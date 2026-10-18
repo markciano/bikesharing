@@ -1,7 +1,7 @@
 # Spike: Git branches and CI/CD flow
 
 - **Task:** T018
-- **ADRs:** none
+- **ADRs:** [ADR-0013](../decisions/0013-github-flow-with-rebase-merge.md)
 - **Code:** none: the trial changes production files
 
 ## Status
