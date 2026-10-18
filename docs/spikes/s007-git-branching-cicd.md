@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-18 · Finished: —
-- Current step: 6
+- Current step: 7
 
 ## 1. Questions — what we need to know
 
@@ -175,7 +175,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 
 ### Step 7 — Rebase merge of PR #1
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Scope:**
   1. Commit step 6, `git push`, and wait for CI green.
@@ -211,6 +211,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 - **F6.** After removing the commit (`git reset --hard HEAD~1` and `git push --force-with-lease`), `CI / docs` turns green again ([run 39146099384](https://github.com/markciano/bikesharing/actions/runs/39146099384)). Force push to the task branch works: only `main` is protected. Step 5, 2026-10-18, source: PR #1.
 - **F7.** A direct push to `main` is rejected with `GH013: Repository rule violations found for refs/heads/main`, listing two rules: "Changes must be made through a pull request" and "Required status check "docs" is expected". Step 5, 2026-10-18, source: terminal output of `git push origin main`.
 - **F8.** The branch was created from a local `main` one commit ahead of `origin/main` (`343c5cf`, T019, never pushed), so that commit travelled in the branch and in PR #1, which has 5 commits instead of 4. Step 5, 2026-10-18, source: `git log` and the `git switch main` message "ahead of 'origin/main' by 1 commit".
+- **F9.** Rebase and merge of PR #1 leaves `main` linear, with no merge commit: the 5 commits of the branch (including `da8a486`, T019, see F8) are on `main` with new SHAs and their original messages, and `d54771e` is the head of `main` and `origin/main`. The remote branch `t018-git-branching-cicd` was deleted automatically on merge. CI on the last push of the branch: [run 39147300068](https://github.com/markciano/bikesharing/actions/runs/39147300068), 10 s. Step 7, 2026-10-18, source: `git log --oneline -n 15` on `main` after `git pull --prune`.
 
 ### Production inputs
 
