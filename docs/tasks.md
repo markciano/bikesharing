@@ -22,3 +22,4 @@
 | T017 | Workflow v4 | 5 | ✅ | — | [settings.json](../.claude/settings.json) |
 | T018 | Git branches and CI/CD flow | 5 | 📝 | T019 | [git-branching-cicd](spikes/s007-git-branching-cicd.md) |
 | T019 | Review repo contents and history before making it public | 2 | ✅ | — |  |
+| T020 | Review where general conventions (testing, Git) live within Claude files | 2 | ⬜ | — |  |
