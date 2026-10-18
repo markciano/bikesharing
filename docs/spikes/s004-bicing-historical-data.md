@@ -317,5 +317,5 @@ Outside the mapping (no 3.0 field): `ESTACIONS` `status`, `traffic` (always null
 
 ## Sources
 
-- https://opendata-ajuntament.barcelona.cat/data/es/dataset/estat-estacions-bicing (station status history)
-- https://opendata-ajuntament.barcelona.cat/data/es/dataset/informacio-estacions-bicing (station information history)
+- <https://opendata-ajuntament.barcelona.cat/data/es/dataset/estat-estacions-bicing> (station status history)
+- <https://opendata-ajuntament.barcelona.cat/data/es/dataset/informacio-estacions-bicing> (station information history)

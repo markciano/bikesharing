@@ -1,4 +1,14 @@
-# Markdown lint: default rules except line length (see docs/spikes/s007-git-branching-cicd.md).
+# Markdown lint: default rules except the ones listed (see Decision log in docs/spikes/s007-git-branching-cicd.md).
 config:
   default: true
-  MD013: false
+  MD007: false # list indentation
+  MD009: false # trailing spaces
+  MD012: false # multiple blank lines
+  MD013: false # line length
+  MD024: # duplicate headings: allowed under different parents
+    siblings_only: true
+  MD029: false # ordered list numbering
+  MD031: false # blank lines around fenced code
+  MD032: false # blank lines around lists
+  MD047: false # trailing newline
+  MD060: false # table column style

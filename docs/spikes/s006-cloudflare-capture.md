@@ -56,7 +56,7 @@ Main question: is Cloudflare Workers (Free plan, Cron Triggers) + R2 the definit
     - Files under `raw/` not named `<ts>.json.gz` are ignored and counted in the report.
 - Two Workers in `js/`, one config file each, deployed with `npx wrangler deploy -c <file>` (Wrangler's standard for several Workers in one folder; decided 2026-10-14). Rejected: Wrangler environments in one file (meant for one script in several stages, not two scripts) and one Worker running both variants (mixes their `cpuTime`).
   
-  ```
+  ```text
   spikes/cloudflare-capture-spike/
   ├── README.md                      Description of the spike
   ├── js/                            V2, V4
@@ -86,7 +86,7 @@ Code makes no design decisions: if something is not specified here, it stops and
 | 1.4 | Owner | Create an R2 API token, Object Read only, scoped to the bucket; save the access key, secret and endpoint in `.env` | Keys in `.env` | ✅ |
 | 2.1 | Owner | In `js/`: `npm init -y`, `npm i -D wrangler` (local dev dependency), `npx wrangler login` (browser OAuth; token stays outside the repo) | `npx wrangler whoami` shows the account | ✅ |
 | 2.2 | Code | Minimal Worker: `wrangler.jsonc` with an R2 binding to the bucket, and `src/V4.js` with a `fetch` handler that requests AMBici `free_bike_status` and Bicing `station_status` with `Accept-Encoding: gzip`, stores each body unchanged in R2 and returns status, `content-encoding` and bytes per feed | Code ready to run | ✅ |
-| 2.3 | Owner | `npx wrangler dev --remote` (runs on Cloudflare, nothing stays deployed) and open the local URL once | The object is in the bucket || ✅ |
+| 2.3 | Owner | `npx wrangler dev --remote` (runs on Cloudflare, nothing stays deployed) and open the local URL once | The object is in the bucket | ✅ |
 | 2.4 | Owner | Download both objects; check them with `file`, their size and `gunzip -t` | AMBici: status 200, feed body (not a challenge), valid gzip of ~45 KB. Bicing: valid gzip of ~10 KB (F1) → V3 and V4 go ahead. **Gate:** if it is ~897 KB of plain JSON, `fetch` decompressed: stop and re-decide V3/V4. Result in Findings | ✅ |
 | 2.5 | Code | Variant of the smoke Worker: `put(key, res.body)` without reading the body; report status, `content-length` and the put result or error per feed | Code ready to run | ✅ |
 | 2.6 | Owner | Run as 2.3; download and check as 2.4 | AMBici stored as valid gzip of ~45 KB → V3/V4 viable for AMBici. Bicing result recorded. Otherwise V3/V4 dropped | ✅ |
@@ -102,7 +102,7 @@ Code makes no design decisions: if something is not specified here, it stops and
 | 5.2 | Owner | Delete the smoke-run objects (steps 3–4) under `V2/` and `V4/`, including `state/` (F10); then `npx wrangler deploy -c wrangler.v2.jsonc` and `-c wrangler.v4.jsonc`; check the first hour, including minute 17 and the even/odd hour alternation (F11) | Objects appear under each variant's prefix; `cpuTime` is visible in Workers Logs | ✅ |
 | 6 | Owner | Run: daily `rclone copy` and a daily look at Workers Logs (`cpuTime`, `exceededCpu`) | A download on every day of the run; CPU noted per variant per day |  |
 | 7.1 | Code | Analysis base in `analysis/analyze_remote_capture.py`. Python 3, standard library only, no arguments. Paths are resolved from the script's location: input `../data/`, output `output/` (created if missing). Constants at the top: variants `V2`, `V4`; dynamic feeds `ambici/station_status`, `ambici/free_bike_status`, `bicing/station_status`. Works with any amount of data, including less than one UTC day; if there are no logs, the report says so and the script exits without error. **Window:** start = the latest of each variant's earliest log `ts`; end = the latest log `ts` in either variant; whole minutes, inclusive, UTC. **Expected** per variant and dynamic feed: every minute in the window except minute 17 of odd UTC hours. **Captured:** `<variant>/raw/<source>/<feed>/<YYYY-MM-DD>/<ts>.json.gz` exists, decompresses with `gzip` and parses with `json`. Every raw object in the window, dynamic and static, is validated; objects outside the window are not analysed, only counted. **Outputs**, overwritten on every run. `output/report.md` has a header with the window start and end, its minutes and the run time (all UTC), then: (a) completeness per variant × dynamic feed: expected, captured and % over the window, per UTC day (days only partly in the window marked as partial), and missing per UTC hour of day (0–23); (b) invalid objects per variant × feed and kind; objects outside the window per variant × feed and UTC day. `output/issues.csv` has the columns `variant,source,feed,ts,kind,detail`, sorted in that column order; kinds in this step: `missing`, `invalid_gzip`, `invalid_json` (detail: the exception message). Same commit: add `analysis/output/` to the `.gitignore` that already ignores `data/` (if none does, stop and report). Do not modify `js/` or `data/` | Code ready to run | ✅ |
-| 7.2 | Owner | From the spike root run `python3 analysis/analyze_remote_capture.py`, then make four checks. (1) Arithmetic: the expected count per dynamic feed equals the window minutes minus the minute-17 passes of odd UTC hours inside the window. (2) Independent count: for one variant, one dynamic feed and one UTC day, find data/<variant>/raw/<source>/<feed>/<day> -name '*.json.gz' \| wc -l equals captured + invalid + off-schedule + outside the window for that day in the report. (3) Fault injection: move one dynamic object from inside the window to `/tmp`, overwrite another with `echo x > <file>`, run again: `missing` +1 and `invalid_gzip` +1 in the report and in `issues.csv`; then `rclone copy` (restores both), delete the `/tmp` copy, run again: back to the previous figures. (4) The first hour after deploy shows no gaps (F12) | All four checks pass | ✅ |
+| 7.2 | Owner | From the spike root run `python3 analysis/analyze_remote_capture.py`, then make four checks. (1) Arithmetic: the expected count per dynamic feed equals the window minutes minus the minute-17 passes of odd UTC hours inside the window. (2) Independent count: for one variant, one dynamic feed and one UTC day, `find data/<variant>/raw/<source>/<feed>/<day> -name '*.json.gz' \| wc -l` equals captured + invalid + off-schedule + outside the window for that day in the report. (3) Fault injection: move one dynamic object from inside the window to `/tmp`, overwrite another with `echo x > <file>`, run again: `missing` +1 and `invalid_gzip` +1 in the report and in `issues.csv`; then `rclone copy` (restores both), delete the `/tmp` copy, run again: back to the previous figures. (4) The first hour after deploy shows no gaps (F12) | All four checks pass | ✅ |
 | 7.3 | Code | Extend the same script with the rest of the analyses. **(c) Reconciliation** from every `<variant>/logs/<YYYY-MM-DD>/<ts>.jsonl` in the window. Logs and objects are matched by source, feed and UTC minute, not by the exact `ts` (passes run at second 47; expected minutes have second 00). In `issues.csv`, `ts` is the exact `ts` of the object or log line when one exists, and the expected minute (second 00) otherwise. A `status` that is neither null nor 200 → `http_error` (detail: the status). An `error` with a null `status` → `fetch_error` (detail: the error). A line with status 200 for a non-`gbfs` feed and no object at its key → `log_without_object`. A raw object in the window with no line for its source, feed and `ts` → `object_without_log`. A window minute with no log file → `missing_log`. A line that cannot be parsed → `invalid_log` (detail: the file). `gbfs` lines feed only `http_error` and `fetch_error`. The report gives, per variant: log files, lines, and count per kind. Log files outside the window are not analysed, only counted, per variant and UTC day. **(d) Static feeds:** for every minute-17 pass in the window, the number of static objects per variant × source, reported as a distribution (objects per pass → number of passes). Plus: minute-17 passes in odd hours that have any dynamic object (expected 0; taken from the off-schedule count of 7.1, not recomputed); minute-17 passes in even hours that have all 3 dynamic objects (expected all); static objects at minutes other than 17 (expected 0). **(e) Class A writes**, estimated per variant as raw objects + log files + `state/` writes (one per `gbfs` line with status 200; if the capturers write `state/` under another condition, follow the code and say so in the report). Reported as the total over the window, the rate per day (total / window minutes × 1,440) against the F2 reference of 6,144 per variant per day (4 per minute + 16 per hour), and a 30-day projection for both variants against the 1M free. The report notes that the R2 dashboard is the authoritative figure. Same restrictions as 7.1. Same commit: create the spike README.md with a description of the spike and an “Analysis” section (what the script does, how to run it).| Code ready to run | ✅ |
 | 7.4 | Owner | Run as in 7.2, then make three checks. (1) `find data/<variant>/logs -name '*.jsonl' \| wc -l` equals the log files in the report plus the logs outside the window. (2) For one UTC day, every static feed folder holds as many objects as there are minute-17 passes inside the window that day (`ls data/<variant>/raw/<source>/<feed>/<day> \| wc -l`), consistent with (d). (3) The report's Class A writes are in the order of the R2 dashboard figure for the same period; the dashboard is higher because it also counts the rclone listings and the deletes. | All three checks pass | ✅ | 
 | 8 | Chat + owner | Findings and Conclusion against the exit criteria. After the last download, tear down V2 (`npx wrangler delete -c wrangler.v2.jsonc`). V4 keeps running as interim capture outside the spike, so no `wrangler logout` and the bucket stays (decided 2026-10-14) | Conclusion written; next ADRs named | ✅ |
@@ -124,16 +124,16 @@ Behaviour shared by both capturers:
 #### Commands used in 3.2 and 4.2
 
 - Run the Worker on Cloudflare without deploying it (terminal 1) 
-  ```
+  ```bash
   cd spikes/cloudflare-capture-spike/js
   npx wrangler dev --remote src/<file_name>.js 
   ```
 - Trigger ONE pass (terminal 2); summary per feed: status, bytes, error. Stop with Ctrl+C
-  ``` 
+  ```bash
   curl -s http://localhost:8787 | python3 -m json.tool
   ```
 - List and download the variant's objects from R2
-  ```
+  ```bash
   rclone ls r2:bikesharing-capture-spike  # list objects
   rclone copy r2:bikesharing-capture-spike data  # root to root folder
   ```
@@ -141,12 +141,13 @@ Behaviour shared by both capturers:
 #### Workers commands
 
 - Deploy workers
-  ``` 
+  ```bash
   cd spikes/cloudflare-capture-spike/js
   npx wrangler deploy -c wrangler.v2.jsonc
   npx wrangler deploy -c wrangler.v4.jsonc
-- Command to delete workers
   ```
+- Command to delete workers
+  ```bash
   npx wrangler delete -c wrangler.vN.jsonc # N = {v2, v4}
   ```
 
@@ -286,7 +287,7 @@ Every other feed is under 5 KB raw. The platform benchmark estimated ~0.5 MB for
 
 Observed window: 2026-10-14T10:51Z–22:09Z (679 minutes, one weekday, no weekend).
 
-**Answers**
+### Answers
 
 - **Q1.** V4: yes in practice. Typical `cpuTime` is 5 ms; minute-17 passes reach 23–28 ms but have never been cut (F12, F15). V2: no, its passes are cut from the fourth hour (F13).
 - **Q2.** Yes, compression is what breaks the budget: V2 spends 18–25 ms on a dynamic-only pass against V4's 4–10 ms (F12). Storing the origin's gzip (V4, F9) avoids it. Python `gzip` (V1) and Python passthrough (V3) were not tested (F8).
@@ -294,7 +295,7 @@ Observed window: 2026-10-14T10:51Z–22:09Z (679 minutes, one weekday, no weeken
 - **Q4.** Yes: the daily `rclone copy` works, €0 billed (F16).
 - **Logs (observe only).** Workers Logs were enough to find V2's `exceededCpu` and the HTTP 524 (F13). V4's JSONL logs reconcile one to one with its objects (F14). The 3-day retention of Workers Logs requires a daily look.
 
-**Exit criteria**
+### Exit criteria
 
 | Criterion | V2 | V4 |
 |---|---|---|
@@ -311,7 +312,7 @@ Observed window: 2026-10-14T10:51Z–22:09Z (679 minutes, one weekday, no weeken
 
 V4 keeps running after the spike closes, as interim capture outside the spike; data after the window are not part of these conclusions. V2 is torn down.
 
-**Inputs for the production design**
+### Inputs for the production design
 
 - consider Wrangler `vars` for the index URLs and the static-feed minute.
 - index `bytes` is measured with string length, not bytes: read `arrayBuffer()` and use `byteLength`.

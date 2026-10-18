@@ -47,7 +47,7 @@ Status: exploratory. Nothing here is approved; these are ideas to feed future ta
 - Two **configuration profiles**, each with its own storage root and the same layer layout.
 - Landing is split by source, named by origin rather than technology (so changing cloud provider does not rename folders):
 
-```
+```text
 data/                  historical profile (kept)
 ├── landing/
 │   ├── realtime/      path A, downloaded from R2, as is
@@ -81,7 +81,7 @@ data-live/             live profile (disposable)
 
 - Candidate: **monorepo organized by deployable unit**, with the PyPA `src` layout for Python code.
 
-```
+```text
 .
 ├── collector/          paths A and B (not C: manual)
 ├── src/bikesharing/    Python/Spark pipeline (bronze, silver, gold)

@@ -108,7 +108,7 @@ spikes/<name>/
 - Commit: only steps that change committed files, following the Git conventions in CLAUDE.md.
 The last step is the Conclusion. -->
 
-#### Step 1 — <title>
+### Step 1 — <title>
 
 - **Status:** 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
 - **Who:** Owner | Claude
@@ -118,7 +118,7 @@ The last step is the Conclusion. -->
 - **Check:** `<command or yes/no verification>`
 - **Commit:** `type(TNNN): …`
 
-#### Step N — Conclusion
+### Step N — Conclusion
 
 - **Status:** 💤 todo
 - **Who:** Owner + Claude
