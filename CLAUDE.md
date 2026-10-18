@@ -35,10 +35,10 @@ The owner runs every command. `main` is protected by a GitHub ruleset (no bypass
 
 1. **Start.** `git switch main && git pull`, then `git status` must say "up to date with 'origin/main'" (a local-only commit would travel into the PR). One branch per task: `git switch -c tNNN-short-title`.
 2. **Work.** Commits as above. `git push -u origin <branch>` the first time, `git push` after. Force push is allowed on the task branch (`--force-with-lease`), never on `main`.
-3. **PR.** Open it to `main`, titled `TNNN: task name`.
+3. **PR.** After the push, press **Compare & pull request** in GitHub (or `gh pr create --base main`). Check that the base is `main` and title it `TNNN: task name`.
 4. **CI.** The check `CI / docs` (Markdown lint of `docs/**/*.md`, config in `.markdownlint-cli2.yaml`) must be green. Fix lint errors in the PR, not by disabling rules.
 5. **Merge.** **Rebase and merge** is the only method enabled. The remote branch is deleted on merge.
-6. **Clean up.** `git switch main && git pull --prune`, check with `git log --oneline -n 15` that the commits are on `main`, then `git branch -D tNNN-short-title` (`-D` because rebase gives the commits new SHAs).
+6. **Clean up.** `git switch main && git pull --prune`, check with `git log --oneline -n 15` that the commits are on `main`, then delete the local branch with `git branch -D tNNN-short-title` (`-D` because rebase gives the commits new SHAs; the remote one is already gone).
 7. **Urgent fix.** Disable the ruleset in GitHub settings, push, enable it again.
 
 **Adding a component to CI.** `.github/workflows/ci.yml` (never renamed) has one job per component, named after it (`docs` now; later `collector`, `pipeline`) with a path filter. When the second component arrives, add a final job `ci-passed` that depends on all and change the required check in the ruleset from `docs` to `ci-passed`.
