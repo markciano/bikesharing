@@ -29,19 +29,14 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 - One logical change per commit: related edits go together; unrelated ones never do.
 - A task's status change goes in the commit of the work that causes it.
 
-### Branch, PR and CI procedure (GitHub Flow)
+### Branches, PRs and CI (GitHub Flow, ADR-0013)
 
-The owner runs every command. `main` is protected by a GitHub ruleset (no bypass): no direct push, PR required, `docs` check green, linear history, rebase merge only.
-
-1. **Start.** `git switch main && git pull`, then `git status` must say "up to date with 'origin/main'" (a local-only commit would travel into the PR). One branch per task: `git switch -c tNNN-short-title`.
-2. **Work.** Commits as above. `git push -u origin <branch>` the first time, `git push` after. Force push is allowed on the task branch (`--force-with-lease`), never on `main`.
-3. **PR.** After the push, press **Compare & pull request** in GitHub (or `gh pr create --base main`). Check that the base is `main` and title it `TNNN: task name`.
-4. **CI.** The check `CI / docs` (Markdown lint of `docs/**/*.md`, config in `.markdownlint-cli2.yaml`) must be green. Fix lint errors in the PR, not by disabling rules.
-5. **Merge.** **Rebase and merge** is the only method enabled. The remote branch is deleted on merge.
-6. **Clean up.** `git switch main && git pull --prune`, check with `git log --oneline -n 15` that the commits are on `main`, then delete the local branch with `git branch -D tNNN-short-title` (`-D` because rebase gives the commits new SHAs; the remote one is already gone).
-7. **Urgent fix.** Disable the ruleset in GitHub settings, push, enable it again.
-
-**Adding a component to CI.** `.github/workflows/ci.yml` (never renamed) has one job per component, named after it (`docs` now; later `collector`, `pipeline`) with a path filter. When the second component arrives, add a final job `ci-passed` that depends on all and change the required check in the ruleset from `docs` to `ci-passed`.
+- `main` is protected by a GitHub ruleset (no bypass): changes reach it only through a PR with every required check green, by rebase merge.
+- One branch per task, `tNNN-short-title`, created from an up-to-date `main` before the task's first commit. PR title: `TNNN: task name`.
+- When a task starts, Claude checks with `git status` that the owner is on its branch. When the task reaches ✅ and its last commit exists, Claude gives the owner the close sequence: push, PR, checks, rebase merge, clean up (local branch deleted with `-D`, since rebase rewrites SHAs).
+- A failing check is fixed in the PR, never by disabling or skipping it.
+- CI: one job per component in `.github/workflows/ci.yml`, as set in ADR-0013.
+- Urgent fix: the owner disables the ruleset, pushes, and enables it again.
 
 ## Pacing
 
