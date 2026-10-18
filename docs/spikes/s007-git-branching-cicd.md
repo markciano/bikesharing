@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-18 · Finished: —
-- Current step: 3
+- Current step: 6
 
 ## 1. Questions — what we need to know
 
@@ -131,7 +131,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 
 ### Step 4 — CI green and ruleset on `main`
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Scope:**
   1. Commit step 3, `git push`, and wait for `CI / docs` to turn green on the PR.
@@ -145,7 +145,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 
 ### Step 5 — Fault injection
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Scope:**
   1. Break the lint on the branch: `printf '\n#Broken heading\n' >> docs/tasks.md && git commit -am "test(T018): break lint on purpose" && git push`.
@@ -158,7 +158,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 
 ### Step 6 — Procedure in `CLAUDE.md`
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:**
   - Extend `CLAUDE.md` › Git with the procedure, short:
@@ -206,6 +206,11 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 - **F1.** Current major of `actions/checkout` is v7 (latest release v7.0.1, confirmed by the owner). Pinned as `@v7`. Step 1, 2026-10-18, source: [releases](https://github.com/actions/checkout/releases).
 - **F2.** Current major of `DavidAnson/markdownlint-cli2-action` is v24 (latest release v24.2.0, from dependency-bump PRs of October 2026; its Releases and Marketplace pages were stale in the search). Pinned as `@v24`. Step 1, 2026-10-18, source: [releases](https://github.com/DavidAnson/markdownlint-cli2-action/releases). TODO: confirm v24 on the Releases page.
 - **F3.** The `CI / docs` check runs on the PR and fails on the existing docs: 516 issues in 16 of 27 files (markdownlint-cli2 v0.23.2). By rule: MD060 427, MD034 14, MD032 12, MD040 9, MD024 9, MD031 8, MD036 7, MD009 7, MD029 6, MD007 6, MD033 4, MD047 3, MD012 2, MD056 1, MD001 1. By file: s006 120, s004 117, s001 115, s002 29, t011 20, t006 20, sources/bicing 19, tasks 17, s007 17, project-ideas-0 14, sources/ambici 12, ADR-0001 6, s003 4, t014 4, s005 1, ADR-0007 1. Duration: 10 s the run, 1 s the lint step. Step 2, 2026-10-18, source: PR #1, [run 39141556842](https://github.com/markciano/bikesharing/actions/runs/39141556842/job/117716866636?pr=1); the breakdown comes from running markdownlint-cli2@0.23.2 locally on the same files.
+- **F4.** After the fixes, `CI / docs` is green on PR #1: [run 39144208795](https://github.com/markciano/bikesharing/actions/runs/39144208795), 8 s, 4 commits on the branch. `docs` was selectable as a required check and the ruleset asked for no approval (Gate met). While the repo setting "Allow rebase merging" was off, the PR showed "Merge is not an allowed merge method" and "This branch must not contain merge commits" with the merge button blocked, although the branch had no merge commit; once enabled, Rebase and merge appeared. Step 4, 2026-10-18, source: PR #1 and repo settings.
+- **F5.** With `#Broken heading` appended to `docs/tasks.md` on the branch, `CI / docs` fails ([run 39145989710](https://github.com/markciano/bikesharing/actions/runs/39145989710), 10 s) and the merge of PR #1 is blocked. Step 5, 2026-10-18, source: PR #1.
+- **F6.** After removing the commit (`git reset --hard HEAD~1` and `git push --force-with-lease`), `CI / docs` turns green again ([run 39146099384](https://github.com/markciano/bikesharing/actions/runs/39146099384)). Force push to the task branch works: only `main` is protected. Step 5, 2026-10-18, source: PR #1.
+- **F7.** A direct push to `main` is rejected with `GH013: Repository rule violations found for refs/heads/main`, listing two rules: "Changes must be made through a pull request" and "Required status check "docs" is expected". Step 5, 2026-10-18, source: terminal output of `git push origin main`.
+- **F8.** The branch was created from a local `main` one commit ahead of `origin/main` (`343c5cf`, T019, never pushed), so that commit travelled in the branch and in PR #1, which has 5 commits instead of 4. Step 5, 2026-10-18, source: `git log` and the `git switch main` message "ahead of 'origin/main' by 1 commit".
 
 ### Production inputs
 
