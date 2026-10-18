@@ -65,6 +65,3 @@ derby.log
 # Operating system and editors
 .DS_Store
 .idea/
-
-# CLAUDE
-docs/new-claude-docs/robert
