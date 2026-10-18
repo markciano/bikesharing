@@ -39,7 +39,7 @@ Owner + Claude. Draft each part in this order; the owner approves on the diff:
 4. Verdict.
 5. Not verified: each item with its risk and mitigation.
 6. Production inputs: a destination for every P: a design (naming its task), or discarded with a reason. No new task rows from Production inputs.
-7. Follow-ups: ADRs to write, each in its own commit after this step; new tasks proposed to the owner as rows in `docs/tasks.md`.
+7. Follow-ups: ADRs to write, each in its own commit; new tasks proposed to the owner as rows in `docs/tasks.md`.
 8. README › How we got here: 5–10 lines of narrative for the portfolio, linking to Findings and Decision log entries instead of repeating their detail.
 9. Tear-down: what is torn down and what is kept; a kept resource gets a Decision log entry. The owner runs the tear-down.
 
