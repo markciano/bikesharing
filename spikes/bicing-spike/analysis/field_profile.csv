@@ -1,0 +1,142 @@
+feed,path,parent_path,parent_occurrences,occurrences,types,present_pct,null_pct,min,max,timestamp,timestamp_unparseable,distinct_count,distinct_values
+gbfs,data,(root),186,186,object:186,100.00,0.00,,,,,,
+gbfs,data.feeds,data,186,186,array:186,100.00,0.00,,,,,,
+gbfs,data.feeds[],(list items),1488,1488,object:1488,,0.00,,,,,,
+gbfs,data.feeds[].name,data.feeds[],1488,1488,string:1488,100.00,0.00,,,,,8,"[""gbfs_versions"", ""geofencing_zones"", ""station_information"", ""station_status"", ""system_information"", ""system_pricing_plans"", ""system_regions"", ""vehicle_types""]"
+gbfs,data.feeds[].url,data.feeds[],1488,1488,string:1488,100.00,0.00,,,,,8,"[""https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/gbfs_versions"", ""https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/geofencing_zones"", ""https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/station_information"", ""https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/station_status"", ""https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/system_information"", ""https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/system_pricing_plans"", ""https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/system_regions"", ""https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/vehicle_types""]"
+gbfs,last_updated,(root),186,186,string:186,100.00,0.00,2026-10-03T17:11:00.000Z,2026-10-05T14:15:00.000Z,yes,0,186,
+gbfs,ttl,(root),186,186,integer:186,100.00,0.00,0,0,,,1,[0]
+gbfs,version,(root),186,186,string:186,100.00,0.00,,,,,1,"[""3.0""]"
+gbfs_versions,data,(root),182,182,object:182,100.00,0.00,,,,,,
+gbfs_versions,data.versions,data,182,182,array:182,100.00,0.00,,,,,,
+gbfs_versions,data.versions[],(list items),546,546,object:546,,0.00,,,,,,
+gbfs_versions,data.versions[].url,data.versions[],546,546,string:546,100.00,0.00,,,,,3,"[""https://barcelona.publicbikesystem.net/customer/gbfs/v2/"", ""https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/"", ""https://barcelona.publicbikesystem.net/ube/gbfs/v1/""]"
+gbfs_versions,data.versions[].version,data.versions[],546,546,string:546,100.00,0.00,,,,,3,"[""1.1"", ""2.3"", ""3.0""]"
+gbfs_versions,last_updated,(root),182,182,string:182,100.00,0.00,2026-10-03T17:11:00.000Z,2026-10-05T14:15:00.000Z,yes,0,182,
+gbfs_versions,ttl,(root),182,182,integer:182,100.00,0.00,0,0,,,1,[0]
+gbfs_versions,version,(root),182,182,string:182,100.00,0.00,,,,,1,"[""3.0""]"
+geofencing_zones,data,(root),182,182,object:182,100.00,0.00,,,,,,
+geofencing_zones,data.geofencing_zones,data,182,182,object:182,100.00,0.00,,,,,,
+geofencing_zones,data.geofencing_zones.features,data.geofencing_zones,182,182,array:182,100.00,0.00,,,,,,
+geofencing_zones,data.geofencing_zones.type,data.geofencing_zones,182,182,string:182,100.00,0.00,,,,,1,"[""FeatureCollection""]"
+geofencing_zones,data.global_rules,data,182,182,array:182,100.00,0.00,,,,,,
+geofencing_zones,last_updated,(root),182,182,string:182,100.00,0.00,2026-10-03T17:11:00.000Z,2026-10-05T14:15:01.000Z,yes,0,182,
+geofencing_zones,ttl,(root),182,182,integer:182,100.00,0.00,0,0,,,1,[0]
+geofencing_zones,version,(root),182,182,string:182,100.00,0.00,,,,,1,"[""3.0""]"
+station_information,data,(root),182,182,object:182,100.00,0.00,,,,,,
+station_information,data.stations,data,182,182,array:182,100.00,0.00,,,,,,
+station_information,data.stations[],(list items),98731,98731,object:98731,,0.00,,,,,,
+station_information,data.stations[].address,data.stations[],98731,98731,string:98731,100.00,0.00,,,,,543,
+station_information,data.stations[].capacity,data.stations[],98731,98731,integer:98731,100.00,0.00,0,54,,,39,
+station_information,data.stations[].cross_street,data.stations[],98731,98731,string:98731,100.00,0.00,,,,,71,
+station_information,data.stations[].external_id,data.stations[],98731,98731,string:98731,100.00,0.00,,,,,543,
+station_information,data.stations[].is_charging_station,data.stations[],98731,98731,boolean:98731,100.00,0.00,,,,,1,[true]
+station_information,data.stations[].is_virtual_station,data.stations[],98731,98731,boolean:98731,100.00,0.00,,,,,1,[false]
+station_information,data.stations[].lat,data.stations[],98731,98731,number:98731,100.00,0.00,41.3467746,41.462095,,,542,
+station_information,data.stations[].lon,data.stations[],98731,98731,number:98731,100.00,0.00,2.1091535,2.2206913,,,543,
+station_information,data.stations[].name,data.stations[],98731,98731,array:98731,100.00,0.00,,,,,,
+station_information,data.stations[].name[],(list items),493655,493655,object:493655,,0.00,,,,,,
+station_information,data.stations[].name[].language,data.stations[].name[],493655,493655,string:493655,100.00,0.00,,,,,5,"[""ca"", ""en"", ""es"", ""fr"", ""nl""]"
+station_information,data.stations[].name[].text,data.stations[].name[],493655,493655,string:493655,100.00,0.00,,,,,543,
+station_information,data.stations[].post_code,data.stations[],98731,98367,string:98367,99.63,0.00,,,,,44,
+station_information,data.stations[].rental_methods,data.stations[],98731,98731,array:98731,100.00,0.00,,,,,,
+station_information,data.stations[].rental_methods[],(list items),394924,394924,string:394924,,0.00,,,,,4,"[""creditcard"", ""key"", ""phone"", ""transitcard""]"
+station_information,data.stations[].rental_uris,data.stations[],98731,98731,object:98731,100.00,0.00,,,,,,
+station_information,data.stations[].short_name,data.stations[],98731,98731,array:98731,100.00,0.00,,,,,,
+station_information,data.stations[].short_name[],(list items),493655,493655,object:493655,,0.00,,,,,,
+station_information,data.stations[].short_name[].language,data.stations[].short_name[],493655,493655,string:493655,100.00,0.00,,,,,5,"[""ca"", ""en"", ""es"", ""fr"", ""nl""]"
+station_information,data.stations[].short_name[].text,data.stations[].short_name[],493655,493655,string:493655,100.00,0.00,,,,,543,
+station_information,data.stations[].station_id,data.stations[],98731,98731,string:98731,100.00,0.00,,,,,543,
+station_information,data.stations[].vehicle_docks_capacity,data.stations[],98731,98731,array:98731,100.00,0.00,,,,,,
+station_information,data.stations[].vehicle_docks_capacity[],(list items),98731,98731,object:98731,,0.00,,,,,,
+station_information,data.stations[].vehicle_docks_capacity[].count,data.stations[].vehicle_docks_capacity[],98731,98731,integer:98731,100.00,0.00,0,54,,,39,
+station_information,data.stations[].vehicle_docks_capacity[].vehicle_type_ids,data.stations[].vehicle_docks_capacity[],98731,98731,array:98731,100.00,0.00,,,,,,
+station_information,data.stations[].vehicle_docks_capacity[].vehicle_type_ids[],(list items),888579,888579,string:888579,,0.00,,,,,9,"[""ASTRO"", ""BOOST"", ""CHLOE"", ""COSMO"", ""EFIT"", ""FIT"", ""ICONIC"", ""METRO"", ""METRO_CONNECTED""]"
+station_information,data.stations[].vehicle_types_capacity,data.stations[],98731,98731,array:98731,100.00,0.00,,,,,,
+station_information,last_updated,(root),182,182,string:182,100.00,0.00,2026-10-03T17:11:00.000Z,2026-10-05T14:15:01.000Z,yes,0,182,
+station_information,ttl,(root),182,182,integer:182,100.00,0.00,0,0,,,1,[0]
+station_information,version,(root),182,182,string:182,100.00,0.00,,,,,1,"[""3.0""]"
+station_status,data,(root),2710,2710,object:2710,100.00,0.00,,,,,,
+station_status,data.stations,data,2710,2710,array:2710,100.00,0.00,,,,,,
+station_status,data.stations[],(list items),1470126,1470126,object:1470126,,0.00,,,,,,
+station_status,data.stations[].is_installed,data.stations[],1470126,1470126,boolean:1470126,100.00,0.00,,,,,2,"[false, true]"
+station_status,data.stations[].is_renting,data.stations[],1470126,1470126,boolean:1470126,100.00,0.00,,,,,2,"[false, true]"
+station_status,data.stations[].is_returning,data.stations[],1470126,1470126,boolean:1470126,100.00,0.00,,,,,2,"[false, true]"
+station_status,data.stations[].last_reported,data.stations[],1470126,1470126,string:1470126,100.00,0.00,2025-06-12T08:54:16.043Z,2026-10-05T14:25:56.649Z,yes,0,457632,
+station_status,data.stations[].num_docks_available,data.stations[],1470126,1470126,integer:1470126,100.00,0.00,0,52,,,53,
+station_status,data.stations[].num_docks_disabled,data.stations[],1470126,1470126,integer:1470126,100.00,0.00,0,40,,,38,
+station_status,data.stations[].num_vehicles_available,data.stations[],1470126,1470126,integer:1470126,100.00,0.00,0,47,,,48,
+station_status,data.stations[].num_vehicles_disabled,data.stations[],1470126,1470126,integer:1470126,100.00,0.00,0,23,,,24,
+station_status,data.stations[].station_id,data.stations[],1470126,1470126,string:1470126,100.00,0.00,,,,,543,
+station_status,data.stations[].vehicle_docks_available,data.stations[],1470126,1470126,array:1470126,100.00,0.00,,,,,,
+station_status,data.stations[].vehicle_docks_available[],(list items),1470126,1470126,object:1470126,,0.00,,,,,,
+station_status,data.stations[].vehicle_docks_available[].count,data.stations[].vehicle_docks_available[],1470126,1470126,integer:1470126,100.00,0.00,0,52,,,53,
+station_status,data.stations[].vehicle_docks_available[].vehicle_type_ids,data.stations[].vehicle_docks_available[],1470126,1470126,array:1470126,100.00,0.00,,,,,,
+station_status,data.stations[].vehicle_docks_available[].vehicle_type_ids[],(list items),5880504,5880504,string:5880504,,0.00,,,,,4,"[""BOOST"", ""EFIT"", ""FIT"", ""ICONIC""]"
+station_status,data.stations[].vehicle_types_available,data.stations[],1470126,1470126,array:1470126,100.00,0.00,,,,,,
+station_status,data.stations[].vehicle_types_available[],(list items),5880504,5880504,object:5880504,,0.00,,,,,,
+station_status,data.stations[].vehicle_types_available[].count,data.stations[].vehicle_types_available[],5880504,5880504,integer:5880504,100.00,0.00,0,44,,,45,
+station_status,data.stations[].vehicle_types_available[].vehicle_type_id,data.stations[].vehicle_types_available[],5880504,5880504,string:5880504,100.00,0.00,,,,,4,"[""BOOST"", ""EFIT"", ""FIT"", ""ICONIC""]"
+station_status,last_updated,(root),2710,2710,string:2710,100.00,0.00,2026-10-03T17:11:00.000Z,2026-10-05T14:26:00.000Z,yes,0,2710,
+station_status,ttl,(root),2710,2710,integer:2710,100.00,0.00,0,0,,,1,[0]
+station_status,version,(root),2710,2710,string:2710,100.00,0.00,,,,,1,"[""3.0""]"
+system_information,data,(root),182,182,object:182,100.00,0.00,,,,,,
+system_information,data.feed_contact_email,data,182,182,string:182,100.00,0.00,,,,,1,"[""mobility-data-client@lyft.com""]"
+system_information,data.languages,data,182,182,array:182,100.00,0.00,,,,,,
+system_information,data.languages[],(list items),910,910,string:910,,0.00,,,,,5,"[""ca"", ""en"", ""es"", ""fr"", ""nl""]"
+system_information,data.name,data,182,182,array:182,100.00,0.00,,,,,,
+system_information,data.name[],(list items),910,910,object:910,,0.00,,,,,,
+system_information,data.name[].language,data.name[],910,910,string:910,100.00,0.00,,,,,5,"[""ca"", ""en"", ""es"", ""fr"", ""nl""]"
+system_information,data.name[].text,data.name[],910,910,string:910,100.00,0.00,,,,,1,"[""Bike Barcelona""]"
+system_information,data.opening_hours,data,182,182,string:182,100.00,0.00,,,,,1,"[""Mo-Su,PH 00:00-24:00""]"
+system_information,data.system_id,data,182,182,string:182,100.00,0.00,,,,,1,"[""bike_barcelona""]"
+system_information,data.timezone,data,182,182,string:182,100.00,0.00,,,,,1,"[""Europe/Madrid""]"
+system_information,last_updated,(root),182,182,string:182,100.00,0.00,2026-10-03T17:11:01.000Z,2026-10-05T14:15:02.000Z,yes,0,182,
+system_information,ttl,(root),182,182,integer:182,100.00,0.00,0,0,,,1,[0]
+system_information,version,(root),182,182,string:182,100.00,0.00,,,,,1,"[""3.0""]"
+system_pricing_plans,data,(root),182,182,object:182,100.00,0.00,,,,,,
+system_pricing_plans,data.plans,data,182,182,array:182,100.00,0.00,,,,,,
+system_pricing_plans,data.plans[],(list items),3640,3640,object:3640,,0.00,,,,,,
+system_pricing_plans,data.plans[].currency,data.plans[],3640,3640,string:3640,100.00,0.00,,,,,1,"[""EUR""]"
+system_pricing_plans,data.plans[].description,data.plans[],3640,3640,array:3640,100.00,0.00,,,,,,
+system_pricing_plans,data.plans[].description[],(list items),10920,10920,object:10920,,0.00,,,,,,
+system_pricing_plans,data.plans[].description[].language,data.plans[].description[],10920,10920,string:10920,100.00,0.00,,,,,3,"[""ca"", ""en"", ""es""]"
+system_pricing_plans,data.plans[].description[].text,data.plans[].description[],10920,10920,string:10920,100.00,0.00,,,,,1,"[""""]"
+system_pricing_plans,data.plans[].is_taxable,data.plans[],3640,3640,boolean:3640,100.00,0.00,,,,,1,[false]
+system_pricing_plans,data.plans[].name,data.plans[],3640,3640,array:3640,100.00,0.00,,,,,,
+system_pricing_plans,data.plans[].name[],(list items),10920,10920,object:10920,,0.00,,,,,,
+system_pricing_plans,data.plans[].name[].language,data.plans[].name[],10920,10920,string:10920,100.00,0.00,,,,,3,"[""ca"", ""en"", ""es""]"
+system_pricing_plans,data.plans[].name[].text,data.plans[].name[],10920,10920,string:10920,100.00,0.00,,,,,12,"[""Pagament per ús"", ""Tarifa Plana"", ""Tarifa Plana + 2 meses"", ""Tarifa Plana 0 Bicing-AMB"", ""Tarifa Plana Bicing-AMB"", ""Tarifa d'us Promocional"", ""Tarifa d'Ús + 2 mesos"", ""Tarifa d'ús"", ""Tarifa d'ús 0 Bicing-AMB"", ""Tarifa d'ús Bicing-AMB"", ""Tarifa de uso"", ""Tarifa de uso Promocional""]"
+system_pricing_plans,data.plans[].per_min_pricing,data.plans[],3640,3640,array:3640,100.00,0.00,,,,,,
+system_pricing_plans,data.plans[].per_min_pricing[],(list items),15652,15652,object:15652,,0.00,,,,,,
+system_pricing_plans,data.plans[].per_min_pricing[].end,data.plans[].per_min_pricing[],15652,15652,integer:15652,100.00,0.00,31,1265,,,7,"[121, 1263, 1264, 1265, 31, 61, 91]"
+system_pricing_plans,data.plans[].per_min_pricing[].interval,data.plans[].per_min_pricing[],15652,15652,integer:15652,100.00,0.00,30,60,,,3,"[30, 31, 60]"
+system_pricing_plans,data.plans[].per_min_pricing[].rate,data.plans[].per_min_pricing[],15652,15652,number:15652,100.00,0.00,0.4,5.75,,,5,"[0.4, 0.63, 0.81, 1.04, 5.75]"
+system_pricing_plans,data.plans[].per_min_pricing[].start,data.plans[].per_min_pricing[],15652,15652,integer:15652,100.00,0.00,0,121,,,5,"[0, 121, 31, 61, 91]"
+system_pricing_plans,data.plans[].plan_id,data.plans[],3640,3640,string:3640,100.00,0.00,,,,,20,"[""1-4"", ""1-5"", ""11-4"", ""11-5"", ""12-2"", ""12-3"", ""13-1"", ""13-4"", ""13-5"", ""14-1"", ""14-2"", ""14-3"", ""2-2"", ""2-3"", ""6-2"", ""6-3"", ""8-4"", ""8-5"", ""9-2"", ""9-3""]"
+system_pricing_plans,data.plans[].price,data.plans[],3640,3640,number:3640,100.00,0.00,0.0,65.0,,,5,"[0.0, 35.0, 50.0, 53.0, 65.0]"
+system_pricing_plans,last_updated,(root),182,182,string:182,100.00,0.00,2026-10-03T17:11:01.000Z,2026-10-05T14:15:02.000Z,yes,0,182,
+system_pricing_plans,ttl,(root),182,182,integer:182,100.00,0.00,0,0,,,1,[0]
+system_pricing_plans,version,(root),182,182,string:182,100.00,0.00,,,,,1,"[""3.0""]"
+system_regions,data,(root),182,182,object:182,100.00,0.00,,,,,,
+system_regions,data.regions,data,182,182,array:182,100.00,0.00,,,,,,
+system_regions,last_updated,(root),182,182,string:182,100.00,0.00,2026-10-03T17:11:01.000Z,2026-10-05T14:15:02.000Z,yes,0,182,
+system_regions,ttl,(root),182,182,integer:182,100.00,0.00,0,0,,,1,[0]
+system_regions,version,(root),182,182,string:182,100.00,0.00,,,,,1,"[""3.0""]"
+vehicle_types,data,(root),182,182,object:182,100.00,0.00,,,,,,
+vehicle_types,data.vehicle_types,data,182,182,array:182,100.00,0.00,,,,,,
+vehicle_types,data.vehicle_types[],(list items),1638,1638,object:1638,,0.00,,,,,,
+vehicle_types,data.vehicle_types[].default_pricing_plan_id,data.vehicle_types[],1638,1638,string:1638,100.00,0.00,,,,,3,"["""", ""1-4"", ""8-4""]"
+vehicle_types,data.vehicle_types[].form_factor,data.vehicle_types[],1638,1638,string:1638,100.00,0.00,,,,,2,"[""bicycle"", ""scooter_standing""]"
+vehicle_types,data.vehicle_types[].max_range_meters,data.vehicle_types[],1638,1638,number:1638,100.00,0.00,0.0,70000.0,,,3,"[0.0, 60000.0, 70000.0]"
+vehicle_types,data.vehicle_types[].name,data.vehicle_types[],1638,1638,array:1638,100.00,0.00,,,,,,
+vehicle_types,data.vehicle_types[].name[],(list items),8190,8190,object:8190,,0.00,,,,,,
+vehicle_types,data.vehicle_types[].name[].language,data.vehicle_types[].name[],8190,8190,string:8190,100.00,0.00,,,,,5,"[""ca"", ""en"", ""es"", ""fr"", ""nl""]"
+vehicle_types,data.vehicle_types[].name[].text,data.vehicle_types[].name[],8190,8190,string:8190,100.00,0.00,,,,,9,"[""ASTRO"", ""BOOST"", ""CHLOE"", ""COSMO"", ""EFIT"", ""FIT"", ""ICONIC"", ""METRO"", ""METRO_CONNECTED""]"
+vehicle_types,data.vehicle_types[].pricing_plan_ids,data.vehicle_types[],1638,1456,array:1456,88.89,0.00,,,,,,
+vehicle_types,data.vehicle_types[].pricing_plan_ids[],(list items),24752,24752,string:24752,,0.00,,,,,20,"[""1-4"", ""1-5"", ""11-4"", ""11-5"", ""12-2"", ""12-3"", ""13-1"", ""13-4"", ""13-5"", ""14-1"", ""14-2"", ""14-3"", ""2-2"", ""2-3"", ""6-2"", ""6-3"", ""8-4"", ""8-5"", ""9-2"", ""9-3""]"
+vehicle_types,data.vehicle_types[].propulsion_type,data.vehicle_types[],1638,1638,string:1638,100.00,0.00,,,,,3,"[""electric"", ""electric_assist"", ""human""]"
+vehicle_types,data.vehicle_types[].vehicle_type_id,data.vehicle_types[],1638,1638,string:1638,100.00,0.00,,,,,9,"[""ASTRO"", ""BOOST"", ""CHLOE"", ""COSMO"", ""EFIT"", ""FIT"", ""ICONIC"", ""METRO"", ""METRO_CONNECTED""]"
+vehicle_types,last_updated,(root),182,182,string:182,100.00,0.00,2026-10-03T17:11:01.000Z,2026-10-05T14:15:02.000Z,yes,0,182,
+vehicle_types,ttl,(root),182,182,integer:182,100.00,0.00,0,0,,,1,[0]
+vehicle_types,version,(root),182,182,string:182,100.00,0.00,,,,,1,"[""3.0""]"

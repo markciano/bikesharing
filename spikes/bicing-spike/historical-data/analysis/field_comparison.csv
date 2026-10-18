@@ -1,0 +1,71 @@
+series,feed,field,archive_months,archive_type,archive_null_pct,archive_min,archive_max,archive_distinct_count,archive_distinct_values,realtime_path,realtime_present_pct,realtime_type,realtime_null_pct,realtime_min,realtime_max,realtime_distinct_count,realtime_distinct_values
+ESTACIONS,station_status,station_id,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,1,614,550,,data.stations[].station_id,100.00,string:1470126,0.00,,,543,
+ESTACIONS,station_status,num_bikes_available,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,54,55,,,,,,,,,
+ESTACIONS,station_status,is_charging_station,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BOOLEAN,0.00,True,True,1,"{""TRUE"": 27117650}",,,,,,,,
+ESTACIONS,station_status,status,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,VARCHAR,0.00,IN_SERVICE,PLANNED,4,"{""IN_SERVICE"": 27014843, ""MAINTENANCE"": 62132, ""NOT_IN_SERVICE"": 40638, ""PLANNED"": 37}",,,,,,,,
+ESTACIONS,station_status,traffic,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,VARCHAR,100.00,,,1,"{""NA"": 27117650}",,,,,,,,
+ESTACIONS,station_status,num_bikes_available_types.mechanical,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,51,52,,,,,,,,,
+ESTACIONS,station_status,num_bikes_available_types.ebike,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,51,52,,,,,,,,,
+ESTACIONS,station_status,num_docks_available,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,54,55,,data.stations[].num_docks_available,100.00,integer:1470126,0.00,0,52,53,
+ESTACIONS,station_status,last_reported,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,1788213303,8488515,,data.stations[].last_reported,100.00,string:1470126,0.00,2025-06-12T08:54:16.043Z,2026-10-05T14:25:56.649Z,457632,
+ESTACIONS,station_status,is_installed,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,1,2,"{""1"": 27117613, ""0"": 37}",data.stations[].is_installed,100.00,boolean:1470126,0.00,,,2,"[false, true]"
+ESTACIONS,station_status,is_renting,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,1,2,"{""1"": 26885561, ""0"": 232089}",data.stations[].is_renting,100.00,boolean:1470126,0.00,,,2,"[false, true]"
+ESTACIONS,station_status,is_returning,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,1,2,"{""1"": 27014843, ""0"": 102807}",data.stations[].is_returning,100.00,boolean:1470126,0.00,,,2,"[false, true]"
+ESTACIONS,station_status,last_updated,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,1769900406,1788213304,50040,,last_updated,100.00,string:2710,0.00,2026-10-03T17:11:00.000Z,2026-10-05T14:26:00.000Z,2710,
+ESTACIONS,station_status,ttl,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,0,1,"{""0"": 27117650}",ttl,100.00,integer:2710,0.00,0,0,1,[0]
+ESTACIONS,station_status,V1,2026-03,VARCHAR,100.00,,,1,"{""NA"": 4804908}",,,,,,,,
+ESTACIONS,station_status,data,,,,,,,,data,100.00,object:2710,0.00,,,,
+ESTACIONS,station_status,data.stations,,,,,,,,data.stations,100.00,array:2710,0.00,,,,
+ESTACIONS,station_status,data.stations[],,,,,,,,data.stations[],,object:1470126,0.00,,,,
+ESTACIONS,station_status,num_docks_disabled,,,,,,,,data.stations[].num_docks_disabled,100.00,integer:1470126,0.00,0,40,38,
+ESTACIONS,station_status,num_vehicles_available,,,,,,,,data.stations[].num_vehicles_available,100.00,integer:1470126,0.00,0,47,48,
+ESTACIONS,station_status,num_vehicles_disabled,,,,,,,,data.stations[].num_vehicles_disabled,100.00,integer:1470126,0.00,0,23,24,
+ESTACIONS,station_status,vehicle_docks_available,,,,,,,,data.stations[].vehicle_docks_available,100.00,array:1470126,0.00,,,,
+ESTACIONS,station_status,vehicle_docks_available[],,,,,,,,data.stations[].vehicle_docks_available[],,object:1470126,0.00,,,,
+ESTACIONS,station_status,vehicle_docks_available[].count,,,,,,,,data.stations[].vehicle_docks_available[].count,100.00,integer:1470126,0.00,0,52,53,
+ESTACIONS,station_status,vehicle_docks_available[].vehicle_type_ids,,,,,,,,data.stations[].vehicle_docks_available[].vehicle_type_ids,100.00,array:1470126,0.00,,,,
+ESTACIONS,station_status,vehicle_docks_available[].vehicle_type_ids[],,,,,,,,data.stations[].vehicle_docks_available[].vehicle_type_ids[],,string:5880504,0.00,,,4,"[""BOOST"", ""EFIT"", ""FIT"", ""ICONIC""]"
+ESTACIONS,station_status,vehicle_types_available,,,,,,,,data.stations[].vehicle_types_available,100.00,array:1470126,0.00,,,,
+ESTACIONS,station_status,vehicle_types_available[],,,,,,,,data.stations[].vehicle_types_available[],,object:5880504,0.00,,,,
+ESTACIONS,station_status,vehicle_types_available[].count,,,,,,,,data.stations[].vehicle_types_available[].count,100.00,integer:5880504,0.00,0,44,45,
+ESTACIONS,station_status,vehicle_types_available[].vehicle_type_id,,,,,,,,data.stations[].vehicle_types_available[].vehicle_type_id,100.00,string:5880504,0.00,,,4,"[""BOOST"", ""EFIT"", ""FIT"", ""ICONIC""]"
+ESTACIONS,station_status,version,,,,,,,,version,100.00,string:2710,0.00,,,1,"[""3.0""]"
+INFORMACIO,station_information,station_id,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,1,614,552,,data.stations[].station_id,100.00,string:98731,0.00,,,543,
+INFORMACIO,station_information,name,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,VARCHAR,0.00," AV. MARTÍ CODOLAR, 2 | COLL I ALENTORN",WORLD TRADE CENTER,569,,data.stations[].name,100.00,array:98731,0.00,,,,
+INFORMACIO,station_information,physical_configuration,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,VARCHAR,0.00,ELECTRICBIKESTATION,VALET,2,"{""ELECTRICBIKESTATION"": 27116584, ""VALET"": 76474}",,,,,,,,
+INFORMACIO,station_information,lat,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,DOUBLE,0.00,41.3467746,41.462095,562,,data.stations[].lat,100.00,number:98731,0.00,41.3467746,41.462095,542,
+INFORMACIO,station_information,lon,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,DOUBLE,0.00,2.1091535,2.2206913,563,,data.stations[].lon,100.00,number:98731,0.00,2.1091535,2.2206913,543,
+INFORMACIO,station_information,altitude,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,DOUBLE,1.61,0.0,184.0,162,,,,,,,,,
+INFORMACIO,station_information,address,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,VARCHAR,0.00," AV. DIAGONAL, 650",WORLD TRADE CENTER,566,,data.stations[].address,100.00,string:98731,0.00,,,543,
+INFORMACIO,station_information,cross_street,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,VARCHAR,0.33,01-CiutatVella/01-el Raval,10-SantMartí/73-la Verneda i la Pau,71,,data.stations[].cross_street,100.00,string:98731,0.00,,,71,
+INFORMACIO,station_information,post_code,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.69,8001,8930,45,,data.stations[].post_code,99.63,string:98367,0.00,,,44,
+INFORMACIO,station_information,capacity,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,55,55,,data.stations[].capacity,100.00,integer:98731,0.00,0,54,39,
+INFORMACIO,station_information,is_charging_station,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BOOLEAN,0.00,False,True,2,"{""TRUE"": 27116584, ""FALSE"": 76474}",data.stations[].is_charging_station,100.00,boolean:98731,0.00,,,1,[true]
+INFORMACIO,station_information,short_name,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,1,9001,552,,data.stations[].short_name,100.00,array:98731,0.00,,,,
+INFORMACIO,station_information,nearby_distance,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,1,1000,5,"{""1000"": 26903821, ""1"": 176662, ""999"": 100203, ""997"": 10952, ""101"": 1420}",,,,,,,,
+INFORMACIO,station_information,x_ride_code_support,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BOOLEAN,0.00,True,True,1,"{""TRUE"": 27193058}",,,,,,,,
+INFORMACIO,station_information,rental_uris,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,VARCHAR,100.00,,,1,"{""NA"": 27193058}",data.stations[].rental_uris,100.00,object:98731,0.00,,,,
+INFORMACIO,station_information,is_valet_station,2026-02;2026-03;2026-04;2026-05;2026-06,BOOLEAN,99.67,False,False,2,"{""NA"": 23129465, ""FALSE"": 76474}",,,,,,,,
+INFORMACIO,station_information,last_updated,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,1769900404,1788213304,50038,,last_updated,100.00,string:182,0.00,2026-10-03T17:11:00.000Z,2026-10-05T14:15:01.000Z,182,
+INFORMACIO,station_information,ttl,2026-02;2026-03;2026-04;2026-05;2026-06;2026-08,BIGINT,0.00,0,0,1,"{""0"": 27193058}",ttl,100.00,integer:182,0.00,0,0,1,[0]
+INFORMACIO,station_information,V1,2026-03,VARCHAR,100.00,,,1,"{""NA"": 4822141}",,,,,,,,
+INFORMACIO,station_information,external_id,2026-03;2026-04;2026-05;2026-06;2026-08,VARCHAR,20.52,4a58d0ca-aa16-4ecf-8c42-943b48a086c2,fc599dd5-eb2f-11ef-896d-0a9e2ea61361,552,,data.stations[].external_id,100.00,string:98731,0.00,,,543,
+INFORMACIO,station_information,data,,,,,,,,data,100.00,object:182,0.00,,,,
+INFORMACIO,station_information,data.stations,,,,,,,,data.stations,100.00,array:182,0.00,,,,
+INFORMACIO,station_information,data.stations[],,,,,,,,data.stations[],,object:98731,0.00,,,,
+INFORMACIO,station_information,is_virtual_station,,,,,,,,data.stations[].is_virtual_station,100.00,boolean:98731,0.00,,,1,[false]
+INFORMACIO,station_information,name[],,,,,,,,data.stations[].name[],,object:493655,0.00,,,,
+INFORMACIO,station_information,name[].language,,,,,,,,data.stations[].name[].language,100.00,string:493655,0.00,,,5,"[""ca"", ""en"", ""es"", ""fr"", ""nl""]"
+INFORMACIO,station_information,name[].text,,,,,,,,data.stations[].name[].text,100.00,string:493655,0.00,,,543,
+INFORMACIO,station_information,rental_methods,,,,,,,,data.stations[].rental_methods,100.00,array:98731,0.00,,,,
+INFORMACIO,station_information,rental_methods[],,,,,,,,data.stations[].rental_methods[],,string:394924,0.00,,,4,"[""creditcard"", ""key"", ""phone"", ""transitcard""]"
+INFORMACIO,station_information,short_name[],,,,,,,,data.stations[].short_name[],,object:493655,0.00,,,,
+INFORMACIO,station_information,short_name[].language,,,,,,,,data.stations[].short_name[].language,100.00,string:493655,0.00,,,5,"[""ca"", ""en"", ""es"", ""fr"", ""nl""]"
+INFORMACIO,station_information,short_name[].text,,,,,,,,data.stations[].short_name[].text,100.00,string:493655,0.00,,,543,
+INFORMACIO,station_information,vehicle_docks_capacity,,,,,,,,data.stations[].vehicle_docks_capacity,100.00,array:98731,0.00,,,,
+INFORMACIO,station_information,vehicle_docks_capacity[],,,,,,,,data.stations[].vehicle_docks_capacity[],,object:98731,0.00,,,,
+INFORMACIO,station_information,vehicle_docks_capacity[].count,,,,,,,,data.stations[].vehicle_docks_capacity[].count,100.00,integer:98731,0.00,0,54,39,
+INFORMACIO,station_information,vehicle_docks_capacity[].vehicle_type_ids,,,,,,,,data.stations[].vehicle_docks_capacity[].vehicle_type_ids,100.00,array:98731,0.00,,,,
+INFORMACIO,station_information,vehicle_docks_capacity[].vehicle_type_ids[],,,,,,,,data.stations[].vehicle_docks_capacity[].vehicle_type_ids[],,string:888579,0.00,,,9,"[""ASTRO"", ""BOOST"", ""CHLOE"", ""COSMO"", ""EFIT"", ""FIT"", ""ICONIC"", ""METRO"", ""METRO_CONNECTED""]"
+INFORMACIO,station_information,vehicle_types_capacity,,,,,,,,data.stations[].vehicle_types_capacity,100.00,array:98731,0.00,,,,
+INFORMACIO,station_information,version,,,,,,,,version,100.00,string:182,0.00,,,1,"[""3.0""]"

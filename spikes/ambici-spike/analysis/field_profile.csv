@@ -1,0 +1,152 @@
+feed,path,parent_path,parent_occurrences,occurrences,types,present_pct,null_pct,min,max,timestamp,timestamp_unparseable,distinct_count,distinct_values
+free_bike_status,data,(root),2709,2709,object:2709,100.00,0.00,,,,,,
+free_bike_status,data.bikes,data,2709,2709,array:2709,100.00,0.00,,,,,,
+free_bike_status,data.bikes[],(list items),5654036,5654036,object:5654036,,0.00,,,,,,
+free_bike_status,data.bikes[].bike_id,data.bikes[],5654036,5654036,string:5654036,100.00,0.00,,,,,12065,
+free_bike_status,data.bikes[].current_fuel_percent,data.bikes[],5654036,5615056,integer:2593111; number:3021945,99.31,0.00,0.02,1,,,95,
+free_bike_status,data.bikes[].current_range_meters,data.bikes[],5654036,5651400,integer:5651400,99.95,0.00,0,60000,,,61,
+free_bike_status,data.bikes[].is_disabled,data.bikes[],5654036,5654036,boolean:5654036,100.00,0.00,,,,,1,[false]
+free_bike_status,data.bikes[].is_reserved,data.bikes[],5654036,5654036,boolean:5654036,100.00,0.00,,,,,2,"[false, true]"
+free_bike_status,data.bikes[].lat,data.bikes[],5654036,5654036,number:5654036,100.00,0.00,41.265438,41.482205,,,236,
+free_bike_status,data.bikes[].lon,data.bikes[],5654036,5654036,number:5654036,100.00,0.00,1.943849,2.267271,,,237,
+free_bike_status,data.bikes[].pricing_plan_id,data.bikes[],5654036,5654036,string:5654036,100.00,0.00,,,,,1,"[""Rate0010""]"
+free_bike_status,data.bikes[].rental_uris,data.bikes[],5654036,5654036,object:5654036,100.00,0.00,,,,,,
+free_bike_status,data.bikes[].rental_uris.android,data.bikes[].rental_uris,5654036,5654036,string:5654036,100.00,0.00,,,,,237,
+free_bike_status,data.bikes[].rental_uris.ios,data.bikes[].rental_uris,5654036,5654036,string:5654036,100.00,0.00,,,,,237,
+free_bike_status,data.bikes[].rental_uris.web,data.bikes[].rental_uris,5654036,5654036,string:5654036,100.00,0.00,,,,,237,
+free_bike_status,data.bikes[].station_id,data.bikes[],5654036,5654036,string:5654036,100.00,0.00,,,,,237,
+free_bike_status,data.bikes[].vehicle_type_id,data.bikes[],5654036,5654036,string:5654036,100.00,0.00,,,,,2,"[""196"", ""204""]"
+free_bike_status,last_updated,(root),2709,2709,integer:2709,100.00,0.00,2026-10-03T17:10:21.000Z,2026-10-05T14:25:35.000Z,yes,0,2679,
+free_bike_status,ttl,(root),2709,2709,integer:2709,100.00,0.00,60,60,,,1,[60]
+free_bike_status,version,(root),2709,2709,string:2709,100.00,0.00,,,,,1,"[""2.3""]"
+gbfs,data,(root),181,181,object:181,100.00,0.00,,,,,,
+gbfs,data.ca,data,181,181,object:181,100.00,0.00,,,,,,
+gbfs,data.ca.feeds,data.ca,181,181,array:181,100.00,0.00,,,,,,
+gbfs,data.ca.feeds[],(list items),1629,1629,object:1629,,0.00,,,,,,
+gbfs,data.ca.feeds[].name,data.ca.feeds[],1629,1629,string:1629,100.00,0.00,,,,,9,"[""free_bike_status"", ""geofencing_zones"", ""station_information"", ""station_status"", ""system_hours"", ""system_information"", ""system_pricing_plans"", ""system_regions"", ""vehicle_types""]"
+gbfs,data.ca.feeds[].url,data.ca.feeds[],1629,1629,string:1629,100.00,0.00,,,,,9,"[""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/free_bike_status.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/geofencing_zones.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/station_information.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/station_status.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/system_hours.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/system_information.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/system_pricing_plans.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/system_regions.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/vehicle_types.json""]"
+gbfs,data.en,data,181,181,object:181,100.00,0.00,,,,,,
+gbfs,data.en.feeds,data.en,181,181,array:181,100.00,0.00,,,,,,
+gbfs,data.en.feeds[],(list items),1629,1629,object:1629,,0.00,,,,,,
+gbfs,data.en.feeds[].name,data.en.feeds[],1629,1629,string:1629,100.00,0.00,,,,,9,"[""free_bike_status"", ""geofencing_zones"", ""station_information"", ""station_status"", ""system_hours"", ""system_information"", ""system_pricing_plans"", ""system_regions"", ""vehicle_types""]"
+gbfs,data.en.feeds[].url,data.en.feeds[],1629,1629,string:1629,100.00,0.00,,,,,9,"[""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/free_bike_status.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/geofencing_zones.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/station_information.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/station_status.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_hours.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_information.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_pricing_plans.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_regions.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/vehicle_types.json""]"
+gbfs,data.es,data,181,181,object:181,100.00,0.00,,,,,,
+gbfs,data.es.feeds,data.es,181,181,array:181,100.00,0.00,,,,,,
+gbfs,data.es.feeds[],(list items),1629,1629,object:1629,,0.00,,,,,,
+gbfs,data.es.feeds[].name,data.es.feeds[],1629,1629,string:1629,100.00,0.00,,,,,9,"[""free_bike_status"", ""geofencing_zones"", ""station_information"", ""station_status"", ""system_hours"", ""system_information"", ""system_pricing_plans"", ""system_regions"", ""vehicle_types""]"
+gbfs,data.es.feeds[].url,data.es.feeds[],1629,1629,string:1629,100.00,0.00,,,,,9,"[""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/free_bike_status.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/geofencing_zones.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/station_information.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/station_status.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/system_hours.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/system_information.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/system_pricing_plans.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/system_regions.json"", ""https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/vehicle_types.json""]"
+gbfs,last_updated,(root),181,181,integer:181,100.00,0.00,2026-10-03T17:14:25.000Z,2026-10-05T14:14:23.000Z,yes,0,181,
+gbfs,ttl,(root),181,181,integer:181,100.00,0.00,60,60,,,1,[60]
+gbfs,version,(root),181,181,string:181,100.00,0.00,,,,,1,"[""2.3""]"
+geofencing_zones,data,(root),181,181,object:181,100.00,0.00,,,,,,
+geofencing_zones,data.geofencing_zones,data,181,181,object:181,100.00,0.00,,,,,,
+geofencing_zones,data.geofencing_zones.features,data.geofencing_zones,181,181,array:181,100.00,0.00,,,,,,
+geofencing_zones,data.geofencing_zones.type,data.geofencing_zones,181,181,string:181,100.00,0.00,,,,,1,"[""FeatureCollection""]"
+geofencing_zones,last_updated,(root),181,181,integer:181,100.00,0.00,2026-10-03T17:14:25.000Z,2026-10-05T14:14:23.000Z,yes,0,181,
+geofencing_zones,ttl,(root),181,181,integer:181,100.00,0.00,86400,86400,,,1,[86400]
+geofencing_zones,version,(root),181,181,string:181,100.00,0.00,,,,,1,"[""2.3""]"
+station_information,data,(root),181,181,object:181,100.00,0.00,,,,,,
+station_information,data.stations,data,181,181,array:181,100.00,0.00,,,,,,
+station_information,data.stations[],(list items),42897,42897,object:42897,,0.00,,,,,,
+station_information,data.stations[].capacity,data.stations[],42897,42897,integer:42897,100.00,0.00,12,28,,,14,"[12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24, 26, 27, 28]"
+station_information,data.stations[].is_virtual_station,data.stations[],42897,42897,boolean:42897,100.00,0.00,,,,,1,[false]
+station_information,data.stations[].lat,data.stations[],42897,42897,number:42897,100.00,0.00,41.265438,41.482205,,,236,
+station_information,data.stations[].lon,data.stations[],42897,42897,number:42897,100.00,0.00,1.943849,2.267271,,,237,
+station_information,data.stations[].name,data.stations[],42897,42897,string:42897,100.00,0.00,,,,,235,
+station_information,data.stations[].region_id,data.stations[],42897,42897,string:42897,100.00,0.00,,,,,16,"[""833"", ""840"", ""841"", ""842"", ""843"", ""844"", ""845"", ""846"", ""847"", ""848"", ""849"", ""850"", ""851"", ""852"", ""853"", ""856""]"
+station_information,data.stations[].rental_uris,data.stations[],42897,42897,object:42897,100.00,0.00,,,,,,
+station_information,data.stations[].rental_uris.android,data.stations[].rental_uris,42897,42897,string:42897,100.00,0.00,,,,,237,
+station_information,data.stations[].rental_uris.ios,data.stations[].rental_uris,42897,42897,string:42897,100.00,0.00,,,,,237,
+station_information,data.stations[].rental_uris.web,data.stations[].rental_uris,42897,42897,string:42897,100.00,0.00,,,,,237,
+station_information,data.stations[].short_name,data.stations[],42897,42897,string:42897,100.00,0.00,,,,,237,
+station_information,data.stations[].station_id,data.stations[],42897,42897,string:42897,100.00,0.00,,,,,237,
+station_information,last_updated,(root),181,181,integer:181,100.00,0.00,2026-10-03T17:14:26.000Z,2026-10-05T14:14:23.000Z,yes,0,181,
+station_information,ttl,(root),181,181,integer:181,100.00,0.00,60,60,,,1,[60]
+station_information,version,(root),181,181,string:181,100.00,0.00,,,,,1,"[""2.3""]"
+station_status,data,(root),2710,2710,object:2710,100.00,0.00,,,,,,
+station_status,data.stations,data,2710,2710,array:2710,100.00,0.00,,,,,,
+station_status,data.stations[],(list items),642270,642270,object:642270,,0.00,,,,,,
+station_status,data.stations[].is_installed,data.stations[],642270,642270,boolean:642270,100.00,0.00,,,,,1,[true]
+station_status,data.stations[].is_renting,data.stations[],642270,642270,boolean:642270,100.00,0.00,,,,,2,"[false, true]"
+station_status,data.stations[].is_returning,data.stations[],642270,642270,boolean:642270,100.00,0.00,,,,,2,"[false, true]"
+station_status,data.stations[].last_reported,data.stations[],642270,642270,integer:642270,100.00,0.00,2026-10-03T17:10:21.000Z,2026-10-05T14:25:35.000Z,yes,0,2676,
+station_status,data.stations[].num_bikes_available,data.stations[],642270,642270,integer:642270,100.00,0.00,0,35,,,36,
+station_status,data.stations[].num_docks_available,data.stations[],642270,642270,integer:642270,100.00,0.00,0,27,,,28,
+station_status,data.stations[].station_id,data.stations[],642270,642270,string:642270,100.00,0.00,,,,,237,
+station_status,data.stations[].vehicle_types_available,data.stations[],642270,642270,array:642270,100.00,0.00,,,,,,
+station_status,data.stations[].vehicle_types_available[],(list items),630154,630154,object:630154,,0.00,,,,,,
+station_status,data.stations[].vehicle_types_available[].count,data.stations[].vehicle_types_available[],630154,630154,integer:630154,100.00,0.00,1,35,,,35,
+station_status,data.stations[].vehicle_types_available[].vehicle_type_id,data.stations[].vehicle_types_available[],630154,630154,string:630154,100.00,0.00,,,,,2,"[""196"", ""204""]"
+station_status,last_updated,(root),2710,2710,integer:2710,100.00,0.00,2026-10-03T17:10:21.000Z,2026-10-05T14:25:35.000Z,yes,0,2673,
+station_status,ttl,(root),2710,2710,integer:2710,100.00,0.00,60,60,,,1,[60]
+station_status,version,(root),2710,2710,string:2710,100.00,0.00,,,,,1,"[""2.3""]"
+system_hours,data,(root),181,181,object:181,100.00,0.00,,,,,,
+system_hours,data.rental_hours,data,181,181,array:181,100.00,0.00,,,,,,
+system_hours,data.rental_hours[],(list items),313,313,object:313,,0.00,,,,,,
+system_hours,data.rental_hours[].days,data.rental_hours[],313,313,array:313,100.00,0.00,,,,,,
+system_hours,data.rental_hours[].days[],(list items),2191,2191,string:2191,,0.00,,,,,7,"[""fri"", ""mon"", ""sat"", ""sun"", ""thu"", ""tue"", ""wed""]"
+system_hours,data.rental_hours[].end_time,data.rental_hours[],313,313,string:313,100.00,0.00,,,,,3,"[""02:00:00"", ""22:30:00"", ""23:59:00""]"
+system_hours,data.rental_hours[].start_time,data.rental_hours[],313,313,string:313,100.00,0.00,,,,,3,"[""00:00:00"", ""05:00:00"", ""14:00:00""]"
+system_hours,data.rental_hours[].user_types,data.rental_hours[],313,313,array:313,100.00,0.00,,,,,,
+system_hours,data.rental_hours[].user_types[],(list items),626,626,string:626,,0.00,,,,,2,"[""member"", ""nonmember""]"
+system_hours,last_updated,(root),181,181,integer:181,100.00,0.00,2026-10-03T17:14:25.000Z,2026-10-05T14:14:23.000Z,yes,0,181,
+system_hours,ttl,(root),181,181,integer:181,100.00,0.00,60,60,,,1,[60]
+system_hours,version,(root),181,181,string:181,100.00,0.00,,,,,1,"[""2.3""]"
+system_information,data,(root),181,181,object:181,100.00,0.00,,,,,,
+system_information,data.email,data,181,181,string:181,100.00,0.00,,,,,1,"[""info@ambici.cat""]"
+system_information,data.feed_contact_email,data,181,181,string:181,100.00,0.00,,,,,1,"[""gbfs@nextbike.net""]"
+system_information,data.language,data,181,181,string:181,100.00,0.00,,,,,1,"[""en""]"
+system_information,data.license_id,data,181,181,string:181,100.00,0.00,,,,,1,"[""CC0-1.0""]"
+system_information,data.name,data,181,181,string:181,100.00,0.00,,,,,1,"[""AMBici""]"
+system_information,data.operator,data,181,181,string:181,100.00,0.00,,,,,1,"[""TIER Mobility SE, Karl-Heine-Str. 46, 04229 Leipzig, Germany""]"
+system_information,data.phone_number,data,181,181,string:181,100.00,0.00,,,,,1,"[""+34 900 747 152""]"
+system_information,data.rental_apps,data,181,181,object:181,100.00,0.00,,,,,,
+system_information,data.rental_apps.android,data.rental_apps,181,181,object:181,100.00,0.00,,,,,,
+system_information,data.rental_apps.android.discovery_uri,data.rental_apps.android,181,181,string:181,100.00,0.00,,,,,1,"[""ambici://""]"
+system_information,data.rental_apps.android.store_uri,data.rental_apps.android,181,181,string:181,100.00,0.00,,,,,1,"[""https://play.google.com/store/apps/details?id=net.nextbike.ambici""]"
+system_information,data.rental_apps.android.x_app_link_host,data.rental_apps.android,181,181,string:181,100.00,0.00,,,,,1,"[""ambici.nextbike.app""]"
+system_information,data.rental_apps.ios,data.rental_apps,181,181,object:181,100.00,0.00,,,,,,
+system_information,data.rental_apps.ios.discovery_uri,data.rental_apps.ios,181,181,string:181,100.00,0.00,,,,,1,"[""ambici://""]"
+system_information,data.rental_apps.ios.store_uri,data.rental_apps.ios,181,181,string:181,100.00,0.00,,,,,1,"[""https://apps.apple.com/app/id1640231653""]"
+system_information,data.rental_apps.ios.x_universal_link_host,data.rental_apps.ios,181,181,string:181,100.00,0.00,,,,,1,"[""ambici.nextbike.app""]"
+system_information,data.system_id,data,181,181,string:181,100.00,0.00,,,,,1,"[""nextbike_bs""]"
+system_information,data.timezone,data,181,181,string:181,100.00,0.00,,,,,1,"[""Europe/Berlin""]"
+system_information,data.url,data,181,181,string:181,100.00,0.00,,,,,1,"[""https://www.ambici.cat/""]"
+system_information,last_updated,(root),181,181,integer:181,100.00,0.00,2026-10-03T17:14:25.000Z,2026-10-05T14:14:23.000Z,yes,0,181,
+system_information,ttl,(root),181,181,integer:181,100.00,0.00,60,60,,,1,[60]
+system_information,version,(root),181,181,string:181,100.00,0.00,,,,,1,"[""2.3""]"
+system_pricing_plans,data,(root),181,181,object:181,100.00,0.00,,,,,,
+system_pricing_plans,data.plans,data,181,181,array:181,100.00,0.00,,,,,,
+system_pricing_plans,data.plans[],(list items),181,181,object:181,,0.00,,,,,,
+system_pricing_plans,data.plans[].currency,data.plans[],181,181,string:181,100.00,0.00,,,,,1,"[""EUR""]"
+system_pricing_plans,data.plans[].description,data.plans[],181,181,string:181,100.00,0.00,,,,,1,"[""Free/Frei""]"
+system_pricing_plans,data.plans[].is_taxable,data.plans[],181,181,boolean:181,100.00,0.00,,,,,1,[false]
+system_pricing_plans,data.plans[].name,data.plans[],181,181,string:181,100.00,0.00,,,,,1,"[""Free/Frei""]"
+system_pricing_plans,data.plans[].per_min_pricing,data.plans[],181,181,array:181,100.00,0.00,,,,,,
+system_pricing_plans,data.plans[].plan_id,data.plans[],181,181,string:181,100.00,0.00,,,,,1,"[""Rate0010""]"
+system_pricing_plans,data.plans[].price,data.plans[],181,181,integer:181,100.00,0.00,0,0,,,1,[0]
+system_pricing_plans,last_updated,(root),181,181,integer:181,100.00,0.00,2026-10-03T17:14:26.000Z,2026-10-05T14:14:23.000Z,yes,0,181,
+system_pricing_plans,ttl,(root),181,181,integer:181,100.00,0.00,86400,86400,,,1,[86400]
+system_pricing_plans,version,(root),181,181,string:181,100.00,0.00,,,,,1,"[""2.3""]"
+system_regions,data,(root),181,181,object:181,100.00,0.00,,,,,,
+system_regions,data.regions,data,181,181,array:181,100.00,0.00,,,,,,
+system_regions,data.regions[],(list items),2896,2896,object:2896,,0.00,,,,,,
+system_regions,data.regions[].name,data.regions[],2896,2896,string:2896,100.00,0.00,,,,,16,"[""AMB"", ""Badalona"", ""Castelldefels"", ""Cornellà de Llobregat"", ""El Prat de Llobregat"", ""Esplugues de Llobregat"", ""Gavà"", ""Hospitalet de Llobregat"", ""Molins de Rei"", ""Sant Adrià de Besòs"", ""Sant Boi de Llobregat"", ""Sant Feliu de Llobregat"", ""Sant Joan Despí"", ""Sant Just Desvern"", ""Santa Coloma de Gramenet"", ""Viladecans""]"
+system_regions,data.regions[].region_id,data.regions[],2896,2896,string:2896,100.00,0.00,,,,,16,"[""833"", ""840"", ""841"", ""842"", ""843"", ""844"", ""845"", ""846"", ""847"", ""848"", ""849"", ""850"", ""851"", ""852"", ""853"", ""856""]"
+system_regions,last_updated,(root),181,181,integer:181,100.00,0.00,2026-10-03T17:14:26.000Z,2026-10-05T14:14:23.000Z,yes,0,181,
+system_regions,ttl,(root),181,181,integer:181,100.00,0.00,60,60,,,1,[60]
+system_regions,version,(root),181,181,string:181,100.00,0.00,,,,,1,"[""2.3""]"
+vehicle_types,data,(root),181,181,object:181,100.00,0.00,,,,,,
+vehicle_types,data.vehicle_types,data,181,181,array:181,100.00,0.00,,,,,,
+vehicle_types,data.vehicle_types[],(list items),543,543,object:543,,0.00,,,,,,
+vehicle_types,data.vehicle_types[]._description,data.vehicle_types[],543,543,string:543,100.00,0.00,,,,,3,"[""- SWAP3 frame with swappable battery BAFANG 540 Wh\r\n - steel fork\r\n - plastic basket with ad panel and solar\r\n - free wheel, rollerbrake back and front\r\n - TANNUS puncture protection\r\n - cockpit with phone holder and display\r\n - BSIOT \r\n - Brake Block"", ""- e-eco B frame with FrameLock\r\n- aluminum basket with ad panel\r\n- e-CFC fork with charging contact and RFID chip\r\n- Rollerbrake back and front\r\n- RFID Reader \r\n"", ""SMARTbike 2.0 with labeling\r\n\r\n- eco frame with coverd Framelock +\r\n - analog fork with forkadapter and RFID chip\r\n - aluminum solar basket with ad panel\r\n - freewheel with rollerbrake back and front""]"
+vehicle_types,data.vehicle_types[].form_factor,data.vehicle_types[],543,543,string:543,100.00,0.00,,,,,1,"[""bicycle""]"
+vehicle_types,data.vehicle_types[].max_range_meters,data.vehicle_types[],543,362,integer:362,66.67,0.00,60000,60000,,,1,[60000]
+vehicle_types,data.vehicle_types[].name,data.vehicle_types[],543,543,string:543,100.00,0.00,,,,,2,"[""Classic Bike"", ""E-Bike""]"
+vehicle_types,data.vehicle_types[].propulsion_type,data.vehicle_types[],543,543,string:543,100.00,0.00,,,,,2,"[""electric_assist"", ""human""]"
+vehicle_types,data.vehicle_types[].rider_capacity,data.vehicle_types[],543,543,integer:543,100.00,0.00,1,1,,,1,[1]
+vehicle_types,data.vehicle_types[].vehicle_image,data.vehicle_types[],543,543,string:543,100.00,0.00,,,,,3,"[""https://static.nextbike.net/app/biketypes-v5/type/bs/196/h500.png"", ""https://static.nextbike.net/app/biketypes-v5/type/bs/204/h500.png"", ""https://static.nextbike.net/app/biketypes-v5/type/bs/420/h500.png""]"
+vehicle_types,data.vehicle_types[].vehicle_type_id,data.vehicle_types[],543,543,string:543,100.00,0.00,,,,,3,"[""196"", ""204"", ""420""]"
+vehicle_types,last_updated,(root),181,181,integer:181,100.00,0.00,2026-10-03T17:14:26.000Z,2026-10-05T14:14:23.000Z,yes,0,181,
+vehicle_types,ttl,(root),181,181,integer:181,100.00,0.00,60,60,,,1,[60]
+vehicle_types,version,(root),181,181,string:181,100.00,0.00,,,,,1,"[""2.3""]"

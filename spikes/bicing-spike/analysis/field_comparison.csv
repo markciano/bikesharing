@@ -1,0 +1,83 @@
+feed,path,ambici_present,ambici_types,ambici_present_pct,ambici_null_pct,ambici_min,ambici_max,ambici_distinct,ambici_violations_1f,bicing_present,bicing_types,bicing_present_pct,bicing_null_pct,bicing_min,bicing_max,bicing_distinct,bicing_violations_1f
+station_information,data,yes,object:181,100.00,0.00,,,,0,yes,object:182,100.00,0.00,,,,0
+station_information,data.stations,yes,array:181,100.00,0.00,,,,0,yes,array:182,100.00,0.00,,,,0
+station_information,data.stations[],yes,object:42897,,0.00,,,,0,yes,object:98731,,0.00,,,,0
+station_information,data.stations[].address,no,,,,,,,,yes,string:98731,100.00,0.00,,,543 distinct,0
+station_information,data.stations[].capacity,yes,integer:42897,100.00,0.00,12,28,"[12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24, 26, 27, 28]",0,yes,integer:98731,100.00,0.00,0,54,39 distinct,0
+station_information,data.stations[].cross_street,no,,,,,,,,yes,string:98731,100.00,0.00,,,71 distinct,0
+station_information,data.stations[].external_id,no,,,,,,,,yes,string:98731,100.00,0.00,,,543 distinct,0
+station_information,data.stations[].is_charging_station,no,,,,,,,,yes,boolean:98731,100.00,0.00,,,[true],0
+station_information,data.stations[].is_virtual_station,yes,boolean:42897,100.00,0.00,,,[false],0,yes,boolean:98731,100.00,0.00,,,[false],0
+station_information,data.stations[].lat,yes,number:42897,100.00,0.00,41.265438,41.482205,236 distinct,0,yes,number:98731,100.00,0.00,41.3467746,41.462095,542 distinct,0
+station_information,data.stations[].lon,yes,number:42897,100.00,0.00,1.943849,2.267271,237 distinct,0,yes,number:98731,100.00,0.00,2.1091535,2.2206913,543 distinct,0
+station_information,data.stations[].name,yes,string:42897,100.00,0.00,,,235 distinct,0,yes,array:98731,100.00,0.00,,,,0
+station_information,data.stations[].name[],no,,,,,,,,yes,object:493655,,0.00,,,,0
+station_information,data.stations[].name[].language,no,,,,,,,,yes,string:493655,100.00,0.00,,,"[""ca"", ""en"", ""es"", ""fr"", ""nl""]",0
+station_information,data.stations[].name[].text,no,,,,,,,,yes,string:493655,100.00,0.00,,,543 distinct,0
+station_information,data.stations[].post_code,no,,,,,,,,yes,string:98367,99.63,0.00,,,44 distinct,0
+station_information,data.stations[].region_id,yes,string:42897,100.00,0.00,,,"[""833"", ""840"", ""841"", ""842"", ""843"", ""844"", ""845"", ""846"", ""847"", ""848"", ""849"", ""850"", ""851"", ""852"", ""853"", ""856""]",0,no,,,,,,,
+station_information,data.stations[].rental_methods,no,,,,,,,,yes,array:98731,100.00,0.00,,,,0
+station_information,data.stations[].rental_methods[],no,,,,,,,,yes,string:394924,,0.00,,,"[""creditcard"", ""key"", ""phone"", ""transitcard""]",0
+station_information,data.stations[].rental_uris,yes,object:42897,100.00,0.00,,,,0,yes,object:98731,100.00,0.00,,,,0
+station_information,data.stations[].rental_uris.android,yes,string:42897,100.00,0.00,,,237 distinct,0,no,,,,,,,
+station_information,data.stations[].rental_uris.ios,yes,string:42897,100.00,0.00,,,237 distinct,0,no,,,,,,,
+station_information,data.stations[].rental_uris.web,yes,string:42897,100.00,0.00,,,237 distinct,0,no,,,,,,,
+station_information,data.stations[].short_name,yes,string:42897,100.00,0.00,,,237 distinct,0,yes,array:98731,100.00,0.00,,,,0
+station_information,data.stations[].short_name[],no,,,,,,,,yes,object:493655,,0.00,,,,0
+station_information,data.stations[].short_name[].language,no,,,,,,,,yes,string:493655,100.00,0.00,,,"[""ca"", ""en"", ""es"", ""fr"", ""nl""]",0
+station_information,data.stations[].short_name[].text,no,,,,,,,,yes,string:493655,100.00,0.00,,,543 distinct,0
+station_information,data.stations[].station_id,yes,string:42897,100.00,0.00,,,237 distinct,0,yes,string:98731,100.00,0.00,,,543 distinct,0
+station_information,data.stations[].vehicle_docks_capacity,no,,,,,,,,yes,array:98731,100.00,0.00,,,,0
+station_information,data.stations[].vehicle_docks_capacity[],no,,,,,,,,yes,object:98731,,0.00,,,,0
+station_information,data.stations[].vehicle_docks_capacity[].count,no,,,,,,,,yes,integer:98731,100.00,0.00,0,54,39 distinct,0
+station_information,data.stations[].vehicle_docks_capacity[].vehicle_type_ids,no,,,,,,,,yes,array:98731,100.00,0.00,,,,0
+station_information,data.stations[].vehicle_docks_capacity[].vehicle_type_ids[],no,,,,,,,,yes,string:888579,,0.00,,,"[""ASTRO"", ""BOOST"", ""CHLOE"", ""COSMO"", ""EFIT"", ""FIT"", ""ICONIC"", ""METRO"", ""METRO_CONNECTED""]",0
+station_information,data.stations[].vehicle_types_capacity,no,,,,,,,,yes,array:98731,100.00,0.00,,,,0
+station_information,last_updated,yes,integer:181,100.00,0.00,2026-10-03T17:14:26.000Z,2026-10-05T14:14:23.000Z,181 distinct,0,yes,string:182,100.00,0.00,2026-10-03T17:11:00.000Z,2026-10-05T14:15:01.000Z,182 distinct,0
+station_information,ttl,yes,integer:181,100.00,0.00,60,60,[60],0,yes,integer:182,100.00,0.00,0,0,[0],0
+station_information,version,yes,string:181,100.00,0.00,,,"[""2.3""]",0,yes,string:182,100.00,0.00,,,"[""3.0""]",0
+station_status,data,yes,object:2710,100.00,0.00,,,,0,yes,object:2710,100.00,0.00,,,,0
+station_status,data.stations,yes,array:2710,100.00,0.00,,,,0,yes,array:2710,100.00,0.00,,,,0
+station_status,data.stations[],yes,object:642270,,0.00,,,,0,yes,object:1470126,,0.00,,,,0
+station_status,data.stations[].is_installed,yes,boolean:642270,100.00,0.00,,,[true],0,yes,boolean:1470126,100.00,0.00,,,"[false, true]",0
+station_status,data.stations[].is_renting,yes,boolean:642270,100.00,0.00,,,"[false, true]",0,yes,boolean:1470126,100.00,0.00,,,"[false, true]",0
+station_status,data.stations[].is_returning,yes,boolean:642270,100.00,0.00,,,"[false, true]",0,yes,boolean:1470126,100.00,0.00,,,"[false, true]",0
+station_status,data.stations[].last_reported,yes,integer:642270,100.00,0.00,2026-10-03T17:10:21.000Z,2026-10-05T14:25:35.000Z,2676 distinct,0,yes,string:1470126,100.00,0.00,2025-06-12T08:54:16.043Z,2026-10-05T14:25:56.649Z,457632 distinct,0
+station_status,data.stations[].num_bikes_available,yes,integer:642270,100.00,0.00,0,35,36 distinct,0,no,,,,,,,
+station_status,data.stations[].num_docks_available,yes,integer:642270,100.00,0.00,0,27,28 distinct,0,yes,integer:1470126,100.00,0.00,0,52,53 distinct,0
+station_status,data.stations[].num_docks_disabled,no,,,,,,,,yes,integer:1470126,100.00,0.00,0,40,38 distinct,0
+station_status,data.stations[].num_vehicles_available,no,,,,,,,,yes,integer:1470126,100.00,0.00,0,47,48 distinct,0
+station_status,data.stations[].num_vehicles_disabled,no,,,,,,,,yes,integer:1470126,100.00,0.00,0,23,24 distinct,0
+station_status,data.stations[].station_id,yes,string:642270,100.00,0.00,,,237 distinct,0,yes,string:1470126,100.00,0.00,,,543 distinct,0
+station_status,data.stations[].vehicle_docks_available,no,,,,,,,,yes,array:1470126,100.00,0.00,,,,0
+station_status,data.stations[].vehicle_docks_available[],no,,,,,,,,yes,object:1470126,,0.00,,,,0
+station_status,data.stations[].vehicle_docks_available[].count,no,,,,,,,,yes,integer:1470126,100.00,0.00,0,52,53 distinct,0
+station_status,data.stations[].vehicle_docks_available[].vehicle_type_ids,no,,,,,,,,yes,array:1470126,100.00,0.00,,,,0
+station_status,data.stations[].vehicle_docks_available[].vehicle_type_ids[],no,,,,,,,,yes,string:5880504,,0.00,,,"[""BOOST"", ""EFIT"", ""FIT"", ""ICONIC""]",0
+station_status,data.stations[].vehicle_types_available,yes,array:642270,100.00,0.00,,,,0,yes,array:1470126,100.00,0.00,,,,0
+station_status,data.stations[].vehicle_types_available[],yes,object:630154,,0.00,,,,0,yes,object:5880504,,0.00,,,,0
+station_status,data.stations[].vehicle_types_available[].count,yes,integer:630154,100.00,0.00,1,35,35 distinct,0,yes,integer:5880504,100.00,0.00,0,44,45 distinct,0
+station_status,data.stations[].vehicle_types_available[].vehicle_type_id,yes,string:630154,100.00,0.00,,,"[""196"", ""204""]",0,yes,string:5880504,100.00,0.00,,,"[""BOOST"", ""EFIT"", ""FIT"", ""ICONIC""]",0
+station_status,last_updated,yes,integer:2710,100.00,0.00,2026-10-03T17:10:21.000Z,2026-10-05T14:25:35.000Z,2673 distinct,0,yes,string:2710,100.00,0.00,2026-10-03T17:11:00.000Z,2026-10-05T14:26:00.000Z,2710 distinct,0
+station_status,ttl,yes,integer:2710,100.00,0.00,60,60,[60],0,yes,integer:2710,100.00,0.00,0,0,[0],0
+station_status,version,yes,string:2710,100.00,0.00,,,"[""2.3""]",0,yes,string:2710,100.00,0.00,,,"[""3.0""]",0
+vehicle_types,data,yes,object:181,100.00,0.00,,,,0,yes,object:182,100.00,0.00,,,,0
+vehicle_types,data.vehicle_types,yes,array:181,100.00,0.00,,,,0,yes,array:182,100.00,0.00,,,,0
+vehicle_types,data.vehicle_types[],yes,object:543,,0.00,,,,0,yes,object:1638,,0.00,,,,0
+vehicle_types,data.vehicle_types[]._description,yes,string:543,100.00,0.00,,,"[""- SWAP3 frame with swappable battery BAFANG 540 Wh\r\n - steel fork\r\n - plastic basket with ad panel and solar\r\n - free wheel, rollerbrake back and front\r\n - TANNUS puncture protection\r\n - cockpit with phone holder and display\r\n - BSIOT \r\n - Brake Block"", ""- e-eco B frame with FrameLock\r\n- aluminum basket with ad panel\r\n- e-CFC fork with charging contact and RFID chip\r\n- Rollerbrake back and front\r\n- RFID Reader \r\n"", ""SMARTbike 2.0 with labeling\r\n\r\n- eco frame with coverd Framelock +\r\n - analog fork with forkadapter and RFID chip\r\n - aluminum solar basket with ad panel\r\n - freewheel with rollerbrake back and front""]",0,no,,,,,,,
+vehicle_types,data.vehicle_types[].default_pricing_plan_id,no,,,,,,,,yes,string:1638,100.00,0.00,,,"["""", ""1-4"", ""8-4""]",0
+vehicle_types,data.vehicle_types[].form_factor,yes,string:543,100.00,0.00,,,"[""bicycle""]",0,yes,string:1638,100.00,0.00,,,"[""bicycle"", ""scooter_standing""]",0
+vehicle_types,data.vehicle_types[].max_range_meters,yes,integer:362,66.67,0.00,60000,60000,[60000],0,yes,number:1638,100.00,0.00,0.0,70000.0,"[0.0, 60000.0, 70000.0]",0
+vehicle_types,data.vehicle_types[].name,yes,string:543,100.00,0.00,,,"[""Classic Bike"", ""E-Bike""]",0,yes,array:1638,100.00,0.00,,,,0
+vehicle_types,data.vehicle_types[].name[],no,,,,,,,,yes,object:8190,,0.00,,,,0
+vehicle_types,data.vehicle_types[].name[].language,no,,,,,,,,yes,string:8190,100.00,0.00,,,"[""ca"", ""en"", ""es"", ""fr"", ""nl""]",0
+vehicle_types,data.vehicle_types[].name[].text,no,,,,,,,,yes,string:8190,100.00,0.00,,,"[""ASTRO"", ""BOOST"", ""CHLOE"", ""COSMO"", ""EFIT"", ""FIT"", ""ICONIC"", ""METRO"", ""METRO_CONNECTED""]",0
+vehicle_types,data.vehicle_types[].pricing_plan_ids,no,,,,,,,,yes,array:1456,88.89,0.00,,,,0
+vehicle_types,data.vehicle_types[].pricing_plan_ids[],no,,,,,,,,yes,string:24752,,0.00,,,"[""1-4"", ""1-5"", ""11-4"", ""11-5"", ""12-2"", ""12-3"", ""13-1"", ""13-4"", ""13-5"", ""14-1"", ""14-2"", ""14-3"", ""2-2"", ""2-3"", ""6-2"", ""6-3"", ""8-4"", ""8-5"", ""9-2"", ""9-3""]",0
+vehicle_types,data.vehicle_types[].propulsion_type,yes,string:543,100.00,0.00,,,"[""electric_assist"", ""human""]",0,yes,string:1638,100.00,0.00,,,"[""electric"", ""electric_assist"", ""human""]",0
+vehicle_types,data.vehicle_types[].rider_capacity,yes,integer:543,100.00,0.00,1,1,[1],0,no,,,,,,,
+vehicle_types,data.vehicle_types[].vehicle_image,yes,string:543,100.00,0.00,,,"[""https://static.nextbike.net/app/biketypes-v5/type/bs/196/h500.png"", ""https://static.nextbike.net/app/biketypes-v5/type/bs/204/h500.png"", ""https://static.nextbike.net/app/biketypes-v5/type/bs/420/h500.png""]",0,no,,,,,,,
+vehicle_types,data.vehicle_types[].vehicle_type_id,yes,string:543,100.00,0.00,,,"[""196"", ""204"", ""420""]",0,yes,string:1638,100.00,0.00,,,"[""ASTRO"", ""BOOST"", ""CHLOE"", ""COSMO"", ""EFIT"", ""FIT"", ""ICONIC"", ""METRO"", ""METRO_CONNECTED""]",0
+vehicle_types,last_updated,yes,integer:181,100.00,0.00,2026-10-03T17:14:26.000Z,2026-10-05T14:14:23.000Z,181 distinct,0,yes,string:182,100.00,0.00,2026-10-03T17:11:01.000Z,2026-10-05T14:15:02.000Z,182 distinct,0
+vehicle_types,ttl,yes,integer:181,100.00,0.00,60,60,[60],0,yes,integer:182,100.00,0.00,0,0,[0],0
+vehicle_types,version,yes,string:181,100.00,0.00,,,"[""2.3""]",0,yes,string:182,100.00,0.00,,,"[""3.0""]",0

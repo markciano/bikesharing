@@ -1,0 +1,12 @@
+{
+  "name": "capture-v4",
+  "main": "src/V4.js",
+  "compatibility_date": "2026-10-01",
+  "r2_buckets": [
+    { "binding": "BUCKET", "bucket_name": "bikesharing-capture-spike" }
+  ],
+  "triggers": { "crons": ["* * * * *"] },
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
+}

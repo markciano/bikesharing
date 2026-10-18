@@ -1,0 +1,202 @@
+month,series,position,column,change,previous_position,inferred_type,previous_type,type_differs
+2026-02,ESTACIONS,1,station_id,first month,,BIGINT,,
+2026-02,ESTACIONS,2,num_bikes_available,first month,,BIGINT,,
+2026-02,ESTACIONS,3,is_charging_station,first month,,BOOLEAN,,
+2026-02,ESTACIONS,4,status,first month,,VARCHAR,,
+2026-02,ESTACIONS,5,traffic,first month,,VARCHAR,,
+2026-02,ESTACIONS,6,num_bikes_available_types.mechanical,first month,,BIGINT,,
+2026-02,ESTACIONS,7,num_bikes_available_types.ebike,first month,,BIGINT,,
+2026-02,ESTACIONS,8,num_docks_available,first month,,BIGINT,,
+2026-02,ESTACIONS,9,last_reported,first month,,BIGINT,,
+2026-02,ESTACIONS,10,is_installed,first month,,BIGINT,,
+2026-02,ESTACIONS,11,is_renting,first month,,BIGINT,,
+2026-02,ESTACIONS,12,is_returning,first month,,BIGINT,,
+2026-02,ESTACIONS,13,last_updated,first month,,BIGINT,,
+2026-02,ESTACIONS,14,ttl,first month,,BIGINT,,
+2026-03,ESTACIONS,1,station_id,unchanged,1,BIGINT,BIGINT,no
+2026-03,ESTACIONS,2,num_bikes_available,unchanged,2,BIGINT,BIGINT,no
+2026-03,ESTACIONS,3,is_charging_station,unchanged,3,BOOLEAN,BOOLEAN,no
+2026-03,ESTACIONS,4,status,unchanged,4,VARCHAR,VARCHAR,no
+2026-03,ESTACIONS,5,traffic,unchanged,5,VARCHAR,VARCHAR,no
+2026-03,ESTACIONS,6,num_bikes_available_types.mechanical,unchanged,6,BIGINT,BIGINT,no
+2026-03,ESTACIONS,7,num_bikes_available_types.ebike,unchanged,7,BIGINT,BIGINT,no
+2026-03,ESTACIONS,8,num_docks_available,unchanged,8,BIGINT,BIGINT,no
+2026-03,ESTACIONS,9,last_reported,unchanged,9,BIGINT,BIGINT,no
+2026-03,ESTACIONS,10,is_installed,unchanged,10,BIGINT,BIGINT,no
+2026-03,ESTACIONS,11,is_renting,unchanged,11,BIGINT,BIGINT,no
+2026-03,ESTACIONS,12,is_returning,unchanged,12,BIGINT,BIGINT,no
+2026-03,ESTACIONS,13,last_updated,unchanged,13,BIGINT,BIGINT,no
+2026-03,ESTACIONS,14,ttl,unchanged,14,BIGINT,BIGINT,no
+2026-03,ESTACIONS,15,V1,added,,VARCHAR,,
+2026-04,ESTACIONS,1,station_id,unchanged,1,BIGINT,BIGINT,no
+2026-04,ESTACIONS,2,num_bikes_available,unchanged,2,BIGINT,BIGINT,no
+2026-04,ESTACIONS,3,is_charging_station,unchanged,3,BOOLEAN,BOOLEAN,no
+2026-04,ESTACIONS,4,status,unchanged,4,VARCHAR,VARCHAR,no
+2026-04,ESTACIONS,5,traffic,unchanged,5,VARCHAR,VARCHAR,no
+2026-04,ESTACIONS,6,num_bikes_available_types.mechanical,unchanged,6,BIGINT,BIGINT,no
+2026-04,ESTACIONS,7,num_bikes_available_types.ebike,unchanged,7,BIGINT,BIGINT,no
+2026-04,ESTACIONS,8,num_docks_available,unchanged,8,BIGINT,BIGINT,no
+2026-04,ESTACIONS,9,last_reported,unchanged,9,BIGINT,BIGINT,no
+2026-04,ESTACIONS,10,is_installed,unchanged,10,BIGINT,BIGINT,no
+2026-04,ESTACIONS,11,is_renting,unchanged,11,BIGINT,BIGINT,no
+2026-04,ESTACIONS,12,is_returning,unchanged,12,BIGINT,BIGINT,no
+2026-04,ESTACIONS,13,last_updated,unchanged,13,BIGINT,BIGINT,no
+2026-04,ESTACIONS,14,ttl,unchanged,14,BIGINT,BIGINT,no
+2026-04,ESTACIONS,,V1,removed,15,,VARCHAR,
+2026-05,ESTACIONS,1,station_id,unchanged,1,BIGINT,BIGINT,no
+2026-05,ESTACIONS,2,num_bikes_available,unchanged,2,BIGINT,BIGINT,no
+2026-05,ESTACIONS,3,is_charging_station,unchanged,3,BOOLEAN,BOOLEAN,no
+2026-05,ESTACIONS,4,status,unchanged,4,VARCHAR,VARCHAR,no
+2026-05,ESTACIONS,5,traffic,unchanged,5,VARCHAR,VARCHAR,no
+2026-05,ESTACIONS,6,num_bikes_available_types.mechanical,unchanged,6,BIGINT,BIGINT,no
+2026-05,ESTACIONS,7,num_bikes_available_types.ebike,unchanged,7,BIGINT,BIGINT,no
+2026-05,ESTACIONS,8,num_docks_available,unchanged,8,BIGINT,BIGINT,no
+2026-05,ESTACIONS,9,last_reported,unchanged,9,BIGINT,BIGINT,no
+2026-05,ESTACIONS,10,is_installed,unchanged,10,BIGINT,BIGINT,no
+2026-05,ESTACIONS,11,is_renting,unchanged,11,BIGINT,BIGINT,no
+2026-05,ESTACIONS,12,is_returning,unchanged,12,BIGINT,BIGINT,no
+2026-05,ESTACIONS,13,last_updated,unchanged,13,BIGINT,BIGINT,no
+2026-05,ESTACIONS,14,ttl,unchanged,14,BIGINT,BIGINT,no
+2026-06,ESTACIONS,1,station_id,unchanged,1,BIGINT,BIGINT,no
+2026-06,ESTACIONS,2,num_bikes_available,unchanged,2,BIGINT,BIGINT,no
+2026-06,ESTACIONS,3,is_charging_station,unchanged,3,BOOLEAN,BOOLEAN,no
+2026-06,ESTACIONS,4,status,unchanged,4,VARCHAR,VARCHAR,no
+2026-06,ESTACIONS,5,traffic,unchanged,5,VARCHAR,VARCHAR,no
+2026-06,ESTACIONS,6,num_bikes_available_types.mechanical,unchanged,6,BIGINT,BIGINT,no
+2026-06,ESTACIONS,7,num_bikes_available_types.ebike,unchanged,7,BIGINT,BIGINT,no
+2026-06,ESTACIONS,8,num_docks_available,unchanged,8,BIGINT,BIGINT,no
+2026-06,ESTACIONS,9,last_reported,unchanged,9,BIGINT,BIGINT,no
+2026-06,ESTACIONS,10,is_installed,unchanged,10,BIGINT,BIGINT,no
+2026-06,ESTACIONS,11,is_renting,unchanged,11,BIGINT,BIGINT,no
+2026-06,ESTACIONS,12,is_returning,unchanged,12,BIGINT,BIGINT,no
+2026-06,ESTACIONS,13,last_updated,unchanged,13,BIGINT,BIGINT,no
+2026-06,ESTACIONS,14,ttl,unchanged,14,BIGINT,BIGINT,no
+2026-08,ESTACIONS,1,station_id,unchanged,1,BIGINT,BIGINT,no
+2026-08,ESTACIONS,2,num_bikes_available,unchanged,2,BIGINT,BIGINT,no
+2026-08,ESTACIONS,3,is_charging_station,unchanged,3,BOOLEAN,BOOLEAN,no
+2026-08,ESTACIONS,4,status,unchanged,4,VARCHAR,VARCHAR,no
+2026-08,ESTACIONS,5,traffic,unchanged,5,VARCHAR,VARCHAR,no
+2026-08,ESTACIONS,6,num_bikes_available_types.mechanical,unchanged,6,BIGINT,BIGINT,no
+2026-08,ESTACIONS,7,num_bikes_available_types.ebike,unchanged,7,BIGINT,BIGINT,no
+2026-08,ESTACIONS,8,num_docks_available,unchanged,8,BIGINT,BIGINT,no
+2026-08,ESTACIONS,9,last_reported,unchanged,9,BIGINT,BIGINT,no
+2026-08,ESTACIONS,10,is_installed,unchanged,10,BIGINT,BIGINT,no
+2026-08,ESTACIONS,11,is_renting,unchanged,11,BIGINT,BIGINT,no
+2026-08,ESTACIONS,12,is_returning,unchanged,12,BIGINT,BIGINT,no
+2026-08,ESTACIONS,13,last_updated,unchanged,13,BIGINT,BIGINT,no
+2026-08,ESTACIONS,14,ttl,unchanged,14,BIGINT,BIGINT,no
+2026-02,INFORMACIO,1,station_id,first month,,BIGINT,,
+2026-02,INFORMACIO,2,name,first month,,VARCHAR,,
+2026-02,INFORMACIO,3,physical_configuration,first month,,VARCHAR,,
+2026-02,INFORMACIO,4,lat,first month,,DOUBLE,,
+2026-02,INFORMACIO,5,lon,first month,,DOUBLE,,
+2026-02,INFORMACIO,6,altitude,first month,,DOUBLE,,
+2026-02,INFORMACIO,7,address,first month,,VARCHAR,,
+2026-02,INFORMACIO,8,cross_street,first month,,VARCHAR,,
+2026-02,INFORMACIO,9,post_code,first month,,BIGINT,,
+2026-02,INFORMACIO,10,capacity,first month,,BIGINT,,
+2026-02,INFORMACIO,11,is_charging_station,first month,,BOOLEAN,,
+2026-02,INFORMACIO,12,short_name,first month,,BIGINT,,
+2026-02,INFORMACIO,13,nearby_distance,first month,,BIGINT,,
+2026-02,INFORMACIO,14,x_ride_code_support,first month,,BOOLEAN,,
+2026-02,INFORMACIO,15,rental_uris,first month,,VARCHAR,,
+2026-02,INFORMACIO,16,is_valet_station,first month,,BOOLEAN,,
+2026-02,INFORMACIO,17,last_updated,first month,,BIGINT,,
+2026-02,INFORMACIO,18,ttl,first month,,BIGINT,,
+2026-03,INFORMACIO,1,station_id,unchanged,1,BIGINT,BIGINT,no
+2026-03,INFORMACIO,2,name,unchanged,2,VARCHAR,VARCHAR,no
+2026-03,INFORMACIO,3,physical_configuration,unchanged,3,VARCHAR,VARCHAR,no
+2026-03,INFORMACIO,4,lat,unchanged,4,DOUBLE,DOUBLE,no
+2026-03,INFORMACIO,5,lon,unchanged,5,DOUBLE,DOUBLE,no
+2026-03,INFORMACIO,6,altitude,unchanged,6,DOUBLE,DOUBLE,no
+2026-03,INFORMACIO,7,address,unchanged,7,VARCHAR,VARCHAR,no
+2026-03,INFORMACIO,8,cross_street,unchanged,8,VARCHAR,VARCHAR,no
+2026-03,INFORMACIO,9,post_code,unchanged,9,BIGINT,BIGINT,no
+2026-03,INFORMACIO,10,capacity,unchanged,10,BIGINT,BIGINT,no
+2026-03,INFORMACIO,11,is_charging_station,unchanged,11,BOOLEAN,BOOLEAN,no
+2026-03,INFORMACIO,12,short_name,unchanged,12,BIGINT,BIGINT,no
+2026-03,INFORMACIO,13,nearby_distance,unchanged,13,BIGINT,BIGINT,no
+2026-03,INFORMACIO,14,x_ride_code_support,unchanged,14,BOOLEAN,BOOLEAN,no
+2026-03,INFORMACIO,15,rental_uris,unchanged,15,VARCHAR,VARCHAR,no
+2026-03,INFORMACIO,16,is_valet_station,unchanged,16,BOOLEAN,BOOLEAN,no
+2026-03,INFORMACIO,17,last_updated,unchanged,17,BIGINT,BIGINT,no
+2026-03,INFORMACIO,18,ttl,unchanged,18,BIGINT,BIGINT,no
+2026-03,INFORMACIO,19,V1,added,,VARCHAR,,
+2026-03,INFORMACIO,20,external_id,added,,VARCHAR,,
+2026-04,INFORMACIO,1,station_id,unchanged,1,BIGINT,BIGINT,no
+2026-04,INFORMACIO,2,external_id,moved,20,VARCHAR,VARCHAR,no
+2026-04,INFORMACIO,3,name,moved,2,VARCHAR,VARCHAR,no
+2026-04,INFORMACIO,4,physical_configuration,moved,3,VARCHAR,VARCHAR,no
+2026-04,INFORMACIO,5,lat,moved,4,DOUBLE,DOUBLE,no
+2026-04,INFORMACIO,6,lon,moved,5,DOUBLE,DOUBLE,no
+2026-04,INFORMACIO,7,altitude,moved,6,DOUBLE,DOUBLE,no
+2026-04,INFORMACIO,8,address,moved,7,VARCHAR,VARCHAR,no
+2026-04,INFORMACIO,9,cross_street,moved,8,VARCHAR,VARCHAR,no
+2026-04,INFORMACIO,10,post_code,moved,9,BIGINT,BIGINT,no
+2026-04,INFORMACIO,11,capacity,moved,10,BIGINT,BIGINT,no
+2026-04,INFORMACIO,12,is_charging_station,moved,11,BOOLEAN,BOOLEAN,no
+2026-04,INFORMACIO,13,short_name,moved,12,BIGINT,BIGINT,no
+2026-04,INFORMACIO,14,nearby_distance,moved,13,BIGINT,BIGINT,no
+2026-04,INFORMACIO,15,x_ride_code_support,moved,14,BOOLEAN,BOOLEAN,no
+2026-04,INFORMACIO,16,rental_uris,moved,15,VARCHAR,VARCHAR,no
+2026-04,INFORMACIO,17,is_valet_station,moved,16,BOOLEAN,BOOLEAN,no
+2026-04,INFORMACIO,18,last_updated,moved,17,BIGINT,BIGINT,no
+2026-04,INFORMACIO,19,ttl,moved,18,BIGINT,BIGINT,no
+2026-04,INFORMACIO,,V1,removed,19,,VARCHAR,
+2026-05,INFORMACIO,1,station_id,unchanged,1,BIGINT,BIGINT,no
+2026-05,INFORMACIO,2,external_id,unchanged,2,VARCHAR,VARCHAR,no
+2026-05,INFORMACIO,3,name,unchanged,3,VARCHAR,VARCHAR,no
+2026-05,INFORMACIO,4,physical_configuration,unchanged,4,VARCHAR,VARCHAR,no
+2026-05,INFORMACIO,5,lat,unchanged,5,DOUBLE,DOUBLE,no
+2026-05,INFORMACIO,6,lon,unchanged,6,DOUBLE,DOUBLE,no
+2026-05,INFORMACIO,7,altitude,unchanged,7,DOUBLE,DOUBLE,no
+2026-05,INFORMACIO,8,address,unchanged,8,VARCHAR,VARCHAR,no
+2026-05,INFORMACIO,9,cross_street,unchanged,9,VARCHAR,VARCHAR,no
+2026-05,INFORMACIO,10,post_code,unchanged,10,BIGINT,BIGINT,no
+2026-05,INFORMACIO,11,capacity,unchanged,11,BIGINT,BIGINT,no
+2026-05,INFORMACIO,12,is_charging_station,unchanged,12,BOOLEAN,BOOLEAN,no
+2026-05,INFORMACIO,13,short_name,unchanged,13,BIGINT,BIGINT,no
+2026-05,INFORMACIO,14,nearby_distance,unchanged,14,BIGINT,BIGINT,no
+2026-05,INFORMACIO,15,x_ride_code_support,unchanged,15,BOOLEAN,BOOLEAN,no
+2026-05,INFORMACIO,16,rental_uris,unchanged,16,VARCHAR,VARCHAR,no
+2026-05,INFORMACIO,17,is_valet_station,unchanged,17,BOOLEAN,BOOLEAN,no
+2026-05,INFORMACIO,18,last_updated,unchanged,18,BIGINT,BIGINT,no
+2026-05,INFORMACIO,19,ttl,unchanged,19,BIGINT,BIGINT,no
+2026-06,INFORMACIO,1,station_id,unchanged,1,BIGINT,BIGINT,no
+2026-06,INFORMACIO,2,external_id,unchanged,2,VARCHAR,VARCHAR,no
+2026-06,INFORMACIO,3,name,unchanged,3,VARCHAR,VARCHAR,no
+2026-06,INFORMACIO,4,physical_configuration,unchanged,4,VARCHAR,VARCHAR,no
+2026-06,INFORMACIO,5,lat,unchanged,5,DOUBLE,DOUBLE,no
+2026-06,INFORMACIO,6,lon,unchanged,6,DOUBLE,DOUBLE,no
+2026-06,INFORMACIO,7,altitude,unchanged,7,DOUBLE,DOUBLE,no
+2026-06,INFORMACIO,8,address,unchanged,8,VARCHAR,VARCHAR,no
+2026-06,INFORMACIO,9,cross_street,unchanged,9,VARCHAR,VARCHAR,no
+2026-06,INFORMACIO,10,post_code,unchanged,10,BIGINT,BIGINT,no
+2026-06,INFORMACIO,11,capacity,unchanged,11,BIGINT,BIGINT,no
+2026-06,INFORMACIO,12,is_charging_station,unchanged,12,BOOLEAN,BOOLEAN,no
+2026-06,INFORMACIO,13,short_name,unchanged,13,BIGINT,BIGINT,no
+2026-06,INFORMACIO,14,nearby_distance,unchanged,14,BIGINT,BIGINT,no
+2026-06,INFORMACIO,15,x_ride_code_support,unchanged,15,BOOLEAN,BOOLEAN,no
+2026-06,INFORMACIO,16,rental_uris,unchanged,16,VARCHAR,VARCHAR,no
+2026-06,INFORMACIO,17,is_valet_station,unchanged,17,BOOLEAN,BOOLEAN,no
+2026-06,INFORMACIO,18,last_updated,unchanged,18,BIGINT,BIGINT,no
+2026-06,INFORMACIO,19,ttl,unchanged,19,BIGINT,BIGINT,no
+2026-08,INFORMACIO,1,station_id,unchanged,1,BIGINT,BIGINT,no
+2026-08,INFORMACIO,2,external_id,unchanged,2,VARCHAR,VARCHAR,no
+2026-08,INFORMACIO,3,name,unchanged,3,VARCHAR,VARCHAR,no
+2026-08,INFORMACIO,4,physical_configuration,unchanged,4,VARCHAR,VARCHAR,no
+2026-08,INFORMACIO,5,lat,unchanged,5,DOUBLE,DOUBLE,no
+2026-08,INFORMACIO,6,lon,unchanged,6,DOUBLE,DOUBLE,no
+2026-08,INFORMACIO,7,altitude,unchanged,7,DOUBLE,DOUBLE,no
+2026-08,INFORMACIO,8,address,unchanged,8,VARCHAR,VARCHAR,no
+2026-08,INFORMACIO,9,cross_street,unchanged,9,VARCHAR,VARCHAR,no
+2026-08,INFORMACIO,10,post_code,unchanged,10,BIGINT,BIGINT,no
+2026-08,INFORMACIO,11,capacity,unchanged,11,BIGINT,BIGINT,no
+2026-08,INFORMACIO,12,is_charging_station,unchanged,12,BOOLEAN,BOOLEAN,no
+2026-08,INFORMACIO,13,short_name,unchanged,13,BIGINT,BIGINT,no
+2026-08,INFORMACIO,14,nearby_distance,unchanged,14,BIGINT,BIGINT,no
+2026-08,INFORMACIO,15,x_ride_code_support,unchanged,15,BOOLEAN,BOOLEAN,no
+2026-08,INFORMACIO,16,rental_uris,unchanged,16,VARCHAR,VARCHAR,no
+2026-08,INFORMACIO,17,last_updated,moved,18,BIGINT,BIGINT,no
+2026-08,INFORMACIO,18,ttl,moved,19,BIGINT,BIGINT,no
+2026-08,INFORMACIO,,is_valet_station,removed,17,,BOOLEAN,

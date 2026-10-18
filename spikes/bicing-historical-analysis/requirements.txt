@@ -1,0 +1,2 @@
+# Python 3.14.4; versions resolved by pip on 2026-10-08
+duckdb==1.5.6
