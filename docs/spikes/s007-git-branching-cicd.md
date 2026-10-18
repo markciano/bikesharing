@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-18 · Finished: —
-- Current step: 1
+- Current step: 3
 
 ## 1. Questions — what we need to know
 
@@ -69,13 +69,17 @@ Main question: Which branching model and CI flow does the project adopt, and wha
 | 2026-10-18 | Markdown lint with markdownlint-cli2 and its official action; config in `.markdownlint-cli2.yaml` at the root, default rules except MD013 (line length). Existing docs are fixed in the first trial PR | De facto standard, one config file, readable failures. MD013 would flag almost every existing doc and adds nothing in a docs repo. |
 | 2026-10-18 | Markdown lint covers only `docs/**/*.md` | Owner's choice: the lint targets the project documentation; `CLAUDE.md`, `.claude/` and `spikes/` stay outside. |
 | 2026-10-18 | The procedure lives in `CLAUDE.md` › Git, extended and kept short; no new document | Owner's priority is an easy learning flow with no extra documents; no contributors are expected. Both the owner and Claude follow it every session. |
+| 2026-10-18 | Disable MD060 (table column style) in `.markdownlint-cli2.yaml`, applied in step 3 | 427 of the 516 initial errors (83 %): only the alignment of table pipes, with no effect on content or rendering. Reformatting tables would add diff noise to 16 files for no gain in a docs repo. The remaining 89 errors are fixed in the files. |
+| 2026-10-18 | Also disable MD007, MD009, MD012, MD029, MD031, MD032 and MD047; MD024 with `siblings_only`. Of the 89 remaining errors, 54 were these rules | Owner's choice: they are cosmetic (spacing, blank lines, list numbering) and too strict for this project. Numbered lists stay free. MD024 only forbids repeating a heading under the same parent, so the same title may appear under different ones. |
+| 2026-10-18 | Fix the remaining errors in the files (MD001, MD033, MD034, MD036, MD040) and add three short lines to `.claude/rules/docs.md` so new documents do not reintroduce them. Deviation from File layout, approved by the owner | They are the rules still enforced and fixing them is format only. The CI lint is what enforces; the rules file only avoids rework when Claude writes. |
+| 2026-10-18 | Step headings go from `####` to `###` in the spike template and in this report. Deviation from the step 3 Scope (template outside it), approved by the owner | MD001: the template put `#### Step N` right under `## 3. Steps`, which would fail the lint in every new spike. Earlier spikes are unaffected. |
 
 ### File layout
 
-```
+```text
 .
 ├── .github/workflows/ci.yml   CI workflow; job `docs` (Markdown lint)
-├── .markdownlint-cli2.yaml    Lint config: defaults except MD013
+├── .markdownlint-cli2.yaml    Lint config: defaults except the rules disabled in the Decision log
 ├── CLAUDE.md                  § Git extended with the branch, PR and CI procedure
 └── docs/**/*.md               Fixes for lint errors found in the first PR
 ```
@@ -86,7 +90,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 
 ## 3. Steps
 
-#### Step 1 — CI workflow and lint config
+### Step 1 — CI workflow and lint config
 
 - **Status:** ✅ done
 - **Who:** Claude
@@ -99,9 +103,9 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 - **Check:** both files exist, and the job id is exactly `docs`
 - **Commit:** `ci(T018): add CI workflow with Markdown lint`
 
-#### Step 2 — Branch, first push and PR #1
+### Step 2 — Branch, first push and PR #1
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Scope:**
   1. Create the task branch from an up-to-date `main`: `git switch main && git pull && git switch -c t018-git-branching-cicd`
@@ -113,9 +117,9 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 - **Gate:** the `docs` job runs on the PR → if not, step 1 is reopened to fix the trigger.
 - **Check:** the PR shows a `CI / docs` check with a result
 
-#### Step 3 — Fix the lint errors
+### Step 3 — Fix the lint errors
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:**
   - Fix in the existing `.md` files under `docs/` every error reported in step 2: format only, never meaning.
@@ -125,7 +129,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 - **Check:** every file and line in the step 2 output is fixed, or covered by an approved rule change
 - **Commit:** `docs(T018): fix Markdown lint errors`
 
-#### Step 4 — CI green and ruleset on `main`
+### Step 4 — CI green and ruleset on `main`
 
 - **Status:** 💤 todo
 - **Who:** Owner
@@ -139,7 +143,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 - **Gate:** `docs` is selectable as required and the ruleset asks for no approval → if not, Q4 is re-decided before step 5.
 - **Check:** the PR shows CI green and the merge button is enabled
 
-#### Step 5 — Fault injection
+### Step 5 — Fault injection
 
 - **Status:** 💤 todo
 - **Who:** Owner
@@ -152,7 +156,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 - **Gate:** both the merge with red CI and the direct push are blocked → if not, the ruleset is reviewed and step 5 is repeated.
 - **Check:** both rejections reported; the branch has no test commit; local `main` equals `origin/main`
 
-#### Step 6 — Procedure in `CLAUDE.md`
+### Step 6 — Procedure in `CLAUDE.md`
 
 - **Status:** 💤 todo
 - **Who:** Claude
@@ -169,7 +173,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 - **Check:** every Decision log row about the flow appears in the procedure; nothing is in the procedure that the Decision log does not support
 - **Commit:** `docs(T018): add branch, PR and CI procedure to CLAUDE.md`
 
-#### Step 7 — Rebase merge of PR #1
+### Step 7 — Rebase merge of PR #1
 
 - **Status:** 💤 todo
 - **Who:** Owner
@@ -180,7 +184,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
   4. Report back: `git log --oneline -n 15`, and whether the remote branch was deleted.
 - **Check:** `main` history is linear with no merge commit; every commit of the branch is on `main` with its `type(T018)` message
 
-#### Step 8 — Conclusion
+### Step 8 — Conclusion
 
 - **Status:** 💤 todo
 - **Who:** Owner + Claude
@@ -201,6 +205,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 
 - **F1.** Current major of `actions/checkout` is v7 (latest release v7.0.1, confirmed by the owner). Pinned as `@v7`. Step 1, 2026-10-18, source: [releases](https://github.com/actions/checkout/releases).
 - **F2.** Current major of `DavidAnson/markdownlint-cli2-action` is v24 (latest release v24.2.0, from dependency-bump PRs of October 2026; its Releases and Marketplace pages were stale in the search). Pinned as `@v24`. Step 1, 2026-10-18, source: [releases](https://github.com/DavidAnson/markdownlint-cli2-action/releases). TODO: confirm v24 on the Releases page.
+- **F3.** The `CI / docs` check runs on the PR and fails on the existing docs: 516 issues in 16 of 27 files (markdownlint-cli2 v0.23.2). By rule: MD060 427, MD034 14, MD032 12, MD040 9, MD024 9, MD031 8, MD036 7, MD009 7, MD029 6, MD007 6, MD033 4, MD047 3, MD012 2, MD056 1, MD001 1. By file: s006 120, s004 117, s001 115, s002 29, t011 20, t006 20, sources/bicing 19, tasks 17, s007 17, project-ideas-0 14, sources/ambici 12, ADR-0001 6, s003 4, t014 4, s005 1, ADR-0007 1. Duration: 10 s the run, 1 s the lint step. Step 2, 2026-10-18, source: PR #1, [run 39141556842](https://github.com/markciano/bikesharing/actions/runs/39141556842/job/117716866636?pr=1); the breakdown comes from running markdownlint-cli2@0.23.2 locally on the same files.
 
 ### Production inputs
 

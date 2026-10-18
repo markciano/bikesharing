@@ -206,7 +206,7 @@ Constraint: the owner's machine cannot run 24/7, so capture must run in the clou
 | c. Azure Functions + Blob/ADLS Gen2 | Closest to Fabric (ADR-0003); cost not verified |
 | d. Always-on small machine (Raspberry Pi, free-tier VM, VPS) | Maintenance burden, single point of failure |
 
-**a. Cloudflare Worker + R2**
+#### a. Cloudflare Worker + R2
 
 - Free plan: 5 cron triggers per account, 1-minute minimum interval, 100,000 requests/day, 10 ms CPU per cron invocation.
 - CPU time excludes waiting on `fetch()` and R2 operations. Cloudflare reports an average Worker uses ~2.2 ms, and the runtime tolerates occasional overruns.
@@ -214,7 +214,7 @@ Constraint: the owner's machine cannot run 24/7, so capture must run in the clou
 - R2: 10 GB free, no egress fees, S3-compatible.
 - To verify with a 1-day prototype: CPU time per invocation (Workers Logs), response sizes, R2 free operation limits.
 
-**b. GitHub Actions schedule**
+#### b. GitHub Actions schedule
 
 - The 5-minute minimum interval is acceptable for the baseline (weekday × time slot).
 - Best-effort scheduling (delays, dropped runs) → irregular gaps.
@@ -360,8 +360,8 @@ The hosting prototype and its ADR become a new task in `docs/tasks.md`, added wh
 
 ## Sources
 
-- https://developers.cloudflare.com/workers/platform/limits/
-- https://docs.github.com/en/billing/managing-billing-for-your-products/managing-billing-for-github-actions/about-billing-for-github-actions
-- https://github.com/MobilityData/gbfs/blob/v2.3/gbfs.md (GBFS 2.3 specification)
-- https://github.com/MobilityData/gbfs-json-schema (official JSON Schemas, commit `2e974fd51ae1db9c8006c97375d53e0b882cfedf`)
-- https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ (AMBici GBFS feeds, one folder per language)
+- <https://developers.cloudflare.com/workers/platform/limits/>
+- <https://docs.github.com/en/billing/managing-billing-for-your-products/managing-billing-for-github-actions/about-billing-for-github-actions>
+- <https://github.com/MobilityData/gbfs/blob/v2.3/gbfs.md> (GBFS 2.3 specification)
+- <https://github.com/MobilityData/gbfs-json-schema> (official JSON Schemas, commit `2e974fd51ae1db9c8006c97375d53e0b882cfedf`)
+- <https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/> (AMBici GBFS feeds, one folder per language)

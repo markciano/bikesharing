@@ -8,7 +8,7 @@ Real-time facts confirmed by the realtime capture spike (T006, 2026-10-03 to 202
 
 Bicing — public bike sharing of the city of Barcelona. Two access routes:
 
-**Real time — operator GBFS feed**
+### Real time — operator GBFS feed
 
 | | |
 |---|---|
@@ -23,7 +23,7 @@ Bicing — public bike sharing of the city of Barcelona. Two access routes:
 | Licence | No licence fields → CC0 by the GBFS 3.0 default; attribute anyway as good practice |
 | Refresh | `ttl: 0` on every feed (no hint); measured: `station_status` content changes every 60 s, each station reports about every 3 min |
 
-**History — Open Data BCN**
+### History — Open Data BCN
 
 | | |
 |---|---|

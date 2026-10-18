@@ -215,6 +215,6 @@ Checks added to the plan after reviewing the first results (Analysis plan › Re
 
 ## Sources
 
-- https://github.com/MobilityData/gbfs/blob/v3.0/gbfs.md (GBFS 3.0 specification)
-- https://github.com/MobilityData/gbfs-json-schema (official JSON Schemas, commit `2e974fd51ae1db9c8006c97375d53e0b882cfedf`)
-- https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/ (Bicing GBFS 3.0 feeds)
+- <https://github.com/MobilityData/gbfs/blob/v3.0/gbfs.md> (GBFS 3.0 specification)
+- <https://github.com/MobilityData/gbfs-json-schema> (official JSON Schemas, commit `2e974fd51ae1db9c8006c97375d53e0b882cfedf`)
+- <https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/> (Bicing GBFS 3.0 feeds)
