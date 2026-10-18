@@ -6,10 +6,10 @@
 
 ## Status
 
-- State: Ready 🎬
+- State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
-- Started: — · Finished: —
-- Current step: —
+- Started: 2026-10-18 · Finished: —
+- Current step: 1
 
 ## 1. Questions — what we need to know
 
@@ -88,7 +88,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 
 #### Step 1 — CI workflow and lint config
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:**
   - `.github/workflows/ci.yml`: workflow `CI`, triggered on `pull_request` to `main` and on `push` to `main`; `permissions: contents: read`; one job `docs` on `ubuntu-latest` that checks out the repo and runs the official markdownlint-cli2 action on `docs/**/*.md`. Actions pinned to their current major version, looked up by Claude and noted in Findings.
@@ -198,6 +198,9 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 - **Commit:** `docs(T018): conclude spike s007`
 
 ## 4. Findings
+
+- **F1.** Current major of `actions/checkout` is v7 (latest release v7.0.1, confirmed by the owner). Pinned as `@v7`. Step 1, 2026-10-18, source: [releases](https://github.com/actions/checkout/releases).
+- **F2.** Current major of `DavidAnson/markdownlint-cli2-action` is v24 (latest release v24.2.0, from dependency-bump PRs of October 2026; its Releases and Marketplace pages were stale in the search). Pinned as `@v24`. Step 1, 2026-10-18, source: [releases](https://github.com/DavidAnson/markdownlint-cli2-action/releases). TODO: confirm v24 on the Releases page.
 
 ### Production inputs
 
