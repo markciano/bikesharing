@@ -6,10 +6,9 @@
 
 ## Status
 
-- State: Running 🔄
+- State: Concluded ✅
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
-- Started: 2026-10-18 · Finished: —
-- Current step: 7
+- Started: 2026-10-18 · Finished: 2026-10-18
 
 ## 1. Questions — what we need to know
 
@@ -72,6 +71,7 @@ Main question: Which branching model and CI flow does the project adopt, and wha
 | 2026-10-18 | Disable MD060 (table column style) in `.markdownlint-cli2.yaml`, applied in step 3 | 427 of the 516 initial errors (83 %): only the alignment of table pipes, with no effect on content or rendering. Reformatting tables would add diff noise to 16 files for no gain in a docs repo. The remaining 89 errors are fixed in the files. |
 | 2026-10-18 | Also disable MD007, MD009, MD012, MD029, MD031, MD032 and MD047; MD024 with `siblings_only`. Of the 89 remaining errors, 54 were these rules | Owner's choice: they are cosmetic (spacing, blank lines, list numbering) and too strict for this project. Numbered lists stay free. MD024 only forbids repeating a heading under the same parent, so the same title may appear under different ones. |
 | 2026-10-18 | Fix the remaining errors in the files (MD001, MD033, MD034, MD036, MD040) and add three short lines to `.claude/rules/docs.md` so new documents do not reintroduce them. Deviation from File layout, approved by the owner | They are the rules still enforced and fixing them is format only. The CI lint is what enforces; the rules file only avoids rework when Claude writes. |
+| 2026-10-18 | Tear-down of s007: nothing is torn down. Kept: the workflow `.github/workflows/ci.yml`, `.markdownlint-cli2.yaml`, the ruleset on `main` and the repo merge settings (rebase only, delete head branches) | They are the adopted CI and protection, not spike code. |
 | 2026-10-18 | Step headings go from `####` to `###` in the spike template and in this report. Deviation from the step 3 Scope (template outside it), approved by the owner | MD001: the template put `#### Step N` right under `## 3. Steps`, which would fail the lint in every new spike. Earlier spikes are unaffected. |
 
 ### File layout
@@ -186,7 +186,7 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 
 ### Step 8 — Conclusion
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner + Claude
 - **Scope:**
   - Runs as PR #2 that follows `CLAUDE.md` › Git literally, with no other guidance.
@@ -215,23 +215,52 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 
 ### Production inputs
 
-| P | Input | Origin | Destination |
-|---|---|---|---|
+
+None: the trial changes production files directly (workflow, lint config, `CLAUDE.md`), so there is nothing to carry over.
 
 ## 5. Conclusion
 
-Observed window:
+Observed window: 2026-10-18, one trial of the full cycle in the real repo: two PRs (#1 with 5 commits, #2 for the conclusion), with CI runs of 8–10 s.
 
 ### Answers
 
+- **Q1.** GitHub Flow (`main` + short-lived branch, PR, CI, merge). It passes C1–C6; trunk-based development commits to `main` and fails C4, Git Flow keeps long-lived branches and fails C6 (Decision log, 2026-10-18).
+- **Q2.** Rebase merge, one branch per task. It keeps every `type(TNNN)` commit with its message and a linear history (F9). Squash would need one branch per logical change; merge commits add commits outside the convention (Decision log).
+- **Q3.** One workflow `CI` runs the job `docs` (Markdown lint of `docs/**/*.md`) on every PR to `main` and on each push to `main` (F3). It stays green with an empty `src/` because it lints only the documentation. Stage 2 adds a job per component and a final `ci-passed` (Decision log, `CLAUDE.md` › Git). Observe only: a run takes 8–10 s, of which the lint step is about 1 s (F3, F4, F5, F9).
+- **Q4.** A ruleset on `main` with no bypass: PR required with 0 approvals, check `docs`, linear history, rebase merge only, no force push or deletion. `docs` was selectable and no approval was asked (F4). A red CI blocks the merge (F5) and a direct push is rejected (F7).
+- **Q5.** Yes, the cycle runs end to end. It broke in four places, all fixed in `CLAUDE.md` › Git: the repo setting "Allow rebase merging" must be on, or the PR shows a misleading "merge commits" block (F4); a local-only commit on `main` travels into the PR (F8); how to open the PR (F10); what deletes the local branch (F11).
+
 ### Exit criteria
+
+- **C1.** Pass: 0 approvals, the owner merged PR #1 alone (F4, F9).
+- **C2.** Pass: the owner ran every Git write command; Claude only read Git.
+- **C3.** Pass: the commits keep their `type(T018)` messages on `main` (F9).
+- **C4.** Pass: CI red blocks the merge (F5) and a direct push is rejected (F7).
+- **C5.** Pass, judged from this spike's own sessions: the plan was committed on the task branch (`1f83db0`) and the work continued on it across sessions.
+- **C6.** Pass: the only branches are `main` and the short-lived task branch.
+- **C7.** Good: linear history, one commit per logical change; the T019 commit inside PR #1 is the only stray one (F8).
+- **C8.** Good: each piece appears when it solves a problem (one job now, one per component later), and nothing already built is renamed.
+- **Check of the run.** One real PR merged with CI green (F9) and one deliberate CI failure blocked by the protection (F5, F7).
 
 ### Verdict
 
+Adopt GitHub Flow with rebase merge, one branch per task, the ruleset on `main` and the CI of stage 1. The working procedure is in `CLAUDE.md` › Git.
+
 ### Not verified
+
+- Stage 2 of the CI (job per component, `ci-passed` as the only required check): not built because there is one component. Risk: the ruleset needs its required check changed at that moment. Mitigation: the step is written in the procedure.
+- The urgent-fix path (disable the ruleset, push, enable it again): not run. Risk: the ruleset stays disabled by mistake. Mitigation: do it in a PR whenever possible.
+- Rebase merge with conflicts: not run. Mitigation: rebase the task branch on `main` and force-push it with `--force-with-lease`, which the ruleset allows (F6).
+- Friction between Claude Code permissions and commands such as `gh pr`: not checked (TODO in Out of scope).
 
 ### Follow-ups
 
+- ADR to write, in its own commit after this step: branching model (GitHub Flow), merge strategy (rebase) and protection of `main`.
+- New tasks: none.
+
 ## Sources
 
--
+- <https://docs.github.com/en/get-started/using-github/github-flow>
+- <https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets>
+- <https://nvie.com/posts/a-successful-git-branching-model/>
+- <https://github.com/DavidAnson/markdownlint-cli2>
