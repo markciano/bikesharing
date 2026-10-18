@@ -12,3 +12,8 @@ paths:
 - **Diagrams (Mermaid)** only where a flow branches or has several actors; the text is authoritative.
 - **Documents** record decisions, not discussion, without repetition.
 - New designs and spikes start from the template in their skill..
+- **Markdown lint** (CI job `docs`, config in `.markdownlint-cli2.yaml`) fails the PR on these, so write them right the first time:
+  - fenced code blocks state their language (`text` if it is not code);
+  - URLs go between `<>` or as a link;
+  - a title is a heading (`##`), not a bold line; levels go up one at a time;
+  - placeholders such as `<name>` go in backticks.
