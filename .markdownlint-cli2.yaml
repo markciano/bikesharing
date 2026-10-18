@@ -1,0 +1,4 @@
+# Markdown lint: default rules except line length (see docs/spikes/s007-git-branching-cicd.md).
+config:
+  default: true
+  MD013: false
