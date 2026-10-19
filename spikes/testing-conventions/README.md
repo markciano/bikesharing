@@ -21,3 +21,13 @@ python3.14 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 pytest
 ```
+
+## P3 Worker
+
+A minimal Worker (functional core, imperative shell) tested in `workerd` with `@cloudflare/vitest-plugin`: `objectKey` against the contract vectors, and the `scheduled` handler writing to an in-memory R2 binding with the source fetch mocked. Needs Node 25.9.0; no Cloudflare account.
+
+```bash
+cd spikes/testing-conventions/worker
+npm install
+npm test
+```

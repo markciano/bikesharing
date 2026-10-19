@@ -4,8 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    # TODO: temporary (spike s008): remove t020-testing-conventions at Conclusion.
-    branches: [main, t020-testing-conventions]
+    branches: [main]
 
 permissions:
   contents: read
@@ -39,3 +38,17 @@ jobs:
           java-version: "17"
       - run: pip install -r requirements.txt
       - run: pytest
+
+  # TODO: temporary (spike s008): remove at Conclusion.
+  poc-worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spikes/testing-conventions/worker
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: spikes/testing-conventions/worker/package.json
+      - run: npm ci
+      - run: npx vitest run

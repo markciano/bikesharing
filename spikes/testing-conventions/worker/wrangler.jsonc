@@ -1,0 +1,15 @@
+// Throwaway PoC config (spike s008). Local simulation only: no account, no deploy.
+{
+  "name": "poc-worker",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "triggers": { "crons": ["* * * * *"] },
+  "r2_buckets": [{ "binding": "RAW_BUCKET", "bucket_name": "poc-raw" }],
+  "vars": {
+    "SOURCE": "bicing",
+    "FEED": "station_status",
+    // TODO: real feed URL in the production design; the PoC test mocks this one.
+    "FEED_URL": "https://gbfs.example.org/station_status.json"
+  }
+}
