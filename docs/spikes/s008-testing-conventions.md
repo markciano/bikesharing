@@ -1,13 +1,13 @@
 # Spike: Testing conventions
 
 - **Task:** T020
-- **ADRs:** ADR-0009 (test fixtures), ADR-0012 (collectors decoupled by output contract), ADR-0013 (CI)
+- **ADRs:** ADR-0009 (test fixtures), ADR-0011 (Worker and R2 capture), ADR-0012 (collectors decoupled by output contract), ADR-0013 (CI)
 - **Code:** `spikes/testing-conventions/`
 
 ## Status
 
-- State: Draft 📝
-- Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review
+- State: Ready 🎬
+- Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: — · Finished: —
 - Current step: —
 
@@ -35,7 +35,7 @@ Main question: which testing conventions (levels, tools, CI layers) does each co
 - **Timebox:** 2 working days; the run ends when every exit criterion has a result or the time is spent, and whatever is not covered goes to Not verified with its risk
 - Tests detect faults (manual mutation testing): in each PoC (Python, Spark, Worker, contract), at least one deliberate change to the code under test makes its test fail, locally and in CI — hard cut
 - Reproducible from scratch: each PoC passes with one command documented in its README, locally and in a CI job that starts from a clean environment, with every dependency version pinned in the repo — hard cut
-- Feedback time: the pre-merge checks of a PR finish in ≤ 10 min in total (XP ten-minute build); above it, the spike proposes moving slow tests to another CI layer — guide
+- Feedback time: the pre-merge checks of a PR finish in ≤ 10 min in total, measured as the wall-clock duration of the `pull_request` workflow run as GitHub shows it, all jobs included (XP ten-minute build); above it, the spike proposes moving slow tests to another CI layer — guide
 - Traceability: every convention adopted or corrected (including each rule in `.claude/rules/python.md`, Q1) records its reason and the standard it comes from; every tool with real alternatives is chosen with a weighted decision matrix whose criteria and weights are fixed before scoring — hard cut
 
 ### Out of scope
@@ -56,26 +56,27 @@ There are no competing variants: one probe per question, each telling something 
 
 | Probe | What it is | What it tells |
 |---|---|---|
-| P1 Python | Minimal Python module with `unit` and `integration` tests: trimmed fixture (ADR-0009), `conftest.py`, injected time, coverage report | Validates in practice the `.claude/rules/python.md` rules that need it; the rest are justified on paper (Q1) |
+| P1 Python | Minimal Python module with `unit` and `integration` tests: synthetic fixture (Shared behaviour 5), `conftest.py`, injected time, coverage report | Validates in practice the `.claude/rules/python.md` rules that need it; the rest are justified on paper (Q1) |
 | P2 Spark | One PySpark transformation tested on a shared local SparkSession | The right test level for Spark and its real cost in CI: Java and session start-up (Q2) |
-| P3 Worker | Minimal Worker tested with `vitest` and `@cloudflare/vitest-pool-workers` | Whether the Worker can be tested in `workerd` without a Cloudflare account, locally and in CI (Q3) |
-| P4 Contract | One shared JSON Schema; a producer test in JS on the Worker output and a consumer test in Python | Whether one contract breaks both sides when it changes, whatever the language (Q4) |
+| P3 Worker | Minimal Worker split as functional core, imperative shell, tested with `vitest` in `workerd` (step 1 tool): pure functions as unit tests, the `scheduled` handler writing to an in-memory R2 binding as integration test | Whether the Worker can be tested in `workerd` without a Cloudflare account, locally and in CI (Q3) |
+| P4 Contract | Shared golden test vectors for the collector contract of ADR-0012 (key, UTC timestamp, gzip payload unchanged); a producer test in JS on the Worker and a consumer test in Python on a bronze-side key parser | Whether one language-neutral contract breaks both sides when it changes (Q4) |
 | P5 CI layers | P1–P4 running in the pre-commit, PR and `main` layers, with measured durations | Which test level goes in each layer, and whether ADR-0013 changes (Q5) |
 | Desk analysis | Review of CLAUDE.md, the rules and the `/implement` skill; no code | Where each convention lives (Q6) |
 
-Tool choices with real alternatives are scored on paper with a weighted decision matrix; the PoC uses the winner and alternatives are not built:
+Tool choices with real alternatives are scored on paper with a weighted decision matrix; the PoC uses the winner and alternatives are not built. Every other tool used in a PoC gets a "no real alternative" line with its source.
 
 - `pytest` vs `unittest` (P1)
 - Spark helpers: `pyspark.testing.assertDataFrameEqual` (PySpark ≥ 3.5) vs `chispa` (P2)
-- Contract format: hand-written JSON Schema vs schema generated from models (`pydantic`, `zod`) (P4)
+- Worker test tool: `@cloudflare/vitest-pool-workers` vs Miniflare API vs `unstable_startWorker` (P3)
+- Contract format: shared golden test vectors vs schema (JSON Schema / ODCS), scored separately for format/behaviour contracts (keys, naming, encoding) and data-shape contracts (silver, gold); only the vectors are built (P4)
 
 ### Shared behaviour
 
-1. **One command per PoC,** documented in the README; dependencies pinned as set in the Decision log.
-2. **Mutation check:** change one line of the code under test; run the test locally and keep the failing output; commit and push the change, marked as temporary, and record the red CI run URL; commit the revert and see CI green again. Each mutation is a finding: what was changed, which test failed, the run URL.
+1. **One command per PoC,** documented in the README; dependencies pinned as set in the Decision log. Python: Claude writes only the direct dependencies with `==`; the owner's run step installs them, runs `pip freeze > requirements.txt`, adds the header line `# Python <version>; versions resolved by pip on <date>` and commits it with the step. Any later change to the direct dependencies or to the Python version repeats the freeze.
+2. **Mutation check:** check and apply the patch (`git apply --check`, then `git apply`); run the test locally and keep the failing output; commit and push the change, marked as temporary, and record the red CI run URL; commit the revert and see CI green again. Only `pull_request` runs (the PR gate) are counted; `push` runs are not. Each mutation is a finding: what was changed, which test failed, the run URL. The P4 mutation is a change that the valid data of both sides stops meeting (e.g. a changed key format), never one that relaxes the contract, which would let invalid cases pass and fail only one side; it runs the tests of both sides.
 3. **No network in tests** (hermetic tests), in Python and JS alike; in the Worker, calls to the source API are mocked with the `vitest-pool-workers` fetch mock. Hypothesis for Q1: checks against live sources belong outside the PR gate (e.g. a scheduled job); Q5 names their layer only.
-4. **Measurements:** local duration with `time <command>`; CI duration per job as reported by GitHub; both recorded in Findings.
-5. **Fixtures** are hand-written synthetic JSON with the GBFS shape defined by the P4 schema; no source data is committed (ADR-0009).
+4. **Measurements:** local duration with `time <command>`; CI duration per job as reported by GitHub, plus the wall-clock duration of the whole `pull_request` workflow run for criterion 3; all recorded in Findings.
+5. **Fixtures** are hand-written synthetic data: GBFS JSON for P1 in `python/tests/fixtures/`; the P4 vectors and one GBFS payload in `contract/`; Spark builds its DataFrame inside the test. Payloads that must be gzip are compressed in memory by the test, so no binary file is committed. No source data is committed (ADR-0009).
 6. **Commit messages** start the description with the step: `type(T020): sN description`.
 
 ### Decision log
@@ -94,6 +95,18 @@ Tool choices with real alternatives are scored on paper with a weighted decision
 | 2026-10-19 | Java 17 is provisional, for this spike only; the production Java version is decided in T021, against the runtime of the deployment target (T022) | The testing conventions do not depend on the Java version; Spark 4.2 supports 17/21/25 and 17 is the most tested by the Spark ecosystem; choosing now would decide without the deployment runtime |
 | 2026-10-19 | Tool matrices run first (step 1), before any PoC | The PoCs use the chosen tools; scoring after building would bias the matrix |
 | 2026-10-19 | Placing conventions in the Claude files is split into placement map, owner approval and writing (steps 13–15) | In T018 conventions were written into CLAUDE.md first and redistributed later; deciding the place before writing follows progressive disclosure and spec-driven development |
+| 2026-10-19 | Method change (Steps review): P4 tests the collector contract of ADR-0012 (key, UTC timestamp, gzip payload unchanged) with shared golden test vectors in `contract/collector-contract.json`. The earlier P4 assumed a station-shape contract validated with JSON Schema, which ADR-0012 does not define | Q4 must be answered on the real contract; conformance test vectors are the standard way to test one format across implementations in different languages, and they check what a schema cannot (date folder consistent with the timestamp, bytes unchanged) |
+| 2026-10-19 | The Q4 convention states when each form applies: shared test vectors for format/behaviour contracts (keys, naming, encoding); a schema (JSON Schema / ODCS) for data-shape contracts (silver, gold). Only the vectors are built; the schema case is justified on paper in step 11 and goes to Not verified with its risk and the mitigation "validated in the first design that defines a data-shape contract" | Q4 serves later contracts too; building a data-shape contract now would have no real case to test (YAGNI) |
+| 2026-10-19 | The Worker follows functional core, imperative shell: pure exported functions (e.g. `objectKey`) are unit-tested against the vectors (P4 producer); the `scheduled` handler is tested in `workerd` with the source fetch mocked, asserting the object written to the in-memory R2 binding (ADR-0011). The integration test answers Q3 and is what the step 6 Gate checks | A pure-function test alone does not need `workerd`, so it cannot answer Q3; the split keeps the logic testable without the runtime |
+| 2026-10-19 | Old step 7 split: contract vectors become step 4, before the Worker; the producer test goes with the Worker (steps 5–6) and the consumer test with Python (steps 7–8) | The contract exists before either side; each PoC stays one code step plus one run step; `ajv` and `jsonschema` are no longer needed, so the late lockfile change disappears |
+| 2026-10-19 | Amends "Dependencies follow the earlier spikes": Python dependencies are frozen with `pip freeze` in the owner's run steps (Shared behaviour 1), as in `spikes/realtime-capture-analysis/requirements.txt` | Criterion 2 requires every version pinned, transitive ones included; `==` on direct dependencies alone does not pin them |
+| 2026-10-19 | Every tool used in a PoC gets a matrix or a "no real alternative" line with its source in step 1, the Worker test tool (Q3) included | Criterion 4: no tool choice is left to a code step |
+| 2026-10-19 | Criterion 3 "in total" is the wall-clock duration of the `pull_request` workflow run as GitHub shows it, `docs` job included | Jobs run in parallel; the wall-clock time is what the developer waits for |
+| 2026-10-19 | Replaces the consequence of "Gate in P2": on a failure, Claude diagnoses the cause first. Python incompatibility → the latest Python version PySpark 4.2.0 supports; Java → Java 21; runner or other → a finding, and P2 is re-decided with the owner | Dropping the Python version only fixes one of the possible causes; the Gate must say what happens for each |
+| 2026-10-19 | Conditional change to "Java 17 is provisional": when the Java branch of "Replaces the consequence of 'Gate in P2'" applies, P2 moves to Java 21 (Temurin 21.0.10, installed locally), locally and in `setup-java`, and the change is recorded here | Java 21 is supported by Spark 4.2 and needs no install; production still decides in T021 |
+| 2026-10-19 | Mutation runs count only `pull_request` runs: four red, four green | The PR run is the gate; each push also triggers a `push` run, which would double the count |
+| 2026-10-19 | P1 unit tests are written test-first in their own commit (`s7 add failing unit tests`) before the code; a red phase by import error is accepted as the valid first red of TDD, and recorded as such in the Q1 evidence | The Git history is the evidence for the TDD rule in Q1 |
+| 2026-10-19 | Amends "Spike fixtures are hand-written synthetic JSON": payloads that must be gzip are built in memory inside the tests from the JSON fixtures | The contract payload is gzip bytes (ADR-0012); compressing in the test keeps binary files out of the repo |
 
 ### File layout
 
@@ -104,28 +117,28 @@ spikes/testing-conventions/
 ├── README.md              Question, setup, one command per PoC; How we got here (at Conclusion)
 ├── .gitignore             venvs, node_modules/, .wrangler/, outputs/
 ├── contract/              P4 · shared by JS and Python
-│   ├── station.schema.json   JSON Schema of the contract
-│   └── fixtures/             synthetic GBFS JSON: valid and invalid cases
+│   ├── collector-contract.json   golden test vectors: valid (source, feed, captured_at) → key; invalid keys
+│   └── fixtures/                 one synthetic GBFS payload (JSON; gzipped in memory by the tests)
 ├── python/                P1 (+ P4 consumer test)
-│   ├── requirements.txt      pinned (pytest, pytest-cov, jsonschema)
+│   ├── requirements.txt      frozen with pip freeze (direct: pytest, pytest-cov)
 │   ├── pyproject.toml        pytest config only
-│   ├── poc/                  minimal module under test
-│   └── tests/                conftest.py, unit/, integration/
+│   ├── poc/                  status parsing and staleness; bronze-side key parser
+│   └── tests/                conftest.py, unit/, integration/, fixtures/
 ├── spark/                 P2
-│   ├── requirements.txt      pinned (pyspark 4.2.0, pytest)
+│   ├── requirements.txt      frozen with pip freeze (direct: pyspark 4.2.0, pytest)
 │   ├── pyproject.toml        pytest config only
 │   ├── poc/                  one transformation
 │   └── tests/                conftest.py with a shared local SparkSession
 ├── worker/                P3 (+ P4 producer test)
 │   ├── package.json · package-lock.json
 │   ├── wrangler.jsonc · vitest.config.js
-│   ├── src/index.js          minimal Worker
-│   └── test/                 vitest tests in workerd, fetch mocked
+│   ├── src/                  contract.js (pure functions) · index.js (scheduled handler)
+│   └── test/                 unit/ (pure functions) · integration/ (workerd, fetch mocked, in-memory R2)
 ├── mutations/             one .patch per PoC, applied and reverted by the owner
-└── outputs/               ignored by Git: local timings and failing outputs
+└── outputs/               ignored by Git: failing outputs of the mutation runs
 ```
 
-Outside this folder, only `.github/workflows/ci.yml` changes, temporarily (Decision log). Tool matrices are recorded in 4. Findings, not in files.
+Outside this folder, only `.github/workflows/ci.yml` changes, temporarily (Decision log). Tool matrices are recorded in 4. Findings, not in files; timings too (Shared behaviour 4).
 
 ## 3. Steps
 
@@ -134,11 +147,11 @@ Outside this folder, only `.github/workflows/ci.yml` changes, temporarily (Decis
 | 1 | Tool matrices |
 | 2 | Spark PoC and temporary CI job |
 | 3 | Run Spark locally and in CI; open draft PR |
-| 4 | Worker PoC and temporary CI job |
-| 5 | Run the Worker locally and in CI |
-| 6 | P1 Python PoC and temporary CI job |
-| 7 | P4 contract PoC |
-| 8 | Run P1 and P4 locally and in CI |
+| 4 | Collector contract vectors |
+| 5 | Worker PoC (P3 + P4 producer) and temporary CI job |
+| 6 | Run the Worker locally and in CI |
+| 7 | Python PoC (P1 + P4 consumer) and temporary CI job |
+| 8 | Run the Python PoC locally and in CI |
 | 9 | Mutation patches |
 | 10 | Apply and revert mutations |
 | 11 | Analysis Q1–Q5 |
@@ -154,9 +167,9 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Scope:** three weighted decision matrices in 4. Findings: `pytest` vs `unittest`; `pyspark.testing.assertDataFrameEqual` vs `chispa`; hand-written JSON Schema vs schema generated from models (`pydantic`, `zod`). Criteria and weights are written first and approved by the owner on the diff; only then are options scored, each score with a one-line reason and a source. Touches only this doc.
-- **Reads:** 1. Questions, 2. Method › Approach, official docs of each tool
-- **Check:** the weights were approved before any score was written; each matrix names a winner
+- **Scope:** the weighted decision matrices listed in 2. Method › Approach, in 4. Findings. The contract-format matrix is scored separately for format/behaviour contracts and data-shape contracts, so it records which form applies to each (Decision log). Every other tool used in a PoC (e.g. `vitest`, `wrangler`, `pytest-cov`) gets a "no real alternative" line with its source. Criteria and weights are written first and approved by the owner on the diff; only then are options scored, each score with a one-line reason and a source. Touches only this doc.
+- **Reads:** 1. Questions; 2. Method › Approach, Decision log; ADR-0012; official docs of each tool
+- **Check:** the weights were approved before any score was written; each matrix names a winner (the contract format, one per contract kind); every tool used in a PoC has a matrix or a "no real alternative" line
 - **Commit:** `docs(T020): s1 add tool matrices to spike s008`
 
 ### Step 2 — Spark PoC and temporary CI job
@@ -164,15 +177,15 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 - **Status:** 💤 todo
 - **Who:** Claude
 - **Scope:**
-  - `spark/requirements.txt` (`pyspark==4.2.0`, `pytest`, the step 1 Spark helper if it is a package; all `==`), `spark/pyproject.toml` (pytest config only).
+  - `spark/requirements.txt` with the direct dependencies only (`pyspark==4.2.0`, `pytest`, the step 1 Spark helper if it is a package; all `==`); the owner freezes it in step 3 (Shared behaviour 1). `spark/pyproject.toml` (pytest config only).
   - `spark/poc/` with one transformation: a DataFrame of station status in, the same rows plus an occupancy ratio (`num_bikes_available / capacity`) out.
   - `spark/tests/conftest.py` with a session-scoped local SparkSession (`local[1]`, UI disabled), and `spark/tests/test_<module>.py` with one test using the step 1 helper. The session scope deviates from the function-scope rule in `.claude/rules/python.md` on purpose; the step records why as evidence for Q1 and Q2.
   - `README.md` (question, link to this doc, Spark command) and `.gitignore` (Shared behaviour, File layout).
-  - `.github/workflows/ci.yml`: add `t020-testing-conventions` to the `push` branches and a job `poc-spark` (`actions/setup-python` 3.14, `actions/setup-java` Temurin 17, `pip install -r requirements.txt`, `pytest`, working directory `spikes/testing-conventions/spark`).
+  - `.github/workflows/ci.yml`: add `t020-testing-conventions` to the `push` branches and a job `poc-spark` (`actions/setup-python` with the Python version in the Decision log, `actions/setup-java` Temurin with the Java version in the Decision log, `pip install -r requirements.txt`, `pytest`, working directory `spikes/testing-conventions/spark`).
   - Must not touch: the `docs` job, anything outside `spikes/testing-conventions/` and `ci.yml`.
 - **Reads:** 2. Method › Shared behaviour, File layout, Decision log; step 1 matrix; `.github/workflows/ci.yml`
 - **Check:** `pytest --collect-only` lists one test (run by the owner in step 3)
-- **Commit:** `chore(T020): s2 add Spark PoC and temporary CI job`
+- **Commit:** `chore(T020): s2 add Spark PoC and temporary CI job` (after step 3 freezes `spark/requirements.txt`)
 
 ### Step 3 — Run Spark locally and in CI; open draft PR
 
@@ -180,37 +193,70 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 - **Who:** Owner
 - **Scope:**
 
+  Python 3.14 and Java 17 are the versions in the Decision log; if the Gate changed them, use the ones it recorded.
+
   ```bash
   cd spikes/testing-conventions/spark
   export JAVA_HOME=$(/usr/libexec/java_home -v 17) && java -version
   python3.14 -m venv .venv && source .venv/bin/activate
   pip install -r requirements.txt
+  pip freeze > requirements.txt
+  pytest --collect-only -q
   time pytest
-  cd ../../.. && git push -u origin t020-testing-conventions
+  deactivate && cd ../../..
+  ```
+
+  `java -version` must show 17; if not, install Temurin 17 (`brew install --cask temurin@17`) and repeat. After the freeze, add the header line of Shared behaviour 1 at the top of `spark/requirements.txt`.
+
+  Commit step 1 (if not done yet) and step 2, including the frozen `requirements.txt`. Then:
+
+  ```bash
+  git push -u origin t020-testing-conventions
   gh pr create --draft --base main --title "T020: Testing conventions and place in claude files" --body "Spike s008. Temporary CI jobs; reverted before merge."
   ```
 
-  `java -version` must show 17; if not, install Temurin 17 (`brew install --cask temurin@17`) and repeat.
+  Report: `java -version` output; `--collect-only` output; local test result and `time`; PR URL; result, duration and run URL of `poc-spark` on the `push` and on the `pull_request` run.
+- **Gate:** the test passes locally and in CI with Python 3.14 + PySpark 4.2.0 + Java 17 → if not, Claude diagnoses the cause from the failing output first:
+  - Python incompatibility → drop `poc-spark` to the latest Python version PySpark 4.2.0 supports;
+  - Java → retry with Java 21 (`-v 21` locally, `setup-java` 21), as in the Decision log;
+  - runner or other → record a finding and re-decide P2 with the owner.
 
-  Report: `java -version` output; local test result and `time`; PR URL; result, duration and run URL of `poc-spark` on the `push` and on the `pull_request` run.
-- **Gate:** the test passes locally and in CI with Python 3.14 + PySpark 4.2.0 + Java 17 → if not, Claude drops `poc-spark` to the latest Python version PySpark 4.2.0 supports, records it in the Decision log, and this step is repeated.
+  Each change is recorded in the Decision log, and this step is repeated, freeze included.
 - **Check:** `poc-spark` green on the PR
 
-### Step 4 — Worker PoC and temporary CI job
+### Step 4 — Collector contract vectors
 
 - **Status:** 💤 todo
 - **Who:** Claude
 - **Scope:**
-  - `worker/package.json` with exact versions (no `^`) of `wrangler`, `vitest` and `@cloudflare/vitest-pool-workers`, and `engines.node`; `worker/wrangler.jsonc`; `worker/vitest.config.js` using the Workers pool.
-  - `worker/src/index.js`: a minimal scheduled Worker that fetches one GBFS feed and returns its stations in the contract shape.
-  - `worker/test/`: one test that runs the Worker in `workerd` with the source fetch mocked (Shared behaviour 3).
-  - `README.md`: Worker command. `.github/workflows/ci.yml`: job `poc-worker` (`actions/setup-node` with the `engines` version, `npm ci`, `npx vitest run`, working directory `spikes/testing-conventions/worker`).
-  - Must not touch: other jobs, anything outside `spikes/testing-conventions/` and `ci.yml`.
-- **Reads:** 2. Method › Shared behaviour, File layout; ADR-0011; `.github/workflows/ci.yml`
-- **Check:** `package.json` has no ranges; the test makes no real network call
-- **Commit:** `chore(T020): s4 add Worker PoC and temporary CI job` (after step 5 creates `package-lock.json`)
+  - `contract/collector-contract.json` in the step 1 format for format/behaviour contracts, following ADR-0012:
+    - `valid`: cases `{source, feed, captured_at}` with `captured_at` in UTC, ISO 8601 with `Z` (ADR-0005), each with its expected `key` (`raw/<source>/<feed>/<YYYY-MM-DD>/<YYYYMMDDTHHMMSSZ>.json.gz`); one case is within an hour of midnight UTC, where local time and UTC fall on different dates;
+    - `invalid`: keys that each break exactly one rule (extension, timestamp without `Z`, date folder not matching the timestamp, missing segment), each with a one-line `reason`.
+  - `contract/fixtures/`: one synthetic GBFS `station_status` payload as JSON (Shared behaviour 5).
+  - `README.md`: a Contract section (what the vectors are, which tests read them).
+  - Must not touch: anything outside `contract/` and `README.md`.
+- **Reads:** ADR-0012; ADR-0005; step 1 contract-format matrix; 2. Method › Shared behaviour
+- **Check:** in every valid case the date folder is the date of `captured_at` in UTC; every invalid case breaks exactly one rule
+- **Commit:** `chore(T020): s4 add collector contract vectors`
 
-### Step 5 — Run the Worker locally and in CI
+### Step 5 — Worker PoC (P3 + P4 producer) and temporary CI job
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Scope:**
+  - `worker/package.json` with exact versions (no `^`) of `wrangler`, `vitest` and the step 1 Worker test tool, and an exact `engines.node`; `worker/wrangler.jsonc` with one cron trigger and an R2 binding `RAW_BUCKET`; `worker/vitest.config.js` using the Workers pool.
+  - Functional core, imperative shell (Decision log):
+    - `worker/src/contract.js`: pure exported `objectKey(source, feed, capturedAt)`;
+    - `worker/src/index.js`: a `scheduled` handler that takes one capture time per pass (UTC), fetches one GBFS feed as set in ADR-0011 (`Accept-Encoding: gzip`, `encodeResponseBody: 'manual'`) and stores the body unchanged in `RAW_BUCKET` under `objectKey(...)`.
+  - `worker/test/unit/`: `objectKey` returns the expected key for every valid vector in `../contract/collector-contract.json` (P4 producer test).
+  - `worker/test/integration/`: in `workerd`, trigger `scheduled` with the source fetch mocked (Shared behaviour 3), serving the contract fixture gzipped in memory with `Content-Encoding: gzip`; assert one object in the in-memory R2 binding, at the expected key, with bytes identical to those served. This test answers Q3. Whether the mock reproduces the runtime's handling of `encodeResponseBody: 'manual'` is observed only and noted in Findings (risk in ADR-0011).
+  - `README.md`: Worker command. `.github/workflows/ci.yml`: job `poc-worker` (`actions/setup-node` with `node-version-file: package.json`, `npm ci`, `npx vitest run`, working directory `spikes/testing-conventions/worker`).
+  - Must not touch: other jobs, `contract/`, anything outside `spikes/testing-conventions/` and `ci.yml`.
+- **Reads:** 2. Method › Shared behaviour, File layout, Decision log; ADR-0011; ADR-0012; `contract/collector-contract.json`; step 1 Worker test tool matrix; `.github/workflows/ci.yml`
+- **Check:** `package.json` has no ranges; no test makes a real network call; the unit test loads the vectors by relative path
+- **Commit:** `chore(T020): s5 add Worker PoC and temporary CI job` (after step 6 creates `package-lock.json`)
+
+### Step 6 — Run the Worker locally and in CI
 
 - **Status:** 💤 todo
 - **Who:** Owner
@@ -221,40 +267,31 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
   node --version
   npm install
   time npx vitest run
+  cd ../../..
   ```
 
-  Then commit step 4 including `package-lock.json`, and `git push`. No Cloudflare login is needed. Report: Node version; local result and `time`; result, duration and run URL of `poc-worker`.
-- **Gate:** the test passes in `workerd` locally and in CI without a Cloudflare account → if not, Q3 is re-decided with the owner before step 7, which depends on the Worker.
+  Then commit steps 4 and 5, step 5 including `package-lock.json`, and `git push`. No Cloudflare login is needed. Report: Node version; local result of both tests and `time`; result, duration and run URL of `poc-worker` on the `pull_request` run.
+- **Gate:** the integration test passes in `workerd` locally and in CI without a Cloudflare account → if not, Q3 is re-decided with the owner before step 9, whose p3 and p4 patches depend on the Worker.
 - **Check:** `poc-worker` green on the PR
 
-### Step 6 — P1 Python PoC and temporary CI job
+### Step 7 — Python PoC (P1 + P4 consumer) and temporary CI job
 
 - **Status:** 💤 todo
 - **Who:** Claude
 - **Scope:**
-  - `python/requirements.txt` (`pytest`, `pytest-cov`, `jsonschema`; all `==`), `python/pyproject.toml` (pytest config only, coverage reported without threshold).
-  - `python/poc/`: a minimal module that parses one station-status JSON into records and flags stale stations against a `now` received as a parameter (UTC).
-  - `python/tests/conftest.py` (function-scoped fixtures), `tests/unit/` (parsing and staleness, written test-first), `tests/integration/` (file fixture → records), following every rule in `.claude/rules/python.md` › Testing so that Q1 can test them.
-  - `README.md`: Python command. `.github/workflows/ci.yml`: job `poc-python` (`setup-python` 3.14, `pip install -r requirements.txt`, `pytest --cov`).
-  - Must not touch: other jobs, anything outside `spikes/testing-conventions/` and `ci.yml`.
-- **Reads:** `.claude/rules/python.md`; 2. Method › Shared behaviour, File layout
-- **Check:** each python.md testing rule is either applied in the PoC or listed in the README as "paper only"
-- **Commit:** `chore(T020): s6 add Python PoC and temporary CI job`
+  - `python/requirements.txt` with the direct dependencies only (`pytest`, `pytest-cov`; all `==`); the owner freezes it in step 8 (Shared behaviour 1). `python/pyproject.toml` (pytest config only, coverage reported without threshold).
+  - `python/poc/`:
+    - a module that parses one station-status JSON into records and flags stale stations against a `now` received as a parameter (UTC);
+    - a bronze-side key parser: `parse_key(key)` returns `(source, feed, captured_at)` in UTC and rejects keys that break ADR-0012; a reader that decompresses a gzip payload.
+  - `python/tests/conftest.py` (function-scoped fixtures); `tests/fixtures/` (synthetic GBFS JSON, Shared behaviour 5); `tests/unit/` (parsing, staleness, key parser); `tests/integration/` (file fixture → records; P4 consumer test: every valid vector in `../contract/collector-contract.json` parses to its `(source, feed, captured_at)`, every invalid one is rejected, and the contract fixture gzipped in memory is read back unchanged). Every rule in `.claude/rules/python.md` › Testing is followed, so that Q1 can test them.
+  - Test-first, in two commits (Decision log): Claude writes `tests/unit/` and `conftest.py`, the owner commits them; then Claude writes the rest.
+  - `README.md`: Python command. `.github/workflows/ci.yml`: job `poc-python` (`actions/setup-python` with the Python version in the Decision log, `pip install -r requirements.txt`, `pytest --cov`, working directory `spikes/testing-conventions/python`).
+  - Must not touch: other jobs, `contract/`, `worker/`, `spark/`, anything outside `spikes/testing-conventions/` and `ci.yml`.
+- **Reads:** `.claude/rules/python.md`; 2. Method › Shared behaviour, File layout, Decision log; ADR-0012; `contract/collector-contract.json`
+- **Check:** each `python.md` testing rule is either applied in the PoC or listed in the README as "paper only"; the consumer test loads the vectors by relative path; the first commit contains only `tests/unit/` and `conftest.py`
+- **Commit:** `test(T020): s7 add failing unit tests`, then `chore(T020): s7 add Python PoC code and temporary CI job` (after step 8 freezes `python/requirements.txt`)
 
-### Step 7 — P4 contract PoC
-
-- **Status:** 💤 todo
-- **Who:** Claude
-- **Scope:**
-  - `contract/station.schema.json` in the step 1 format, consistent with ADR-0012; `contract/fixtures/` with valid and invalid synthetic cases (Shared behaviour 5).
-  - Producer test in `worker/test/`: the Worker output validates against the schema. Consumer test in `python/tests/integration/`: the fixtures the Python side reads validate against the same schema, and the invalid ones are rejected.
-  - Add any validator package to `worker/package.json` and `python/requirements.txt` with exact versions.
-  - Must not touch: `spark/`, `ci.yml` (the existing jobs already run both tests).
-- **Reads:** ADR-0012; step 1 matrix; 2. Method › Shared behaviour
-- **Check:** both tests load the same schema file by relative path
-- **Commit:** `chore(T020): s7 add contract PoC`
-
-### Step 8 — Run P1 and P4 locally and in CI
+### Step 8 — Run the Python PoC locally and in CI
 
 - **Status:** 💤 todo
 - **Who:** Owner
@@ -264,19 +301,24 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
   cd spikes/testing-conventions/python
   python3.14 -m venv .venv && source .venv/bin/activate
   pip install -r requirements.txt
+  pip freeze > requirements.txt
   time pytest --cov
-  deactivate && cd ../worker && npm install && time npx vitest run
+  deactivate && cd ../../..
   ```
 
-  Then commit steps 6 and 7 as proposed, and `git push`. Report: local results, coverage summary and times; result, duration and run URL of `poc-python` and `poc-worker`.
+  After the freeze, add the header line of Shared behaviour 1 at the top of `python/requirements.txt`. Then make the second step 7 commit, including the frozen `requirements.txt`, and `git push`. Report: local result, coverage summary and `time`; result, duration and run URL of `poc-python`; the wall-clock duration of the whole `pull_request` workflow run as GitHub shows it (criterion 3).
 - **Check:** `poc-python`, `poc-worker` and `poc-spark` green on the PR
 
 ### Step 9 — Mutation patches
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Scope:** `mutations/p1-python.patch`, `p2-spark.patch`, `p3-worker.patch`, `p4-contract.patch`: each changes one line of the code under test (P4: one field of the schema or of the Worker output) and says in a header comment which test must fail. Adds `mutations/` usage to the README. Touches nothing else.
-- **Reads:** the PoC code from steps 2–7
+- **Scope:** `mutations/p1-python.patch`, `p2-spark.patch`, `p3-worker.patch`, `p4-contract.patch`.
+  - P1–P3: each changes one line of the code under test.
+  - P4: changes one rule of the key format in every valid vector of `contract/collector-contract.json` (e.g. the date folder as `YYYY/MM/DD`), so the valid data of both sides stops meeting it; never a change that relaxes the contract (Shared behaviour 2).
+  - Each patch says in a header comment, before its first `diff` line, which test must fail; for P4, the producer unit test in `worker/` and the consumer test in `python/`, and why a relaxing change would not do.
+  - Adds `mutations/` usage to the README. Touches nothing else.
+- **Reads:** the PoC code and contract from steps 2–8; 2. Method › Shared behaviour
 - **Check:** `git apply --check mutations/<patch>` succeeds for each (run by the owner in step 10)
 - **Commit:** `chore(T020): s9 add mutation patches`
 
@@ -284,31 +326,55 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Scope:** for each patch, from the repo root (Shared behaviour 2):
+- **Scope:** all commands from the repo root (Shared behaviour 2). Once:
 
   ```bash
-  git apply spikes/testing-conventions/mutations/<patch>
-  <PoC command from the README> 2>&1 | tee spikes/testing-conventions/outputs/<patch>.txt
-  git commit -am "test(T020): s10 deliberate mutation <patch>, reverted next" && git push
-  # wait for the red CI run, note its URL
-  git revert --no-commit HEAD && git commit -m "test(T020): s10 revert mutation <patch>" && git push
+  mkdir -p spikes/testing-conventions/outputs
   ```
 
-  Report per patch: the test that failed locally, the red run URL, the green run URL after the revert.
-- **Gate:** a mutation does not make its test fail → that convention is not adopted as is; Claude records it as a finding and step 11 re-decides it.
-- **Check:** four red runs and four green runs recorded
+  For each patch, check and apply it:
+
+  ```bash
+  git apply --check spikes/testing-conventions/mutations/<patch>
+  git apply spikes/testing-conventions/mutations/<patch>
+  ```
+
+  Run the block of its PoC; for `p4-contract.patch`, run both the Python and the Worker blocks. Use the Java version in the Decision log.
+
+  ```bash
+  # P1 Python (and P4)
+  (cd spikes/testing-conventions/python && source .venv/bin/activate && pytest) 2>&1 | tee spikes/testing-conventions/outputs/<patch>-python.txt
+  # P2 Spark
+  (cd spikes/testing-conventions/spark && export JAVA_HOME=$(/usr/libexec/java_home -v 17) && source .venv/bin/activate && pytest) 2>&1 | tee spikes/testing-conventions/outputs/<patch>-spark.txt
+  # P3 Worker (and P4)
+  (cd spikes/testing-conventions/worker && npx vitest run) 2>&1 | tee spikes/testing-conventions/outputs/<patch>-worker.txt
+  ```
+
+  Then commit, push and revert:
+
+  ```bash
+  git commit -am "test(T020): s10 deliberate mutation <patch>, reverted next" && git push
+  # wait for the red pull_request run, note its URL
+  git revert --no-commit HEAD && git commit -m "test(T020): s10 revert mutation <patch>" && git push
+  # wait for the green pull_request run, note its URL
+  ```
+
+  Report per patch: the test that failed locally (for P4, on each side), the red `pull_request` run URL, the green `pull_request` run URL after the revert. `push` runs are not counted.
+- **Gate:** a mutation does not make its test fail (for P4, on both sides) → that convention is not adopted as is; Claude records it as a finding and step 11 re-decides it.
+- **Check:** four red and four green `pull_request` runs recorded; the P4 mutation failed on both sides
 
 ### Step 11 — Analysis Q1–Q5
 
 - **Status:** 💤 todo
 - **Who:** Claude
 - **Scope:** findings in 4. Findings:
-  - Q1: each rule of `.claude/rules/python.md` › Testing with verdict (holds, corrected, dropped), reason, standard, and its evidence (PoC or paper).
-  - Q2–Q4: answers from steps 2–10.
-  - Q5: test level per CI layer (local via `/implement`, push to a feature branch, PR pre-merge, post-merge on `main`), the layer for checks against live sources, and the proposed change to ADR-0013 (including "require branches to be up to date"), with the measured durations against criterion 3.
+  - Q1: each rule of `.claude/rules/python.md` › Testing with verdict (holds, corrected, dropped), reason, standard, and its evidence (PoC or paper). The TDD evidence is the two step 7 commits; the red phase by import error is recorded as the valid first red of TDD (Decision log).
+  - Q2–Q4: answers from steps 2–10. Q4 states when each contract form applies: shared test vectors for format/behaviour contracts (built), a schema (JSON Schema / ODCS) for data-shape contracts (justified on paper; to Not verified with its risk and the mitigation "validated in the first design that defines a data-shape contract").
+  - Q5: test level per CI layer (local via `/implement`, push to a feature branch, PR pre-merge, post-merge on `main`), the layer for checks against live sources, and the proposed change to ADR-0013 (including "require branches to be up to date"), with the measured durations and the wall-clock `pull_request` run against criterion 3.
+  - Observe only: job and local durations; whether the Worker fetch mock reproduces `encodeResponseBody: 'manual'` (step 5).
   - Exit criteria results so far, and Production inputs.
   - Touches only this doc.
-- **Reads:** 1. Questions, 2. Method, reports from steps 3, 5, 8 and 10, `.claude/rules/python.md`, ADR-0013
+- **Reads:** 1. Questions, 2. Method, reports from steps 3, 6, 8 and 10, `.claude/rules/python.md`, ADR-0013
 - **Check:** every Q1–Q5 has at least one finding; every finding cites its evidence
 - **Commit:** `docs(T020): s11 add analysis to spike s008`
 
@@ -348,7 +414,16 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 - **Status:** 💤 todo
 - **Who:** Owner + Claude
-- **Scope:** 5. Conclusion and the destination of every Production input in this doc; How we got here in the README; tear-down: Claude restores `.github/workflows/ci.yml` to its content on `main` (`git show main:.github/workflows/ci.yml`), the owner commits and pushes it and deletes local venvs and `node_modules/`.
+- **Scope:**
+  - Claude: 5. Conclusion (Not verified includes the schema case of Q4) and the destination of every Production input in this doc; How we got here in the README; T020 to ✅ in `docs/tasks.md`, in the conclusion commit.
+  - Tear-down: Claude restores `.github/workflows/ci.yml` to its content on `main` (`git show main:.github/workflows/ci.yml`); the owner commits both commits, pushes, and deletes the local environments:
+
+    ```bash
+    rm -rf spikes/testing-conventions/{python,spark}/.venv spikes/testing-conventions/worker/node_modules
+    gh pr ready
+    ```
+
+  - Then Claude gives the close sequence from CLAUDE.md (checks green, rebase merge, clean up with `-D`), and the owner runs it.
 - **Reads:** 1. Questions, 2. Method › Decision log, 4. Findings
 - **Check:** every Q answered; every exit criterion has a result; every P has a destination; `git diff main -- .github/workflows/ci.yml` is empty
 - **Commit:** `docs(T020): s16 conclude spike s008`, then `ci(T020): s16 remove temporary spike jobs`
