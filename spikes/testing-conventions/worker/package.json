@@ -1,0 +1,16 @@
+{
+  "name": "poc-worker",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "25.9.0"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.4.5",
+    "vitest": "5.0.5",
+    "wrangler": "4.151.2"
+  }
+}
