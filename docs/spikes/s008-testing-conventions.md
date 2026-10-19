@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 5
+- Current step: 6
 
 ## 1. Questions — what we need to know
 
@@ -86,7 +86,7 @@ Tool choices with real alternatives are scored on paper with a weighted decision
 | 2026-10-19 | Exit criterion "fault injection" renamed to "tests detect faults (manual mutation testing)"; content unchanged | "Fault injection" names resilience testing of running distributed systems, which is not what the criterion checks |
 | 2026-10-19 | One probe per question (P1–P5 plus desk analysis), no competing variants | Each probe answers a different question; the conventions cover every component, not a choice among them |
 | 2026-10-19 | Tool alternatives are scored on paper; only the winner is built | Keeps the timebox; the PoC verifies the chosen tool, the matrix records why |
-| 2026-10-19 | PoCs run in CI through temporary changes to `ci.yml` on the T020 branch: one job per PoC scoped to `spikes/testing-conventions/`, plus a `push` trigger for this branch; the PR is opened as draft; the changes are reverted at Conclusion, before merge | Measures the real CI layers (criterion 2, Q5) while nothing temporary reaches `main` (ephemeral CI config on a feature branch); `act` does not reproduce the GitHub runner faithfully |
+| 2026-10-19 | PoCs run in CI through temporary changes to `ci.yml` on the T020 branch: one job per PoC scoped to `spikes/testing-conventions/`; the PR is opened as draft; the changes are reverted at Conclusion, before merge. Amended 2026-10-20: the temporary `push` trigger for this branch (added in step 2) is removed in step 5 | Measures the real CI layers (criterion 2, Q5) while nothing temporary reaches `main` (ephemeral CI config on a feature branch); `act` does not reproduce the GitHub runner faithfully. Amendment: the double run (`push` + `pull_request`) was observed in step 3 and is documented GitHub behaviour; keeping the trigger only duplicates the remaining runs. Q5 is answered from the step 3 observation plus the standard |
 | 2026-10-19 | The local layer (Q5) is the test command `/implement` runs before proposing each commit; its duration is measured. A Git `pre-commit` hook is assessed on paper only, and Claude Code hooks (`.claude/settings.json`) are assessed on paper in Q6 as the automatic form of that instruction | YAGNI: `/implement` already runs the tests before every commit the owner makes, so a Git hook would repeat them and add config, per-machine install and tear-down |
 | 2026-10-19 | Dependencies follow the earlier spikes: Python `venv` + `requirements.txt` pinned with `==`; JS `npm` + `package-lock.json`; Python, Node and Java versions pinned in each CI job (`actions/setup-python`, `setup-node`, `setup-java`) | Criterion 2 with tools the owner already used; the dependency tooling of production code is not a testing convention |
 | 2026-10-19 | Gate in P2: Python 3.14 + PySpark 4.2.0 + Java 17 run the Spark test locally and in CI; if not, P2 drops to an earlier Python version | Python 3.14 is supported since Spark 4.1.0 (SPARK-51169, 4.1.0 release notes); 4.2.0 is the latest stable (2026-07-14) and runs on Java 17/21/25, 17 being the lowest LTS. Not confirmed by docs: behaviour on the GitHub Actions runner and `pyspark.testing.assertDataFrameEqual` in an installed 4.2.0 |
@@ -108,6 +108,8 @@ Tool choices with real alternatives are scored on paper with a weighted decision
 | 2026-10-19 | P1 unit tests are written test-first in their own commit (`s7 add failing unit tests`) before the code; a red phase by import error is accepted as the valid first red of TDD, and recorded as such in the Q1 evidence | The Git history is the evidence for the TDD rule in Q1 |
 | 2026-10-19 | Amends "Spike fixtures are hand-written synthetic JSON": payloads that must be gzip are built in memory inside the tests from the JSON fixtures | The contract payload is gzip bytes (ADR-0012); compressing in the test keeps binary files out of the repo |
 | 2026-10-19 | Deviation in step 1: the Worker test tool matrix compares `@cloudflare/vitest-plugin`, the Miniflare API and wrangler `createTestHarness()`, with the criteria and weights already approved; the outbound fetch mock is the one of the chosen tool (`@msw/cloudflare` for the plugin) | `@cloudflare/vitest-pool-workers` is deprecated on npm and renamed `@cloudflare/vitest-plugin`; `unstable_startWorker` is deprecated in favour of `createTestHarness()` (Cloudflare changelog, 2026-07-21); a convention for production cannot rest on deprecated tools |
+| 2026-10-20 | Outcome of the step 6 diagnosis (F5–F7): the step 5 integration test intercepts the source fetch with Miniflare `outboundService` in the vitest config and keeps the bytes-unchanged assertion; MSW is no longer used to serve the gzip body. The Gate of step 6 is not failed: Q3 holds (the `scheduled` handler runs in `workerd` and writes R2 without an account) | MSW intercepts `fetch` in JavaScript and decodes by `Content-Encoding` before the Worker sees the response (F6); `outboundService` keeps the bytes (F7). Limit: since `outboundService` does not decode in default mode either, the test cannot detect a regression of `encodeResponseBody: 'manual'`; that platform behaviour is covered by the measured V4 capture (ADR-0011) and, for the future, by a post-deploy smoke test (layer 4, on paper only) |
+| 2026-10-20 | Amends Shared behaviour 3: in the Worker, calls to the source API are simulated with Miniflare's `outboundService` (in `vitest.config.js`), not with the outbound mock of the step 1 tool (`@msw/cloudflare`), which is removed with `msw` from the PoC. The integration test compares the bytes stored in R2 with the in-memory gzip fixture, passed to it as a binding, and asserts that they start with the gzip magic bytes `1f 8b` | MSW decodes the body before the Worker sees it (F6), so it cannot serve a gzip body for a bytes-unchanged test; an oracle that does not travel through the mocked path (the fixture bytes, not a fetch back) keeps the test able to fail if any layer transforms the body |
 
 ### File layout
 
@@ -242,7 +244,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 5 — Worker PoC (P3 + P4 producer) and temporary CI job
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:**
   - `worker/package.json` with exact versions (no `^`) of `wrangler`, `vitest` and the step 1 Worker test tool, and an exact `engines.node`; `worker/wrangler.jsonc` with one cron trigger and an R2 binding `RAW_BUCKET`; `worker/vitest.config.js` using the step 1 Worker test tool.
@@ -251,7 +253,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
     - `worker/src/index.js`: a `scheduled` handler that takes one capture time per pass (UTC), fetches one GBFS feed as set in ADR-0011 (`Accept-Encoding: gzip`, `encodeResponseBody: 'manual'`) and stores the body unchanged in `RAW_BUCKET` under `objectKey(...)`.
   - `worker/test/unit/`: `objectKey` returns the expected key for every valid vector in `../contract/collector-contract.json` (P4 producer test).
   - `worker/test/integration/`: in `workerd`, trigger `scheduled` with the source fetch mocked (Shared behaviour 3), serving the contract fixture gzipped in memory with `Content-Encoding: gzip`; assert one object in the in-memory R2 binding, at the expected key, with bytes identical to those served. This test answers Q3. Whether the mock reproduces the runtime's handling of `encodeResponseBody: 'manual'` is observed only and noted in Findings (risk in ADR-0011).
-  - `README.md`: Worker command. `.github/workflows/ci.yml`: job `poc-worker` (`actions/setup-node` with `node-version-file: package.json`, `npm ci`, `npx vitest run`, working directory `spikes/testing-conventions/worker`).
+  - `README.md`: Worker command. `.github/workflows/ci.yml`: job `poc-worker` (`actions/setup-node` with `node-version-file: package.json`, `npm ci`, `npx vitest run`, working directory `spikes/testing-conventions/worker`); and remove `t020-testing-conventions` from the `push` branches with its TODO comment, so `push` stays `[main]` (Decision log, amended 2026-10-20).
   - Must not touch: other jobs, `contract/`, anything outside `spikes/testing-conventions/` and `ci.yml`.
 - **Reads:** 2. Method › Shared behaviour, File layout, Decision log; ADR-0011; ADR-0012; `contract/collector-contract.json`; step 1 Worker test tool matrix; `.github/workflows/ci.yml`
 - **Check:** `package.json` has no ranges; no test makes a real network call; the unit test loads the vectors by relative path
@@ -371,7 +373,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 - **Scope:** findings in 4. Findings:
   - Q1: each rule of `.claude/rules/python.md` › Testing with verdict (holds, corrected, dropped), reason, standard, and its evidence (PoC or paper). The TDD evidence is the two step 7 commits; the red phase by import error is recorded as the valid first red of TDD (Decision log).
   - Q2–Q4: answers from steps 2–10. Q4 states when each contract form applies: shared test vectors for format/behaviour contracts (built), a schema (JSON Schema / ODCS) for data-shape contracts (justified on paper; to Not verified with its risk and the mitigation "validated in the first design that defines a data-shape contract").
-  - Q5: test level per CI layer (local via `/implement`, push to a feature branch, PR pre-merge, post-merge on `main`), the layer for checks against live sources, and the proposed change to ADR-0013 (including "require branches to be up to date"), with the measured durations and the wall-clock `pull_request` run against criterion 3.
+  - Q5: test level per CI layer (local via `/implement`, push to a feature branch (answered from the step 3 double-run observation plus the standard, not measured again), PR pre-merge, post-merge on `main`), the layer for checks against live sources, and the proposed change to ADR-0013 (including "require branches to be up to date"), with the measured durations and the wall-clock `pull_request` run against criterion 3.
   - Observe only: job and local durations; whether the Worker fetch mock reproduces `encodeResponseBody: 'manual'` (step 5).
   - Exit criteria results so far, and Production inputs.
   - Touches only this doc.
@@ -537,12 +539,17 @@ Winners: shared test vectors for format/behaviour contracts; a schema (ODCS) for
 | F2 | `pyspark.testing.assertDataFrameEqual` exists and compares two DataFrames in the installed PySpark 4.2.0 (default options only; `checkRowOrder`, `rtol` and `atol` were not exercised). This confirms the part of matrix B that was unconfirmed | Step 3 · owner report (1 test passed) |
 | F3 | Duration of the Spark job with one test: locally 34.66 s as reported by `pytest` (34.859 s with `time`), first and only run, JVM and SparkSession start-up included and not measured apart; in CI `poc-spark` 50 s on `push` and 56 s on `pull_request`, whole job (checkout, setup, install, test) | Step 3 · owner report |
 | F4 | `pip freeze` of the Spark PoC resolves 7 packages: `pyspark` 4.2.0 and `pytest` 9.1.1 plus `iniconfig`, `packaging`, `pluggy`, `py4j` and `Pygments` | Step 3 · `spark/requirements.txt` |
+| F5 | The step 5 integration test fails locally on its last assertion: the bytes stored in R2 start with `123, 34, 108` (decoded JSON) and the bytes served by the MSW mock with `31, 139, 8` (gzip). The key and the single object in R2 were correct; the unit test passes 5/5 (vitest 5.0.5, Node 25.9.0, `time` 1.725 s) | Step 6 · local run 2026-10-20 |
+| F6 | Diagnosis 1, MSW: a gzip body served with `Content-Encoding: gzip` reaches the Worker decoded (533 bytes, starts `123, 34, 108`) with `encodeResponseBody: 'manual'` and without it; the same body served without `Content-Encoding` reaches it unchanged (192 bytes, `31, 139, 8`). MSW decodes by the header and ignores `manual` | Step 6 · local run 2026-10-20, temporary `diag/*.diag.js` (not committed) |
+| F7 | Diagnosis 2, Miniflare `outboundService` (accepted by the `miniflare` option of `cloudflareTest`): the gzip body (220 bytes, `31, 139, 8`) reaches the Worker unchanged in all three variants: with `Content-Encoding` and `manual`, with `Content-Encoding` and without `manual`, and without `Content-Encoding`. It keeps the bytes but does not decode in default mode either, so it cannot tell whether `manual` is honoured | Step 6 · local run 2026-10-20, temporary `diag/*.diag.js` (not committed) |
+| F8 | Corrects the Worker test tool matrix C (step 1), which names `@msw/cloudflare` as the documented mechanism for the outbound mock: for a test that asserts unchanged gzip bytes, MSW is replaced by the `outboundService` interception, with F6 and F7 as evidence. The matrix scores are not rewritten | Step 6 · F6, F7 |
+| F9 | Local result of the Worker PoC after the change (F8), Node v25.9.0: unit test 5 passed, integration test 1 passed in `workerd` without a Cloudflare account; vitest 523 ms, `time` 1.260 s total. `npm install` warns EBADENGINE: `vitest@5.0.5` requires Node `^22.12.0 \|\| ^24.0.0 \|\| >=26.0.0`, and 25.9.0 is outside that range | Step 6 · local run 2026-10-20 |
 
 ### Production inputs
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | | Step N · FN | |
+| P1 | Pin the Node version of a Worker to a release inside the range its test tools support (here `vitest` 5.0.5: 22.12, 24 or ≥ 26), not to the version installed on the owner's machine | Step 6 · F9 | |
 
 ## 5. Conclusion
 
