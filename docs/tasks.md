@@ -23,6 +23,6 @@
 | T018 | Git branches and CI/CD flow | 5 | ✅ | T019 | [git-branching-cicd](spikes/s007-git-branching-cicd.md) |
 | T018.1 | Git and CI conventions as invariants in CLAUDE.md | 1 | ✅ | T018 | — |
 | T019 | Review repo contents and history before making it public | 2 | ✅ | — |  |
-| T020 | Testing conventions and place in claude files | 5 | 📝 | — | [testing-conventions](spikes/s008-testing-conventions.md) |
+| T020 | Testing conventions and place in claude files | 5 | 🎬 | — | [testing-conventions](spikes/s008-testing-conventions.md) |
 | T021 | Production stack versions (Python, Spark, Java) and dependency tooling (ADR; `uv` + `pyproject.toml` vs pip) | 1 | ⬜ | T020 |  |
 | T022 | Supersede ADR-0003: deployment target (Fabric dropped) | 1 | ⬜ | — |  |
