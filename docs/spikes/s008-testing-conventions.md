@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 2
+- Current step: 4
 
 ## 1. Questions — what we need to know
 
@@ -175,7 +175,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 2 — Spark PoC and temporary CI job
 
-- **Status:** 🔄 in progress (code written; Check pending in step 3)
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:**
   - `spark/requirements.txt` with the direct dependencies only (`pyspark==4.2.0`, `pytest`, the step 1 Spark helper if it is a package; all `==`); the owner freezes it in step 3 (Shared behaviour 1). `spark/pyproject.toml` (pytest config only).
@@ -190,7 +190,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 3 — Run Spark locally and in CI; open draft PR
 
-- **Status:** 🔄 in progress (waiting for the owner's result)
+- **Status:** ✅ done
 - **Who:** Owner
 - **Scope:**
 
@@ -528,6 +528,15 @@ Data-shape contracts (silver, gold):
 | **Total** | 100 | 54 | **84** | |
 
 Winners: shared test vectors for format/behaviour contracts; a schema (ODCS) for data-shape contracts, justified on paper only (Decision log).
+
+### Findings log
+
+| F | Finding | Step · Source |
+|---|---|---|
+| F1 | The Gate of P2 passes: the Spark test runs with Python 3.14.4 + PySpark 4.2.0 + Java Temurin 17.0.20.1 locally (macOS) and in CI (`poc-spark`, Python 3.14, Temurin 17, `ubuntu-latest`), on the `push` run and on the `pull_request` run. No change to the Decision log | Step 3 · owner report; [push run](https://github.com/markciano/bikesharing/actions/runs/39332952154/job/118335360931?pr=6), [pull_request run](https://github.com/markciano/bikesharing/actions/runs/39332955352/job/118335372260?pr=6), [PR #6](https://github.com/markciano/bikesharing/pull/6) |
+| F2 | `pyspark.testing.assertDataFrameEqual` exists and compares two DataFrames in the installed PySpark 4.2.0 (default options only; `checkRowOrder`, `rtol` and `atol` were not exercised). This confirms the part of matrix B that was unconfirmed | Step 3 · owner report (1 test passed) |
+| F3 | Duration of the Spark job with one test: locally 34.66 s as reported by `pytest` (34.859 s with `time`), first and only run, JVM and SparkSession start-up included and not measured apart; in CI `poc-spark` 50 s on `push` and 56 s on `pull_request`, whole job (checkout, setup, install, test) | Step 3 · owner report |
+| F4 | `pip freeze` of the Spark PoC resolves 7 packages: `pyspark` 4.2.0 and `pytest` 9.1.1 plus `iniconfig`, `packaging`, `pluggy`, `py4j` and `Pygments` | Step 3 · `spark/requirements.txt` |
 
 ### Production inputs
 
