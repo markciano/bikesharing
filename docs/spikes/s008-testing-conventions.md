@@ -175,7 +175,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 2 — Spark PoC and temporary CI job
 
-- **Status:** 💤 todo
+- **Status:** 🔄 in progress (code written; Check pending in step 3)
 - **Who:** Claude
 - **Scope:**
   - `spark/requirements.txt` with the direct dependencies only (`pyspark==4.2.0`, `pytest`, the step 1 Spark helper if it is a package; all `==`); the owner freezes it in step 3 (Shared behaviour 1). `spark/pyproject.toml` (pytest config only).
@@ -190,7 +190,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 3 — Run Spark locally and in CI; open draft PR
 
-- **Status:** 💤 todo
+- **Status:** 🔄 in progress (waiting for the owner's result)
 - **Who:** Owner
 - **Scope:**
 
