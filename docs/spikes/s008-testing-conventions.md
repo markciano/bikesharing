@@ -6,10 +6,10 @@
 
 ## Status
 
-- State: Ready 🎬
+- State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
-- Started: — · Finished: —
-- Current step: —
+- Started: 2026-10-19 · Finished: —
+- Current step: 2
 
 ## 1. Questions — what we need to know
 
@@ -67,14 +67,14 @@ Tool choices with real alternatives are scored on paper with a weighted decision
 
 - `pytest` vs `unittest` (P1)
 - Spark helpers: `pyspark.testing.assertDataFrameEqual` (PySpark ≥ 3.5) vs `chispa` (P2)
-- Worker test tool: `@cloudflare/vitest-pool-workers` vs Miniflare API vs `unstable_startWorker` (P3)
+- Worker test tool: `@cloudflare/vitest-plugin` vs Miniflare API vs wrangler `createTestHarness()` (P3)
 - Contract format: shared golden test vectors vs schema (JSON Schema / ODCS), scored separately for format/behaviour contracts (keys, naming, encoding) and data-shape contracts (silver, gold); only the vectors are built (P4)
 
 ### Shared behaviour
 
 1. **One command per PoC,** documented in the README; dependencies pinned as set in the Decision log. Python: Claude writes only the direct dependencies with `==`; the owner's run step installs them, runs `pip freeze > requirements.txt`, adds the header line `# Python <version>; versions resolved by pip on <date>` and commits it with the step. Any later change to the direct dependencies or to the Python version repeats the freeze.
 2. **Mutation check:** check and apply the patch (`git apply --check`, then `git apply`); run the test locally and keep the failing output; commit and push the change, marked as temporary, and record the red CI run URL; commit the revert and see CI green again. Only `pull_request` runs (the PR gate) are counted; `push` runs are not. Each mutation is a finding: what was changed, which test failed, the run URL. The P4 mutation is a change that the valid data of both sides stops meeting (e.g. a changed key format), never one that relaxes the contract, which would let invalid cases pass and fail only one side; it runs the tests of both sides.
-3. **No network in tests** (hermetic tests), in Python and JS alike; in the Worker, calls to the source API are mocked with the `vitest-pool-workers` fetch mock. Hypothesis for Q1: checks against live sources belong outside the PR gate (e.g. a scheduled job); Q5 names their layer only.
+3. **No network in tests** (hermetic tests), in Python and JS alike; in the Worker, calls to the source API are mocked with the outbound mock of the step 1 Worker test tool (`@msw/cloudflare` for `@cloudflare/vitest-plugin`). Hypothesis for Q1: checks against live sources belong outside the PR gate (e.g. a scheduled job); Q5 names their layer only.
 4. **Measurements:** local duration with `time <command>`; CI duration per job as reported by GitHub, plus the wall-clock duration of the whole `pull_request` workflow run for criterion 3; all recorded in Findings.
 5. **Fixtures** are hand-written synthetic data: GBFS JSON for P1 in `python/tests/fixtures/`; the P4 vectors and one GBFS payload in `contract/`; Spark builds its DataFrame inside the test. Payloads that must be gzip are compressed in memory by the test, so no binary file is committed. No source data is committed (ADR-0009).
 6. **Commit messages** start the description with the step: `type(T020): sN description`.
@@ -107,6 +107,7 @@ Tool choices with real alternatives are scored on paper with a weighted decision
 | 2026-10-19 | Mutation runs count only `pull_request` runs: four red, four green | The PR run is the gate; each push also triggers a `push` run, which would double the count |
 | 2026-10-19 | P1 unit tests are written test-first in their own commit (`s7 add failing unit tests`) before the code; a red phase by import error is accepted as the valid first red of TDD, and recorded as such in the Q1 evidence | The Git history is the evidence for the TDD rule in Q1 |
 | 2026-10-19 | Amends "Spike fixtures are hand-written synthetic JSON": payloads that must be gzip are built in memory inside the tests from the JSON fixtures | The contract payload is gzip bytes (ADR-0012); compressing in the test keeps binary files out of the repo |
+| 2026-10-19 | Deviation in step 1: the Worker test tool matrix compares `@cloudflare/vitest-plugin`, the Miniflare API and wrangler `createTestHarness()`, with the criteria and weights already approved; the outbound fetch mock is the one of the chosen tool (`@msw/cloudflare` for the plugin) | `@cloudflare/vitest-pool-workers` is deprecated on npm and renamed `@cloudflare/vitest-plugin`; `unstable_startWorker` is deprecated in favour of `createTestHarness()` (Cloudflare changelog, 2026-07-21); a convention for production cannot rest on deprecated tools |
 
 ### File layout
 
@@ -165,7 +166,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 1 — Tool matrices
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:** the weighted decision matrices listed in 2. Method › Approach, in 4. Findings. The contract-format matrix is scored separately for format/behaviour contracts and data-shape contracts, so it records which form applies to each (Decision log). Every other tool used in a PoC (e.g. `vitest`, `wrangler`, `pytest-cov`) gets a "no real alternative" line with its source. Criteria and weights are written first and approved by the owner on the diff; only then are options scored, each score with a one-line reason and a source. Touches only this doc.
 - **Reads:** 1. Questions; 2. Method › Approach, Decision log; ADR-0012; official docs of each tool
@@ -244,7 +245,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 - **Status:** 💤 todo
 - **Who:** Claude
 - **Scope:**
-  - `worker/package.json` with exact versions (no `^`) of `wrangler`, `vitest` and the step 1 Worker test tool, and an exact `engines.node`; `worker/wrangler.jsonc` with one cron trigger and an R2 binding `RAW_BUCKET`; `worker/vitest.config.js` using the Workers pool.
+  - `worker/package.json` with exact versions (no `^`) of `wrangler`, `vitest` and the step 1 Worker test tool, and an exact `engines.node`; `worker/wrangler.jsonc` with one cron trigger and an R2 binding `RAW_BUCKET`; `worker/vitest.config.js` using the step 1 Worker test tool.
   - Functional core, imperative shell (Decision log):
     - `worker/src/contract.js`: pure exported `objectKey(source, feed, capturedAt)`;
     - `worker/src/index.js`: a `scheduled` handler that takes one capture time per pass (UTC), fetches one GBFS feed as set in ADR-0011 (`Accept-Encoding: gzip`, `encodeResponseBody: 'manual'`) and stores the body unchanged in `RAW_BUCKET` under `objectKey(...)`.
@@ -429,6 +430,104 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 - **Commit:** `docs(T020): s16 conclude spike s008`, then `ci(T020): s16 remove temporary spike jobs`
 
 ## 4. Findings
+
+### Tool matrices
+
+Weighted decision matrices (step 1). Criteria, weights and scale were approved by the owner before any score was written.
+
+#### Scale and rules
+
+| Score | Meaning |
+|---|---|
+| 5 | Covered natively and documented, no extra work |
+| 4 | Covered with minor configuration or an official plugin |
+| 3 | Covered with own code or a maintained third-party plugin |
+| 2 | Partly covered |
+| 1 | Covered with serious limitations |
+| 0 | Not covered |
+
+- Total = Σ (weight × score) / 5; maximum 100. The highest total wins.
+- Each score has a one-line reason and a source (official docs, release notes, changelog). Without a source, the score is 3 and marked *unverified*.
+- Weights and scale are not changed once scoring starts.
+- Tie or difference ≤ 5 points: the option with the better score on the highest-weight criterion wins, recorded as a close call.
+- Knock-out: an option scoring 0 on the highest-weight criterion is discarded whatever its total.
+
+#### A. Python test runner: `pytest` vs `unittest` (P1)
+
+| Criterion | Weight | `pytest` | `unittest` | Source |
+|---|---|---|---|---|
+| Fixture and isolation model (fixtures, `conftest`, `parametrize`) | 25 | 5 — fixtures, `conftest.py` and `parametrize` are native | 3 — `setUp`/`setUpClass` and `subTest`; sharing and parametrizing need own code | [pytest fixtures](https://docs.pytest.org/en/stable/how-to/fixtures.html), [parametrize](https://docs.pytest.org/en/stable/how-to/parametrize.html), [unittest](https://docs.python.org/3/library/unittest.html) |
+| Industry adoption, documentation and learning curve for a beginner | 25 | 5 — PySpark docs call it "one of the most popular Python testing frameworks" | 4 — stdlib with solid docs; xUnit class boilerplate is heavier for a beginner | [Testing PySpark](https://spark.apache.org/docs/latest/api/python/getting_started/testing_pyspark.html) |
+| Readability of tests and failure messages | 20 | 5 — plain `assert` with assertion rewriting and detailed diffs | 3 — `self.assertEqual` style; plainer failure output | [pytest assert](https://docs.pytest.org/en/stable/how-to/assert.html) |
+| Plugins the PoCs need (coverage, Spark) | 20 | 4 — `pytest-cov` plugin; PySpark docs show a pytest fixture | 3 — `coverage run -m unittest`; PySpark docs show `setUpClass` | [pytest-cov](https://pytest-cov.readthedocs.io/en/latest/), [coverage.py](https://coverage.readthedocs.io/) |
+| Dependency cost (stdlib or external) | 10 | 3 — one external dev dependency | 5 — stdlib | [pytest on PyPI](https://pypi.org/project/pytest/) |
+| **Total** | 100 | **92** | 69 | |
+
+Winner: `pytest`. Latest stable: `pytest` 9.1.1 and `pytest-cov` 7.1.0, both declaring Python 3.14 (PyPI classifiers, 2026-10-19).
+
+#### B. Spark helper: `pyspark.testing.assertDataFrameEqual` vs `chispa` (P2)
+
+| Criterion | Weight | `assertDataFrameEqual` | `chispa` | Source |
+|---|---|---|---|---|
+| Official support and maintenance with PySpark 4.2 | 30 | 5 — part of PySpark, ships with 4.2 | 3 — v0.12.0 (2026-03-24); CI covers PySpark 3.5–4.1, not 4.2; Python classifiers up to 3.12 | [chispa on PyPI](https://pypi.org/project/chispa/), [chispa repo](https://github.com/MrPowers/chispa) |
+| Comparison options (row order, approximate float, schema); the occupancy ratio is a float | 25 | 5 — `checkRowOrder` (default `False`), `rtol`/`atol`, `ignoreNullable` | 5 — `ignore_row_order`, approximate float equality, `ignore_nullable`, `ignore_column_order` | [pyspark/testing/utils.py](https://github.com/apache/spark/blob/master/python/pyspark/testing/utils.py), [chispa repo](https://github.com/MrPowers/chispa) |
+| Clarity of the diff on failure | 20 | 3 — `difflib` row diff, `showOnlyDiff`, `maxErrors` | 5 — coloured cell-level diff | same as above |
+| Dependency cost | 15 | 5 — no extra dependency | 4 — one package plus `prettytable` | [chispa on PyPI](https://pypi.org/project/chispa/) |
+| Adoption and documentation | 10 | 5 — official PySpark docs | 4 — own docs site, ~780 GitHub stars | [chispa repo](https://github.com/MrPowers/chispa) |
+| **Total** | 100 | **92** | 83 | |
+
+Winner: `assertDataFrameEqual`. Parameter details come from the Spark `master` source, not the 4.2.0 API page: confirmed in the installed 4.2.0 at step 3 (Decision log, "Gate in P2"). Both DataFrames are collected to the driver, which is fine for test-sized data.
+
+#### C. Worker test tool: `@cloudflare/vitest-plugin` vs Miniflare API vs wrangler `createTestHarness()` (P3)
+
+| Criterion | Weight | `@cloudflare/vitest-plugin` | Miniflare API | `createTestHarness()` | Source |
+|---|---|---|---|---|---|
+| Runs in real `workerd` with bindings (in-memory R2, `scheduled` trigger) without an account | 30 | 5 — tests run inside `workerd` with bindings from the config; `createScheduledController` triggers `scheduled` | 4 — runs `workerd` and dispatches scheduled events; needs own glue | 3 — *unverified*: `worker.scheduled()` documented; R2 and no-account not stated | [test APIs](https://developers.cloudflare.com/workers/testing/vitest-integration/test-apis/), [wrangler API](https://developers.cloudflare.com/workers/wrangler/api/), [test harness](https://developers.cloudflare.com/workers/testing/test-harness/) |
+| Official recommendation and API stability | 25 | 5 — recommended for unit tests; stable 1.x after the rename | 3 — Miniflare 5 still in beta; direct use no longer recommended | 3 — *unverified*: recommended for integration tests, no GA label found | [Vitest integration](https://developers.cloudflare.com/workers/testing/vitest-integration/), [changelog 2026-07-21](https://developers.cloudflare.com/changelog/post/2026-07-21-integration-test-harness/) |
+| `fetch` mocking for hermetic tests | 20 | 4 — `@msw/cloudflare`, the documented mechanism | 3 — *unverified* | 3 — *unverified*: outbound `fetch` proxied through Node, so MSW applies | [migration guide](https://developers.cloudflare.com/workers/testing/vitest-integration/migration-guides/migrate-to-vitest-plugin/), [prepare test state](https://developers.cloudflare.com/workers/testing/test-harness/prepare-test-state/) |
+| Unit and integration tests with one runner | 15 | 5 — pure functions and handler both run under Vitest in `workerd` | 3 — tests in Node, own harness | 3 — any Node runner; pure functions run in Node, not `workerd` | [Workers testing](https://developers.cloudflare.com/workers/testing/) |
+| Setup and CI cost | 10 | 4 — one plugin plus a config file; Node ≥ 22 | 3 — *unverified* | 3 — *unverified*: no CI page | [npm](https://www.npmjs.com/package/@cloudflare/vitest-plugin) |
+| **Total** | 100 | **94** | 66 | 60 | |
+
+Winner: `@cloudflare/vitest-plugin` (1.4.5; peer `vitest` ^4.1.0 or ^5.0.0; Node ≥ 22 via `wrangler` 4.151.2). Cloudflare positions the plugin for functions and modules inside the runtime and `createTestHarness()` for whole-Worker integration across Workers and external services ([Workers testing](https://developers.cloudflare.com/workers/testing/)); the PoC needs one Worker and its R2 binding, which the plugin covers. Observe only (step 5): whether `@msw/cloudflare` passes a gzip body unchanged with `encodeResponseBody: 'manual'`.
+
+#### No real alternative
+
+| Tool | Why | Source |
+|---|---|---|
+| `pytest-cov` | The pytest integration of coverage.py, the same engine; `coverage run -m pytest` only drops the plugin options | [pytest-cov](https://pytest-cov.readthedocs.io/en/latest/) |
+| `pytest` (Spark PoC) | Follows from matrix A; the PySpark testing guide has a pytest section with a shared SparkSession fixture | [Testing PySpark](https://spark.apache.org/docs/latest/api/python/getting_started/testing_pyspark.html) |
+| `vitest` | Peer dependency of `@cloudflare/vitest-plugin`; no other runner is supported | [npm](https://www.npmjs.com/package/@cloudflare/vitest-plugin) |
+| `wrangler` | Dependency of the plugin; reads `wrangler.jsonc` and provides the local runtime (Miniflare, `workerd`) | [npm](https://www.npmjs.com/package/wrangler) |
+| `@msw/cloudflare` | The outbound mock documented for the plugin | [migration guide](https://developers.cloudflare.com/workers/testing/vitest-integration/migration-guides/migrate-to-vitest-plugin/) |
+
+#### D. Contract format: shared golden test vectors vs schema (JSON Schema / ODCS) (P4)
+
+Same criteria and weights, scored separately for format/behaviour contracts (keys, naming, encoding) and data-shape contracts (silver, gold).
+
+Format/behaviour contracts (the collector contract of ADR-0012):
+
+| Criterion | Weight | Test vectors | Schema | Source |
+|---|---|---|---|---|
+| Expresses the rules of that contract kind (cross-field consistency, unchanged bytes, types and nullability) | 35 | 5 — input → expected cases express the date folder = UTC date of the timestamp, and byte equality | 1 — JSON Schema cannot compare two properties; only a regex on the key shape; nothing on bytes | [cross-field validation](https://jsonforms.discourse.group/t/validation-by-comparing-2-fields/1696) |
+| Language neutrality: the same artefact serves JS and Python without code generation | 20 | 5 — one JSON file read by the tests of each language | 4 — the schema is neutral, but the cross-field rule needs code per language | [JSON Schema Test Suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite) |
+| A breaking change fails the tests of both sides | 20 | 5 — both suites read the same file, so a changed case fails both | 3 — validates sample outputs only; implementations can drift | [JSON Schema Test Suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite) |
+| Adopted standard and tooling | 15 | 3 — widely used pattern (conformance suites), no formal standard | 3 — JSON Schema is a standard, but not for this contract kind | [JSON Schema Test Suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite) |
+| Maintenance cost | 10 | 3 — *unverified* | 3 — *unverified* | — |
+| **Total** | 100 | **90** | 50 | |
+
+Data-shape contracts (silver, gold):
+
+| Criterion | Weight | Test vectors | Schema (ODCS) | Source |
+|---|---|---|---|---|
+| Expresses the rules of that contract kind (cross-field consistency, unchanged bytes, types and nullability) | 35 | 2 — types and nullability only by example | 5 — ODCS declares columns, types, required, uniqueness and quality rules | [ODCS v3.1.0](https://bitol.io/?p=302), [ODCS docs](https://docs.datacontract.com/open-data-contract-standard) |
+| Language neutrality: the same artefact serves JS and Python without code generation | 20 | 5 — plain JSON | 4 — YAML/JSON, though ODCS tooling is mostly Python/Java | [ODCS v3.1.0](https://bitol.io/?p=302) |
+| A breaking change fails the tests of both sides | 20 | 2 — cases never see the real table's columns | 3 — *unverified*: the contract can be checked against real tables in CI | — |
+| Adopted standard and tooling | 15 | 2 — no data-contract ecosystem | 5 — Bitol, a Linux Foundation project; tool support (e.g. DataHub) | [ODCS docs](https://docs.datacontract.com/open-data-contract-standard) |
+| Maintenance cost | 10 | 3 — *unverified* | 3 — *unverified* | — |
+| **Total** | 100 | 54 | **84** | |
+
+Winners: shared test vectors for format/behaviour contracts; a schema (ODCS) for data-shape contracts, justified on paper only (Decision log).
 
 ### Production inputs
 
