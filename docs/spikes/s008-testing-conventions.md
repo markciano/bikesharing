@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 6
+- Current step: 7
 
 ## 1. Questions — what we need to know
 
@@ -261,7 +261,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 6 — Run the Worker locally and in CI
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Scope:**
 
@@ -544,6 +544,7 @@ Winners: shared test vectors for format/behaviour contracts; a schema (ODCS) for
 | F7 | Diagnosis 2, Miniflare `outboundService` (accepted by the `miniflare` option of `cloudflareTest`): the gzip body (220 bytes, `31, 139, 8`) reaches the Worker unchanged in all three variants: with `Content-Encoding` and `manual`, with `Content-Encoding` and without `manual`, and without `Content-Encoding`. It keeps the bytes but does not decode in default mode either, so it cannot tell whether `manual` is honoured | Step 6 · local run 2026-10-20, temporary `diag/*.diag.js` (not committed) |
 | F8 | Corrects the Worker test tool matrix C (step 1), which names `@msw/cloudflare` as the documented mechanism for the outbound mock: for a test that asserts unchanged gzip bytes, MSW is replaced by the `outboundService` interception, with F6 and F7 as evidence. The matrix scores are not rewritten | Step 6 · F6, F7 |
 | F9 | Local result of the Worker PoC after the change (F8), Node v25.9.0: unit test 5 passed, integration test 1 passed in `workerd` without a Cloudflare account; vitest 523 ms, `time` 1.260 s total. `npm install` warns EBADENGINE: `vitest@5.0.5` requires Node `^22.12.0 \|\| ^24.0.0 \|\| >=26.0.0`, and 25.9.0 is outside that range | Step 6 · local run 2026-10-20 |
+| F10 | `poc-worker` passes in CI on the `pull_request` run of commit `44a8f0d` (event `pull_request`, shown on the run page): job 13 s, `poc-spark` job 49 s, whole workflow 52 s as reported by the owner; run <https://github.com/markciano/bikesharing/actions/runs/39342670910>. The Gate of step 6 passes: the integration test runs in `workerd` without a Cloudflare account locally (F9) and in CI | Step 6 · owner report 2026-10-20 |
 
 ### Production inputs
 
