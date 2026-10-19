@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 4
+- Current step: 5
 
 ## 1. Questions — what we need to know
 
@@ -227,7 +227,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 4 — Collector contract vectors
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:**
   - `contract/collector-contract.json` in the step 1 format for format/behaviour contracts, following ADR-0012:
