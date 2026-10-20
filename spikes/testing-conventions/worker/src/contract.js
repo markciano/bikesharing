@@ -4,5 +4,5 @@ export function objectKey(source, feed, capturedAt) {
   const iso = capturedAt.toISOString(); // always UTC: 2026-10-18T12:00:00.000Z
   const date = iso.slice(0, 10);
   const stamp = iso.slice(0, 19).replace(/[-:]/g, "") + "Z";
-  return `bronze/${source}/${feed}/${date}/${stamp}.json.gz`;
+  return `raw/${source}/${feed}/${date}/${stamp}.json.gz`;
 }
