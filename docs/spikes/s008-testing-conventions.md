@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 8
+- Current step: 9
 
 ## 1. Questions — what we need to know
 
@@ -296,7 +296,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 8 — Run the Python PoC locally and in CI
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Scope:**
 
@@ -545,6 +545,10 @@ Winners: shared test vectors for format/behaviour contracts; a schema (ODCS) for
 | F8 | Corrects the Worker test tool matrix C (step 1), which names `@msw/cloudflare` as the documented mechanism for the outbound mock: for a test that asserts unchanged gzip bytes, MSW is replaced by the `outboundService` interception, with F6 and F7 as evidence. The matrix scores are not rewritten | Step 6 · F6, F7 |
 | F9 | Local result of the Worker PoC after the change (F8), Node v25.9.0: unit test 5 passed, integration test 1 passed in `workerd` without a Cloudflare account; vitest 523 ms, `time` 1.260 s total. `npm install` warns EBADENGINE: `vitest@5.0.5` requires Node `^22.12.0 \|\| ^24.0.0 \|\| >=26.0.0`, and 25.9.0 is outside that range | Step 6 · local run 2026-10-20 |
 | F10 | `poc-worker` passes in CI on the `pull_request` run of commit `44a8f0d` (event `pull_request`, shown on the run page): job 13 s, `poc-spark` job 49 s, whole workflow 52 s as reported by the owner; run <https://github.com/markciano/bikesharing/actions/runs/39342670910>. The Gate of step 6 passes: the integration test runs in `workerd` without a Cloudflare account locally (F9) and in CI | Step 6 · owner report 2026-10-20 |
+| F11 | Local result of the Python PoC with Python 3.14.4, pytest 9.1.1 and pytest-cov 7.1.0: 26 passed (11 integration, 15 unit), `time` 0.559 s total, pytest 0.05 s. The consumer test passed for the 5 valid and 4 invalid contract vectors read by relative path | Step 8 · owner report 2026-10-20 |
+| F12 | `pip freeze` of the Python PoC resolves 7 packages: `pytest` 9.1.1 and `pytest-cov` 7.1.0 plus `coverage`, `iniconfig`, `packaging`, `pluggy` and `Pygments`. The freeze was committed apart from the PoC code (`1c155f3`, `69c6498`) | Step 8 · `python/requirements.txt`, `git log` |
+| F13 | `pytest --cov` on the command line overrides `--cov=poc` from `addopts`, so the coverage table includes the test files (TOTAL 120 statements, 100%) instead of only `poc/` (25 statements, 0 missed). The 100% is the same on `poc/`, but the total is not that of the logic | Step 8 · owner report 2026-10-20 |
+| F14 | `poc-python` passes in CI on the `pull_request` run: job 12 s, `poc-worker` 15 s, `poc-spark` 39 s; whole workflow 42 s as GitHub shows it, the three jobs green; run <https://github.com/markciano/bikesharing/actions/runs/39393325460/job/118529857966?pr=6>. Against criterion 3, 42 s is far below 10 min | Step 8 · owner report 2026-10-20 |
 
 ### Production inputs
 
