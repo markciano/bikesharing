@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 15
+- Current step: 16
 
 ## 1. Questions — what we need to know
 
@@ -115,6 +115,7 @@ Tool choices with real alternatives are scored on paper with a weighted decision
 | 2026-10-20 | Amends step 13: the placement map also covers the destination of the testing model, the docs local lint (pinned version, command, `.claude/settings.json` permission; completed in step 15, since docs is the only component with real code today) and a CI job recipe for future component designs, assessing a rule with `paths: .github/workflows/**` against a line in the `/design` skill or template. The CI jobs of python, spark and worker are still created in their own designs | The model needs an owner-facing home; docs can be linted locally today; the spike's temporary jobs are the evidence for a recipe that each component design would otherwise re-derive |
 | 2026-10-21 | Step 15 deviation from the placement map: M6 and M7 go to `.claude/rules/cloudflare-worker.md` (`paths:` `collector/**/*.js`, `collector/**/package.json`), not to `collector.md`; the testing-strategy section is "Cloudflare Worker (JS)" | The content is Cloudflare-specific (`workerd`, R2, Miniflare), and a collector in another language must not load it |
 | 2026-10-21 | Step 15 deviation from the placement map: the CI job recipe in `.claude/rules/ci.md` (M17) sets `timeout-minutes: 10` on every job | A hung test would otherwise hold the PR for the 6-hour default; it matches the 10-minute budget of the `pull_request` run and affects no other decision |
+| 2026-10-21 | Step 15 deviation from the placement map: the docs local lint (M16) is a script `scripts/lint-docs.sh` run by the owner, with `markdownlint-cli2` 0.23.2 (the version of `markdownlint-cli2-action@v24`), instead of a `PostToolUse` hook; written in one commit with its mentions in `.claude/rules/docs.md` and `CLAUDE.md` | A hook would lint on every edit of a file in `docs/`, too often for the benefit; the docs rules already steer the writing, so a lint now and then is enough, and CI is the gate. No `settings.json` permission is needed because the owner runs it |
 
 ### File layout
 
@@ -418,7 +419,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 15 — Write the conventions into the Claude files
 
-- **Status:** 🔄 in progress
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:** edits exactly as the approved map, nothing more: one commit per destination, each explained to the owner before writing. ADR changes (e.g. ADR-0013) are not written here; they go to Follow-ups in step 16.
 - **Reads:** the approved map; the files it names

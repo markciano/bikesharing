@@ -67,6 +67,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 │   ├── sources/            Source cards
 │   └── spikes/             Spike reports per system
 ├── src/bikesharing/        Pipeline code
+├── scripts/                Helper scripts
 ├── tests/                  unit/, integration/, fixtures/
 └── spikes/                 Throwaway investigation code
 ```
