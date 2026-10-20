@@ -30,4 +30,4 @@ def parse_stations(payload: dict) -> list[Station]:
 
 def find_stale(stations: list[Station], now: datetime, max_age: timedelta) -> list[Station]:
     # `now` is a parameter so the result never depends on the clock.
-    return [s for s in stations if now - s.last_reported >= max_age]
+    return [s for s in stations if now - s.last_reported > max_age]
