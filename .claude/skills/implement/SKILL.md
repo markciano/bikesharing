@@ -22,8 +22,8 @@ Cycle: Produce → Review. Produce runs over several sessions of about 3 steps e
 2. Read only what the step lists in Reads.
 3. Work only within the step's Scope and the File layout. Anything else is a deviation: set the step to ⛔, stop and report it, do not decide it. A deviation is valid only with the owner's OK. Once given, write it at once in the design's 4. Close › Decisions taken during implementation, before continuing; if it affects other tasks or the project, also propose an ADR in `docs/decisions/`. Record only what changes something the approved design states (Spec, File layout, a component contract, Test plan); details within the step's Scope are not recorded.
 4. **Tests first.** Write the step's tests from the Test plan and run them: they must fail (red). Then write the code until they pass (green). Tests may be added, never dropped.
-5. Run the Check.
-6. If the Check passes, mark the step ✅ and set Current step; the mark goes into the owner's commit of the step. On the first step, State goes to In progress 🔄 and the task to 🔄. If the Check fails, the step stays 🔄 and the report says why.
+5. Run the Check and, if the step touches code, all unit and integration tests of the touched component, not only the step's (local layer, for reference see [testing strategy](../../../docs/testing-strategy.md)).
+6. If the Check and the tests pass, mark the step ✅ and set Current step; the mark goes into the owner's commit of the step. On the first step, State goes to In progress 🔄 and the task to 🔄. If either fails, the step stays 🔄 and the report says why.
 7. End with the Change report.
 8. When running a range, stop before a step in another area, or past half context. The commit of a step must exist before the next step starts.
 
