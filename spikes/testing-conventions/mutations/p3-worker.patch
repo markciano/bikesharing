@@ -1,0 +1,16 @@
+P3 Worker mutation (spike s008, step 9).
+Change: objectKey starts the key with `bronze/` instead of `raw/`.
+Tests that must fail: worker/test/unit/contract.test.js (every valid vector) and worker/test/integration/scheduled.test.js
+(the key listed in the in-memory R2 binding differs from the contract key).
+Apply from the repo root: git apply spikes/testing-conventions/mutations/p3-worker.patch
+
+diff --git a/spikes/testing-conventions/worker/src/contract.js b/spikes/testing-conventions/worker/src/contract.js
+--- a/spikes/testing-conventions/worker/src/contract.js
++++ b/spikes/testing-conventions/worker/src/contract.js
+@@ -4,5 +4,5 @@
+   const iso = capturedAt.toISOString(); // always UTC: 2026-10-18T12:00:00.000Z
+   const date = iso.slice(0, 10);
+   const stamp = iso.slice(0, 19).replace(/[-:]/g, "") + "Z";
+-  return `raw/${source}/${feed}/${date}/${stamp}.json.gz`;
++  return `bronze/${source}/${feed}/${date}/${stamp}.json.gz`;
+ }

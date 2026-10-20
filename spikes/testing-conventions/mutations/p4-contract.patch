@@ -1,0 +1,56 @@
+P4 contract mutation (spike s008, step 9).
+Change: in the 5 `valid` vectors of contract/collector-contract.json, the date folder is YYYY/MM/DD instead of YYYY-MM-DD.
+The `invalid` vectors are not touched.
+Tests that must fail, one per side:
+  - producer: worker/test/unit/contract.test.js (objectKey still returns YYYY-MM-DD, the vector now expects YYYY/MM/DD);
+  - consumer: python/tests/integration/test_pipeline.py (parse_key rejects the new valid keys).
+Run both sides: the mutation is only proven if both fail.
+Why not a relaxing change: if the contract accepted more keys (e.g. a `valid` vector with a lowercase `z`), objectKey would
+still produce the old keys and keep passing, and only the consumer could notice; invalid keys would be accepted without
+any test failing. A stricter change makes the valid data of both sides stop meeting the contract, so both suites fail.
+Apply from the repo root: git apply spikes/testing-conventions/mutations/p4-contract.patch
+
+diff --git a/spikes/testing-conventions/contract/collector-contract.json b/spikes/testing-conventions/contract/collector-contract.json
+--- a/spikes/testing-conventions/contract/collector-contract.json
++++ b/spikes/testing-conventions/contract/collector-contract.json
+@@ -6,35 +6,35 @@
+       "source": "bicing",
+       "feed": "station_status",
+       "captured_at": "2026-10-18T12:00:00Z",
+-      "key": "raw/bicing/station_status/2026-10-18/20261018T120000Z.json.gz"
++      "key": "raw/bicing/station_status/2026/10/18/20261018T120000Z.json.gz"
+     },
+     {
+       "name": "other source and feed",
+       "source": "ambici",
+       "feed": "station_information",
+       "captured_at": "2026-10-18T08:05:30Z",
+-      "key": "raw/ambici/station_information/2026-10-18/20261018T080530Z.json.gz"
++      "key": "raw/ambici/station_information/2026/10/18/20261018T080530Z.json.gz"
+     },
+     {
+       "name": "before midnight UTC: the date is already the 19th in Madrid",
+       "source": "bicing",
+       "feed": "station_status",
+       "captured_at": "2026-10-18T23:30:00Z",
+-      "key": "raw/bicing/station_status/2026-10-18/20261018T233000Z.json.gz"
++      "key": "raw/bicing/station_status/2026/10/18/20261018T233000Z.json.gz"
+     },
+     {
+       "name": "just after midnight UTC: the date folder is the 19th",
+       "source": "ambici",
+       "feed": "station_status",
+       "captured_at": "2026-10-19T00:15:00Z",
+-      "key": "raw/ambici/station_status/2026-10-19/20261019T001500Z.json.gz"
++      "key": "raw/ambici/station_status/2026/10/19/20261019T001500Z.json.gz"
+     },
+     {
+       "name": "local clock change night (2026-10-25), UTC unaffected",
+       "source": "bicing",
+       "feed": "station_status",
+       "captured_at": "2026-10-25T00:30:00Z",
+-      "key": "raw/bicing/station_status/2026-10-25/20261025T003000Z.json.gz"
++      "key": "raw/bicing/station_status/2026/10/25/20261025T003000Z.json.gz"
+     }
+   ],
+   "invalid": [

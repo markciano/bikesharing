@@ -1,0 +1,14 @@
+P2 Spark mutation (spike s008, step 9).
+Change: add_occupancy multiplies bikes by capacity instead of dividing.
+Test that must fail: spark/tests/test_occupancy.py::test_add_occupancy_divides_bikes_by_capacity (occupancy 100.0 instead of 0.25).
+Apply from the repo root: git apply spikes/testing-conventions/mutations/p2-spark.patch
+
+diff --git a/spikes/testing-conventions/spark/poc/occupancy.py b/spikes/testing-conventions/spark/poc/occupancy.py
+--- a/spikes/testing-conventions/spark/poc/occupancy.py
++++ b/spikes/testing-conventions/spark/poc/occupancy.py
+@@ -9,4 +9,4 @@
+
+
+ def add_occupancy(df: DataFrame) -> DataFrame:
+-    return df.withColumn("occupancy", F.col("num_bikes_available") / F.col("capacity"))
++    return df.withColumn("occupancy", F.col("num_bikes_available") * F.col("capacity"))
