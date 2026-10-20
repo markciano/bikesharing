@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 14
+- Current step: 15
 
 ## 1. Questions — what we need to know
 
@@ -409,7 +409,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 14 — Approve the placement map
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Scope:** review the map row by row; report the rows to move and why.
 - **Check:** owner's OK on the whole map
@@ -712,7 +712,7 @@ New files proposed (names for the owner's approval): `docs/testing-strategy.md`;
 
 | # | Convention | Destination | Loaded | Reason |
 |---|---|---|---|---|
-| M1 | Testing model as a whole: answers (1)–(5) per component and the CI flow, with reasons and findings | `docs/testing-strategy.md` (new) 👉 | On demand, linked from the rules | Owner-facing single source of truth; the rules hold the condensed imperative form and each line links its section (spec-driven: the doc leads, the rules derive). Not `@import`ed, since imports load at launch in every session. Rejected: rules only (no reasons for the owner); spike only (frozen at Conclusion). Risk: doc and rules drift; mitigation: the same-commit rule of `CLAUDE.md` and the section links |
+| M1 | Testing model as a whole: answers (1)–(5) per component and the CI flow, with reasons and findings | `docs/testing-strategy.md` (new) 👉 | On demand, linked from the rules | Owner-facing single source of truth; the rules hold the condensed imperative form and each line links its section (spec-driven: the doc leads, the rules derive). Not `@import`ed, since imports load at launch in every session. Rejected: rules only (no reasons for the owner); spike only (frozen at Conclusion). Risk: doc and rules drift; mitigation: the same-commit rule of `CLAUDE.md` and the section links. Format (owner, step 14): text, one `####` heading per component with items (1)–(5), so a rule links to one section and only that section is read |
 | M2 | Language-neutral principles: pyramid (F19), "Done when" at the lowest level (F20), observable behaviour (F21), TDD (F22), AAA and independence (F23), hermetic tests (F28), injected time (F29), data quality outside the suite (F30) | `.claude/rules/testing.md` (new) 👉 | On matching path | They hold for Python and JS alike; one copy for both instead of one per language rule. They move out of `python.md` |
 | M3 | pytest specifics: runner and coverage with `[tool.coverage.run] source` (F24), level folders (F25), naming (F26), fixture scope with the session-scoped exception (F27) | `.claude/rules/python.md` › Testing (modified) | On matching path `src/**`, `tests/**` | Tool-specific to Python; F24 and F27 are the corrections of Q1 |
 | M4 | Spark: transformations as DataFrame → DataFrame, unit-tested on a session-scoped local SparkSession with `assertDataFrameEqual` (F31) | `.claude/rules/python.md` › Testing › Spark (modified) | On matching path | Spark code lives in `src/bikesharing/`, already in scope |
