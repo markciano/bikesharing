@@ -110,6 +110,9 @@ Tool choices with real alternatives are scored on paper with a weighted decision
 | 2026-10-19 | Deviation in step 1: the Worker test tool matrix compares `@cloudflare/vitest-plugin`, the Miniflare API and wrangler `createTestHarness()`, with the criteria and weights already approved; the outbound fetch mock is the one of the chosen tool (`@msw/cloudflare` for the plugin) | `@cloudflare/vitest-pool-workers` is deprecated on npm and renamed `@cloudflare/vitest-plugin`; `unstable_startWorker` is deprecated in favour of `createTestHarness()` (Cloudflare changelog, 2026-07-21); a convention for production cannot rest on deprecated tools |
 | 2026-10-20 | Outcome of the step 6 diagnosis (F5–F7): the step 5 integration test intercepts the source fetch with Miniflare `outboundService` in the vitest config and keeps the bytes-unchanged assertion; MSW is no longer used to serve the gzip body. The Gate of step 6 is not failed: Q3 holds (the `scheduled` handler runs in `workerd` and writes R2 without an account) | MSW intercepts `fetch` in JavaScript and decodes by `Content-Encoding` before the Worker sees the response (F6); `outboundService` keeps the bytes (F7). Limit: since `outboundService` does not decode in default mode either, the test cannot detect a regression of `encodeResponseBody: 'manual'`; that platform behaviour is covered by the measured V4 capture (ADR-0011) and, for the future, by a post-deploy smoke test (layer 4, on paper only) |
 | 2026-10-20 | Amends Shared behaviour 3: in the Worker, calls to the source API are simulated with Miniflare's `outboundService` (in `vitest.config.js`), not with the outbound mock of the step 1 tool (`@msw/cloudflare`), which is removed with `msw` from the PoC. The integration test compares the bytes stored in R2 with the in-memory gzip fixture, passed to it as a binding, and asserts that they start with the gzip magic bytes `1f 8b` | MSW decodes the body before the Worker sees it (F6), so it cannot serve a gzip body for a bytes-unchanged test; an oracle that does not travel through the mocked path (the fixture bytes, not a fetch back) keeps the test able to fail if any layer transforms the body |
+| 2026-10-20 | Amends step 12: the owner verifies a synthesis (testing model) instead of each finding | About 30 findings are not reviewable one by one; a summary with traceability lets the owner verify what he will actually use |
+| 2026-10-20 | Clarifies the expected output of the main question: the testing model answers, per component (python, spark, worker, contract, docs), (1) when a test is written, (2) which type, (3) format, (4) where it lives, (5) where and when it runs; and once for the project (6) the CI flow with the rule for moving tests from the PR run to the `main` run. Every statement cites its findings. `docs` is a component on paper (no PoC) | The main question asks which conventions each component adopts; a model with these six answers is what the component designs will apply |
+| 2026-10-20 | Amends step 13: the placement map also covers the destination of the testing model, the docs local lint (pinned version, command, `.claude/settings.json` permission; completed in step 15, since docs is the only component with real code today) and a CI job recipe for future component designs, assessing a rule with `paths: .github/workflows/**` against a line in the `/design` skill or template. The CI jobs of python, spark and worker are still created in their own designs | The model needs an owner-facing home; docs can be linted locally today; the spike's temporary jobs are the evidence for a recipe that each component design would otherwise re-derive |
 
 ### File layout
 
@@ -383,16 +386,23 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 12 — Verify the analysis
 
-- **Status:** 💤 todo
-- **Who:** Owner
-- **Scope:** read the step 11 findings; for each, check it against the reported runs and outputs, and say whether its reason is understood. Report the findings to correct or explain.
-- **Check:** owner's OK on every finding
+- **Status:** 🔄 in progress
+- **Who:** Owner + Claude
+- **Scope:** synthesis first (Decision log).
+  - Claude: drafts 4. Findings › Testing model from the findings, answering (1)–(6) as set in the Decision log, each statement citing its findings. Touches only this doc.
+  - Owner: verifies the model, and goes down to a finding only where something is unclear or unsupported. Reports the statements to correct or explain.
+- **Reads:** 4. Findings; 2. Method › Decision log
+- **Check:** owner's OK on the testing model
+- **Commit:** `docs(T020): s12 add testing model to spike s008`
 
 ### Step 13 — Placement map (Q6)
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Scope:** a placement map in 4. Findings: a table with one row per convention from step 11 (convention · destination · reason). Destinations: `CLAUDE.md` (always loaded: short invariants), `.claude/rules/*.md` with `paths:` (loaded when matching files are touched), a skill such as `/implement` (procedures, loaded when invoked), hooks or `settings.json` (enforced by the harness), an ADR (cross-cutting why). The criterion is progressive disclosure: each convention goes to the narrowest place where it is needed, and nothing is duplicated. It includes the ADR-0009 citation fix (TODO in Approach) and the assessment of Claude Code hooks for the local layer (Decision log). Before drafting, Claude reads the official Claude Code docs on memory, rules, skills and hooks and cites them. No Claude file is edited in this step.
+- **Scope:** a placement map in 4. Findings: a table with one row per convention from step 11 (convention · destination · reason). Destinations: `CLAUDE.md` (always loaded: short invariants), `.claude/rules/*.md` with `paths:` (loaded when matching files are touched), a skill such as `/implement` (procedures, loaded when invoked), hooks or `settings.json` (enforced by the harness), an ADR (cross-cutting why). The criterion is progressive disclosure: each convention goes to the narrowest place where it is needed, and nothing is duplicated. It includes the ADR-0009 citation fix (TODO in Approach) and the assessment of Claude Code hooks for the local layer (Decision log). Before drafting, Claude reads the official Claude Code docs on memory, rules, skills and hooks and cites them. No Claude file is edited in this step. The map also covers (Decision log):
+  - the destination of the testing model, an owner-facing document;
+  - the docs local lint: pinned version, command and the `.claude/settings.json` permission, completed in step 15;
+  - a CI job recipe for future component designs: job skeleton and rules (runtime pinned via `setup-*`, `working-directory` per component, one test command, dependencies from the lockfile or frozen `requirements.txt`, and the pending `ci-passed` aggregator with the switch of the ruleset's required check, from the TODO in `ci.yml`), with the spike's temporary jobs as evidence. Two placements are assessed: a rule with `paths: .github/workflows/**`, and a line in the `/design` skill or template so a design that adds a component plans its CI job in its File layout. The CI jobs of python, spark and worker are still created in their own designs (Out of scope).
 - **Reads:** step 11 findings; `CLAUDE.md`; listing of `.claude/rules/` and `.claude/skills/`, then only the files the map touches; official Claude Code docs
 - **Check:** every convention from step 11 has exactly one destination
 - **Commit:** `docs(T020): s13 add placement map to spike s008`
@@ -606,6 +616,7 @@ Findings drawn from steps 2–10 and from paper. Numbering continues from the Fi
 | F40 | Post-merge on `main`: the same workflow on `push` to `main`, which checks the merged result. Post-deploy smoke tests (e.g. F34) belong to this layer once deployment exists; paper only | `ci.yml`; F34 |
 | F41 | Checks against live sources run in a separate `schedule` workflow, outside the PR gate and not required by the ruleset, because a source outage must not block a merge. Paper only | Shared behaviour 3 |
 | F42 | Proposed change to ADR-0013: record the four layers (F37–F41) and enable "require branches to be up to date before merging": the PR checks then run on exactly what `main` will contain. Cost: one re-run of under 1 min after a rebase, and with one owner `main` rarely moves under an open PR · [about protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches) | F10, F14; ADR-0013 |
+| F49 | The `docs` component has no PoC. Its CI job runs `DavidAnson/markdownlint-cli2-action@v24` on `docs/**/*.md`, on every `pull_request` and on `push` to `main`, with `.markdownlint-cli2.yaml` at the repo root (the standard location for tool config). The glob leaves out `CLAUDE.md`, `.claude/**` and the READMEs in `spikes/`. There is no local layer today: Claude cannot run the lint, since `markdownlint-cli2` is not installed and npx cancels the download without permission | `ci.yml`; `.markdownlint-cli2.yaml`; step 11 local attempt 2026-10-20 |
 
 #### Observe only
 
@@ -622,6 +633,61 @@ Findings drawn from steps 2–10 and from paper. Numbering continues from the Fi
 | F46 | Reproducible from scratch | Met in CI from a clean runner with pinned versions (frozen `requirements.txt`, `package-lock.json`, exact `package.json`). Caveat: the local Node 25.9.0 is outside the `vitest` range (P1) | F1, F4, F9, F10, F12, F14 |
 | F47 | Feedback time | Met: 42–52 s against 10 min | F10, F14 |
 | F48 | Traceability | Met so far: matrices A–D, with matrix C corrected by F8; each Q1 rule has a reason and a standard (F19–F30). Pending the owner's verification in step 12 | Matrices A–D; F19–F30 |
+
+### Testing model
+
+Synthesis of the findings (step 12): what each component design applies. Its final destination is decided in step 13. "Paper" marks a statement with no PoC behind it.
+
+#### Python (`src/bikesharing/`, non-Spark)
+
+1. **When:** unit tests are written before the code (red, green, refactor), one or more for every requirement and "Done when" condition, at the lowest level that can verify it (F20, F22).
+2. **Type:** unit for logic; integration when behaviour crosses a file or format boundary (file fixture → records) (F11, F25); contract, consumer side, when the code reads another component's output (F35); e2e on paper (F25).
+3. **Format:** files `test_<module>.py`, functions `test_<behaviour>_<condition>` (F26); Arrange–Act–Assert, one concept per test, no shared state (F23); assertions on outputs, not internals (F21); shared fixtures in `conftest.py`, function-scoped (F27); current time passed as a parameter, fixed UTC in tests (F29); no network, recorded fixtures (ADR-0009) and edge cases by hand (F28); pytest, coverage reported without threshold, source set in `[tool.coverage.run] source` (F24, P2).
+4. **Where:** `tests/unit/` mirroring `src/`, `tests/integration/`, `tests/e2e/`, `tests/fixtures/`; one `conftest.py` in `tests/`, plus one per level when needed (F25, F27).
+5. **Runs:** locally before each commit via `/implement`, under 1 s (F37); every level in the PR run (F39) and again in the `main` run (F40).
+
+#### Spark (transformations in `src/bikesharing/`)
+
+1. **When:** as Python; each transformation is written as a function DataFrame → DataFrame so it can be tested alone (F31).
+2. **Type:** unit, on a local SparkSession (F31). Integration of a whole Spark job: not covered by the spike.
+3. **Format:** as Python, plus: one session-scoped SparkSession (`local[1]`, UI disabled) in `conftest.py`, the documented exception to function scope (F27); input DataFrames built inside the test; comparison with `pyspark.testing.assertDataFrameEqual` (F2, F31).
+4. **Where:** the Python tree (`tests/unit/`). Whether Spark tests get their own folder or CI job, to keep Java and PySpark out of the Python job, is decided in the pipeline design (F32).
+5. **Runs:** locally before each commit, about 35 s (F37); in the PR run, where it is the slowest job at 39–56 s (F32, F39), and in the `main` run (F40). It is the first candidate to move under the rule in (6).
+
+#### Worker (`collector/`, JS)
+
+1. **When:** tests before code, as in Python. TDD was shown only in Python (F22); the Worker follows the same rule on paper.
+2. **Type:** unit for the functional core (pure functions such as `objectKey`); integration for the `scheduled` handler in `workerd`, with an in-memory R2 binding and the source simulated by Miniflare `outboundService` (F33); contract, producer side, on the same vectors (F35); post-deploy smoke test for `encodeResponseBody: 'manual'`, on paper (F34, P4).
+3. **Format:** `@cloudflare/vitest-plugin` with `vitest` (matrix C, F8); Arrange–Act–Assert, one concept per test, assertions on outputs (F21, F23); no network: `outboundService`, not MSW, when bytes must stay unchanged (F6–F8, F28); the oracle does not travel through the mocked path (Decision log 2026-10-20). Naming follows the common JS standard: files `<module>.test.js`, matched by the default `include` pattern of Vitest ([Vitest config](https://vitest.dev/config/#include)); test names are plain sentences stating behaviour and condition, the JS form of `test_<behaviour>_<condition>` (F26), as the PoC did.
+4. **Where:** `test/unit/` and `test/integration/` inside the component; Node pinned in `package.json` `engines` within the range the test tools support (F9, P1).
+5. **Runs:** locally before each commit, about 1.3 s (F37); PR run 13–15 s (F39); `main` run (F40); smoke test after deploy (F40, paper).
+
+#### Contract (between components)
+
+1. **When:** as soon as a contract between two components is defined, before either side is written (Decision log, step split).
+2. **Type:** contract tests. Format/behaviour contracts (keys, naming, encoding): shared golden test vectors (F35). Data-shape contracts (silver, gold): ODCS schema, on paper (F36).
+3. **Format:** one JSON file with `valid` cases (input → expected output) and `invalid` cases, each breaking exactly one rule with its `reason`; binary payloads are built in memory by the tests (Shared behaviour 5). A change to the contract makes the valid data stop meeting it; it never relaxes it (Shared behaviour 2).
+4. **Where:** one shared file, read by relative path by the producer tests and the consumer tests (F35); inside the path filters of every component job that reads it (P3).
+5. **Runs:** inside the test runs of both sides, so a contract change fails both (F18, F35).
+
+#### Docs (`docs/`)
+
+1. **When:** no test is written; every Markdown change in `docs/` is linted (F49).
+2. **Type:** static check (markdownlint), not a test level (F49).
+3. **Format:** the rules in `.markdownlint-cli2.yaml` and the "write them right the first time" list in `.claude/rules/docs.md` (F49).
+4. **Where:** config at the repo root; scope `docs/**/*.md`, which leaves out `CLAUDE.md`, `.claude/**` and the READMEs in `spikes/` (F49).
+5. **Runs:** PR run and `main` run (F49). No local layer today (F49); its local lint is placed in step 13 and completed in step 15 (Decision log).
+
+#### CI flow (project)
+
+1. Branch `tNNN-short-title` from an up-to-date `main` (ADR-0013); before each commit, `/implement` runs the tests of the touched component (F37).
+2. First push opens a draft PR. No CI on `push` to feature branches: the PR's `pull_request` run fires on every push (F38).
+3. The `pull_request` run is the gate: every automated level of every affected component, contract tests and `docs` lint, light, ≤ 10 min wall-clock (F39, F47). Proposed: "require branches to be up to date before merging" (F42).
+4. Rebase merge (ADR-0013).
+5. The `push` run on `main` repeats the workflow on the merged result; it may hold heavier tests, and later post-deploy smoke tests (F40).
+6. A scheduled run holds checks against live sources, outside the gate and not required (F41, paper).
+
+Rule for moving tests (criterion 3, paper): when the `pull_request` run passes 10 min wall-clock, the slowest group of tests moves from the PR run to the `main` run, starting with the heaviest job (today Spark, F32). It stays in the local layer, and a red `main` run is fixed at once in a new PR. Today the run takes 42–52 s, so nothing moves (F39).
 
 ### Production inputs
 
