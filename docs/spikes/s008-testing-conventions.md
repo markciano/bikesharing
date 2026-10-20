@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 10
+- Current step: 11
 
 ## 1. Questions — what we need to know
 
@@ -327,7 +327,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 10 — Apply and revert mutations
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Scope:** all commands from the repo root (Shared behaviour 2). Once:
 
@@ -549,6 +549,10 @@ Winners: shared test vectors for format/behaviour contracts; a schema (ODCS) for
 | F12 | `pip freeze` of the Python PoC resolves 7 packages: `pytest` 9.1.1 and `pytest-cov` 7.1.0 plus `coverage`, `iniconfig`, `packaging`, `pluggy` and `Pygments`. The freeze was committed apart from the PoC code (`1c155f3`, `69c6498`) | Step 8 · `python/requirements.txt`, `git log` |
 | F13 | `pytest --cov` on the command line overrides `--cov=poc` from `addopts`, so the coverage table includes the test files (TOTAL 120 statements, 100%) instead of only `poc/` (25 statements, 0 missed). The 100% is the same on `poc/`, but the total is not that of the logic | Step 8 · owner report 2026-10-20 |
 | F14 | `poc-python` passes in CI on the `pull_request` run: job 12 s, `poc-worker` 15 s, `poc-spark` 39 s; whole workflow 42 s as GitHub shows it, the three jobs green; run <https://github.com/markciano/bikesharing/actions/runs/39393325460/job/118529857966?pr=6>. Against criterion 3, 42 s is far below 10 min | Step 8 · owner report 2026-10-20 |
+| F15 | Mutation P1 (`p1-python.patch`: `>` to `>=` in `find_stale`): locally only `test_find_stale_keeps_station_exactly_at_max_age` failed, as the patch header predicts. Red `pull_request` run <https://github.com/markciano/bikesharing/actions/runs/39397024368>; green after the revert <https://github.com/markciano/bikesharing/actions/runs/39397370983> | Step 10 · owner report 2026-10-20 |
+| F16 | Mutation P2 (`p2-spark.patch`: `/` to `*` in `add_occupancy`): locally `test_add_occupancy_divides_bikes_by_capacity` failed. Red `pull_request` run <https://github.com/markciano/bikesharing/actions/runs/39398939405>; green after the revert <https://github.com/markciano/bikesharing/actions/runs/39399211902> | Step 10 · owner report 2026-10-20 |
+| F17 | Mutation P3 (`p3-worker.patch`: key prefix `raw/` to `bronze/` in `objectKey`): locally 6 of 6 Worker tests failed: the 5 `objectKey` tests of `test/unit/contract.test.js` (one per valid vector) and `stores the served gzip bytes unchanged at the contract key` in `test/integration/scheduled.test.js`, run in `workerd`. Red `pull_request` run <https://github.com/markciano/bikesharing/actions/runs/39399487844>; green after the revert <https://github.com/markciano/bikesharing/actions/runs/39399989457> | Step 10 · owner report 2026-10-20 |
+| F18 | Mutation P4 (`p4-contract.patch`: date folder `YYYY/MM/DD` in the 5 valid vectors) failed on both sides. Consumer: the owner reported `test_parse_key_accepts_every_valid_contract_vector[midday capture]` for Python (only that case was reported, not the full list). Producer: the 5 `objectKey` tests of `test/unit/contract.test.js` failed, and also the integration test `stores the served gzip bytes unchanged at the contract key`, which reads `vectors.valid[0].key`. Red `pull_request` run <https://github.com/markciano/bikesharing/actions/runs/39400503320>; green after the revert <https://github.com/markciano/bikesharing/actions/runs/39400596333> | Step 10 · owner report 2026-10-20 |
 
 ### Production inputs
 
