@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 7
+- Current step: 8
 
 ## 1. Questions — what we need to know
 
@@ -279,7 +279,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 7 — Python PoC (P1 + P4 consumer) and temporary CI job
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:**
   - `python/requirements.txt` with the direct dependencies only (`pytest`, `pytest-cov`; all `==`); the owner freezes it in step 8 (Shared behaviour 1). `python/pyproject.toml` (pytest config only, coverage reported without threshold).

@@ -31,3 +31,22 @@ cd spikes/testing-conventions/worker
 npm install
 npm test
 ```
+
+## P1 Python
+
+A status parser with staleness (time received as a parameter), a bronze-side key parser and a gzip reader, tested with `pytest` at two levels (`tests/unit/`, `tests/integration/`). The integration tests are also the P4 consumer test: they read `contract/collector-contract.json` by relative path. Needs Python 3.14.
+
+```bash
+cd spikes/testing-conventions/python
+python3.14 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+pytest --cov
+```
+
+Rules of `.claude/rules/python.md` › Testing that this PoC does not exercise ("paper only", judged in Q1):
+
+- `tests/e2e/` level: there is no end-to-end flow in a PoC.
+- "Every requirement and Done-when condition is covered": a PoC has no design to trace.
+- Recorded fixtures (ADR-0009): the fixtures are hand-written synthetic data (Decision log).
+- One `conftest.py` per level: one in `tests/` is enough here.
+- Data quality checks stay out of the suite: the PoC has none.
