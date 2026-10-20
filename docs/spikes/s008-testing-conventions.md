@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 11
+- Current step: 12
 
 ## 1. Questions — what we need to know
 
@@ -368,7 +368,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 11 — Analysis Q1–Q5
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:** findings in 4. Findings:
   - Q1: each rule of `.claude/rules/python.md` › Testing with verdict (holds, corrected, dropped), reason, standard, and its evidence (PoC or paper). The TDD evidence is the two step 7 commits; the red phase by import error is recorded as the valid first red of TDD (Decision log).
@@ -554,11 +554,83 @@ Winners: shared test vectors for format/behaviour contracts; a schema (ODCS) for
 | F17 | Mutation P3 (`p3-worker.patch`: key prefix `raw/` to `bronze/` in `objectKey`): locally 6 of 6 Worker tests failed: the 5 `objectKey` tests of `test/unit/contract.test.js` (one per valid vector) and `stores the served gzip bytes unchanged at the contract key` in `test/integration/scheduled.test.js`, run in `workerd`. Red `pull_request` run <https://github.com/markciano/bikesharing/actions/runs/39399487844>; green after the revert <https://github.com/markciano/bikesharing/actions/runs/39399989457> | Step 10 · owner report 2026-10-20 |
 | F18 | Mutation P4 (`p4-contract.patch`: date folder `YYYY/MM/DD` in the 5 valid vectors) failed on both sides. Consumer: the owner reported `test_parse_key_accepts_every_valid_contract_vector[midday capture]` for Python (only that case was reported, not the full list). Producer: the 5 `objectKey` tests of `test/unit/contract.test.js` failed, and also the integration test `stores the served gzip bytes unchanged at the contract key`, which reads `vectors.valid[0].key`. Red `pull_request` run <https://github.com/markciano/bikesharing/actions/runs/39400503320>; green after the revert <https://github.com/markciano/bikesharing/actions/runs/39400596333> | Step 10 · owner report 2026-10-20 |
 
+### Analysis (step 11)
+
+Findings drawn from steps 2–10 and from paper. Numbering continues from the Findings log.
+
+#### Q1 — rules of `.claude/rules/python.md` › Testing
+
+| F | Rule | Verdict | Reason · standard | Evidence |
+|---|---|---|---|---|
+| F19 | Follow the test pyramid | Holds | Many fast unit tests, fewer slower integration tests: feedback cost grows with the level · test pyramid ([Practical Test Pyramid](https://martinfowler.com/articles/practical-test-pyramid.html)) | PoC: P1 15 unit, 11 integration in 0.559 s (F11); Spark shows the cost of a heavier level (F3) |
+| F20 | Every requirement and "Done when" covered at the lowest level that can verify it | Holds | Traceability from spec to test; lower levels are cheaper and point at the fault · test pyramid ("push tests down") | Paper: the spike has no design with "Done when" |
+| F21 | Tests verify observable behaviour, not implementation | Holds | Tests that assert outputs survive refactoring and still catch faults · Practical Test Pyramid; Beck, *TDD by Example* | PoC: every mutation was caught by tests asserting outputs only (F15–F18) |
+| F22 | Unit tests first (TDD: red, green, refactor) | Holds | The failing test proves it can fail before the code exists · Beck, *TDD by Example* | PoC: `fd6a830` adds only tests and `conftest.py`, `1c155f3` the code; the red by import error is the valid first red (Decision log) |
+| F23 | Arrange–Act–Assert; one concept per test; no shared state or order dependency | Holds | A failing test names one cause; independent tests run in any order · AAA (Bill Wake), Meszaros, *xUnit Test Patterns* | PoC: P1 and P2 mutations each failed only the tests of the changed concept (F15, F16) |
+| F24 | pytest; `pytest` runs all, `pytest tests/<level>` one level; coverage reported, never enforced | Corrected | Tool and threshold hold (matrix A; coverage is a tool to find untested code, not a target: [TestCoverage](https://martinfowler.com/bliki/TestCoverage.html)). Correction: the coverage source is set in `[tool.coverage.run] source` ([coverage.py config](https://coverage.readthedocs.io/en/latest/config.html)), not only in `addopts`, because a bare `--cov` on the command line overrides it | PoC: F11; F13 |
+| F25 | Levels are folders: `tests/unit/` (mirrors `src/`), `tests/integration/`, `tests/e2e/` | Holds | Folder per level lets each level run alone (F24) and in its CI layer · [pytest good practices](https://docs.pytest.org/en/stable/explanation/goodpractices.html) | PoC: P1 `unit/` and `integration/`; `e2e/` paper only |
+| F26 | Naming: `test_<module>.py`; `test_<behaviour>_<condition>` | Holds | A failing test name reads as the broken specification · pytest discovery conventions (pytest good practices) | PoC: F15 failure name `test_find_stale_keeps_station_exactly_at_max_age` |
+| F27 | Shared fixtures in `conftest.py`, function-scoped by default | Corrected | Function scope keeps tests independent (F23). Correction: an expensive, immutable resource such as a SparkSession is session-scoped, with the reason in the fixture · [pytest fixture scopes](https://docs.pytest.org/en/stable/how-to/fixtures.html), [Testing PySpark](https://spark.apache.org/docs/latest/api/python/getting_started/testing_pyspark.html) | PoC: step 2 session fixture; one Spark test costs 34.66 s with start-up (F3) |
+| F28 | No test touches the network; recorded fixtures (ADR-0009); edge cases by hand | Holds | Hermetic tests are deterministic and run without credentials · *Software Engineering at Google*, ch. 14 (hermetic tests). The same holds for JS: the Worker simulates the source with Miniflare `outboundService` (Decision log 2026-10-20) | PoC: P1, P3 and P4 run offline in CI (F10, F14); the spike used synthetic fixtures by Decision log, recorded fixtures are paper only |
+| F29 | Code that uses the current time receives it as a parameter; tests pass a fixed UTC time | Holds | A fixed clock makes boundary cases testable and repeatable · dependency injection, functional core, imperative shell | PoC: `find_stale` takes `now`; the boundary mutation was caught only thanks to a fixed time (F15) |
+| F30 | Data quality checks on the data belong to the pipeline design | Holds | Tests check code against fixed inputs before merge; data quality checks check real data at run time | Paper |
+
+#### Q2 — Spark
+
+| F | Finding | Evidence |
+|---|---|---|
+| F31 | Spark transformations are written as functions DataFrame → DataFrame and tested at unit level on a session-scoped local SparkSession (`local[1]`, UI disabled), compared with `assertDataFrameEqual`. They run with Python 3.14, PySpark 4.2.0 and Java 17 locally and in CI | F1, F2, F16, F27 |
+| F32 | Cost: one trivial test takes 34.66 s locally with start-up included, and the `poc-spark` job takes 39–56 s in CI, the slowest job. The marginal cost per extra test was not measured (only one test) | F3, F10, F14 |
+
+#### Q3 — Worker
+
+| F | Finding | Evidence |
+|---|---|---|
+| F33 | The Worker is tested with `@cloudflare/vitest-plugin`, without a Cloudflare account: pure functions (functional core) as unit tests, the `scheduled` handler as an integration test in `workerd` with an in-memory R2 binding and the source simulated by Miniflare `outboundService`. Local 1.26 s; CI job 13–15 s | F8, F9, F10, F14, F17 |
+| F34 | Limit: no local mock tells whether `encodeResponseBody: 'manual'` is honoured; MSW decodes by header, `outboundService` decodes in no mode. That behaviour stays covered by the V4 capture (ADR-0011) and, in future, by a post-deploy smoke test | F6, F7 |
+
+#### Q4 — Contracts between components
+
+| F | Finding | Evidence |
+|---|---|---|
+| F35 | Format/behaviour contracts (keys, naming, encoding) are shared golden test vectors in one JSON file, read by relative path by the producer tests (JS) and the consumer tests (Python). A change that the valid data stops meeting fails both sides | Matrix D; F11, F18 |
+| F36 | Data-shape contracts (silver, gold) use a schema (ODCS). Justified on paper only: to Not verified, risk "the schema form is not proven in this project", mitigation "validated in the first design that defines a data-shape contract" | Matrix D; Decision log |
+
+#### Q5 — CI layers
+
+| F | Finding | Evidence |
+|---|---|---|
+| F37 | Local layer: `/implement` runs the unit and integration tests of the touched component before proposing each commit. Measured: Python 0.559 s, Worker 1.26 s, Spark 34.86 s. A Git `pre-commit` hook is not adopted (Decision log, YAGNI); Claude Code hooks are assessed in Q6 | F3, F9, F11 |
+| F38 | Push to a feature branch: no CI run. Once a PR is open, each push triggers its `pull_request` run (`synchronize`); a `push` trigger on the branch doubles every run, as observed in step 3. Before a PR exists the local layer applies; a draft PR opened early gives CI from the first push · [events that trigger workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows) | F1; Decision log (amended 2026-10-20) |
+| F39 | PR pre-merge (the gate): every automated level of every affected component, plus `docs`. Measured wall-clock of the `pull_request` workflow: 42–52 s, far below the 10 min of criterion 3; no test needs to move to another layer · [Continuous Integration](https://martinfowler.com/articles/continuousIntegration.html) (ten-minute build) | F10, F14 |
+| F40 | Post-merge on `main`: the same workflow on `push` to `main`, which checks the merged result. Post-deploy smoke tests (e.g. F34) belong to this layer once deployment exists; paper only | `ci.yml`; F34 |
+| F41 | Checks against live sources run in a separate `schedule` workflow, outside the PR gate and not required by the ruleset, because a source outage must not block a merge. Paper only | Shared behaviour 3 |
+| F42 | Proposed change to ADR-0013: record the four layers (F37–F41) and enable "require branches to be up to date before merging": the PR checks then run on exactly what `main` will contain. Cost: one re-run of under 1 min after a rebase, and with one owner `main` rarely moves under an open PR · [about protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches) | F10, F14; ADR-0013 |
+
+#### Observe only
+
+| F | Finding | Evidence |
+|---|---|---|
+| F43 | Durations. Local: Python 0.559 s, Worker 1.26 s, Spark 34.86 s. CI jobs: `poc-python` 12 s, `poc-worker` 13–15 s, `poc-spark` 39–56 s. Whole `pull_request` workflow: 42–52 s | F3, F9, F10, F11, F14 |
+| F44 | The Worker fetch mock does not reproduce `encodeResponseBody: 'manual'` (answered by F34) | F6, F7 |
+
+#### Exit criteria so far
+
+| F | Criterion | Result | Evidence |
+|---|---|---|---|
+| F45 | Tests detect faults | Met: four red and four green `pull_request` runs; P4 failed on both sides | F15–F18 |
+| F46 | Reproducible from scratch | Met in CI from a clean runner with pinned versions (frozen `requirements.txt`, `package-lock.json`, exact `package.json`). Caveat: the local Node 25.9.0 is outside the `vitest` range (P1) | F1, F4, F9, F10, F12, F14 |
+| F47 | Feedback time | Met: 42–52 s against 10 min | F10, F14 |
+| F48 | Traceability | Met so far: matrices A–D, with matrix C corrected by F8; each Q1 rule has a reason and a standard (F19–F30). Pending the owner's verification in step 12 | Matrices A–D; F19–F30 |
+
 ### Production inputs
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
 | P1 | Pin the Node version of a Worker to a release inside the range its test tools support (here `vitest` 5.0.5: 22.12, 24 or ≥ 26), not to the version installed on the owner's machine | Step 6 · F9 | |
+| P2 | Set the coverage source in `[tool.coverage.run] source`, so the CI command cannot widen the report to the test files | Step 11 · F13, F24 | |
+| P3 | The shared contract file must be inside the path filters of every component job that reads it, so a contract change runs the tests of both sides | Step 11 · F35, ADR-0013 | |
+| P4 | A post-deploy smoke test that checks the Worker stores gzip bytes unchanged (`encodeResponseBody: 'manual'`) | Step 11 · F34 | |
 
 ## 5. Conclusion
 
