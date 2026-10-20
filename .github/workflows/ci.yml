@@ -52,3 +52,17 @@ jobs:
           node-version-file: spikes/testing-conventions/worker/package.json
       - run: npm ci
       - run: npx vitest run
+
+  # TODO: temporary (spike s008): remove at Conclusion.
+  poc-python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spikes/testing-conventions/python
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - run: pip install -r requirements.txt
+      - run: pytest --cov
