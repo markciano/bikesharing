@@ -50,3 +50,21 @@ Rules of `.claude/rules/python.md` › Testing that this PoC does not exercise (
 - Recorded fixtures (ADR-0009): the fixtures are hand-written synthetic data (Decision log).
 - One `conftest.py` per level: one in `tests/` is enough here.
 - Data quality checks stay out of the suite: the PoC has none.
+
+## Mutations
+
+One patch per PoC in `mutations/`, each changing the code under test so that its test must fail (manual mutation testing). Each patch names the expected failing test in its header comment. Apply from the repo root, run the PoC's test command, then revert:
+
+```bash
+git apply --check spikes/testing-conventions/mutations/p1-python.patch
+git apply spikes/testing-conventions/mutations/p1-python.patch
+# run the PoC tests and check that the named test fails
+git apply -R spikes/testing-conventions/mutations/p1-python.patch
+```
+
+- `p1-python.patch`: staleness boundary in `python/poc/status.py`.
+- `p2-spark.patch`: occupancy formula in `spark/poc/occupancy.py`.
+- `p3-worker.patch`: key prefix in `worker/src/contract.js`.
+- `p4-contract.patch`: date folder format in the valid vectors of `contract/collector-contract.json`; run the Python and Worker tests, both must fail.
+
+Method and CI procedure: Shared behaviour 2 and step 10 of [s008](../../docs/spikes/s008-testing-conventions.md).

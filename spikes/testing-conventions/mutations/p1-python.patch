@@ -1,0 +1,15 @@
+P1 Python mutation (spike s008, step 9).
+Change: find_stale uses `>=` instead of `>` (a station exactly at max_age becomes stale).
+Test that must fail: python/tests/unit/test_status.py::test_find_stale_keeps_station_exactly_at_max_age.
+The other staleness tests must keep passing: only the boundary test sees this change.
+Apply from the repo root: git apply spikes/testing-conventions/mutations/p1-python.patch
+
+diff --git a/spikes/testing-conventions/python/poc/status.py b/spikes/testing-conventions/python/poc/status.py
+--- a/spikes/testing-conventions/python/poc/status.py
++++ b/spikes/testing-conventions/python/poc/status.py
+@@ -30,4 +30,4 @@
+
+ def find_stale(stations: list[Station], now: datetime, max_age: timedelta) -> list[Station]:
+     # `now` is a parameter so the result never depends on the clock.
+-    return [s for s in stations if now - s.last_reported > max_age]
++    return [s for s in stations if now - s.last_reported >= max_age]

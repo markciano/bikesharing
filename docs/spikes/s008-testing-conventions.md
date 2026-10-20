@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 9
+- Current step: 10
 
 ## 1. Questions — what we need to know
 
@@ -314,7 +314,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 9 — Mutation patches
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:** `mutations/p1-python.patch`, `p2-spark.patch`, `p3-worker.patch`, `p4-contract.patch`.
   - P1–P3: each changes one line of the code under test.
