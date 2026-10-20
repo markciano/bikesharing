@@ -9,4 +9,4 @@ from pyspark.sql import functions as F
 
 
 def add_occupancy(df: DataFrame) -> DataFrame:
-    return df.withColumn("occupancy", F.col("num_bikes_available") / F.col("capacity"))
+    return df.withColumn("occupancy", F.col("num_bikes_available") * F.col("capacity"))
