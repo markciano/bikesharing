@@ -1,3 +1,4 @@
+# Python <version>; versions resolved by pip on 2026-10-20
 coverage==7.16.2
 iniconfig==2.3.1
 packaging==26.3
