@@ -30,9 +30,9 @@ Each component design applies the five answers below. "Paper" marks a statement 
 4. **Where:** the Python tree (`tests/unit/`). Whether Spark tests get their own folder or CI job, to keep Java and PySpark out of the Python job, is decided in the pipeline design (F32).
 5. **Runs:** locally before each commit, about 35 s (F37); in the PR run, where it is the slowest job at 39–56 s (F32, F39), and in the `main` run (F40). It is the first candidate to move under the rule in [Moving tests](#moving-tests).
 
-#### JS (`collector/`)
+#### Cloudflare Worker (JS)
 
-TODO: when the collector design fixes the layout (`collector/{bicing,ambici}`, and sources in other languages such as `collector/<source>_python`), rename this section's paths and scope it to the JS collectors; a Python collector follows the Python section.
+TODO: when the collector design fixes the layout (`collector/{bicing/,ambici/}`, and sources in other languages such as `collector/<source>_python`), rename this section's paths and scope it to the JS collectors; a Python collector follows the Python section.
 
 1. **When:** tests before code, as in Python. TDD was shown only in Python (F22); the Worker follows the same rule on paper.
 2. **Type:** unit for the functional core (pure functions such as `objectKey`); integration for the `scheduled` handler in `workerd`, with an in-memory R2 binding and the source simulated by Miniflare `outboundService` (F33); contract, producer side, on the same vectors (F35); post-deploy smoke test for `encodeResponseBody: 'manual'`, on paper (F34).
