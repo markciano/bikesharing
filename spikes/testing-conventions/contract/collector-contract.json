@@ -6,35 +6,35 @@
       "source": "bicing",
       "feed": "station_status",
       "captured_at": "2026-10-18T12:00:00Z",
-      "key": "raw/bicing/station_status/2026/10/18/20261018T120000Z.json.gz"
+      "key": "raw/bicing/station_status/2026-10-18/20261018T120000Z.json.gz"
     },
     {
       "name": "other source and feed",
       "source": "ambici",
       "feed": "station_information",
       "captured_at": "2026-10-18T08:05:30Z",
-      "key": "raw/ambici/station_information/2026/10/18/20261018T080530Z.json.gz"
+      "key": "raw/ambici/station_information/2026-10-18/20261018T080530Z.json.gz"
     },
     {
       "name": "before midnight UTC: the date is already the 19th in Madrid",
       "source": "bicing",
       "feed": "station_status",
       "captured_at": "2026-10-18T23:30:00Z",
-      "key": "raw/bicing/station_status/2026/10/18/20261018T233000Z.json.gz"
+      "key": "raw/bicing/station_status/2026-10-18/20261018T233000Z.json.gz"
     },
     {
       "name": "just after midnight UTC: the date folder is the 19th",
       "source": "ambici",
       "feed": "station_status",
       "captured_at": "2026-10-19T00:15:00Z",
-      "key": "raw/ambici/station_status/2026/10/19/20261019T001500Z.json.gz"
+      "key": "raw/ambici/station_status/2026-10-19/20261019T001500Z.json.gz"
     },
     {
       "name": "local clock change night (2026-10-25), UTC unaffected",
       "source": "bicing",
       "feed": "station_status",
       "captured_at": "2026-10-25T00:30:00Z",
-      "key": "raw/bicing/station_status/2026/10/25/20261025T003000Z.json.gz"
+      "key": "raw/bicing/station_status/2026-10-25/20261025T003000Z.json.gz"
     }
   ],
   "invalid": [
