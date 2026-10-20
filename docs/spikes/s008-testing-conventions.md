@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 13
+- Current step: 14
 
 ## 1. Questions — what we need to know
 
@@ -397,7 +397,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 13 — Placement map (Q6)
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Scope:** a placement map in 4. Findings: a table with one row per convention from step 11 (convention · destination · reason). Destinations: `CLAUDE.md` (always loaded: short invariants), `.claude/rules/*.md` with `paths:` (loaded when matching files are touched), a skill such as `/implement` (procedures, loaded when invoked), hooks or `settings.json` (enforced by the harness), an ADR (cross-cutting why). The criterion is progressive disclosure: each convention goes to the narrowest place where it is needed, and nothing is duplicated. It includes the ADR-0009 citation fix (TODO in Approach) and the assessment of Claude Code hooks for the local layer (Decision log). Before drafting, Claude reads the official Claude Code docs on memory, rules, skills and hooks and cites them. No Claude file is edited in this step. The map also covers (Decision log):
   - the destination of the testing model, an owner-facing document;
@@ -689,6 +689,52 @@ Synthesis of the findings (step 12): what each component design applies. Its fin
 
 Rule for moving tests (criterion 3, paper): when the `pull_request` run passes 10 min wall-clock, the slowest group of tests moves from the PR run to the `main` run, starting with the heaviest job (today Spark, F32). It stays in the local layer, and a red `main` run is fixed at once in a new PR. Today the run takes 42–52 s, so nothing moves (F39).
 
+### Placement map (step 13)
+
+One row per convention from step 11 (F19–F42, F49), plus the items the Decision log adds (testing model, docs local lint, CI recipe, ADR-0009 citation, hooks). F43–F48 are measurements and exit-criteria results, not conventions: they have no destination here and feed 5. Conclusion. Production inputs get their destination at Conclusion. 👉 marks a judgement call for the owner in step 14. ADR changes are follow-ups of step 16, not edits of step 15.
+
+#### Destinations
+
+Criterion: progressive disclosure. Each convention goes to the narrowest place that is loaded when it is needed, and has one copy.
+
+| Destination | When Claude loads it | Source |
+|---|---|---|
+| `CLAUDE.md` | Always, at launch; files it `@import`s also load at launch | [Memory](https://code.claude.com/docs/en/memory.md) |
+| `.claude/rules/<name>.md` with `paths:` | On matching path: when Read, Write or Edit touches a matching file; a rule without `paths:` loads always | [Memory](https://code.claude.com/docs/en/memory.md) |
+| Skill (`SKILL.md`, its template and supporting files) | On skill invocation; only the description is always in context; supporting files when needed | [Skills](https://code.claude.com/docs/en/skills.md) |
+| Hook in `.claude/settings.json` | Enforced by the harness: runs at its event whatever the model decides | [Hooks guide](https://code.claude.com/docs/en/hooks-guide.md) |
+| Permission in `.claude/settings.json` | Enforced by the harness: deny, then ask, then allow | [Permissions](https://code.claude.com/docs/en/permissions.md) |
+| ADR or another doc in `docs/` | Never automatically; read on demand when a rule or skill links it | — |
+
+New files proposed (names for the owner's approval): `docs/testing-strategy.md`; `.claude/rules/testing.md` with `paths:` `src/**`, `tests/**`, `collector/**`; `.claude/rules/collector.md` with `paths:` `collector/**`; `.claude/rules/ci.md` with `paths:` `.github/workflows/**`.
+
+#### Map
+
+| # | Convention | Destination | Loaded | Reason |
+|---|---|---|---|---|
+| M1 | Testing model as a whole: answers (1)–(5) per component and the CI flow, with reasons and findings | `docs/testing-strategy.md` (new) 👉 | On demand, linked from the rules | Owner-facing single source of truth; the rules hold the condensed imperative form and each line links its section (spec-driven: the doc leads, the rules derive). Not `@import`ed, since imports load at launch in every session. Rejected: rules only (no reasons for the owner); spike only (frozen at Conclusion). Risk: doc and rules drift; mitigation: the same-commit rule of `CLAUDE.md` and the section links |
+| M2 | Language-neutral principles: pyramid (F19), "Done when" at the lowest level (F20), observable behaviour (F21), TDD (F22), AAA and independence (F23), hermetic tests (F28), injected time (F29), data quality outside the suite (F30) | `.claude/rules/testing.md` (new) 👉 | On matching path | They hold for Python and JS alike; one copy for both instead of one per language rule. They move out of `python.md` |
+| M3 | pytest specifics: runner and coverage with `[tool.coverage.run] source` (F24), level folders (F25), naming (F26), fixture scope with the session-scoped exception (F27) | `.claude/rules/python.md` › Testing (modified) | On matching path `src/**`, `tests/**` | Tool-specific to Python; F24 and F27 are the corrections of Q1 |
+| M4 | Spark: transformations as DataFrame → DataFrame, unit-tested on a session-scoped local SparkSession with `assertDataFrameEqual` (F31) | `.claude/rules/python.md` › Testing › Spark (modified) | On matching path | Spark code lives in `src/bikesharing/`, already in scope |
+| M5 | Own folder or CI job for Spark tests (F32) | None: decided in the pipeline design (testing model, Spark (4)) | — | An open choice of that design, not a convention |
+| M6 | Worker: `@cloudflare/vitest-plugin`; unit tests on the functional core, integration of the `scheduled` handler in `workerd` with in-memory R2 and Miniflare `outboundService`; `<module>.test.js` and sentence names; `test/unit/`, `test/integration/`; Node pinned in `engines` (F33) | `.claude/rules/collector.md` (new) | On matching path `collector/**` | JS-specific; the `python.md` scope does not reach `collector/` |
+| M7 | Limit: no local mock verifies `encodeResponseBody: 'manual'` (F34) | `.claude/rules/collector.md` (new) | On matching path | Prevents a mock-based test for what no mock can check; the smoke test itself is P4 |
+| M8 | How to write and use contract vectors: `valid` and `invalid` cases with `reason`, read by relative path by both sides, a change never relaxes the contract (F35, part) | `.claude/rules/testing.md` (new) | On matching path | Producer and consumer both apply it. TODO: add the shared contract folder to `paths:` when a design defines it |
+| M9 | Choice of contract form: vectors for format/behaviour contracts, ODCS schema for data-shape contracts (F35, part; F36) | New ADR (follow-up, step 16) | On demand | A cross-cutting decision for every pair of components (`.claude/rules/docs.md`: an ADR records why) |
+| M10 | Local layer: before proposing each commit, run the unit and integration tests of the touched component (F37) | `/implement` `SKILL.md` (modified) | On skill invocation | A procedure of the build session; the skill body loads only when used |
+| M11 | Claude Code hooks for the local test layer (Decision log) | Not adopted | — | A `PreToolUse` hook only intercepts commands Claude runs, and the owner makes every commit; `PostToolUse` or `Stop` would run Spark (~35 s, F37) on every edit or turn. M10 is enough (YAGNI) |
+| M12 | Draft PR at the first push; no CI on `push` to feature branches (F38) | `CLAUDE.md` › Branches, PRs and CI (one line) | Always | Applies to every session that ends in commits, next to the GitHub Flow lines already there; its reason goes with M13 |
+| M13 | CI layers (F39–F41) and the rule for moving tests from the PR run to the `main` run | ADR-0013 amendment (follow-up, step 16) | On demand | ADR-0013 already sets the CI; layers are a cross-cutting why |
+| M14 | "Require branches to be up to date before merging" (F42) | ADR-0013 amendment (same follow-up); ruleset change by the owner | Enforced by the GitHub ruleset | Operational action, done by the owner (`CLAUDE.md`) |
+| M15 | Docs lint in CI: `markdownlint-cli2` on `docs/**/*.md`, config at the root (F49) | Unchanged: `ci.yml` job `docs`, `.markdownlint-cli2.yaml`, list in `.claude/rules/docs.md` | Enforced by CI; on matching path `docs/**` | Already in place |
+| M16 | Docs local lint, missing today (Decision log, amends step 13) | Hook `PostToolUse` on Edit and Write of `docs/**/*.md` in `.claude/settings.json`, running `markdownlint-cli2` on the edited file at the version that `markdownlint-cli2-action@v24` uses 👉 | Enforced by the harness | Hooks make an action always happen instead of relying on the model; per-file lint is fast, unlike tests (M11); same scope as the CI job. Version, command and any permission are completed in step 15. Rejected: a line in `docs.md` plus an allow rule `Bash(npx markdownlint-cli2@<version> *)`, which relies on Claude choosing to run it |
+| M17 | CI job recipe: job skeleton, runtime pinned via `setup-*`, `working-directory` per component, one test command, dependencies from the lockfile or frozen `requirements.txt`, the `ci-passed` aggregator and the switch of the ruleset's required check (TODO in `ci.yml`, which stays). Evidence: the spike's `poc-*` jobs | `.claude/rules/ci.md` (new) 👉 | On matching path `.github/workflows/**` | Loads exactly when a step edits a workflow; a design session touches no workflow, so the recipe does not load there |
+| M18 | A design that adds a component plans its CI job in its File layout | `/design` `template.md` › File layout comment (one line) | On skill invocation | The trigger in the design, without carrying the recipe (M17) into every design session |
+| M19 | Spike code: no test suite, targeted checks only | Unchanged: `.claude/rules/spikes.md` | On matching path `spikes/**` | `testing.md` does not include `spikes/**` |
+| M20 | ADR-0009 cites "CLAUDE.md › Testing" (TODO in Approach) | ADR-0009, citation to `docs/testing-strategy.md` (follow-up, step 16, own commit) | — | The owner-facing doc is the stable home; rule files may move |
+
+Consequential edits in step 15, not conventions: `CLAUDE.md` › Project structure lists `docs/testing-strategy.md`; `.claude/rules/docs.md` names the testing strategy as a doc type. Related and parked: T023 (scope of `.claude/rules/docs.md`), which does not change this map.
+
 ### Production inputs
 
 | P | Input | Origin | Destination |
@@ -714,4 +760,7 @@ Observed window: —
 
 ## Sources
 
--
+- [Claude Code: Memory (CLAUDE.md, imports, rules)](https://code.claude.com/docs/en/memory.md), read 2026-10-20
+- [Claude Code: Skills](https://code.claude.com/docs/en/skills.md), read 2026-10-20
+- [Claude Code: Hooks guide](https://code.claude.com/docs/en/hooks-guide.md) and [Hooks reference](https://code.claude.com/docs/en/hooks), read 2026-10-20
+- [Claude Code: Permissions](https://code.claude.com/docs/en/permissions.md), read 2026-10-20
