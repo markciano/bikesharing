@@ -14,16 +14,18 @@ paths:
 
 ## Testing
 
-Follow the test pyramid.
+General principles are in `testing.md`; reasons and detail in the [testing strategy](../../docs/testing-strategy.md) (Python section).
 
-- Every requirement and "Done when" condition is covered by at least one test, at the lowest level that can verify it.
-- Tests verify observable behaviour, not implementation details.
-- Unit tests are written first (TDD: red, green, refactor).
-- Arrange–Act–Assert; one concept per test; no shared state or order dependency between tests.
-- Tool: pytest; `pytest` runs every test, `pytest tests/<level>` one level. Line coverage (pytest-cov) is reported, never enforced with a threshold.
+- Tool: pytest; `pytest` runs every test, `pytest tests/<level>` one level.
+- Line coverage (pytest-cov) is reported, never enforced with a threshold. The source is set in `[tool.coverage.run] source`, so the CI command cannot widen the report to the test files.
 - Levels are folders: `tests/unit/` (mirrors `src/`), `tests/integration/`, `tests/e2e/`.
 - Naming: files `test_<module>.py`; functions `test_<behaviour>_<condition>`.
 - Shared fixtures in `conftest.py` (one in `tests/`, plus one per level when needed), function-scoped by default.
-- No test touches the network: integration and e2e tests use recorded fixtures (ADR-0009); edge cases are written by hand.
-- Code that uses the current time receives it as a parameter; tests pass a fixed UTC time.
-- Data quality checks on the data itself belong to the pipeline design, not to the test suite.
+
+### Spark
+
+Detail: [testing strategy](../../docs/testing-strategy.md) (Spark section).
+
+- Each transformation is a function DataFrame → DataFrame, so it can be tested alone.
+- Unit tests run on one session-scoped local SparkSession (`local[1]`, UI disabled) in `conftest.py`: the exception to function-scoped fixtures.
+- Input DataFrames are built inside the test; compare with `pyspark.testing.assertDataFrameEqual`.
