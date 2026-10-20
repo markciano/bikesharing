@@ -416,7 +416,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 15 — Write the conventions into the Claude files
 
-- **Status:** 💤 todo
+- **Status:** 🔄 in progress
 - **Who:** Claude
 - **Scope:** edits exactly as the approved map, nothing more: one commit per destination, each explained to the owner before writing. ADR changes (e.g. ADR-0013) are not written here; they go to Follow-ups in step 16.
 - **Reads:** the approved map; the files it names
