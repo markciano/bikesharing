@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-19 · Finished: —
-- Current step: 12
+- Current step: 13
 
 ## 1. Questions — what we need to know
 
@@ -386,7 +386,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 12 — Verify the analysis
 
-- **Status:** 🔄 in progress
+- **Status:** ✅ done
 - **Who:** Owner + Claude
 - **Scope:** synthesis first (Decision log).
   - Claude: drafts 4. Findings › Testing model from the findings, answering (1)–(6) as set in the Decision log, each statement citing its findings. Touches only this doc.
