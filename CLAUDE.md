@@ -33,6 +33,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 
 - `main` is protected by a GitHub ruleset (no bypass): changes reach it only through a PR with every required check green, by rebase merge.
 - One branch per task, `tNNN-short-title`, created from an up-to-date `main` before the task's first commit. PR title: `TNNN: task name`.
+- The first push opens a draft PR. There is no CI on `push` to feature branches: the PR run fires on every push (`docs/testing-strategy.md`).
 - When a task starts, Claude checks with `git status` that the owner is on its branch. When the task reaches ✅ and its last commit exists, Claude gives the owner the close sequence: push, PR, checks, rebase merge, clean up (local branch deleted with `-D`, since rebase rewrites SHAs).
 - A failing check is fixed in the PR, never by disabling or skipping it.
 - CI: one job per component in `.github/workflows/ci.yml`, as set in ADR-0013.
@@ -53,18 +54,19 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 
 ```
 .
-├── CLAUDE.md              Rules for every session
+├── CLAUDE.md               Rules for every session
 ├── .claude/
-│   ├── settings.json      Permissions and environment
-│   ├── rules/             Path-specific rules (docs, tasks, python, spikes)
-│   └── skills/            Session skills: spike, design, implement
-├── docs/                  Project documentation
-│   ├── tasks.md           Task table
-│   ├── decisions/         ADRs
-│   ├── designs/           Design documents
-│   ├── sources/           Source cards
-│   └── spikes/            Spike reports per system
-├── src/bikesharing/       Pipeline code
-├── tests/                 unit/, integration/, fixtures/
-└── spikes/                Throwaway investigation code
+│   ├── settings.json       Permissions and environment
+│   ├── rules/              Path-specific rules (docs, tasks, python, spikes)
+│   └── skills/             Session skills: spike, design, implement
+├── docs/                   Project documentation
+│   ├── tasks.md            Task table
+│   ├── testing-strategy.md Testing model per component and CI flow
+│   ├── decisions/          ADRs
+│   ├── designs/            Design documents
+│   ├── sources/            Source cards
+│   └── spikes/             Spike reports per system
+├── src/bikesharing/        Pipeline code
+├── tests/                  unit/, integration/, fixtures/
+└── spikes/                 Throwaway investigation code
 ```
