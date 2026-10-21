@@ -50,8 +50,6 @@ Main question: which testing conventions (levels, tools, CI layers) does each co
 
 ### Approach
 
-- TODO: parked from Questions: ADR-0009 cites "CLAUDE.md › Testing", which now lives in `.claude/rules/python.md`; fix it when the Claude files are updated (Q6).
-
 There are no competing variants: one probe per question, each telling something the others do not.
 
 | Probe | What it is | What it tells |

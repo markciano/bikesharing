@@ -7,7 +7,7 @@ date: 2026-10-08
 
 ## Context and Problem Statement
 
-Integration and end-to-end tests run against recorded source responses, not live APIs (CLAUDE.md › Testing). Raw data is never committed to Git, so the tests would have nothing real to run against in a fresh clone.
+Integration and end-to-end tests run against recorded source responses, not live APIs (`docs/testing-strategy.md`). Raw data is never committed to Git, so the tests would have nothing real to run against in a fresh clone.
 
 Which source data, if any, may be committed for tests?
 
