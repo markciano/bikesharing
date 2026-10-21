@@ -43,7 +43,7 @@ TODO: when the collector design fixes the layout (`collector/{bicing/,ambici/}`,
 #### Contract (between components)
 
 1. **When:** as soon as a contract between two components is defined, before either side is written.
-2. **Type:** contract tests. Format/behaviour contracts (keys, naming, encoding): shared golden test vectors (F35). Data-shape contracts (silver, gold): ODCS schema, on paper (F36).
+2. **Type:** contract tests. Format/behaviour contracts (keys, naming, encoding): shared golden test vectors (F35). Data-shape contracts (silver, gold): ODCS schema, on paper (F36). Reasons: ADR-0015.
 3. **Format:** one JSON file with `valid` cases (input → expected output) and `invalid` cases, each breaking exactly one rule with its `reason`; binary payloads are built in memory by the tests. A change to the contract makes the valid data stop meeting it; it never relaxes it.
 4. **Where:** one shared file, read by relative path by the producer tests and the consumer tests (F35); inside the path filters of every component job that reads it.
 5. **Runs:** inside the test runs of both sides, so a contract change fails both (F18, F35).
