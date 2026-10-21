@@ -29,3 +29,4 @@
 | T023 | Include `.claude/*/*.md` and `spikes/*/*.md` in `.claude/rules/docs.md` | 1 | ⬜ | — |  |
 | T024 | Hooks: Code conventions for Python, JS, Spark and SQL | 1 | ⬜ | — |  |
 | T025 | Data processing pipeline spec and plan | 5 | ⬜ | T007, T021, T022 |  |
+| T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ⬜ |  |  |
