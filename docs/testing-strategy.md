@@ -60,7 +60,7 @@ TODO: when the collector design fixes the layout (`collector/{bicing/,ambici/}`,
 
 1. Branch `tNNN-short-title` from an up-to-date `main` (ADR-0013); before each commit, `/implement` runs the tests of the touched component (F37).
 2. First push opens a draft PR. No CI on `push` to feature branches: the PR's `pull_request` run fires on every push (F38).
-3. The `pull_request` run is the gate: every automated level of every affected component, contract tests and `docs` lint, light, at most 10 min wall-clock (F39, F47). Proposed: "require branches to be up to date before merging" (F42).
+3. The `pull_request` run is the gate: every automated level of every affected component, contract tests and `docs` lint, light, at most 10 min wall-clock (F39, F47). Branches must be up to date before merging (ADR-0014, F42).
 4. Rebase merge (ADR-0013).
 5. The `push` run on `main` repeats the workflow on the merged result; it may hold heavier tests, and later post-deploy smoke tests (F40).
 6. A scheduled run holds checks against live sources, outside the gate and not required (F41, paper).
