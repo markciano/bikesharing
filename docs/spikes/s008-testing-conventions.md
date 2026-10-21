@@ -6,10 +6,10 @@
 
 ## Status
 
-- State: Running 🔄
+- State: Concluded ✅
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
-- Started: 2026-10-19 · Finished: —
-- Current step: 16
+- Started: 2026-10-19 · Finished: 2026-10-21
+- Current step: —
 
 ## 1. Questions — what we need to know
 
@@ -116,6 +116,7 @@ Tool choices with real alternatives are scored on paper with a weighted decision
 | 2026-10-21 | Step 15 deviation from the placement map: M6 and M7 go to `.claude/rules/cloudflare-worker.md` (`paths:` `collector/**/*.js`, `collector/**/package.json`), not to `collector.md`; the testing-strategy section is "Cloudflare Worker (JS)" | The content is Cloudflare-specific (`workerd`, R2, Miniflare), and a collector in another language must not load it |
 | 2026-10-21 | Step 15 deviation from the placement map: the CI job recipe in `.claude/rules/ci.md` (M17) sets `timeout-minutes: 10` on every job | A hung test would otherwise hold the PR for the 6-hour default; it matches the 10-minute budget of the `pull_request` run and affects no other decision |
 | 2026-10-21 | Step 15 deviation from the placement map: the docs local lint (M16) is a script `scripts/lint-docs.sh` run by the owner, with `markdownlint-cli2` 0.23.2 (the version of `markdownlint-cli2-action@v24`), instead of a `PostToolUse` hook; written in one commit with its mentions in `.claude/rules/docs.md` and `CLAUDE.md` | A hook would lint on every edit of a file in `docs/`, too often for the benefit; the docs rules already steer the writing, so a lint now and then is enough, and CI is the gate. No `settings.json` permission is needed because the owner runs it |
+| 2026-10-21 | Conclusion reframed: the Verdict leads with the testing strategy as the outcome; Answers and Exit criteria are reduced to pointers | The questions were framed per probe before the expected output of the main question was clarified (2026-10-20); the testing strategy is what the component designs use |
 
 ### File layout
 
@@ -428,7 +429,7 @@ All paths below are relative to `spikes/testing-conventions/` unless they start 
 
 ### Step 16 — Conclusion
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner + Claude
 - **Scope:**
   - Claude: 5. Conclusion (Not verified includes the schema case of Q4) and the destination of every Production input in this doc; How we got here in the README; T020 to ✅ in `docs/tasks.md`, in the conclusion commit.
@@ -742,24 +743,64 @@ Consequential edits in step 15, not conventions: `CLAUDE.md` › Project structu
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | Pin the Node version of a Worker to a release inside the range its test tools support (here `vitest` 5.0.5: 22.12, 24 or ≥ 26), not to the version installed on the owner's machine | Step 6 · F9 | |
-| P2 | Set the coverage source in `[tool.coverage.run] source`, so the CI command cannot widen the report to the test files | Step 11 · F13, F24 | |
-| P3 | The shared contract file must be inside the path filters of every component job that reads it, so a contract change runs the tests of both sides | Step 11 · F35, ADR-0013 | |
-| P4 | A post-deploy smoke test that checks the Worker stores gzip bytes unchanged (`encodeResponseBody: 'manual'`) | Step 11 · F34 | |
+| P1 | Pin the Node version of a Worker to a release inside the range its test tools support (here `vitest` 5.0.5: 22.12, 24 or ≥ 26), not to the version installed on the owner's machine | Step 6 · F9 | T007 design, applying `.claude/rules/cloudflare-worker.md` (step 15) |
+| P2 | Set the coverage source in `[tool.coverage.run] source`, so the CI command cannot widen the report to the test files | Step 11 · F13, F24 | applying `.claude/rules/python.md` › Testing (step 15) |
+| P3 | The shared contract file must be inside the path filters of every component job that reads it, so a contract change runs the tests of both sides | Step 11 · F35, ADR-0013 | T007 design, in the CI jobs it creates |
+| P4 | A post-deploy smoke test that checks the Worker stores gzip bytes unchanged (`encodeResponseBody: 'manual'`) | Step 11 · F34 | T007 design, with the Worker deployment |
 
 ## 5. Conclusion
 
-Observed window: —
-
-### Answers
-
-### Exit criteria
+Observed window: 2026-10-19 → 2026-10-21 (steps 1–15).
 
 ### Verdict
 
+1. **The outcome is [`docs/testing-strategy.md`](../testing-strategy.md):** one testing convention per component (Python, Spark, Cloudflare Worker, contract, docs) and per level, answering when, which type, format, where and when it runs, plus the CI flow and the rule for moving tests. Component designs apply it without deciding anything about testing.
+2. **It is proven, not only written:** each PoC (Python, Spark, Worker, contract) passed locally and in CI from a clean runner, a deliberate mutation made its tests fail (F15–F18; the contract on both sides), and the PR run takes 42–52 s (F39).
+3. **The rules for building tests** (test pyramid, TDD, Arrange–Act–Assert, observable behaviour, hermetic tests, injected time) are in `.claude/rules/testing.md` › Principles, each with its standard (F19–F30).
+4. **Claude applies it without being reminded** ([Placement map](#placement-map-step-13)): each file loads only where it is needed.
+   - Rules, loaded by path: `.claude/rules/testing.md` (principles and contracts, all languages), `.claude/rules/python.md` › Testing (pytest, Spark), `.claude/rules/cloudflare-worker.md` (Worker), `.claude/rules/ci.md` (CI job recipe), `.claude/rules/docs.md` (testing strategy as a doc type, local lint).
+   - Skills, loaded when invoked: `/implement` runs the tests of the touched component before each commit; the `/design` template plans the CI job of a new component in its File layout.
+   - `CLAUDE.md`, always loaded: draft PR at the first push, no CI on `push` to feature branches.
+   - `scripts/lint-docs.sh`: the owner's local docs lint.
+
+### Answers
+
+- **Q1:** `.claude/rules/testing.md` › Principles and `.claude/rules/python.md` › Testing; 10 rules hold, 2 corrected (F24, F27).
+- **Q2:** testing strategy › Spark (F31, F32).
+- **Q3:** testing strategy › Cloudflare Worker (JS) (F33, F34).
+- **Q4:** testing strategy › Contract; `.claude/rules/testing.md` › Contracts between components (F35, F36).
+- **Q5:** testing strategy › CI flow (F37–F42, F49).
+- **Q6:** placement map (M1–M20), written in step 15.
+
 ### Not verified
 
+| Item | Risk | Mitigation |
+|---|---|---|
+| ODCS schema for data-shape contracts (F36) | The schema form is not proven in this project | Validated in the first design that defines a data-shape contract |
+| `encodeResponseBody: 'manual'` honoured by the deployed Worker (F34) | A platform change decodes the gzip body before R2 and no test catches it | The V4 capture (ADR-0011) today; a post-deploy smoke test (P4) |
+| Marginal cost per Spark test, and integration of a whole Spark job (F32) | The PR run grows past 10 min as Spark tests are added | Measured in the pipeline design; the rule for moving tests (Testing model › CI flow) |
+| `assertDataFrameEqual` options `checkRowOrder`, `rtol`, `atol` (F2) | Their behaviour in 4.2.0 differs from the `master` source read in step 1 | Exercised by the first Spark test that compares floats |
+| TDD in JS (Testing model › Worker (1)) | Low: same rule, another runner | The collector design writes its tests first |
+| e2e level (F25) | Folder and runner never exercised | Defined by the first design that needs an e2e test |
+| Recorded fixtures from trimmed source samples (F28, ADR-0009) | The spike used synthetic fixtures only (Decision log) | The trimming script belongs to the production design |
+| Scheduled workflow for checks against live sources (F41) | Not built | Built by the design that adds such a check |
+| `main` run with heavier tests and the rule for moving tests (F40) | The rule is untested | Applied when the PR run first nears 10 min |
+
 ### Follow-ups
+
+Each ADR in its own commit:
+
+- **ADR-0014 CI test layers** (new, amends ADR-0013; M13, M14): the four layers (F37–F41), the rule for moving tests from the PR run to the `main` run, and "require branches to be up to date before merging" (F42). ADR-0013 gets only its Status changed to "Amended by ADR-0014". The owner then enables the ruleset setting.
+- **ADR-0015 contract form** (new; M9): shared golden test vectors for format/behaviour contracts, an ODCS schema for data-shape contracts (F35, F36).
+- **ADR-0009 citation** (M20): "CLAUDE.md › Testing" becomes `docs/testing-strategy.md`; editorial fix.
+
+No new tasks.
+
+### Tear-down
+
+- **Torn down:** the temporary `poc-*` jobs, by restoring `.github/workflows/ci.yml` to its content on `main` (own commit); locally, `.venv`, `node_modules` and `outputs/` (owner).
+- **Kept:** the spike code and the mutation patches in `spikes/testing-conventions/`, as `.claude/rules/spikes.md` sets; no deployed resource, so no Decision log entry.
+- **Cloud resources:** none; every test ran without a Cloudflare account.
 
 ## Sources
 

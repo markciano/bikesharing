@@ -9,7 +9,7 @@
 | T005 | Profile Bicing historical data | 5 | ✅ | — | [bicing-historical-data](spikes/s004-bicing-historical-data.md) |
 | T006 | Close AMBici and Bicing capture spikes | 5 | ✅ | T006.1 | [ambici](spikes/s001-ambici-realtime-capture.md), [bicing](spikes/s002-bicing-realtime-capture.md) |
 | T006.1 | Review the points written with Claude's judgement in T006 docs | 2 | ✅ | — | [t006-spike-review](designs/t006-spike-review.md) |
-| T007 | GBFS ingestion spec and plan | 5 | ⬜ | T006, T011 | — |
+| T007 | GBFS ingestion spec and plan | 5 | ⬜ | T006, T011 | Inputs: [s008 P1–P4](spikes/s008-testing-conventions.md#production-inputs) |
 | T008 | Portfolio presentation | 3 | ✅ | — | [ADR-0007](decisions/0007-repository-presentation-to-externals.md) |
 | T009 | Review previous project Claude docs | 3 | ✅ | — | — |
 | T010 | Write README | 3 | ⬜ | T006 | — |
@@ -23,6 +23,8 @@
 | T018 | Git branches and CI/CD flow | 5 | ✅ | T019 | [git-branching-cicd](spikes/s007-git-branching-cicd.md) |
 | T018.1 | Git and CI conventions as invariants in CLAUDE.md | 1 | ✅ | T018 | — |
 | T019 | Review repo contents and history before making it public | 2 | ✅ | — |  |
-| T020 | Testing conventions and place in claude files | 5 | 🔄 | — | [testing-conventions](spikes/s008-testing-conventions.md) |
+| T020 | Testing conventions and place in claude files | 5 | ✅ | — | [testing-conventions](spikes/s008-testing-conventions.md) |
 | T021 | Production stack versions (Python, Spark, Java) and dependency tooling (ADR; `uv` + `pyproject.toml` vs pip) | 1 | ⬜ | T020 |  |
 | T022 | Supersede ADR-0003: deployment target (Fabric dropped) | 1 | ⬜ | — |  |
+| T023 | Include `.claude/*/*.md` and `spikes/*/*.md` in `.claude/rules/docs.md` | 1 | ⬜ | — |  |
+| T024 | Hooks: Code conventions for Python, JS, Spark and SQL | 1 | ⬜ | — |  |
