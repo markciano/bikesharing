@@ -6,7 +6,7 @@
 ## Status
 
 - State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
 
 ## 1. Spec — what and why
@@ -26,9 +26,9 @@ The project has no single source of truth for the versions of its stack (languag
 
 ### Requirements
 
-- **R1** The docs lint shall run, locally and in CI, the `markdownlint-cli2` version declared in a single file of the repository.
+- **R1** The docs lint shall run, locally and in CI, the `markdownlint-cli2` version locked in the repository lockfile, pinned exactly in its manifest.
 - **R2** If the lockfile does not match its manifest, then the CI job shall fail.
-- **R3** If the declared tools are not installed locally, then the docs lint shall stop with a message naming the install command.
+- **R3** If the declared tools are not installed locally, or not at the locked version, then the docs lint shall stop with a message naming the install command.
 
 ### Out of scope
 
@@ -62,7 +62,7 @@ Dependencies are declared in `pyproject.toml` and `pip-compile` locks them, with
 
 ##### Option A — One native file per runtime, inside each component (chosen)
 
-Python in `.python-version`, Node in `.nvmrc`, Java in `.java-version`; a Cloudflare Worker's runtime in the `compatibility_date` of its wrangler configuration. CI reads each file through the `*-version-file` input of `actions/setup-python`, `actions/setup-node` and `actions/setup-java`.
+Python in `.python-version`, Node in `.nvmrc`, Java in `.java-version`; a Cloudflare Worker's runtime in the `compatibility_date` of its wrangler configuration. CI reads each file through `astral-sh/setup-uv` for Python (it installs `uv`, which reads `.python-version`) and the `*-version-file` input of `actions/setup-node` and `actions/setup-java`.
 
 **Pros:** each ecosystem's tools read their own file with no extra configuration (`uv` reads `.python-version`); one value per file, so a single source of truth holds by construction.
 **Cons:** one small file per runtime.
@@ -76,11 +76,11 @@ Every runtime of a component in one file, in the asdf/mise format.
 
 #### Concern 3 · Repository tooling (docs lint)
 
-`markdownlint-cli2-action` bundles its own `markdownlint-cli2` version and cannot read ours, so CI moves to `actions/setup-node` (root `.nvmrc`) + `npm ci` + the lint command, with the version declared in a root `package.json` and locked in `package-lock.json`. The open choice was the command that runs the lint.
+`markdownlint-cli2-action` bundles its own `markdownlint-cli2` version and cannot read ours, so CI moves to `actions/setup-node` (root `.nvmrc`) + `npm ci` + the lint command, with the version pinned exactly in a root `package.json` (root `.npmrc` with `save-exact=true`) and locked in `package-lock.json`. The open choice was the command that runs the lint.
 
 ##### Option A — `scripts/lint-docs.sh` as the single entry point (chosen)
 
-The script checks that `markdownlint-cli2` is installed, stops with "Run `npm ci` first" if not, and runs the installed version without downloading anything. The owner and CI call the same script.
+The script checks with `npm ls --depth=0` that `markdownlint-cli2` is installed at the pinned version (with the exact pin, the locked one), stops with "Run `npm ci` first" if not, and runs the installed version without downloading anything. The owner and CI call the same script.
 
 **Pros:** the same command runs locally and in CI; the owner's way of running it does not change; the existing mention of the script in `.claude/rules/docs.md` stays valid.
 **Cons:** a shell script where npm has a native mechanism.
@@ -113,9 +113,9 @@ ADR-0016 records the why; `.claude/rules/dependencies.md` holds the how, loaded 
 | Concern | Decision | R |
 |---|---|---|
 | Python dependency tooling | `uv` with `pyproject.toml` (PEP 621) and `uv.lock`, for every Python component | R2 |
-| Runtime version declaration | One native file per runtime inside each component (`.python-version`, `.nvmrc`, `.java-version`; the wrangler `compatibility_date` for a Worker), read by CI through `*-version-file`; never a version written in `ci.yml`. `requires-python` in `pyproject.toml` stays a compatibility range, the exact pin is `.python-version` | R1 |
-| Repository tooling | Node-based tools that act on the whole repository are declared in a root `package.json` and locked in `package-lock.json`, with Node in a root `.nvmrc`; component tools live in their component's manifest. The docs lint runs through `scripts/lint-docs.sh`, locally and in CI (`setup-node` + `npm ci` + the script), replacing `markdownlint-cli2-action`; a single entry script for local and CI follows GitHub's scripts-to-rule-them-all pattern | R1, R2, R3 |
-| Where the rule is written | ADR-0016 (why); `.claude/rules/dependencies.md` (how, including "only the locked versions run; installing them automatically is fine, running any other version is not"); one line in the design template's File layout comment and one in CLAUDE.md › Conventions pointing to them; `.claude/rules/ci.md` updated to `*-version-file`, `uv sync --locked` / `npm ci` and the uv/npm cache | — |
+| Runtime version declaration | One native file per runtime inside each component (`.python-version`, `.nvmrc`, `.java-version`; the wrangler `compatibility_date` for a Worker), read by CI through `astral-sh/setup-uv` for Python and `*-version-file` for Node and Java; never a version written in `ci.yml`. `requires-python` in `pyproject.toml` stays a compatibility range, the exact pin is `.python-version`. The Java distribution required by `setup-java` is decided, with its declaration place, in T025 | R1 |
+| Repository tooling | Node-based tools that act on the whole repository are pinned exactly in a root `package.json` (root `.npmrc` with `save-exact=true`) and locked in `package-lock.json`, with Node in a root `.nvmrc`; component tools live in their component's manifest. The docs lint runs through `scripts/lint-docs.sh`, locally and in CI (`setup-node` + `npm ci` + the script), replacing `markdownlint-cli2-action`; a single entry script for local and CI follows GitHub's scripts-to-rule-them-all pattern | R1, R2, R3 |
+| Where the rule is written | ADR-0016 (why); `.claude/rules/dependencies.md` (how, including "only the locked versions run; installing them automatically is fine, running any other version is not"); one line in the design template's File layout comment and one in CLAUDE.md › Conventions pointing to them; `.claude/rules/ci.md` updated to `astral-sh/setup-uv` / `*-version-file`, `uv sync --locked` / `npm ci` and the uv/npm cache | — |
 
 ### File layout
 
@@ -123,12 +123,13 @@ ADR-0016 records the why; `.claude/rules/dependencies.md` holds the how, loaded 
 .
 ├── CLAUDE.md                     (modified)  Conventions: one line on stack versions and dependency tooling, pointing to ADR-0016
 ├── .nvmrc                        (new)       Node version of the repository tooling
-├── package.json                  (new)       Repository tooling manifest: `markdownlint-cli2` 0.23.2 as a dev dependency
+├── .npmrc                        (new)       `save-exact=true`: npm writes exact versions to `package.json`
+├── package.json                  (new)       Repository tooling manifest: `markdownlint-cli2` 0.23.2, exact, as a dev dependency
 ├── package-lock.json             (new)       Lockfile generated by npm
 ├── .claude/
 │   ├── rules/
-│   │   ├── dependencies.md       (new)       How components and repository tooling declare runtime versions and dependencies; "only the locked versions run"
-│   │   ├── ci.md                 (modified)  Job recipe: runtime from `*-version-file`, install with `uv sync --locked` or `npm ci`, uv/npm cache
+│   │   ├── dependencies.md       (new)       How components and repository tooling declare runtime versions and dependencies; exact versions in manifests; "only the locked versions run"
+│   │   ├── ci.md                 (modified)  Job recipe: runtime from `astral-sh/setup-uv` (Python) or `*-version-file`, install with `uv sync --locked` or `npm ci`, uv/npm cache
 │   │   └── docs.md               (modified)  Local lint needs `npm ci` once per clone
 │   └── skills/design/
 │       └── template.md           (modified)  File layout comment: a component lists its manifest and version files (rule in `dependencies.md`)
@@ -138,10 +139,10 @@ ADR-0016 records the why; `.claude/rules/dependencies.md` holds the how, loaded 
 │   ├── decisions/
 │   │   └── 0016-stack-versions-and-dependency-tooling.md  (new)  Why: per-component versions in native files, `uv` for Python, `npm` for JS, one manifest for repository tooling
 │   ├── spikes/
-│   │   └── s008-testing-conventions.md  (modified)  New Decision log row: the production Java version is decided in T025, not T021
+│   │   └── s008-testing-conventions.md  (modified)  New Decision log row, correcting both rows that cite T021: the production Java version is decided in T025, not T021
 │   └── tasks.md                  (modified)  T021 status
 └── scripts/
-    └── lint-docs.sh              (modified)  Runs the installed `markdownlint-cli2`; stops with "Run `npm ci` first" if it is missing
+    └── lint-docs.sh              (modified)  Runs the installed `markdownlint-cli2`; stops with "Run `npm ci` first" if it is missing or not at the locked version (`npm ls --depth=0`)
 ```
 
 ### Test plan
@@ -149,8 +150,9 @@ ADR-0016 records the why; `.claude/rules/dependencies.md` holds the how, loaded 
 | R | Test concept | Level |
 |---|---|---|
 | R1 | The version banner printed by `markdownlint-cli2` is the one locked in `package-lock.json`, in the local run of `scripts/lint-docs.sh` and in the `docs` job log | e2e (manual) |
-| R2 | On the PR branch, the `markdownlint-cli2` version in `package.json` is changed without regenerating the lockfile: the `docs` job fails at `npm ci`; the change is reverted | e2e (manual) |
-| R3 | With `node_modules/` removed, `scripts/lint-docs.sh` exits non-zero and prints "Run `npm ci` first" | e2e (manual) |
+| R2 | On a throwaway branch with its own draft PR, the `markdownlint-cli2` version in `package.json` is changed without regenerating the lockfile: the `docs` job fails at `npm ci`; the PR is closed without merging and the branch deleted | e2e (manual) |
+| R3 | `scripts/lint-docs.sh` exits non-zero and prints "Run `npm ci` first" in two cases: with `node_modules/` removed, and with a different `markdownlint-cli2` version installed in `node_modules/` | e2e (manual) |
+| Done when | From CLAUDE.md › Conventions, the design template's File layout comment and `.claude/rules/dependencies.md` alone, a reader finds where a new component declares its runtime versions, manifest and lockfile | review (manual) |
 
 ### What does not change
 
