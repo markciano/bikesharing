@@ -5,7 +5,7 @@ paths:
 
 # CI workflow rules
 
-Flow and reasons: [testing strategy](../../docs/testing-strategy.md) (CI flow section) and ADR-0013. The jobs of each component are created in that component's design.
+Flow and reasons: [testing strategy](../../docs/testing-strategy.md) (CI flow section), ADR-0013 and ADR-0014. The jobs of each component are created in that component's design.
 
 ## Job per component
 

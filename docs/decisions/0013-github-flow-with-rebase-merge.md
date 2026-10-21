@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted; amended by ADR-0014 (CI test layers)
 date: 2026-10-18
 ---
 
