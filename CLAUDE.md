@@ -12,6 +12,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 - State lives in the working document, not the session: decisions are written when approved (if small, accumulate 2-3); Status is updated at every stop.
 - Operational actions (accounts, consoles, billing, production deployments) are done by the owner.
 - Permissions are set in `.claude/settings.json`. Never work around an action it asks for or denies: report it.
+- Web research goes to the `web-researcher` subagent, never inline: it keeps the main session's context small.
 
 ## Conventions
 
@@ -58,6 +59,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 ├── CLAUDE.md               Rules for every session
 ├── .claude/
 │   ├── settings.json       Permissions and environment
+│   ├── agents/             Project subagents (web-researcher)
 │   ├── rules/              Path-specific rules (docs, tasks, python, spikes)
 │   └── skills/             Session skills: spike, design, implement
 ├── docs/                   Project documentation
