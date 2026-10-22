@@ -31,3 +31,7 @@ Trunk-based development fails the rule that `main` stays green (it commits direc
 * CI is the gate: a red check blocks the merge and a direct push is rejected.
 * Each new component adds a CI job in its own design; the required check changes from `docs` to `ci-passed` when the second one arrives, the only change to the ruleset.
 * Urgent fixes mean disabling the ruleset briefly; this path was not tested.
+
+## Amendments
+
+* 2026-10-22: the commit format in Context and Consequences was edited in place from `type(TNNN)` to `type: description` (commit c4c3c5f) to follow `CLAUDE.md` › Git; the decision is unchanged.
