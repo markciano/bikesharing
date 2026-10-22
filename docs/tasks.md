@@ -32,3 +32,4 @@
 | T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ⬜ |  |  |
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T028 | Design skill: rule documents and prerequisites written in the design (lessons from d001; done on the T021 branch) | 1 | ✅ | — | [SKILL.md](../.claude/skills/design/SKILL.md) |
+| T029 | Upgrade `markdownlint-cli2` to the newest release whose tree clears the 11 `npm audit` advisories of 2026-10-22 (braces, js-yaml, katex, markdown-it, smol-toml); if none does, stop and report | 1 | 🎬 | T021 |  |
