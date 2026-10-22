@@ -45,9 +45,10 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
    - what is being decided and why it matters, in 2–3 lines;
    - 2–3 options, each with its practical consequence;
    - the recommendation marked, with a one-line reason and the standard or pattern that applies.
-3. Once the owner picks, write **Options considered** (only if alternatives were weighed) and one row in **Decision summary**. A cross-cutting decision becomes an **ADR**, ask to the owner to write it during the plan following the [adr-template.md](adr-template.md) and link it in the header.
-4. With every concern decided, write **File layout**, then **Components** and **Test plan** when they apply. A change to the overall structure also updates CLAUDE.md › Project structure; ask the owner.
-5. Ask for the Plan approval. Once approved, check Plan in Phase and tell the owner to run `/design dNNN review-plan` in a new session. The session ends here.
+3. Once the owner picks, write **Options considered** (only if alternatives were weighed) and one row in **Decision summary**.
+   A cross-cutting decision becomes an **ADR**, ask to the owner to write it during the plan (using subagent) following the [adr-template.md](adr-template.md) and link it in the header of the current design.
+5. With every concern decided, write **File layout**, then **Components** and **Test plan** when they apply. A change to the overall structure also updates CLAUDE.md › Project structure; ask the owner.
+6. Ask for the Plan approval. Once approved, check Plan in Phase and tell the owner to run `/design dNNN review-plan` in a new session. The session ends here.
 
 ## 3. Implementation
 
