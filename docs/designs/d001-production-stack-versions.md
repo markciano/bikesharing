@@ -1,13 +1,14 @@
 # Design: Production stack versions and dependency tooling
 
 - **Task:** T021
-- **ADRs:** ADR-0013, ADR-0016 (new, created by this design)
+- **ADRs:** ADR-0013
+- **New ADRs created by this design:** ADR-0016, ADR-0017
 
 ## Status
 
-- State: Ready for implementation 🎬
+- State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: —
+- Current step: 2
 
 ## 1. Spec — what and why
 
@@ -98,7 +99,7 @@ Path-specific rules in `.claude/rules/` load only when matching files are touche
 
 ##### Option A — ADR + path rule + template line + CLAUDE.md line (chosen)
 
-ADR-0016 records the why; `.claude/rules/dependencies.md` holds the how, loaded when manifests or version files are touched; one line in the File layout comment of the design template and one line in CLAUDE.md › Conventions point to it. `.claude/rules/ci.md` is updated to the new pattern. Follows the precedent of the CI job recipe.
+ADR-0016 and ADR-0017 record the why; `.claude/rules/dependencies.md` holds the how, loaded when manifests or version files are touched; one line in the File layout comment of the design template and one line in CLAUDE.md › Conventions point to it. `.claude/rules/ci.md` is updated to the new pattern. Follows the precedent of the CI job recipe.
 
 **Pros:** each piece loads when it is needed (progressive disclosure, as the repo already does for CI); no content is repeated: the ADR gives the why, the rule the how, the other two only point.
 **Cons:** four places to keep consistent.
@@ -115,13 +116,13 @@ ADR-0016 records the why; `.claude/rules/dependencies.md` holds the how, loaded 
 | Python dependency tooling | `uv` with `pyproject.toml` (PEP 621) and `uv.lock`, for every Python component | R2 |
 | Runtime version declaration | One native file per runtime inside each component (`.python-version`, `.nvmrc`, `.java-version`, each holding an exact version in the full format of its runtime's tooling, e.g. `major.minor.patch` for Node and Python; the wrangler `compatibility_date`, a fixed date, for a Worker), read by CI through `astral-sh/setup-uv` for Python and `*-version-file` for Node and Java; never a version written in `ci.yml`. `requires-python` in `pyproject.toml` stays a compatibility range, the exact pin is `.python-version`. The Java distribution required by `setup-java` is decided, with its declaration place, in T025 | R1 |
 | Repository tooling | Node-based tools that act on the whole repository are pinned exactly in a root `package.json` (root `.npmrc` with `save-exact=true`) and locked in `package-lock.json`, with Node in a root `.nvmrc`; component tools live in their component's manifest. The docs lint runs through `scripts/lint-docs.sh`, locally and in CI (`setup-node` + `npm ci` + the script), replacing `markdownlint-cli2-action`; a single entry script for local and CI follows GitHub's scripts-to-rule-them-all pattern | R1, R2, R3 |
-| Where the rule is written | ADR-0016 (why); `.claude/rules/dependencies.md` (how, including "only the locked versions run; installing them automatically is fine, running any other version is not"); one line in the design template's File layout comment and one in CLAUDE.md › Conventions pointing to them; `.claude/rules/ci.md` updated to `astral-sh/setup-uv` / `*-version-file`, `uv sync --locked` / `npm ci` and the uv/npm cache | — |
+| Where the rule is written | ADR-0016 (runtime versions) and ADR-0017 (dependencies), the why; `.claude/rules/dependencies.md` (how, including "only the locked versions run; installing them automatically is fine, running any other version is not"); one line in the design template's File layout comment and one in CLAUDE.md › Conventions pointing to them; `.claude/rules/ci.md` updated to `astral-sh/setup-uv` / `*-version-file`, `uv sync --locked` / `npm ci` and the uv/npm cache | — |
 
 ### File layout
 
 ```text
 .
-├── CLAUDE.md                     (modified)  Conventions: one line on stack versions and dependency tooling, pointing to ADR-0016
+├── CLAUDE.md                     (modified)  Conventions: one line on stack versions and dependency tooling, pointing to ADR-0016, ADR-0017 and the rule
 ├── .nvmrc                        (new)       Node version of the repository tooling
 ├── .npmrc                        (new)       `save-exact=true`: npm writes exact versions to `package.json`
 ├── package.json                  (new)       Repository tooling manifest: `markdownlint-cli2` 0.23.2, exact, as a dev dependency
@@ -137,7 +138,8 @@ ADR-0016 records the why; `.claude/rules/dependencies.md` holds the how, loaded 
 │   └── ci.yml                    (modified)  `docs` job: `setup-node` (`.nvmrc`) + `npm ci` + `scripts/lint-docs.sh`, replacing `markdownlint-cli2-action`; `timeout-minutes: 10` (ci.md)
 ├── docs/
 │   ├── decisions/
-│   │   └── 0016-stack-versions-and-dependency-tooling.md  (new)  Why: per-component versions in native files, `uv` for Python, `npm` for JS, one manifest for repository tooling
+│   │   ├── 0016-runtime-versions-pinned-per-component.md  (new)  Why: each runtime pinned exactly in its native version file, read by CI
+│   │   └── 0017-dependencies-locked-per-component.md      (new)  Why: manifest and lockfile per component, `uv` for Python, `npm` for JS, repository tooling as a root component
 │   ├── spikes/
 │   │   └── s008-testing-conventions.md  (modified)  New Decision log row, correcting both rows that cite T021: the production Java version is decided in T025, not T021
 │   └── tasks.md                  (modified)  T021 status
@@ -165,14 +167,16 @@ ADR-0016 records the why; `.claude/rules/dependencies.md` holds the how, loaded 
 
 ### Steps
 
-#### Step 1 — ADR-0016: stack versions and dependency tooling
+#### Step 1 — ADR-0016 and ADR-0017
 
-- **Status:** 💤 todo
-- **Scope:** `docs/decisions/0016-stack-versions-and-dependency-tooling.md` records the four decisions of the Decision summary, with the rejected options of Options considered as its alternatives: one native version file per runtime inside each component, `uv` + `pyproject.toml` + `uv.lock` for Python, `npm` + `package.json` + `package-lock.json` for JS, repository tooling in a root manifest run through a single entry script. `docs/tasks.md`: T021 → 🔄.
+- **Status:** ✅ done
 - **R:** —
-- **Reads:** § Plan (Options considered, Decision summary); an existing ADR in `docs/decisions/` for the format.
-- **Check:** `bash scripts/lint-docs.sh` passes, and the ADR names the four decisions of the Decision summary (yes/no).
-- **Commit:** `docs(T021): add ADR-0016 stack versions and dependency tooling`
+- **Commit:** `docs(T021): split ADR-0016 into ADR-0016 and ADR-0017, amend d001 plan`
+
+##### Scope
+
+Written during the design as a Plan amendment, following `.claude/rules/adr.md`: `docs/decisions/0016-runtime-versions-pinned-per-component.md` (Decision summary row "Runtime version declaration") and `docs/decisions/0017-dependencies-locked-per-component.md` (rows "Python dependency tooling" and "Repository tooling"), both `Proposed` until the owner accepts them. `docs/tasks.md`: T021 → 🔄; T027 added (automated updates, the security-patch risk of ADR-0016).
+
 
 #### Step 2 — Repository tooling manifest
 
@@ -204,7 +208,7 @@ ADR-0016 records the why; `.claude/rules/dependencies.md` holds the how, loaded 
 #### Step 5 — Dependencies rule
 
 - **Status:** 💤 todo
-- **Scope:** `.claude/rules/dependencies.md` (new), with `paths` frontmatter matching manifests, lockfiles and version files (`**/pyproject.toml`, `**/uv.lock`, `**/package.json`, `**/package-lock.json`, `**/.python-version`, `**/.nvmrc`, `**/.java-version`, `**/wrangler.*`): one native version file per runtime inside each component; every version file (`.nvmrc`, `.python-version`, `.java-version`) holds an exact version in the full format of its runtime's tooling (e.g. `major.minor.patch` for Node and Python), never a major alone or a range; a Cloudflare Worker declares its runtime in the `compatibility_date` of its wrangler configuration, a fixed date; `requires-python` is a range and `.python-version` the exact pin; `uv` for Python, `npm` for JS; component manifests declare ranges and their lockfile pins the exact versions; repository tooling in the root manifest, pinned exactly; "only the locked versions run; installing them automatically is fine, running any other version is not"; links ADR-0016; code under `spikes/` is throwaway and outside the rule.
+- **Scope:** `.claude/rules/dependencies.md` (new), with `paths` frontmatter matching manifests, lockfiles and version files (`**/pyproject.toml`, `**/uv.lock`, `**/package.json`, `**/package-lock.json`, `**/.python-version`, `**/.nvmrc`, `**/.java-version`, `**/wrangler.*`): one native version file per runtime inside each component; every version file (`.nvmrc`, `.python-version`, `.java-version`) holds an exact version in the full format of its runtime's tooling (e.g. `major.minor.patch` for Node and Python), never a major alone or a range; a Cloudflare Worker declares its runtime in the `compatibility_date` of its wrangler configuration, a fixed date; `requires-python` is a range and `.python-version` the exact pin; `uv` for Python, `npm` for JS; component manifests declare ranges and their lockfile pins the exact versions; repository tooling in the root manifest, pinned exactly; "only the locked versions run; installing them automatically is fine, running any other version is not"; links ADR-0016 and ADR-0017; code under `spikes/` is throwaway and outside the rule.
 - **R:** —
 - **Reads:** § Plan (Decision summary); one existing rule in `.claude/rules/` for the frontmatter format.
 - **Check:** `bash scripts/lint-docs.sh` passes, and the rule states every item of the Decision summary rows "Python dependency tooling", "Runtime version declaration" and "Repository tooling" (yes/no).
@@ -213,7 +217,7 @@ ADR-0016 records the why; `.claude/rules/dependencies.md` holds the how, loaded 
 #### Step 6 — Pointers in CLAUDE.md and the design template
 
 - **Status:** 💤 todo
-- **Scope:** `CLAUDE.md` › Conventions: one line, **Stack versions and dependencies**, pointing to ADR-0016 and `.claude/rules/dependencies.md`. `.claude/skills/design/template.md`, File layout comment: one line stating that a component lists its manifest, lockfile and version files, per `.claude/rules/dependencies.md`. Neither repeats the rule's content.
+- **Scope:** `CLAUDE.md` › Conventions: one line, **Stack versions and dependencies**, pointing to ADR-0016, ADR-0017 and `.claude/rules/dependencies.md`. `.claude/skills/design/template.md`, File layout comment: one line stating that a component lists its manifest, lockfile and version files, per `.claude/rules/dependencies.md`. Neither repeats the rule's content.
 - **R:** —
 - **Reads:** § Plan (Concern 4); `CLAUDE.md` › Conventions; the File layout comment of `.claude/skills/design/template.md`.
 - **Check:** each file gains exactly one line, and that line points to the rule (yes/no; `git diff --stat`).
