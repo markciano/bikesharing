@@ -26,7 +26,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 ## Git
 
 - Claude runs only `git status`, `diff`, `log` and `show`. The owner reviews the diff, makes every commit and runs every other git command, including removing a leftover `.git/index.lock`.
-- Commits follow Conventional Commits, with the task ID as scope: `type: description`. Claude proposes the message.
+- Commits follow Conventional Commits without scope (type: description); the branch names the task". Claude proposes the message.
 - One logical change per commit: related edits go together; unrelated ones never do.
 - A task's status change goes in the commit of the work that causes it.
 
