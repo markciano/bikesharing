@@ -144,22 +144,32 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 ### Steps
 
 <!-- Each step is one reviewable result and one commit, touching at most 2–3 files.
-- Status: where the step is.
-- Scope: what the step produces, naming its components and files. A step that writes code includes the tests that cover it, taken from the Test plan.
+- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
 - R: the requirements the step implements or tests, or —.
-- Reads: the design sections and files the step needs.
-- Check: a command or verification with a yes/no result.
-- Commit: the proposed message, following the Git conventions in CLAUDE.md.
-The last step verifies the deliverable end to end. -->
+- Commit: the proposed message, following the Git conventions in CLAUDE.md. -->
 
 #### Step 1 — <title>
 
-- **Status:** 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- **Scope:**
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** 
 - **R:** R1, R3 (or —)
-- **Reads:**
-- **Check:** `<command or yes/no verification>`
-- **Commit:** `type(TNNN): …`
+
+##### Scope
+
+<!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
+
+##### Reads
+
+<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
+
+##### Check
+
+<!-- command/s or verification with a yes/no result. -->
+
+##### Do
+
+<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
 ## 4. Close
 
