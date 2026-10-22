@@ -18,14 +18,13 @@ Cycle: Produce → Review. Produce runs over several sessions of about 3 steps e
 
 ## Step protocol
 
-1. **Precondition.** Read the design's Status and the step row. Stop and report if State is not Ready 🎬 or In progress 🔄, if a previous step is not ✅, or if a ✅ step has no commit in `git log`.
-2. Read only what the step lists in Reads.
-3. Work only within the step's Scope and the File layout. Anything else is a deviation: set the step to ⛔, stop and report it, do not decide it. A deviation is valid only with the owner's OK. Once given, write it at once in the design's 4. Close › Decisions taken during implementation, before continuing; if it affects other tasks or the project, also propose an ADR in `docs/decisions/`. Record only what changes something the approved design states (Spec, File layout, a component contract, Test plan); details within the step's Scope are not recorded.
-4. **Tests first.** Write the step's tests from the Test plan and run them: they must fail (red). Then write the code until they pass (green). Tests may be added, never dropped.
-5. Run the Check and, if the step touches code, all unit and integration tests of the touched component, not only the step's (local layer, for reference see [testing strategy](../../../docs/testing-strategy.md)).
-6. If the Check and the tests pass, mark the step ✅ and set Current step; the mark goes into the owner's commit of the step. On the first step, State goes to In progress 🔄 and the task to 🔄. If either fails, the step stays 🔄 and the report says why.
-7. End with the Change report.
-8. When running a range, stop before a step in another area, or past half context. The commit of a step must exist before the next step starts.
+1. **Precondition.** Read only the design's Status, the current step row and the Reads listed in the step. Stop and report if State is not Ready 🎬 or In progress 🔄, if a previous step is not ✅, or if a ✅ step has no commit in `git log`.
+2. Work only within the step's Scope and the File layout. Anything else is a deviation: set the step to ⛔, stop and report it, do not decide it. A deviation is valid only with the owner's OK. Once given, write it at once in the design's 4. Close › Decisions taken during implementation, before continuing; if it affects other tasks or the project, also propose an ADR in `docs/decisions/`. Record only what changes something the approved design states (Spec, File layout, a component contract, Test plan); details within the step's Scope are not recorded.
+3. **Tests first.** Write the step's tests from the Test plan and run them: they must fail (red). Then write the code until they pass (green). Tests may be added, never dropped.
+4. Run the Check and, if the step touches code, all unit and integration tests of the touched component, not only the step's (local layer, for reference see [testing strategy](../../../docs/testing-strategy.md)).
+5. If the Check and the tests pass, mark the step ✅ and set Current step; the mark goes into the owner's commit of the step. On the first step, State goes to In progress 🔄 and the task to 🔄. If either fails, the step stays 🔄 and the report says why.
+6. End with the Change report.
+7. When running a range, stop before a step in another area, or past half context. The commit of a step must exist before the next step starts.
 
 ## Change report
 
@@ -34,7 +33,7 @@ Report by exception: what follows the plan is not described; the owner reads the
   Step N ✅ — <one line: what the system does now>
   Check: <last line of the output, literal>
   Exceptions: none
-  Commit: type(TNNN): description
+  Commit: Follow Git conventions in CLAUDE.md.
 
 - **Step line:** ✅ if the Check passes, 🔄 or ⛔ otherwise. For a one-step change, "Change" instead of "Step N".
 - **Check:** the summary line only, literal. If it fails, the full output, literal. For a one-step change, the test run.
@@ -43,4 +42,4 @@ Report by exception: what follows the plan is not described; the owner reads the
   - files touched outside the step's Scope;
   - tests added, or planned tests that did not fail before the code;
   - new TODOs.
-- **Commit:** the step's Commit line, adjusted only if the step's content changed. For a one-step change, `type(TNNN): description` following the Git conventions in CLAUDE.md.
+- **Commit:** the step's Commit line, adjusted only if the step's content changed. For a one-step change, following the Git conventions in CLAUDE.md.
