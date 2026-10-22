@@ -31,3 +31,4 @@
 | T025 | Data processing pipeline spec and plan | 5 | ⬜ | T007, T021, T022 |  |
 | T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ⬜ |  |  |
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
+| T028 | Design skill: rule documents and prerequisites written in the design (lessons from d001; done on the T021 branch) | 1 | ✅ | — | [SKILL.md](../.claude/skills/design/SKILL.md) |

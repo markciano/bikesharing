@@ -46,17 +46,19 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
    - 2–3 options, each with its practical consequence;
    - the recommendation marked, with a one-line reason and the standard or pattern that applies.
 3. Once the owner picks, write **Options considered** (only if alternatives were weighed) and one row in **Decision summary**.
-   A cross-cutting decision becomes an **ADR**, ask to the owner to write it during the plan (using subagent) following the [adr-template.md](adr-template.md) and link it in the header of the current design.
-5. With every concern decided, write **File layout**, then **Components** and **Test plan** when they apply. A change to the overall structure also updates CLAUDE.md › Project structure; ask the owner.
+   A cross-cutting decision becomes an **ADR**, ask to the owner to write it during the Plan, following the adr-template.md; link it in the header.
+4. With every concern decided, write **File layout**, then **Components** and **Test plan** when they apply. A change to the overall structure also updates CLAUDE.md › Project structure; ask the owner.
+5. **Rule documents.** Every file in File layout that states rules or decisions (ADRs, `.claude/rules/`, skills, templates, `CLAUDE.md`) is written and approved now, one per message, on the edit's diff. Implementation builds the remaining files and verifies them against these; a mismatch is fixed in the design, not in the build.
 6. Ask for the Plan approval. Once approved, check Plan in Phase and tell the owner to run `/design dNNN review-plan` in a new session. The session ends here.
 
 ## 3. Implementation
 
 Starts only when Phase shows Plan review checked.
 
-1. Propose the step skeleton as a compact table (step · title · R · files); the owner adjusts order and cuts.
-2. Write each step in full.
-3. Ask for the Steps approval. Once approved, check Steps in Phase and tell the owner to run `/design dNNN review-steps` in a new session. The design goes to Ready when that review closes.
+1. **Prerequisites.** List what the owner prepares outside the repo before Step 1 (installs on the local machine, accounts, access), with exact versions decided now. The design goes to Ready only when they are done.
+2. Propose the step skeleton as a compact table (step · title · R · files); the owner adjusts order and cuts.
+3. Write each step in full.
+4. Ask for the Steps approval. Once approved, check Steps in Phase and tell the owner to run `/design dNNN review-steps` in a new session. The design goes to Ready when that review closes.
 
 ## End of session
 

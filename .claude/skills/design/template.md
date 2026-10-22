@@ -142,6 +142,10 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 ## 3. Implementation
 
+### Prerequisites
+
+<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
+
 ### Steps
 
 <!-- Each step is one reviewable result and one commit, touching at most 2–3 files.

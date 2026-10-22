@@ -10,6 +10,7 @@ Phase shows Plan checked and Plan review unchecked. Otherwise stop and tell the 
 
 - The design doc `docs/designs/dNNN-*.md`: Status, Spec and Plan.
 - ADRs linked in its header, only when a check needs them.
+- The rule documents listed in File layout, for check 6.
 - Nothing else unless a finding needs confirming; announce it in one line, within the reading budget in CLAUDE.md.
 
 ## Checklist
@@ -19,7 +20,7 @@ Phase shows Plan checked and Plan review unchecked. Otherwise stop and tell the 
 3. **Consistency.** Decisions do not contradict each other or existing ADRs. Cross-cutting decisions have their ADR. Each decision names the standard that applies, or has an ADR for the deviation.
 4. **Verifiability.** Done when and every requirement can be checked by something in the Test plan.
 5. **No gaps.** No decision is left implicit. File layout is complete, the documents the change affects included, and its names follow the conventions in CLAUDE.md. Pending items are marked `TODO:`.
-6. **ADR**: If new ADRs is created in the plan, check that it is created and pinned to the header. 
+6. **Rule documents.** Every file in File layout that states rules or decisions (ADRs, `.claude/**`, `CLAUDE.md`) is written; each matches the Decision summary and adds no decision of its own. New ADRs are linked in the header.
 
 ## Severity
 
