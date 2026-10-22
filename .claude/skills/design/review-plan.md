@@ -18,7 +18,8 @@ Phase shows Plan checked and Plan review unchecked. Otherwise stop and tell the 
 2. **Soundness.** Would a senior data engineer approve this Plan for these requirements? Look at least at: what happens on re-runs and partial writes; whether each decision is the simplest that meets the requirements; whether the named standard fits the problem.
 3. **Consistency.** Decisions do not contradict each other or existing ADRs. Cross-cutting decisions have their ADR. Each decision names the standard that applies, or has an ADR for the deviation.
 4. **Verifiability.** Done when and every requirement can be checked by something in the Test plan.
-5.  **No gaps.** No decision is left implicit. File layout is complete, the documents the change affects included, and its names follow the conventions in CLAUDE.md. Pending items are marked `TODO:`.
+5. **No gaps.** No decision is left implicit. File layout is complete, the documents the change affects included, and its names follow the conventions in CLAUDE.md. Pending items are marked `TODO:`.
+6. **ADR**: If new ADRs is created in the plan, check that it is created and pinned to the header. 
 
 ## Severity
 

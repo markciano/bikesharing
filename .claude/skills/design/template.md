@@ -8,6 +8,7 @@ Sections marked Optional are kept only when they apply.
 
 - **Task:** TNNN
 - **ADRs:** <ADRs this design must respect, or "none">
+- **New ADRs from this doc:** <ADRs created during this design, or "none">
 
 ## Status
 
