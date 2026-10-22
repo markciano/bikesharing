@@ -97,35 +97,51 @@ spikes/<name>/
 ```
 
 ## 3. Steps
-
-<!-- Each step is one reviewable result.
-- Status: where the step is.
+<!-- Each step is one reviewable result and one commit, touching at most 2–3 files.
+- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
 - Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- Scope: what the step produces. A Claude step names its files and what it must not touch; an Owner step gives the exact commands or actions and what to report back.
-- Reads: Claude steps only; the spike sections and files the step needs.
+- R: the requirements the step implements or tests, or —.
+- Commit: the proposed message, following the Git conventions in CLAUDE.md.
 - Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>.
-- Check: a command or verification with a yes/no result.
-- Commit: only steps that change committed files, following the Git conventions in CLAUDE.md.
 The last step is the Conclusion. -->
 
 ### Step 1 — <title>
 
-- **Status:** 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- **Who:** Owner | Claude
-- **Scope:**
-- **Reads:**
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** following the Git conventions in CLAUDE.md.
+- **R:** R1, R3 (or —)
 - **Gate:** <condition> → <consequence>
-- **Check:** `<command or yes/no verification>`
-- **Commit:** `type(TNNN): …`
+
+##### Scope
+
+<!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
+
+##### Reads
+
+<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
+
+##### Check
+
+<!-- command/s or verification with a yes/no result. -->
+
+##### Do
+
+<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
 ### Step N — Conclusion
 
-- **Status:** 💤 todo
-- **Who:** Owner + Claude
-- **Scope:** 5. Conclusion and the destination of every Production input in this doc; How we got here in the README; tear-down of what does not outlive the spike.
-- **Reads:** 1. Questions, 2. Method › Decision log, 4. Findings
-- **Check:** every Q answered; every exit criterion has a result; every P has a destination
-- **Commit:** `docs(TNNN): conclude spike sNNN`
+<!-- 
+Same structure as the example before before but: 
+- Scope contains: 
+  1. Conclusion
+  2. the destination of every Production input in this doc;
+  3. How we got here in the README
+  4. tear-down of what does not outlive the spike.
+- Reads: 1. Questions, 2. Method › Decision log, 4. Findings
+- Check: every Q answered; every exit criterion has a result; every P has a destination
+- Commit: `conclude spike sNNN` following the Git conventions in CLAUDE.md.
+-->
 
 ## 4. Findings
 
