@@ -146,6 +146,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Each step is one reviewable result and one commit, touching at most 2–3 files.
 - Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
+- Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
 - R: the requirements the step implements or tests, or —.
 - Commit: the proposed message, following the Git conventions in CLAUDE.md. -->
 
