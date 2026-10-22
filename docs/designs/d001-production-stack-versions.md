@@ -8,7 +8,7 @@
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [ ] Steps review
-- Current step: 3
+- Current step: 4
 
 ## 1. Spec — what and why
 
@@ -237,7 +237,7 @@ Result (2026-10-22): (a) exit 0, `markdownlint-cli2 v0.23.2 (markdownlint v0.41.
 
 #### Step 3 — `docs` job on the locked toolchain
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `ci: run docs lint through setup-node, npm ci and lint-docs.sh`
 - **R:** R1, R2
@@ -257,6 +257,8 @@ Result (2026-10-22): (a) exit 0, `markdownlint-cli2 v0.23.2 (markdownlint v0.41.
 ##### Check
 
 `grep -n "markdownlint-cli2-action" .github/workflows/ci.yml` finds nothing; the `docs` job has `node-version-file: .nvmrc`, `cache: npm`, `npm ci`, `bash scripts/lint-docs.sh` and `timeout-minutes: 10`; the `# TODO:` block is unchanged (yes/no).
+
+Result (2026-10-22): `grep` finds nothing (exit 1); the `docs` job has `node-version-file: .nvmrc`, `cache: npm`, `npm ci`, `bash scripts/lint-docs.sh` and `timeout-minutes: 10`; the `# TODO:` block is unchanged (yes).
 
 ##### Do
 
