@@ -8,7 +8,7 @@
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [ ] Steps review
-- Current step: 4
+- Current step: —
 
 ## 1. Spec — what and why
 
@@ -267,7 +267,7 @@ Result (2026-10-22): `grep` finds nothing (exit 1); the `docs` job has `node-ver
 
 #### Step 4 — End-to-end verification
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner (push, throwaway PR) and Claude (review)
 - **Commit:** `docs: close d001 after end-to-end verification`
 - **R:** R1, R2
@@ -288,6 +288,8 @@ Runs the Test plan rows for R1, R2 and Done when (R3 was covered in Step 2), and
 
 R1 banner seen locally and in the `docs` job log; R2 job failed at `npm ci`; built files match both rules; every Done when item met; the `docs` check of the T021 PR is green (yes/no each).
 
+Result (2026-10-22): R1 yes (`markdownlint-cli2 v0.23.2 (markdownlint v0.41.1)`, 0 issues, locally and in the `docs` job log); R2 yes (throwaway PR, `npm ci` error: "`npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync"; PR closed without merging, branches deleted); built files match both rules: yes; Done when: yes (no TODO citing T021 left, s008 correction in place, pointers in CLAUDE.md and the design template); `docs` check of the T021 PR green: yes.
+
 ##### Do
 
 1. Owner: push the branch; the draft PR exists.
@@ -301,8 +303,17 @@ R1 banner seen locally and in the `docs` job log; R2 job failed at `npm ci`; bui
 
 ### Implemented
 
+- The repository tooling is a root component: `.nvmrc` (Node 26.12.1), `.npmrc` (`save-exact=true`), `package.json` and `package-lock.json` with `markdownlint-cli2` 0.23.2 pinned exactly.
+- `scripts/lint-docs.sh` is the single entry point, locally and in CI: it stops with "Run `npm ci` first" unless the locked version is installed, and never downloads one.
+- The `docs` job runs `setup-node` (`.nvmrc`, npm cache), `npm ci` and the script, replacing `markdownlint-cli2-action`; the job name is unchanged.
+- The rules (ADR-0016, ADR-0017, `dependencies.md`, `ci.md`, `docs.md`, template and CLAUDE.md pointers) were written in the design.
+
 ### Known gaps at close
 
-- `<gap>` — TNNN
+- Exact pins do not receive security patches automatically — T027
+- `npm audit` reports 11 advisories in the `markdownlint-cli2` 0.23.2 tree — T029
+- Java distribution and where it is declared — T025
 
 ### Decisions taken during implementation
+
+None.
