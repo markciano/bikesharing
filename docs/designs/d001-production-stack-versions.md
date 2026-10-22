@@ -8,7 +8,7 @@
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [ ] Steps review
-- Current step: 1
+- Current step: 3
 
 ## 1. Spec — what and why
 
@@ -175,7 +175,7 @@ Owner, on the local machine, before Step 1: Node 26.12.1 installed and selected 
 
 #### Step 1 — Repository tooling manifest
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `build: pin markdownlint-cli2 in root package.json`
 - **R:** R1
@@ -204,7 +204,7 @@ The repository tooling as a root component, per `.claude/rules/dependencies.md`:
 
 #### Step 2 — `lint-docs.sh` runs the locked version
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `build: run locked markdownlint-cli2 in lint-docs.sh`
 - **R:** R1, R3
@@ -225,6 +225,8 @@ The repository tooling as a root component, per `.claude/rules/dependencies.md`:
 ##### Check
 
 Three runs of `bash scripts/lint-docs.sh; echo $?`: (a) after `npm ci`, it passes and prints the `markdownlint-cli2 v0.23.2` banner; (b) after `rm -rf node_modules`, it exits 1 with "Run `npm ci` first"; (c) after `npm ci && npm install --no-save markdownlint-cli2@0.23.1`, it exits 1 with the same message. `npm ci` afterwards restores the locked state.
+
+Result (2026-10-22): (a) exit 0, `markdownlint-cli2 v0.23.2 (markdownlint v0.41.1)`, `Summary: 0 issues in 0 files`; (b) exit 1 and (c) exit 1, both with "markdownlint-cli2 is not installed at the locked version. Run `npm ci` first."; `npm ls --depth=0` after `npm ci` lists `markdownlint-cli2@0.23.2`. (b) and (c) exited 0 with the previous script (red before the change).
 
 ##### Do
 
