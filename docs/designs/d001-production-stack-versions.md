@@ -6,8 +6,8 @@
 
 ## Status
 
-- State: In progress 🔄
-- Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [ ] Steps review
+- State: Complete ✅
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: —
 
 ## 1. Spec — what and why
@@ -307,12 +307,14 @@ Result (2026-10-22): R1 yes (`markdownlint-cli2 v0.23.2 (markdownlint v0.41.1)`,
 - `scripts/lint-docs.sh` is the single entry point, locally and in CI: it stops with "Run `npm ci` first" unless the locked version is installed, and never downloads one.
 - The `docs` job runs `setup-node` (`.nvmrc`, npm cache), `npm ci` and the script, replacing `markdownlint-cli2-action`; the job name is unchanged.
 - The rules (ADR-0016, ADR-0017, `dependencies.md`, `ci.md`, `docs.md`, template and CLAUDE.md pointers) were written in the design.
+- Tests passing: R1 and R2 end-to-end on the T021 PR and a throwaway PR (Step 4), R3 in its two failure cases (Step 2); docs lint 0 issues on 35 files at review.
 
 ### Known gaps at close
 
 - Exact pins do not receive security patches automatically — T027
 - `npm audit` reports 11 advisories in the `markdownlint-cli2` 0.23.2 tree — T029
 - Java distribution and where it is declared — T025
+- ADR-0013 was edited in place for the commit format change, without an amendment note — T031
 
 ### Decisions taken during implementation
 
