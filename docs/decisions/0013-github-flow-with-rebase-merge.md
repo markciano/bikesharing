@@ -7,7 +7,7 @@ date: 2026-10-18
 
 ## Context and Problem Statement
 
-A single owner makes every commit (Claude only reads Git), commits follow `type(TNNN)`, and there is no CI yet. Spike s007 screened branching models against these constraints and validated the chosen flow in the real repo.
+A single owner makes every commit (Claude only reads Git), commits follow `type: description`, and there is no CI yet. Spike s007 screened branching models against these constraints and validated the chosen flow in the real repo.
 
 Which branching model, merge strategy and protection does the project use?
 
@@ -27,7 +27,7 @@ Trunk-based development fails the rule that `main` stays green (it commits direc
 
 ### Consequences
 
-* Every `type(TNNN)` commit reaches `main` unchanged, in a linear history.
+* Every `type: description` commit reaches `main` unchanged, in a linear history.
 * CI is the gate: a red check blocks the merge and a direct push is rejected.
 * Each new component adds a CI job in its own design; the required check changes from `docs` to `ci-passed` when the second one arrives, the only change to the ruleset.
 * Urgent fixes mean disabling the ruleset briefly; this path was not tested.
