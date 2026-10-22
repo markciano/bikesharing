@@ -26,7 +26,7 @@
 | T020 | Testing conventions and place in claude files | 5 | ✅ | — | [testing-conventions](spikes/s008-testing-conventions.md) |
 | T021 | Production stack versions (Python, Spark, Java) and dependency tooling (ADR; `uv` + `pyproject.toml` vs pip) | 1 | 🔄 | T020 | [d001-production-stack-versions](designs/d001-production-stack-versions.md) |
 | T022 | Supersede ADR-0003: deployment target (Fabric dropped) | 1 | ⬜ | — |  |
-| T023 | Include `.claude/*/*.md` and `spikes/*/*.md` in `.claude/rules/docs.md` | 1 | ⬜ | — |  |
+| T023 | Include `.claude/**/*.md` and `spikes/**/*.md` in `.claude/rules/docs.md` and in the docs lint glob (`scripts/lint-docs.sh`), fixing the existing violations (e.g. the design template) | 1 | ⬜ | — |  |
 | T024 | Hooks: Code conventions for Python, JS, Spark and SQL | 1 | ⬜ | — |  |
 | T025 | Data processing pipeline spec and plan | 5 | ⬜ | T007, T021, T022 |  |
 | T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ⬜ |  |  |
