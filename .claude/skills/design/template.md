@@ -169,13 +169,13 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
 
-##### Check
-
-<!-- command/s or verification with a yes/no result. -->
-
 ##### Do
 
 <!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
+
+##### Check
+
+<!-- command/s or verification with a yes/no result. -->
 
 ## 4. Close
 
