@@ -113,19 +113,19 @@ The last step is the Conclusion. -->
 - **R:** R1, R3 (or —)
 - **Gate:** <condition> → <consequence>
 
-##### Scope
+#### Scope
 
 <!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
 
-##### Reads
+#### Reads
 
 <!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
 
-##### Check
+#### Check
 
 <!-- command/s or verification with a yes/no result. -->
 
-##### Do
+#### Do
 
 <!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
