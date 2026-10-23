@@ -23,19 +23,19 @@ Main question: where do the processing pipeline and the visualization run, and w
 
 - **Q1.** Which platforms, local and cloud free tiers, run a Python Spark + Delta Lake pipeline at $0, and with what limits (compute, storage, run time, expiry)?
 - **Q2.** Where can each visualization runtime model be hosted publicly at $0, and with what limits (sleep, refresh, data size)?
-- **Q3.** Which combinations support the three operating modes, each started on demand and in how long: static by default (the visualization shows the last processed data, nothing running), catch-up (one pipeline run processes what R2 holds and the pipeline does not), and live for demos (1-minute deltas from R2 through to the visualization, switched off afterwards)?
-- **Q4.** How does each combination score on the weighted criteria?
+- **Q3.** Which top pairs (pipeline platform, visualization host) support the three operating modes, each started on demand and in how long: static by default (the visualization shows the last processed data, nothing running), catch-up (one pipeline run processes what R2 holds and the pipeline does not), and live for demos (1-minute deltas from R2 through to the visualization, switched off afterwards)?
+- **Q4.** How does each pipeline platform and each visualization host score on the weighted criteria, and which of the top pairs pass the junction check?
 - **Observe only:** R2 free-tier operation limits (listing counts as Class A, shared with the Worker's writes) when polled every minute during a demo.
 
 ### Exit criteria
 
-- **Standard:** hard constraints first, then a weighted scoring matrix over the surviving combinations, recorded in MADR style for the ADR that supersedes ADR-0003.
-- **Timebox:** half a day of desk research; the run ends when the matrix is complete for every combination that passes the hard cuts, or when the timebox runs out, in which case the decision is taken on the evidence gathered and the gaps go to Not verified. Every surviving combination is scored: one meeting the criteria is not enough, because the ADR needs the ranked alternatives.
-- **Cost:** expected cost is $0, on always-free tiers or on trials lasting 3 months or more; each combination records when it expires — hard cut.
-- **Payment card:** accepted only if the provider offers at least budget alerts; the accepted worst case from an accidental overage is €10 — hard cut.
+- **Standard:** hard constraints first, then a weighted scoring matrix over the surviving candidates and a junction check of the top pairs, recorded in MADR style for the ADR that supersedes ADR-0003.
+- **Timebox:** half a day of desk research; the run ends when every P1 and P2 survivor is scored and the top pairs are junction-checked, or when the timebox runs out, in which case the decision is taken on the evidence gathered and the gaps go to Not verified. One candidate meeting the criteria is not enough, because the ADR needs the ranked alternatives.
+- **Cost:** expected cost is $0, on always-free tiers or on trials lasting 3 months or more; each candidate records when it expires — hard cut.
+- **Payment card:** passes if the official documentation shows at least one of: no card required; no charges without an explicit plan upgrade; a spending cap; budget alerts. Budget alerts are enough because an accidental overage of up to €10 is an accepted risk — hard cut.
 - **Spark + Delta Lake:** the platform runs PySpark with open-source Delta Lake as it runs locally, either as a managed service or on a self-installed VM or container — hard cut.
 - **Cloud pipeline:** the pipeline is deployed on a cloud platform; local stays the development environment and the reference in P1, not a target — hard cut.
-- **Weighted criteria** — guide. Each surviving combination scores 1–5 per criterion; the total is the sum of score × weight:
+- **Weighted criteria** — guide. Each P1 and P2 survivor scores 1–5 per criterion (Public availability applies to visualization hosts only); the total is the sum of score × weight, shown on a 0–10 scale as total ÷ maximum possible × 10:
 
 | Criterion | What it measures | Weight |
 |---|---|---|
@@ -63,7 +63,7 @@ A funnel of three probes: the first two screen candidates cheaply against the ha
 |---|---|---|
 | P1. Pipeline platforms | Local (Mac), managed Spark free tiers and free VMs or containers, screened against the hard cuts | Q1: which run Spark + Delta Lake at $0, and their limits |
 | P2. Visualization hosting | For each runtime model (static, server app, managed BI), where it is published for free, screened against the hard cuts | Q2: where each model can live, and its limits |
-| P3. Combinations | Survivors of P1 × P2, checked against the three operating modes and scored on the weighted matrix | Q3, Q4 and the Verdict |
+| P3. Scores and junction | P1 and P2 survivors scored separately on the weighted matrix; the top 3 of each side checked in pairs for the junction | Q3, Q4 and the Verdict |
 
 Seed list (unverified until P1 and P2 run):
 
@@ -86,6 +86,7 @@ Seed list (unverified until P1 and P2 run):
 
 ### Shared behaviour
 
+- **Junction check.** A pair (pipeline platform, visualization host) passes if the visualization reads the pipeline's output at $0 (directly, or through an intermediate store such as R2) and the live mode works end to end, from pipeline start to visualization refresh. Pairs are ranked by the sum of their two 0–10 totals; the Verdict is the best-ranked pair that passes. The pair's expiry is the earlier of the two.
 - **Scoring anchors.** Every score in P3 uses these anchors; 2 and 4 are for cases in between.
 
 | Criterion | 1 | 3 | 5 |
@@ -105,6 +106,7 @@ Seed list (unverified until P1 and P2 run):
 | 2026-10-23 | Candidates come from a seed list plus at most 3 additions per probe (P1, P2) found by the web researcher | Long list → short list: bounds the timebox without missing recent free-tier offers |
 | 2026-10-23 | A free-tier limit counts as evidence only from the provider's official pricing page or documentation, with URL and access date; blogs and forums are leads, not evidence; anything without an official source goes to Not verified | Primary sources keep the matrix and the ADR traceable; free tiers change often |
 | 2026-10-23 | Claude proposes each score with a one-line justification citing its source or finding, against fixed anchors (Shared behaviour); the owner validates or corrects in an Owner step | Fixed anchors make a weighted matrix reproducible; the owner's correction records the decision-maker's call |
+| 2026-10-23 | Pipeline platforms and visualization hosts are scored separately; only the top 3 of each side are checked in pairs (junction check), instead of scoring every P1 × P2 combination | The parts do different jobs and meet only where one reads the other; up to 9 junction checks fit the timebox, about 36 scored combinations do not (Steps review, finding 4) |
 | 2026-10-23 | The run is executed in the spike session, not through `/implement` | Desk research with no code: `/implement` would add a session without adding a review of code |
 
 ## 3. Steps
@@ -119,7 +121,7 @@ Seed list (unverified until P1 and P2 run):
 
 #### Scope
 
-Findings for every P1 candidate in this doc: the result of each hard cut (cost, payment card, Spark + Delta Lake, cloud pipeline) and the limits (compute, storage, run time, expiry), each with its official URL and access date. Candidates the researcher adds (at most 3) are appended to the seed list table, marked "added in Step 1".
+Findings for every P1 candidate in this doc: the result of each hard cut (cost, payment card, Spark + Delta Lake, cloud pipeline) and the limits (compute, storage, run time, expiry), each with its official URL and access date. Candidates the researcher adds (at most 3) are appended to the seed list table, marked "added in Step 1". Status in this doc is set to Running 🔄 with today's UTC date as Started.
 
 #### Reads
 
@@ -133,11 +135,12 @@ Every P1 candidate has a pass or fail for each hard cut, backed by an official U
 
 #### Do
 
-1. Run the web researcher with the P1 seed list, the hard cuts, the evidence rule and the cap of 3 additions.
-2. Append the researcher's additions to the seed list table.
-3. Write the P1 findings, one per candidate, with the hard-cut results and the limits.
-4. Add a Production input for any limit the pipeline design (T025) must respect.
-5. Apply the Gate.
+1. Update Status: State to Running 🔄, Started to today's UTC date, Current step to 1.
+2. Run the web researcher with the P1 seed list, the hard cuts, the evidence rule and the cap of 3 additions.
+3. Append the researcher's additions to the seed list table.
+4. Write the P1 findings, one per candidate, with the hard-cut results and the limits.
+5. Add a Production input for any limit the pipeline design (T025) must respect.
+6. Apply the Gate.
 
 ### Step 2 — P2: visualization hosting against the hard cuts
 
@@ -145,11 +148,11 @@ Every P1 candidate has a pass or fail for each hard cut, backed by an official U
 - **Who:** Claude (web researcher)
 - **Commit:** `docs: add s009 visualization hosting findings`
 - **R:** —
-- **Gate:** a runtime model with no host passing every hard cut → that model leaves P3.
+- **Gate:** a runtime model with no host passing every hard cut → that model leaves P3; no model with a passing host → the spike stops and the owner decides which hard cut to relax before Step 3.
 
 #### Scope
 
-Findings for every P2 candidate in this doc: the result of each applicable hard cut (cost, payment card) and the limits (sleep or cold start, refresh, data size, terms of use such as non-commercial plans), each with its official URL and access date. Additions (at most 3) are appended to the seed list table, marked "added in Step 2".
+Findings for every P2 candidate in this doc: the result of each applicable hard cut (cost, payment card) and the limits (sleep or cold start, refresh, data size, expiry, terms of use such as non-commercial plans), each with its official URL and access date. Additions (at most 3) are appended to the seed list table, marked "added in Step 2".
 
 #### Reads
 
@@ -166,7 +169,8 @@ Every P2 candidate has a pass or fail for each applicable hard cut, backed by an
 1. Run the web researcher with the P2 seed list, the hard cuts, the evidence rule and the cap of 3 additions.
 2. Append the researcher's additions to the seed list table.
 3. Write the P2 findings, one per candidate, with the hard-cut results and the limits.
-4. Apply the Gate.
+4. Add a Production input for any limit the visualization tool choice (T033) must respect.
+5. Apply the Gate.
 
 ### Step 3 — Validate P1 and P2
 
@@ -192,58 +196,61 @@ The owner reports "OK" or a list of corrections, and every correction is written
 1. Open the official URL of every discarded candidate and of every survivor.
 2. Report back "OK" or, per finding, what is wrong and the source that shows it.
 
-### Step 4 — P3: combinations, operating modes and proposed scores
+### Step 4 — P3: proposed scores and junction check
 
 - **Status:** 💤 todo
 - **Who:** Claude (web researcher for gaps)
-- **Commit:** `docs: add s009 combination scores`
+- **Commit:** `docs: add s009 scores and junction check`
 - **R:** —
 
 #### Scope
 
-Findings in this doc: the combinations of P1 survivors × P2 survivors, each with its three operating modes (static, catch-up, live: possible or not, and start-up time), the R2 operation count for one hour of live mode (Observe only), and a proposed score per weighted criterion with a one-line justification against the anchors in Shared behaviour, plus the weighted total.
+Findings in this doc: a proposed score per weighted criterion for every P1 and P2 survivor, with a one-line justification against the anchors in Shared behaviour, plus the weighted total on a 0–10 scale; the junction check (Shared behaviour) for the pairs of the top 3 of each side, each pair with its expiry and its three operating modes (static, catch-up, live: possible or not, and start-up time); the ranked pairs; and the R2 Class A operation count for one hour of live mode as a percentage of the official free-tier limit, including the Worker's writes (Observe only).
 
 #### Reads
 
 - This doc, Findings from Steps 1–3: the survivors and their limits.
-- This doc, Exit criteria › weighted criteria and Shared behaviour › scoring anchors.
+- This doc, Exit criteria › weighted criteria and Shared behaviour › junction check and scoring anchors.
 - This doc, Questions › Q3: the three operating modes.
+- ADR-0011: the Worker's capture rate, which sets its R2 writes.
 
 #### Check
 
-Every combination has the three modes assessed and a score with justification for each of the 7 criteria, and its total equals the sum of score × weight: yes/no.
+Every survivor has a score with justification for each applicable criterion and a total equal to the sum of score × weight; every top pair has a junction result, its expiry and its three modes assessed: yes/no.
 
 #### Do
 
-1. List the combinations.
-2. Run the web researcher only for operating-mode gaps the earlier findings do not cover, under the same evidence rule.
-3. Write the operating-mode findings per combination.
-4. Write the R2 operation count for one hour of live mode.
-5. Write the proposed score matrix with justifications and totals.
+1. Write the proposed score matrix for P1 and P2 survivors, with justifications and 0–10 totals.
+2. List the pairs of the top 3 of each side.
+3. Run the web researcher only for junction or operating-mode gaps the earlier findings do not cover, under the same evidence rule.
+4. Write the junction findings per pair and the ranked pairs.
+5. Run the web researcher for the official R2 free-tier Class A limit, and write the Class A count for one hour of live mode plus the Worker's writes, as a percentage of that limit.
 
 ### Step 5 — Validate or correct the scores
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** none, unless corrections are written (then `docs: correct s009 combination scores`)
+- **Commit:** none, unless corrections are written (then `docs: correct s009 scores and junction check`)
 - **R:** —
 
 #### Scope
 
-The owner's validation of the proposed scores. Corrected scores are written by Claude and marked as the owner's.
+The owner's validation of the Step 4 findings: proposed scores, junction checks with their operating modes, and the R2 count. Corrections are written by Claude as new findings; corrected scores are marked as the owner's.
 
 #### Reads
 
-- This doc, the score matrix from Step 4.
+- This doc, the score matrix, the junction findings and the R2 count from Step 4.
 
 #### Check
 
-The owner reports "OK" or a list of corrected scores, and the totals are recomputed after any correction: yes/no.
+The owner reports "OK" or a list of corrections, the R2 count matches the owner's own arithmetic, and the totals are recomputed after any correction: yes/no.
 
 #### Do
 
-1. Review each score against its anchor and justification.
-2. Report back "OK" or, per score, the corrected value and why.
+1. Check each junction and operating-mode finding against the source it cites.
+2. Recompute the R2 count by hand from the limit, the live polling rate and the Worker's writes.
+3. Review each score against its anchor and justification.
+4. Report back "OK" or, per item, the corrected value and why.
 
 ### Step 6 — Conclusion
 
@@ -257,7 +264,8 @@ The owner reports "OK" or a list of corrected scores, and the totals are recompu
 1. Conclusion in this doc: Observed window, Answers, Exit criteria, Verdict, Not verified, Follow-ups.
 2. The destination of every Production input in this doc.
 3. No README and no tear-down: the spike has no code and creates no accounts.
-4. Status in this doc and the T022 row in `docs/tasks.md`.
+4. Sources in this doc: the official URLs cited in Findings, or the section removed if Findings already carry them all.
+5. Status in this doc and the T022 row in `docs/tasks.md`.
 
 #### Reads
 
@@ -273,8 +281,9 @@ Every Q is answered, every exit criterion has a result, and every Production inp
 
 1. Write the Conclusion.
 2. Set the destination of every Production input.
-3. List in Follow-ups the ADR that supersedes ADR-0003, written in its own commit.
-4. Update Status in this doc and the T022 row in `docs/tasks.md`.
+3. List in Follow-ups the ADR that supersedes ADR-0003, in MADR style (the ranked pairs as Considered Options), written in its own commit.
+4. Fill or remove Sources.
+5. Update Status in this doc and the T022 row in `docs/tasks.md`.
 
 ## 4. Findings
 
