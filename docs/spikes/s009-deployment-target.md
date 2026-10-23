@@ -6,10 +6,11 @@
 
 ## Status
 
-- State: Ready 🎬
+- State: Discarded ❌ (built on premises that no longer hold: the processing engine and storage format are not decided)
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
-- Started: — · Finished: —
-- Current step: —
+- Started: 2026-10-23 · Finished: —
+- Current step: — (stopped during Step 1)
+- TODO: delete this spike after the decision-plan session.
 
 ## 1. Questions — what we need to know
 
@@ -74,6 +75,7 @@ Seed list (unverified until P1 and P2 run):
 | P1 | Self-installed VM | Oracle Cloud Always Free ARM VM | |
 | P1 | On-demand job | GitHub Actions on a public repository | Fits catch-up runs; nothing always on |
 | P1 | Self-installed VM | Google Cloud free tier e2-micro VM | Likely too small; discarded on evidence |
+| P1 | Self-installed VM | AWS Free plan (EC2) | Added in Step 1; 6-month trial |
 | P2 | Static | GitHub Pages | |
 | P2 | Static | Cloudflare Pages | |
 | P2 | Static | Vercel | Hobby plan is non-commercial |
@@ -114,7 +116,7 @@ Seed list (unverified until P1 and P2 run):
 
 ### Step 1 — P1: pipeline platforms against the hard cuts
 
-- **Status:** 💤 todo
+- **Status:** 🔄 doing
 - **Who:** Claude (web researcher)
 - **Commit:** `docs: add s009 pipeline platform findings`
 - **R:** —
