@@ -6,8 +6,8 @@
 
 ## Status
 
-- State: Draft 📝
-- Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review
+- State: Ready 🎬
+- Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: — · Finished: —
 - Current step: —
 

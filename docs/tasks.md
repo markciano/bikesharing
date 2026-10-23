@@ -27,7 +27,7 @@
 | T029 | Upgrade `markdownlint-cli2` 0.23.2 → 0.23.3 (11 → 10 `npm audit` advisories, js-yaml cleared); no release clears all on 2026-10-22: braces has no fixed version and katex is held back by `micromark-extension-math`; 0.24.0 deferred until it matures; upstream fixes picked up by T027 | 1 | ✅ | T021 |  |
 | T031 | Add a dated amendment note to ADR-0013 for the commit format change (`type(TNNN)` → `type: description`), edited in place on the T021 branch | 1 | ✅ | — |  |
 | T032 | Move web-research delegation from Claude's memory to a project subagent (`.claude/agents/web-researcher.md`) | 1 | ✅ | — |  |
-| T022 | Supersede ADR-0003: deployment target (Fabric dropped) | 1 | 📝 | — | [s009](spikes/s009-deployment-target.md) |
+| T022 | Supersede ADR-0003: deployment target (Fabric dropped) | 1 | 🎬 | — | [s009](spikes/s009-deployment-target.md) |
 | T007 | GBFS ingestion spec and plan | 5 | ⬜ | T006, T011 | Inputs: [s008 P1–P4](spikes/s008-testing-conventions.md#production-inputs) |
 | T025 | Data processing pipeline spec and plan | 5 | ⬜ | T007, T021, T022 |  |
 | T033 | Choose the visualization tool within the runtime model set by s009 | 2 | ⬜ | T022 |  |
