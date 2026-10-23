@@ -86,6 +86,7 @@ Seed list (unverified until P1 and P2 run):
 
 ### Shared behaviour
 
+- **Status at every stop.** Each step sets Current step when it starts, and Status is updated before the session stops.
 - **Junction check.** A pair (pipeline platform, visualization host) passes if the visualization reads the pipeline's output at $0 (directly, or through an intermediate store such as R2) and the live mode works end to end, from pipeline start to visualization refresh. Pairs are ranked by the sum of their two 0–10 totals; the Verdict is the best-ranked pair that passes. The pair's expiry is the earlier of the two.
 - **Scoring anchors.** Every score in P3 uses these anchors; 2 and 4 are for cases in between.
 
@@ -216,15 +217,15 @@ Findings in this doc: a proposed score per weighted criterion for every P1 and P
 
 #### Check
 
-Every survivor has a score with justification for each applicable criterion and a total equal to the sum of score × weight; every top pair has a junction result, its expiry and its three modes assessed: yes/no.
+Every survivor has a score with justification for each applicable criterion and a total equal to (sum of score × weight) ÷ maximum possible × 10; every top pair has a junction result, its expiry and its three modes assessed: yes/no.
 
 #### Do
 
 1. Write the proposed score matrix for P1 and P2 survivors, with justifications and 0–10 totals.
-2. List the pairs of the top 3 of each side.
+2. List the pairs of the top 3 of each side; candidates tied at third place are all included.
 3. Run the web researcher only for junction or operating-mode gaps the earlier findings do not cover, under the same evidence rule.
 4. Write the junction findings per pair and the ranked pairs.
-5. Run the web researcher for the official R2 free-tier Class A limit, and write the Class A count for one hour of live mode plus the Worker's writes, as a percentage of that limit.
+5. Run the web researcher for the official R2 free-tier Class A limit, and write, as percentages of that monthly limit, the Worker's Class A operations per month and the Class A operations per hour of live mode, plus the demo hours that fit in the remaining quota, stating the assumptions: one LIST per source per poll (each listing returns fewer than 1000 objects) and the Worker's write rate from ADR-0011.
 
 ### Step 5 — Validate or correct the scores
 
