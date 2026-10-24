@@ -102,6 +102,7 @@ spikes/<name>/
 - Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
 - R: the requirements the step implements or tests, or —.
 - Commit: the proposed message, following the Git conventions in CLAUDE.md.
+- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner.
 - Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>.
 The last step is the Conclusion. -->
 
@@ -111,6 +112,7 @@ The last step is the Conclusion. -->
 - **Who:** Owner
 - **Commit:** following the Git conventions in CLAUDE.md.
 - **R:** R1, R3 (or —)
+- **Model:** `<model · effort>` (or —)
 - **Gate:** `<condition>` → `<consequence>`
 
 #### Scope
