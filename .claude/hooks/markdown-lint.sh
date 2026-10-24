@@ -5,6 +5,12 @@ set -uo pipefail
 
 cd "$CLAUDE_PROJECT_DIR"
 
+# Hooks inherit the PATH of the process that launched claude; without node every edit would pass unlinted.
+if ! command -v node >/dev/null; then
+  echo "node not on PATH; launch claude from a shell with fnm loaded" >&2
+  exit 1
+fi
+
 # The hook input is JSON on stdin; node is pinned in .nvmrc, so no extra tool is needed to parse it.
 file=$(node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>process.stdout.write(JSON.parse(d).tool_input?.file_path??""))')
 [[ "$file" == *.md ]] || exit 0
