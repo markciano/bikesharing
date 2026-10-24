@@ -41,4 +41,3 @@
 | T024 | Hooks: code conventions for the project's languages | 1 | 🔄 | — |  |
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
-| T015 | Match Bicing October archive against real-time capture | 2 | ⛔ | T034 | [bicing-historical-data](spikes/s004-bicing-historical-data.md) |

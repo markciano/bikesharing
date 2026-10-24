@@ -23,7 +23,7 @@ The Open Data BCN monthly archives are the only source of Bicing history. Before
 - New monthly archives keep being downloaded as they are published; they may fill gaps.
 - **Out of scope:**
   - Months before 2026.
-  - Value-by-value match against the real-time capture (2026-10-03 to 2026-10-05): no archive overlaps it yet. Moved to T015, blocked until the October 2026 archive is published.
+  - Value-by-value match against the real-time capture (2026-10-03 to 2026-10-05): no archive overlaps it yet. Moved to T040 (processing pipeline), where its scope is decided; it needs the October 2026 archive.
 
 ## Questions
 
@@ -305,7 +305,7 @@ Outside the mapping (no 3.0 field): `ESTACIONS` `status`, `traffic` (always null
 **For coverage:**
 
 - Known holes: July 2026 (catalogue), 2026-08-01 to 08-06 (5b), 2026-04-13/14 (26.7 h). History can fill none of them; record them as known gaps.
-- The range from 2026-08-31T21:55Z to the start of T012 stays open (5d); the September and October archives will shorten it. The value-by-value match is T015, still blocked on the October archive.
+- The range from 2026-08-31T21:55Z to the start of T012 stays open (5d); the September and October archives will shorten it. Matching the archive against the real-time capture moves to T040, which decides its scope.
 
 **Notes for merging history with real time** (to review when that merge is designed):
 
