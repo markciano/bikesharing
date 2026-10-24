@@ -152,7 +152,8 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
 - Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
 - R: the requirements the step implements or tests, or —.
-- Commit: the proposed message, following the Git conventions in CLAUDE.md. -->
+- Commit: the proposed message, following the Git conventions in CLAUDE.md.
+- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner. -->
 
 #### Step 1 — `<title>`
 
@@ -160,6 +161,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **Who:** Owner
 - **Commit:**
 - **R:** R1, R3 (or —)
+- **Model:** `<model · effort>` (or —)
 
 ##### Scope
 
