@@ -12,7 +12,7 @@ paths: # mirrors the lint scope (globs) in .markdownlint-cli2.yaml; keep both in
 - **Design docs:** (`docs/designs/`) record the design of a feature.
 - **Spikes** (`docs/spikes/`) document experiments and investigations.
 - **Source cards** (`docs/sources/`) contain: Source (provider, URL, licence), Access (endpoint, format, auth, update frequency) and Facts (each with its evidence and the date it was confirmed).
-- **Architecture** (`docs/architecture.md`, arc42) states only what holds today, with no history or review notes. A task that takes or changes a decision updates the affected sections in the same commit.
+- **Architecture** (`docs/architecture.md`, arc42) is the curated summary of the project's architecture.
 - **Testing strategy** (`docs/testing-strategy.md`) records the testing model per component and the CI flow.
 - **Diagrams (Mermaid)** only where a flow branches or has several actors; the text is authoritative.
 - **Documents** record decisions, not discussion, without repetition.
