@@ -7,7 +7,6 @@ paths:
   - "**/package-lock.json"
   - "**/.npmrc"
   - "**/.nvmrc"
-  - "**/.java-version"
   - "**/wrangler.*"
 ---
 
@@ -23,12 +22,9 @@ Each component's directory holds its own files; the repository-wide tooling is o
 |---|---|---|---|
 | Python | `pyproject.toml` (PEP 621) | `uv.lock` | `.python-version` |
 | JavaScript | `package.json` | `package-lock.json` | `.nvmrc` |
-| Java | — | — | `.java-version` |
 | Cloudflare Worker | its JS manifest | its JS lockfile | `compatibility_date` in the wrangler configuration |
 
 A component design lists these files in its File layout and chooses the concrete versions against its deployment runtime.
-
-TODO: Java distribution (required by `setup-java`) and where it is declared — T025.
 
 ## Runtime versions
 

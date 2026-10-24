@@ -14,21 +14,13 @@ Each component design applies the five answers below. "Paper" marks a statement 
 
 ### Components
 
-#### Python (`src/bikesharing/`, non-Spark)
+#### Python (`src/bikesharing/`)
 
 1. **When:** unit tests are written before the code (red, green, refactor), one or more for every requirement and "Done when" condition, at the lowest level that can verify it (F20, F22).
 2. **Type:** unit for logic; integration when behaviour crosses a file or format boundary (file fixture → records) (F11, F25); contract, consumer side, when the code reads another component's output (F35); e2e on paper (F25).
 3. **Format:** files `test_<module>.py`, functions `test_<behaviour>_<condition>` (F26); Arrange–Act–Assert, one concept per test, no shared state (F23); assertions on outputs, not internals (F21); shared fixtures in `conftest.py`, function-scoped (F27); current time passed as a parameter, fixed UTC in tests (F29); no network, recorded fixtures (ADR-0009) and edge cases by hand (F28); pytest, coverage reported without threshold, source set in `[tool.coverage.run] source` (F24).
 4. **Where:** `tests/unit/` mirroring `src/`, `tests/integration/`, `tests/e2e/`, `tests/fixtures/`; one `conftest.py` in `tests/`, plus one per level when needed (F25, F27).
 5. **Runs:** locally before each commit via `/implement`, under 1 s (F37); every level in the PR run (F39) and again in the `main` run (F40).
-
-#### Spark (transformations in `src/bikesharing/`)
-
-1. **When:** as Python; each transformation is written as a function DataFrame → DataFrame so it can be tested alone (F31).
-2. **Type:** unit, on a local SparkSession (F31). Integration of a whole Spark job: not covered by the spike.
-3. **Format:** as Python, plus: one session-scoped SparkSession (`local[1]`, UI disabled) in `conftest.py`, the documented exception to function scope (F27); input DataFrames built inside the test; comparison with `pyspark.testing.assertDataFrameEqual` (F2, F31).
-4. **Where:** the Python tree (`tests/unit/`). Whether Spark tests get their own folder or CI job, to keep Java and PySpark out of the Python job, is decided in the pipeline design (F32).
-5. **Runs:** locally before each commit, about 35 s (F37); in the PR run, where it is the slowest job at 39–56 s (F32, F39), and in the `main` run (F40). It is the first candidate to move under the rule in [Moving tests](#moving-tests).
 
 #### Cloudflare Worker (JS)
 
@@ -67,4 +59,4 @@ TODO: when the collector design fixes the layout (`collector/{bicing/,ambici/}`,
 
 ### Moving tests
 
-When the `pull_request` run passes 10 min wall-clock, the slowest group of tests moves from the PR run to the `main` run, starting with the heaviest job (today Spark, F32). It stays in the local layer, and a red `main` run is fixed at once in a new PR. Today the run takes 42–52 s, so nothing moves (F39).
+When the `pull_request` run passes 10 min wall-clock, the slowest group of tests moves from the PR run to the `main` run, starting with the heaviest job. It stays in the local layer, and a red `main` run is fixed at once in a new PR. Today the run takes 42–52 s, so nothing moves (F39).
