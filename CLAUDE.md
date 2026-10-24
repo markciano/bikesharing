@@ -63,6 +63,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 │   ├── rules/              Path-specific rules (docs, tasks, python, spikes)
 │   └── skills/             Session skills: spike, design, implement
 ├── docs/                   Project documentation
+│   ├── architecture.md     Solution architecture (arc42)
 │   ├── tasks.md            Task table
 │   ├── testing-strategy.md Testing model per component and CI flow
 │   ├── decisions/          ADRs in force; archive/ holds retired ones
