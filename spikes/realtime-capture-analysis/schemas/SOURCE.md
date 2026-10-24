@@ -4,7 +4,7 @@ Used by the analysis script for metric 1f (compliance) of the realtime capture a
 
 | Item | Value |
 |---|---|
-| Repository | https://github.com/MobilityData/gbfs-json-schema |
+| Repository | <https://github.com/MobilityData/gbfs-json-schema> |
 | Commit (pinned) | `2e974fd51ae1db9c8006c97375d53e0b882cfedf` |
 | Commit date | 2026-08-14 ("feat: Validate conditional presence of station/vehicle feeds in gbfs.json (#208)") |
 | Downloaded | 2026-10-05, as the repository tarball of that commit (`gh api repos/MobilityData/gbfs-json-schema/tarball/<commit>`) |
@@ -18,7 +18,7 @@ To update, replace the commit, re-download, recompute the hashes and record the 
 
 ## SHA-256 of the copied files
 
-```
+```text
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  LICENSE
 c11e2b0af2869a07414aa6b59d2919094f6d10f5d0ddfc203008c49cea1986af  v2.3/free_bike_status.json
 89bc729e29674d5e99e876a41f390fbf10d3817db977c9e58700a1a9fdb4a2f4  v2.3/gbfs.json

@@ -24,11 +24,13 @@ State is In progress 🔄, every step is ✅ with its commit in `git log`, and t
 ## Findings
 
 Report a finding only if you can quote the passage or output and name its consequence. Severity:
+
 - **Blocking:** the task cannot close.
 - **Important:** the task can close only with a known gap.
 - **Minor:** clarity or wording only.
 
 Present them in two separate sections, writing "None" when empty:
+
 1. **Blocking and important.** Per finding: severity, quote, consequence, suggested fix.
 2. **Minor.** Per finding: quote, short reason.
 

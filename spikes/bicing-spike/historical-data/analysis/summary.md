@@ -92,7 +92,7 @@ Parquet rows = rows kept + rows dropped: 12 of 12.
 
 Raw CSV lines (line 1 = header):
 
-```
+```text
 line 2: 1,18,TRUE,"IN_SERVICE",NA,6,12,28,1769900280,1,1,1,1769900406,0
 line 546: 1,18,TRUE,"IN_SERVICE",NA,6,12,28,1769900641,1,1,1,1769900703,0
 line 1090: 1,17,TRUE,"IN_SERVICE",NA,6,11,29,1769900821,1,1,1,1769901001,0
@@ -116,7 +116,7 @@ Raw lines equal their Parquet rows: yes.
 
 Raw CSV lines (first and last line of each snapshot; line 1 = header):
 
-```
+```text
 line 2860859: 1,4,TRUE,"IN_SERVICE",NA,4,0,39,1771484093,1,1,1,1771484106,0
 line 2861400: 610,10,TRUE,"IN_SERVICE",NA,4,6,16,1771483935,1,1,1,1771484106,0
 line 2861401: 1,1,TRUE,"IN_SERVICE",NA,0,1,42,1771486079,1,1,1,1771486205,0
@@ -145,7 +145,7 @@ Distance: 0.0 m.
 
 Raw archive CSV line (line 1 = header):
 
-```
+```text
 line 3986578: 1,"fc540556-eb2f-11ef-896d-0a9e2ea61361","GRAN VIA CORTS CATALANES, 760","ELECTRICBIKESTATION",41.3979779,2.1801069,16,"GRAN VIA CORTS CATALANES, 760","02-Eixample/05-el Fort Pienc",8013,45,TRUE,1,1000,TRUE,NA,1788213304,0
 ```
 

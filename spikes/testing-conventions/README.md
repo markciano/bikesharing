@@ -1,6 +1,5 @@
 # Testing conventions (spike s008, task T020)
 
-
 Throwaway proofs of concept for the testing conventions of each component.
 Question, method and results: [s008](../../docs/spikes/s008-testing-conventions.md).
 

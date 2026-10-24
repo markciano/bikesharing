@@ -1,7 +1,8 @@
 # Spike — Bicing historical data (Open Data BCN)
 
-**Status:** Ready for implementation. 
-- Analysis plan approved 2026-10-08; 
+**Status:** Ready for implementation.
+
+- Analysis plan approved 2026-10-08;
 - Steps approved 2026-10-08.
 - Time used for Spec, Plan and Steps: 2,5h
 - Current step: 7 ✓ (2026-10-09). Findings and Conclusion drafted by Chat (2026-10-09).
@@ -31,10 +32,10 @@ Numbered like the real-time report so answers can be cross-referenced. The two q
 1. **Schema:** which columns, types, nulls and ranges do `ESTACIONS` and `INFORMACIO` have, which GBFS version do they reflect, and does the schema change between 2026 months?
 2. **Relation to the feed:** do the archives have the same structure and meaning as the feed's `station_status` and `station_information`? Column-by-column mapping to the common model on GBFS 3.0 (ADR-0008), with the categories of the real-time report's Findings 2a (direct / rename / transform / no equivalent).
 3. **Freshness:** how often is each station sampled, and what do `last_reported` and `last_updated` mean in the archives?
-5. **Coverage:** which time ranges have no data: months missing from the catalogue (July 2026), gaps inside a month (start of August), and the range between the last archive record and the first record of the continuous real-time capture (T012)? January 2026 (status) is not in the catalogue either. Are months cut at local time or UTC? The last range can only be described here; it closes when T012 has a start date.
-6. **Identity:** do the stations match the real-time feed (count, IDs, coordinates)?
-7. **Volume:** how large is each month, compressed and uncompressed?
-8. **Quality:** which impossible or suspicious values appear (same checks as the real-time report, question 8)?
+4. **Coverage:** which time ranges have no data: months missing from the catalogue (July 2026), gaps inside a month (start of August), and the range between the last archive record and the first record of the continuous real-time capture (T012)? January 2026 (status) is not in the catalogue either. Are months cut at local time or UTC? The last range can only be described here; it closes when T012 has a start date.
+5. **Identity:** do the stations match the real-time feed (count, IDs, coordinates)?
+6. **Volume:** how large is each month, compressed and uncompressed?
+7. **Quality:** which impossible or suspicious values appear (same checks as the real-time report, question 8)?
 
 Dropped: question 4 (Sampling) — for history, what matters is which time ranges have no data (question 5), not activity lost between samples; the cadence is still measured in question 3.
 

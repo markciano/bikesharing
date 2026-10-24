@@ -49,16 +49,19 @@ Total about 19 MB per day compressed (4 October 2026, static feeds every 15 min)
 **Open Data BCN secured JSON resources** (one per dataset) — token sent raw in the `Authorization` header, stored in `.env` as `TOKEN_BICING` (never committed). On 2026-10-03 both returned HTTP 500 with a valid token. Not needed while the operator feed works.
 
 **Monthly history** — two series of `.7z` archives, no token, from March 2019:
+
 - `..._ESTACIONS.7z` — status. ~16–26 MB compressed per month.
 - `..._INFORMACIO.7z` — information. ~6–9 MB compressed per month.
 
 Listable through the CKAN API (`/data/api/3/action/package_show?id=<dataset>`).
 
 Months not listed on 2026-10-03:
+
 - Status: November 2025, January 2026, July 2026.
 - Information: November 2025, July 2026.
 
 Suspected wrong uploads (same byte size as the other series):
+
 - 2025-10 status and information (8,187,733 bytes).
 - 2022-03 information equals 2022-03 status (25,816,125 bytes).
 

@@ -4,10 +4,10 @@ Blocks: Questions (what we need to know), Method (how we find out), Steps, Findi
 Sections marked Optional are kept only when they apply.
 -->
 
-# Spike: <title>
+# Spike: `<title>`
 
 - **Task:** TNNN
-- **ADRs:** <ADRs this spike must respect, or "none">
+- **ADRs:** `<ADRs this spike must respect, or "none">`
 - **Code:** `spikes/<name>/`
 
 ## Status
@@ -33,10 +33,10 @@ Current step: the step being executed, or —. -->
 <!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
 "Observe only": things to note during the run with no dedicated effort. -->
 
-Main question: <one sentence>
+Main question: `<one sentence>`
 
-- **Q1.** <question>
-- **Observe only:** <item>
+- **Q1.** `<question>`
+- **Observe only:** `<item>`
 
 ### Exit criteria
 
@@ -44,15 +44,15 @@ Main question: <one sentence>
 Derived from the standard that applies to this kind of question, named in the first line: e.g. DAMA data quality dimensions for a data source, a weighted decision matrix for a technology choice.
 Each criterion is measurable and says whether it is a hard cut or a guide. The timebox says what ends the run. State whether one variant meeting the criteria is enough. -->
 
-- **Standard:** <standard or pattern applied>
-- **Timebox:** <window, and what ends it>
-- <criterion> — <threshold> — hard cut | guide
+- **Standard:** `<standard or pattern applied>`
+- **Timebox:** `<window, and what ends it>`
+- `<criterion>` — `<threshold>` — hard cut | guide
 
 ### Out of scope
 
 <!-- Optional. What someone could expect this spike to answer and it will not. -->
 
-- <item>
+- `<item>`
 
 ### Open questions
 
@@ -90,7 +90,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 <!-- Every file and folder the spike creates, as a tree with its purpose in one line. Captured data and outputs are marked as ignored by Git (ADR-0009). The README is always included. -->
 
-```
+```text
 spikes/<name>/
 ├── README.md        Setup, commands, what each script does; How we got here (written at Conclusion)
 └── <file>           <purpose>
@@ -105,13 +105,13 @@ spikes/<name>/
 - Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>.
 The last step is the Conclusion. -->
 
-### Step 1 — <title>
+### Step 1 — `<title>`
 
 - **Status:** 💤 todo
 - **Who:** Owner
 - **Commit:** following the Git conventions in CLAUDE.md.
 - **R:** R1, R3 (or —)
-- **Gate:** <condition> → <consequence>
+- **Gate:** `<condition>` → `<consequence>`
 
 #### Scope
 
@@ -147,10 +147,10 @@ Same structure as the example before before but:
 
 <!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
 
-**F1. <one-line statement>** (step N, YYYY-MM-DD, <source of evidence>)
+**F1. `<one-line statement>`** (step N, YYYY-MM-DD, `<source of evidence>`)
 
-- <evidence>
-- Consequence: <for variants, steps or questions>
+- `<evidence>`
+- Consequence: `<for variants, steps or questions>`
 
 ### Production inputs
 
@@ -164,15 +164,15 @@ Same structure as the example before before but:
 
 <!-- Filled in the last step. Covers only the observed window. -->
 
-Observed window: <from–to, UTC; what it does not cover>
+Observed window: `<from–to, UTC; what it does not cover>`
 
 ### Answers
 
-- **Q1.** <answer> (FN)
+- **Q1.** `<answer>` (FN)
 
 ### Exit criteria
 
-| Criterion | <Variant A> | <Variant B> |
+| Criterion | `<Variant A>` | `<Variant B>` |
 |---|---|---|
 | | | |
 
@@ -184,13 +184,13 @@ Observed window: <from–to, UTC; what it does not cover>
 
 <!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
 
-- <item> — <risk> — <mitigation>
+- `<item>` — `<risk>` — `<mitigation>`
 
 ### Follow-ups
 
 <!-- ADRs to write (each in its own commit) and new tasks agreed with the owner. Production inputs are not repeated here. -->
 
-- <ADR or task>
+- `<ADR or task>`
 
 ## Sources
 

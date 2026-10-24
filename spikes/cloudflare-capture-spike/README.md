@@ -32,7 +32,7 @@ Observed window: 2026-10-14 10:51–22:09 UTC (findings F14 and F15 in the worki
 
 ## Layout
 
-```
+```text
 spikes/cloudflare-capture-spike/
 ├── README.md                 This file
 ├── js/                       V2, V4 (one Wrangler config per Worker)
@@ -48,19 +48,19 @@ spikes/cloudflare-capture-spike/
 
 Deploy or delete a Worker, from `js/`:
 
-```
+```bash
 npx wrangler deploy -c wrangler.v4.jsonc
 npx wrangler delete -c wrangler.v4.jsonc
 ```
 
 Download the bucket, from the spike root (rclone copies only new files):
 
-```
+```bash
 rclone copy r2:bikesharing-capture-spike data
 ```
 
 Analyse the capture, from the spike root. The script recomputes everything from `data/` and overwrites `analysis/output/report.md` (completeness, validity, log reconciliation, static feeds, Class A estimate) and `analysis/output/issues.csv`:
 
-```
+```bash
 python3 analysis/analyze_remote_capture.py
 ```

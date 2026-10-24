@@ -29,6 +29,7 @@ Phase shows Plan checked and Plan review unchecked. Otherwise stop and tell the 
 - **Minor:** clarity or wording only.
 
 Present them in two separate sections, writing "None" when empty:
+
 1. **Blocking and important.** Per finding: severity, quote, consequence, suggested fix.
 2. **Minor.** Per finding: quote, short reason.
 

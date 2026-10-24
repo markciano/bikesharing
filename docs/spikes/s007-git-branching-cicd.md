@@ -215,7 +215,6 @@ Evidence: each finding records the PR number, the Actions run URL and its durati
 
 ### Production inputs
 
-
 None: the trial changes production files directly (workflow, lint config, `CLAUDE.md`), so there is nothing to carry over.
 
 ## 5. Conclusion

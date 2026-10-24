@@ -4,11 +4,11 @@ It is detailed enough that Code can implement it without making design decisions
 Sections marked Optional are kept only when they apply.
 -->
 
-# Design: <title>
+# Design: `<title>`
 
 - **Task:** TNNN
-- **ADRs:** <ADRs this design must respect, or "none">
-- **New ADRs from this doc:** <ADRs created during this design, or "none">
+- **ADRs:** `<ADRs this design must respect, or "none">`
+- **New ADRs from this doc:** `<ADRs created during this design, or "none">`
 
 ## Status
 
@@ -35,7 +35,7 @@ Current step: the step being implemented, or —. -->
 - Every requirement passes its test.
 - Every item in File layout is delivered.
 - Every TODO citing this task is resolved or re-pointed.
-- <extra condition>
+- `<extra condition>`
 
 ### Requirements
 
@@ -48,13 +48,13 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 - Optional: Where <feature is included>, the <system> shall <response>.
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
-- **R1** <EARS statement>
+- **R1** `<EARS statement>`
 
 ### Out of scope
 
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
-- <item> — TNNN
+- `<item>` — TNNN
 
 ### Open questions
 
@@ -70,19 +70,19 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. One subsection per alternative weighed, rejected ones included. -->
 
-#### Option A — <name> (chosen)
+#### Option A — `<name>` (chosen)
 
-<2–3 sentences.>
+`<2–3 sentences.>`
 
 **Pros:**
 **Cons:**
 
-#### Option B — <name> (rejected)
+#### Option B — `<name>` (rejected)
 
-<2–3 sentences.>
+`<2–3 sentences.>`
 
 **Pros:**
-**Cons:** <including the reason for rejection, in one sentence>
+**Cons:** `<including the reason for rejection, in one sentence>`
 
 ### Decision summary
 
@@ -100,7 +100,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/ci.md`), and its version files, manifest and lockfile (`.claude/rules/dependencies.md`). -->
 
-```
+```text
 <path>/
 └── <file>      (new)        <purpose>
 ```
@@ -109,9 +109,9 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
-#### <ComponentName>
+#### `<ComponentName>`
 
-- **Responsibility:** <one sentence>
+- **Responsibility:** `<one sentence>`
 - **Location:** `path/to/file`
 - **Contract:**
 
@@ -154,11 +154,11 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - R: the requirements the step implements or tests, or —.
 - Commit: the proposed message, following the Git conventions in CLAUDE.md. -->
 
-#### Step 1 — <title>
+#### Step 1 — `<title>`
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** 
+- **Commit:**
 - **R:** R1, R3 (or —)
 
 ##### Scope
@@ -189,7 +189,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- What the task leaves undone or imperfect, each with the task that covers it: requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
 
-- <gap> — TNNN
+- `<gap>` — TNNN
 
 ### Decisions taken during implementation
 
