@@ -1,9 +1,11 @@
 ---
-status: proposed
+status: rejected
 date: 2026-10-03
 ---
 
 # Real-time flow compares against a batch-computed baseline
+
+Rejected on 2026-10-24 (T022): a product decision taken before the requirements, which assumed two separate flows; the use cases are set by the requirements decision (T034).
 
 ## Context and Problem Statement
 

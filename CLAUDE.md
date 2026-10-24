@@ -65,7 +65,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 ├── docs/                   Project documentation
 │   ├── tasks.md            Task table
 │   ├── testing-strategy.md Testing model per component and CI flow
-│   ├── decisions/          ADRs
+│   ├── decisions/          ADRs in force; archive/ holds retired ones
 │   ├── designs/            Design documents
 │   ├── sources/            Source cards
 │   └── spikes/             Spike reports per system
