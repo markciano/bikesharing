@@ -27,13 +27,18 @@
 | T029 | Upgrade `markdownlint-cli2` 0.23.2 → 0.23.3 (11 → 10 `npm audit` advisories, js-yaml cleared); no release clears all on 2026-10-22: braces has no fixed version and katex is held back by `micromark-extension-math`; 0.24.0 deferred until it matures; upstream fixes picked up by T027 | 1 | ✅ | T021 |  |
 | T031 | Add a dated amendment note to ADR-0013 for the commit format change (`type(TNNN)` → `type: description`), edited in place on the T021 branch | 1 | ✅ | — |  |
 | T032 | Move web-research delegation from Claude's memory to a project subagent (`.claude/agents/web-researcher.md`) | 1 | ✅ | — |  |
-| T022 | Supersede ADR-0003: deployment target (Fabric dropped) | 1 | 🎬 | — | [s009](spikes/s009-deployment-target.md) |
-| T007 | GBFS ingestion spec and plan | 5 | ⬜ | T006, T011 | Inputs: [s008 P1–P4](spikes/s008-testing-conventions.md#production-inputs) |
-| T025 | Data processing pipeline spec and plan | 5 | ⬜ | T007, T021, T022 |  |
-| T033 | Choose the visualization tool within the runtime model set by s009 | 2 | ⬜ | T022 |  |
+| T022 | Order the project's decisions by dependency (requirements and volume → storage and format → engine → execution target → visualization) and review the affected ADRs and tasks | 3 | 🔄 | — | [worksheet](decision-plan-notes.md) |
+| T034 | D1 Requirements: consumers, questions the data answers, freshness, public or not, whether Bicing history enters | 2 | ⬜ | T022 |  |
+| T035 | D2 Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | ⬜ | T034 |  |
+| T036 | D3 Processing engine (single node) and pipeline language | 3 | ⬜ | T035 |  |
+| T037 | D4 Execution target: where the pipeline runs and what schedules it | 3 | ⬜ | T036 |  |
+| T038 | D5 Visualization: tool and where it is published | 2 | ⬜ | T034, T035, T037 |  |
+| T039 | Capture in production (parent; split into TNNN.M in its design) | 5 | ⬜ | T035 |  |
+| T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
+| T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
 | T023 | Include `.claude/**/*.md` and `spikes/**/*.md` in `.claude/rules/docs.md` and in the docs lint glob (`scripts/lint-docs.sh`), fixing the existing violations (e.g. the design template); decide where the lint run instructions (`npm ci`, `lint-docs.sh`) in the rule's Markdown lint item belong for progressive disclosure (keep in the rule vs `docs/testing-strategy.md` with a pointer) | 1 | ⬜ | — |  |
 | T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ⬜ |  |  |
-| T024 | Hooks: Code conventions for Python, JS, Spark and SQL | 1 | ⬜ | — |  |
+| T024 | Hooks: code conventions for the project's languages | 1 | ⬜ | — |  |
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
-| T010 | Write README | 3 | ⬜ | T006 | — |
-| T015 | Match Bicing October archive against real-time capture | 2 | ⛔ | T005 | [bicing-historical-data](spikes/s004-bicing-historical-data.md) |
+| T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
+| T015 | Match Bicing October archive against real-time capture | 2 | ⛔ | T034 | [bicing-historical-data](spikes/s004-bicing-historical-data.md) |
