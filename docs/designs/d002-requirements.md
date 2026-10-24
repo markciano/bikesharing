@@ -8,7 +8,7 @@
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current step: —
+- Current step: Plan, rule documents: write `docs/architecture.md` §1–2 (resolve or re-point TODOs citing T034, replace D labels with task IDs); then Plan approval and Plan review in a new session. No Implementation steps: the task closes after the Plan review.
 
 ## 1. Spec — what and why
 
@@ -66,6 +66,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 - Whether the capture restarts on its own after an interruption — T037
 - Capture completeness target — T037
 - Data quality checks and targets beyond R14 and Q2 — T042
+- Which Must question the first vertical slice builds — T040
 - Checking the Bicing archive against the real-time capture, scope to be decided — T040
 
 ## 2. Plan — how
