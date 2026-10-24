@@ -13,10 +13,9 @@ Flow and reasons: [testing strategy](../../docs/testing-strategy.md) (CI flow se
 - Take the runtime from the component's pin file; never write a version in the workflow, never rely on the runner's default:
   - Python: `astral-sh/setup-uv`; `uv` reads `.python-version` from the working directory and installs that Python.
   - Node: `actions/setup-node` with `node-version-file: <component folder>/.nvmrc`.
-  - Java: `actions/setup-java` with `java-version-file: <component folder>/.java-version`. TODO: the `distribution` input and where it is declared — T025.
   - `uses:` inputs resolve from the repository root, not from `working-directory`, so file paths include the component folder.
 - Install only from the lockfile, in the mode that fails when it does not match its manifest: `uv sync --locked`, `npm ci`.
-- Cache dependencies: `enable-cache: true` in `setup-uv`; `cache: npm` with `cache-dependency-path: <component folder>/package-lock.json` in `setup-node`. `setup-java` caches only Maven, Gradle or sbt, so a Spark job installs PySpark through the uv cache.
+- Cache dependencies: `enable-cache: true` in `setup-uv`; `cache: npm` with `cache-dependency-path: <component folder>/package-lock.json` in `setup-node`.
 - One test command per job, run with the locked tools (`uv run pytest`, `npx vitest run`).
 - Set `timeout-minutes: 10` on every job, so a hung test cannot hold the PR for the default 6 hours.
 - Keep the `pull_request` run light: at most 10 min wall-clock for the whole workflow. Heavier tests belong to the `push` run on `main`.
