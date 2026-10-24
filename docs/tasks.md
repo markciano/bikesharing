@@ -38,7 +38,7 @@
 | T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
 | T023 | Markdown lint scope and hook: scope and rules in `.markdownlint-cli2.yaml` as single source (root `*.md`, `docs/`, `.claude/`, `spikes/`; default rules except MD013 and MD060), mirrored in `.claude/rules/docs.md`; `--fix` for cosmetic rules; PostToolUse hook that fixes and lints on every edit; existing violations fixed; run instructions moved to `docs/testing-strategy.md` | 2 | ✅ | — | [testing-strategy](testing-strategy.md) |
 | T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ⬜ |  |  |
-| T024 | Hooks: code conventions for the project's languages | 1 | ⬜ | — |  |
+| T024 | Hooks: code conventions for the project's languages | 1 | 🔄 | — |  |
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
 | T015 | Match Bicing October archive against real-time capture | 2 | ⛔ | T034 | [bicing-historical-data](spikes/s004-bicing-historical-data.md) |
