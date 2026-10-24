@@ -8,7 +8,7 @@
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current step: Plan, rule documents: write `docs/architecture.md` §1–2 (resolve or re-point TODOs citing T034, replace D labels with task IDs); then Plan approval and Plan review in a new session. No Implementation steps: the task closes after the Plan review.
+- Current step: Plan, rule documents: owner approval of `docs/architecture.md` on its diff; then Plan approval and Plan review in a new session. No Implementation steps: the task closes after the Plan review.
 
 ## 1. Spec — what and why
 
@@ -40,7 +40,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 - Every item in File layout is delivered.
 - Every TODO citing this task is resolved or re-pointed.
 - The guiding questions that size the project are selected.
-- `docs/architecture.md` §1–2 state the requirements and the guiding questions.
+- `docs/architecture.md` states every requirement and the guiding questions, each in the arc42 section it belongs to.
 
 ### Requirements
 
@@ -79,6 +79,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 | Architecture style guide | A new path-scoped rule, `.claude/rules/architecture.md`, holds the arc42 style guide and the source rule; the Architecture bullet moves there from `.claude/rules/docs.md`. | — |
 | ADRs from this task | Only the medallion layering becomes an ADR (ADR-0018); the other requirements turn into decisions in T035–T038. | R6 |
 | Decision references | Decisions are referenced by task ID (T035, T036…); the D1–D5 labels are dropped, since design file numbers follow creation order. | — |
+| Requirements in architecture | Each requirement goes to the arc42 section whose purpose it fits: functional ones and the guiding questions to §1.1, constraints to §2, solution decisions to §4, conventions to §8, quality scenarios to §10. §1 uses the arc42 subsections 1.1–1.3; quality goals are named after ISO/IEC 25010 and ISO/IEC 25012 characteristics; the terms this design introduces go to the glossary (§12). | R1–R14 |
 
 ### File layout
 
@@ -87,7 +88,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 ├── architecture.md                      (new)       arc42 style guide and the Source rule, scoped to docs/architecture.md
 └── docs.md                              (modified)  Architecture bullet moved to architecture.md
 docs/
-├── architecture.md                      (modified)  §1 requirements, guiding questions, quality goals, stakeholders; §2 constraints; Source lines; TODOs citing T034 resolved or re-pointed; D labels replaced by task IDs
+├── architecture.md                      (modified)  §1.1–1.3, §2, §4, §8, §10 and §12 with the requirements, each with Source lines; TODOs citing T034 resolved or re-pointed; D labels replaced by task IDs
 ├── tasks.md                             (modified)  T034 to 📝 with its doc; D labels dropped; T015 removed; T042, T043 added
 ├── decisions/
 │   └── 0018-medallion-architecture.md   (new)       bronze, silver, gold layering (R6)
@@ -99,7 +100,7 @@ docs/
 
 ### What does not change
 
-- `docs/architecture.md` sections other than §1–2, except for re-pointed TODOs and D labels.
+- `docs/architecture.md` §3, §5–7, §9 and §11, except for re-pointed TODOs, D labels and the §3 consumers line.
 - ADR-0011: reassessed in T035, not here.
 
 ## 3. Implementation
