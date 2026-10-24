@@ -1,38 +1,51 @@
 ---
 status: proposed
-date: 2026-10-15
+date: 2026-10-24
 ---
 
 # Collectors decoupled by an output contract
 
-## Context and Problem Statement
+## Context and problem statement
 
-Raw data arrive through two collectors that do the same job in two places: the cloud capture (ADR-0011, JS on Cloudflare Workers) and an on-demand local capture (Python). ADR-0010 makes ingestion portable by sharing Python logic behind platform adapters. A collector only fetches and stores bytes, so it has no logic to share, and a JS collector cannot share Python code.
+Raw source responses reach the platform through a collector, a component that fetches each feed on a schedule and stores the response. Today there is one collector; the tool it runs on is reassessed with the storage decision (T035), so its platform and language can change.
 
-How should the collectors stay interchangeable for the pipeline?
+A collector only fetches and stores bytes: it holds no logic that other components could reuse. The pipeline reads what collectors store, and needs to read it the same way whichever collector wrote it, so that changing a collector does not change the pipeline.
+
+The forces are: a collector can change tool or language; the pipeline must not depend on which collector ran; the stored responses must stay reprocessable as received (ADR-0006); and stored time is UTC (ADR-0005).
 
 ## Considered Options
 
-* An output contract that every collector meets (decoupled landing zone)
-* Shared Python logic behind platform adapters (ADR-0010 as written)
+### 1. An output contract that every collector meets
+
+Every collector writes its files under the same key layout, timestamp and payload rules, in a landing zone the pipeline reads. Pros: the files are the only interface, so any tool or language can meet it; a contract test checks each collector. Cons: the naming code is written once per collector language.
+
+### 2. Shared logic behind platform adapters
+
+The collector's logic is written once and each platform calls it through a thin adapter. Pros: the naming code is written once. Cons: it binds every collector to the language of the shared logic, and a collector has almost no logic to share.
 
 ## Decision Outcome
 
-Chosen option: "An output contract that every collector meets", because the pipeline depends only on the files, so each collector can change platform or language without affecting it.
+**Chosen option:** 1. An output contract that every collector meets.
 
-The contract:
+Rationale: it is the only option that lets a collector change tool or language without touching the pipeline, which the Context requires; the shared logic of option 2 is too small to justify binding every collector to one language.
 
-* **Key:** `raw/<source>/<feed>/<YYYY-MM-DD>/<YYYYMMDDTHHMMSSZ>.json.gz`.
-* **Timestamp:** the capture time in UTC (ADR-0005), one value per pass for the key and the date folder.
-* **Payload:** the gzip bytes served by the origin, unchanged (ADR-0006). No collector decompresses or recompresses.
-* Decompression happens in the bronze layer.
+Rules:
 
-This amends ADR-0010: ports and adapters stays for processing, and no longer applies to collectors.
+- Every collector MUST write each response under the key `raw/<source>/<feed>/<YYYY-MM-DD>/<YYYYMMDDTHHMMSSZ>.json.gz`, because the pipeline finds files by key alone.
+- The timestamp MUST be the capture time in UTC, one value per pass for both the key and the date folder, because files of one pass must sort and group together (ADR-0005).
+- The payload MUST be the gzip bytes served by the origin, unchanged; no collector decompresses or recompresses, because the raw layer keeps the response as received (ADR-0006).
+- Decompression MUST happen in the first processing step, because it is the first component that needs the content.
+
+**Scope:** every collector that writes raw responses, whatever its tool or language. It does not set where the landing zone lives (T035) nor how processing is structured.
 
 ### Consequences
 
-* Good: the pipeline cannot tell which collector produced a file.
-* Good: full reprocessing from raw is possible whenever bronze, silver or gold logic changes.
-* Bad: each collector's naming code is written once per language and is checked against the contract, not shared.
-* The local collector must request gzip and store the bytes as received.
-* When this ADR is accepted, ADR-0010 gets the line "Amended by ADR-0012".
+#### Positive
+
+- **Interchangeable collectors:** the pipeline cannot tell which collector produced a file.
+- **Reprocessing:** every downstream step can be rebuilt from the raw files, within the retention the storage decision sets.
+
+#### Negative
+
+- **Naming written per language:** a new collector reimplements the key rules; the contract tests (ADR-0015) check it against shared vectors instead of sharing code.
+- **Fixed key layout:** changing the layout means migrating stored files or reading two layouts.
