@@ -1,6 +1,9 @@
 ---
-paths:
+paths: # mirrors the lint scope (globs) in .markdownlint-cli2.yaml; keep both in sync
+  - "*.md"
   - "docs/**"
+  - ".claude/**/*.md"
+  - "spikes/**/*.md"
 ---
 
 # Documentation rules
@@ -13,7 +16,7 @@ paths:
 - **Testing strategy** (`docs/testing-strategy.md`) records the testing model per component and the CI flow.
 - **Diagrams (Mermaid)** only where a flow branches or has several actors; the text is authoritative.
 - **Documents** record decisions, not discussion, without repetition.
-- **Markdown lint** (CI job `docs`, config in `.markdownlint-cli2.yaml`) fails the PR on these, so write them right the first time (the owner can lint locally with `bash scripts/lint-docs.sh`, after `npm ci` once per clone):
+- **Markdown lint** (scope and rules in `.markdownlint-cli2.yaml`; how it runs in `docs/testing-strategy.md`): a hook fixes cosmetic issues and reports the rest after every edit, and the CI job `docs` fails the PR on them. Write these right the first time:
   - fenced code blocks state their language (`text` if it is not code);
   - URLs go between `<>` or as a link;
   - a title is a heading (`##`), not a bold line; levels go up one at a time;
