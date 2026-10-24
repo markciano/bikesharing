@@ -27,7 +27,7 @@
 | T029 | Upgrade `markdownlint-cli2` 0.23.2 → 0.23.3 (11 → 10 `npm audit` advisories, js-yaml cleared); no release clears all on 2026-10-22: braces has no fixed version and katex is held back by `micromark-extension-math`; 0.24.0 deferred until it matures; upstream fixes picked up by T027 | 1 | ✅ | T021 |  |
 | T031 | Add a dated amendment note to ADR-0013 for the commit format change (`type(TNNN)` → `type: description`), edited in place on the T021 branch | 1 | ✅ | — |  |
 | T032 | Move web-research delegation from Claude's memory to a project subagent (`.claude/agents/web-researcher.md`) | 1 | ✅ | — |  |
-| T022 | Order the project's decisions by dependency (requirements and volume → storage and format → engine → execution target → visualization) and review the affected ADRs and tasks | 3 | 🔄 | — | [worksheet](decision-plan-notes.md) |
+| T022 | Order the project's decisions by dependency (requirements and volume → storage and format → engine → execution target → visualization) and review the affected ADRs and tasks | 3 | ✅ | — | [architecture](architecture.md) |
 | T034 | D1 Requirements: consumers, questions the data answers, freshness, public or not, whether Bicing history enters | 2 | ⬜ | T022 |  |
 | T035 | D2 Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | ⬜ | T034 |  |
 | T036 | D3 Processing engine (single node) and pipeline language | 3 | ⬜ | T035 |  |
