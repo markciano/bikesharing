@@ -10,7 +10,8 @@ paths:
 - One decision per ADR. If you find two, split them.
 
 ## Lifecycle
-- Statuses: Proposed → Accepted; Accepted → Deprecated | Superseded.
+- Statuses: Proposed → Accepted | Rejected; Accepted → Deprecated | Superseded.
+- Only ADRs in force stay in `docs/decisions/`. A Rejected, Deprecated or Superseded ADR moves to `docs/decisions/archive/`, with one line under its title stating the date, the task and why. Numbers are never reused; links to a moved ADR are updated in the same commit.
 - New ADRs are always `Proposed`. Never set `Accepted` yourself; only the decision-makers do.
 - Accepted ADRs are immutable. Allowed edits: status, `superseded-by`, typos, broken links. To change a decision, write a new ADR that supersedes it and link both ways.
 

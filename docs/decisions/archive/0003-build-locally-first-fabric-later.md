@@ -1,9 +1,11 @@
 ---
-status: proposed
+status: rejected
 date: 2026-10-03
 ---
 
 # Build locally first, Microsoft Fabric later
+
+Rejected on 2026-10-24 (T022): it bundled three decisions (table format, engine, execution target) taken before the requirements; they are now taken in dependency order (`docs/architecture.md`).
 
 ## Context and Problem Statement
 
