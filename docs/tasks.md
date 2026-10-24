@@ -30,11 +30,11 @@
 | T022 | Order the project's decisions by dependency (requirements and volume → storage and format → engine → execution target → visualization) and review the affected ADRs and tasks | 3 | ✅ | — | [architecture](architecture.md) |
 | T023 | Markdown lint scope and hook: scope and rules in `.markdownlint-cli2.yaml` as single source (root `*.md`, `docs/`, `.claude/`, `spikes/`; default rules except MD013 and MD060), mirrored in `.claude/rules/docs.md`; `--fix` for cosmetic rules; PostToolUse hook that fixes and lints on every edit; existing violations fixed; run instructions moved to `docs/testing-strategy.md` | 2 | ✅ | — | [testing-strategy](testing-strategy.md) |
 | T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ✅ |  |  |
-| T034 | D1 Requirements: consumers, questions the data answers, freshness, public or not, whether Bicing history enters | 2 | ⬜ | T022 |  |
-| T035 | D2 Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | ⬜ | T034 |  |
-| T036 | D3 Processing engine (single node) and pipeline language | 3 | ⬜ | T035 |  |
-| T037 | D4 Execution target: where the pipeline runs and what schedules it | 3 | ⬜ | T036 |  |
-| T038 | D5 Visualization: tool and where it is published | 2 | ⬜ | T034, T035, T037 |  |
+| T034 | Requirements: consumers, questions the data answers, freshness, public or not, whether Bicing history enters | 2 | 📝 | T022 | [requirements](designs/d002-requirements.md) |
+| T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | ⬜ | T034 |  |
+| T036 | Processing engine (single node) and pipeline language | 3 | ⬜ | T035 |  |
+| T037 | Execution target: where the pipeline runs and what schedules it | 3 | ⬜ | T036 |  |
+| T038 | Visualization: tool and where it is published | 2 | ⬜ | T034, T035, T037 |  |
 | T039 | Capture in production (parent; split into TNNN.M in its design) | 5 | ⬜ | T035 |  |
 | T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
 | T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
