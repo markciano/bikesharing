@@ -24,7 +24,7 @@ Each component design applies the five answers below. "Paper" marks a statement 
 
 #### Cloudflare Worker (JS)
 
-TODO: when the collector design fixes the layout (`collector/{bicing/,ambici/}`, and sources in other languages such as `collector/<source>_python`), rename this section's paths and scope it to the JS collectors; a Python collector follows the Python section.
+TODO: when the collector design (T039) fixes the layout, rename this section's paths.
 
 1. **When:** tests before code, as in Python. TDD was shown only in Python (F22); the Worker follows the same rule on paper.
 2. **Type:** unit for the functional core (pure functions such as `objectKey`); integration for the `scheduled` handler in `workerd`, with an in-memory R2 binding and the source simulated by Miniflare `outboundService` (F33); contract, producer side, on the same vectors (F35); post-deploy smoke test for `encodeResponseBody: 'manual'`, on paper (F34).
