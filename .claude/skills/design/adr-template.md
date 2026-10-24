@@ -38,13 +38,13 @@ Why not the others: One line per rejected option with the decisive reason it los
 
 #### Positive
 
-- **A:** 
-- **B:** 
+- **A:**
+- **B:**
 
 #### Negative
 
-- **A:** 
-- **B:** 
+- **A:**
+- **B:**
 
 ## More information
 

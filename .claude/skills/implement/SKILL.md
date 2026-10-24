@@ -30,10 +30,12 @@ Cycle: Produce → Review. Produce runs over several sessions of about 3 steps e
 
 Report by exception: what follows the plan is not described; the owner reads the diff.
 
-  Step N ✅ — <one line: what the system does now>
-  Check: <last line of the output, literal>
-  Exceptions: none
-  Commit: Follow Git conventions in CLAUDE.md.
+```text
+Step N ✅ — <one line: what the system does now>
+Check: <last line of the output, literal>
+Exceptions: none
+Commit: Follow Git conventions in CLAUDE.md.
+```
 
 - **Step line:** ✅ if the Check passes, 🔄 or ⛔ otherwise. For a one-step change, "Change" instead of "Step N".
 - **Check:** the summary line only, literal. If it fails, the full output, literal. For a one-step change, the test run.

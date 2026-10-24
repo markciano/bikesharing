@@ -863,7 +863,7 @@ Static feeds compared: `system_information`, `vehicle_types`, `station_informati
 | `system_information` | `last_updated` | other | 2 | ca, es | en: 1791038514 / ca: 1791038454 |
 | `system_pricing_plans` | `last_updated` | other | 2 | ca, es | en: 1791038514 / ca: 1791038454 |
 | `system_regions` | `last_updated` | other | 2 | ca, es | en: 1791038514 / ca: 1791038454 |
-| `vehicle_types` | `data.vehicle_types[]._description` | translated text | 4 | ca, es | en: - e-eco B frame with FrameLock - aluminum basket with ad p… / ca: - e-SMARTbike 2.0 reforzado - e-eco B cuadro con cierre cu… |
+| `vehicle_types` | `data.vehicle_types[]._description` | translated text | 4 | ca, es | en: - e-eco B frame with FrameLock - aluminum basket with ad p… / ca: - e-SMARTbike 2.0 reforzado - e-eco B cuadro con cierre cu… |
 | `vehicle_types` | `data.vehicle_types[].name` | translated text | 12 | ca, es | en: E-Bike / ca: Bicicleta eléctrica |
 | `vehicle_types` | `last_updated` | other | 2 | ca, es | en: 1791038514 / ca: 1791038455 |
 <!-- END metric:10b -->

@@ -25,8 +25,8 @@ Common to AMBici and Bicing:
 
 AMBici only:
 
-9. What does `free_bike_status` add over `station_status`, and is it worth its volume?
-10. Do the three languages differ beyond translated texts, i.e. is one language enough?
+1. What does `free_bike_status` add over `station_status`, and is it worth its volume?
+2. Do the three languages differ beyond translated texts, i.e. is one language enough?
 
 Dropped: "How different are weekday and weekend usage patterns?" — needs weeks of data; answerable only from the long-term capture.
 

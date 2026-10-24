@@ -3,7 +3,7 @@
 ## Status
 
 - Completed
-- Started:  2026-10-09 
+- Started:  2026-10-09
 - Finished: 2026-10-15 (V4 worker is running on Cloudflare)
 
 ## Questions
@@ -48,12 +48,12 @@ Main question: is Cloudflare Workers (Free plan, Cron Triggers) + R2 the definit
   - The platform logs (Workers Logs, 3-day retention) are observed during the daily review, with no dedicated effort.
 - File layout (decided 2026-10-12). One folder per language, each with its own dependencies and one Wrangler config per Worker. Installed dependencies (`node_modules/`, `.venv/`) stay inside each folder and are ignored by Git.
 - Analysis (decided 2026-10-14): a full recompute over data/ on every run, with outputs overwritten (no incremental state). Window from the latest first log ts across variants to the last log ts in either. Checks instead of tests: known arithmetic, independent counts and fault injection.
-    - Step 7.1 choices (decided 2026-10-14):
-    - A log's `ts` is taken from its file name (the same value as its lines' `ts`).
-    - `invalid_gzip`: decompression fails. `invalid_json`: decompression works but `json` cannot parse the result. An invalid object counts as invalid, not as `missing`.
-    - A valid dynamic object at a non-expected minute (minute 17 of an odd UTC hour) is not counted as captured. It is reported per feed as off-schedule.
-    - A variant with no logs is left out of the window start, and the report says so.
-    - Files under `raw/` not named `<ts>.json.gz` are ignored and counted in the report.
+  - Step 7.1 choices (decided 2026-10-14):
+  - A log's `ts` is taken from its file name (the same value as its lines' `ts`).
+  - `invalid_gzip`: decompression fails. `invalid_json`: decompression works but `json` cannot parse the result. An invalid object counts as invalid, not as `missing`.
+  - A valid dynamic object at a non-expected minute (minute 17 of an odd UTC hour) is not counted as captured. It is reported per feed as off-schedule.
+  - A variant with no logs is left out of the window start, and the report says so.
+  - Files under `raw/` not named `<ts>.json.gz` are ignored and counted in the report.
 - Two Workers in `js/`, one config file each, deployed with `npx wrangler deploy -c <file>` (Wrangler's standard for several Workers in one folder; decided 2026-10-14). Rejected: Wrangler environments in one file (meant for one script in several stages, not two scripts) and one Worker running both variants (mixes their `cpuTime`).
   
   ```text
@@ -104,7 +104,7 @@ Code makes no design decisions: if something is not specified here, it stops and
 | 7.1 | Code | Analysis base in `analysis/analyze_remote_capture.py`. Python 3, standard library only, no arguments. Paths are resolved from the script's location: input `../data/`, output `output/` (created if missing). Constants at the top: variants `V2`, `V4`; dynamic feeds `ambici/station_status`, `ambici/free_bike_status`, `bicing/station_status`. Works with any amount of data, including less than one UTC day; if there are no logs, the report says so and the script exits without error. **Window:** start = the latest of each variant's earliest log `ts`; end = the latest log `ts` in either variant; whole minutes, inclusive, UTC. **Expected** per variant and dynamic feed: every minute in the window except minute 17 of odd UTC hours. **Captured:** `<variant>/raw/<source>/<feed>/<YYYY-MM-DD>/<ts>.json.gz` exists, decompresses with `gzip` and parses with `json`. Every raw object in the window, dynamic and static, is validated; objects outside the window are not analysed, only counted. **Outputs**, overwritten on every run. `output/report.md` has a header with the window start and end, its minutes and the run time (all UTC), then: (a) completeness per variant × dynamic feed: expected, captured and % over the window, per UTC day (days only partly in the window marked as partial), and missing per UTC hour of day (0–23); (b) invalid objects per variant × feed and kind; objects outside the window per variant × feed and UTC day. `output/issues.csv` has the columns `variant,source,feed,ts,kind,detail`, sorted in that column order; kinds in this step: `missing`, `invalid_gzip`, `invalid_json` (detail: the exception message). Same commit: add `analysis/output/` to the `.gitignore` that already ignores `data/` (if none does, stop and report). Do not modify `js/` or `data/` | Code ready to run | ✅ |
 | 7.2 | Owner | From the spike root run `python3 analysis/analyze_remote_capture.py`, then make four checks. (1) Arithmetic: the expected count per dynamic feed equals the window minutes minus the minute-17 passes of odd UTC hours inside the window. (2) Independent count: for one variant, one dynamic feed and one UTC day, `find data/<variant>/raw/<source>/<feed>/<day> -name '*.json.gz' \| wc -l` equals captured + invalid + off-schedule + outside the window for that day in the report. (3) Fault injection: move one dynamic object from inside the window to `/tmp`, overwrite another with `echo x > <file>`, run again: `missing` +1 and `invalid_gzip` +1 in the report and in `issues.csv`; then `rclone copy` (restores both), delete the `/tmp` copy, run again: back to the previous figures. (4) The first hour after deploy shows no gaps (F12) | All four checks pass | ✅ |
 | 7.3 | Code | Extend the same script with the rest of the analyses. **(c) Reconciliation** from every `<variant>/logs/<YYYY-MM-DD>/<ts>.jsonl` in the window. Logs and objects are matched by source, feed and UTC minute, not by the exact `ts` (passes run at second 47; expected minutes have second 00). In `issues.csv`, `ts` is the exact `ts` of the object or log line when one exists, and the expected minute (second 00) otherwise. A `status` that is neither null nor 200 → `http_error` (detail: the status). An `error` with a null `status` → `fetch_error` (detail: the error). A line with status 200 for a non-`gbfs` feed and no object at its key → `log_without_object`. A raw object in the window with no line for its source, feed and `ts` → `object_without_log`. A window minute with no log file → `missing_log`. A line that cannot be parsed → `invalid_log` (detail: the file). `gbfs` lines feed only `http_error` and `fetch_error`. The report gives, per variant: log files, lines, and count per kind. Log files outside the window are not analysed, only counted, per variant and UTC day. **(d) Static feeds:** for every minute-17 pass in the window, the number of static objects per variant × source, reported as a distribution (objects per pass → number of passes). Plus: minute-17 passes in odd hours that have any dynamic object (expected 0; taken from the off-schedule count of 7.1, not recomputed); minute-17 passes in even hours that have all 3 dynamic objects (expected all); static objects at minutes other than 17 (expected 0). **(e) Class A writes**, estimated per variant as raw objects + log files + `state/` writes (one per `gbfs` line with status 200; if the capturers write `state/` under another condition, follow the code and say so in the report). Reported as the total over the window, the rate per day (total / window minutes × 1,440) against the F2 reference of 6,144 per variant per day (4 per minute + 16 per hour), and a 30-day projection for both variants against the 1M free. The report notes that the R2 dashboard is the authoritative figure. Same restrictions as 7.1. Same commit: create the spike README.md with a description of the spike and an “Analysis” section (what the script does, how to run it).| Code ready to run | ✅ |
-| 7.4 | Owner | Run as in 7.2, then make three checks. (1) `find data/<variant>/logs -name '*.jsonl' \| wc -l` equals the log files in the report plus the logs outside the window. (2) For one UTC day, every static feed folder holds as many objects as there are minute-17 passes inside the window that day (`ls data/<variant>/raw/<source>/<feed>/<day> \| wc -l`), consistent with (d). (3) The report's Class A writes are in the order of the R2 dashboard figure for the same period; the dashboard is higher because it also counts the rclone listings and the deletes. | All three checks pass | ✅ | 
+| 7.4 | Owner | Run as in 7.2, then make three checks. (1) `find data/<variant>/logs -name '*.jsonl' \| wc -l` equals the log files in the report plus the logs outside the window. (2) For one UTC day, every static feed folder holds as many objects as there are minute-17 passes inside the window that day (`ls data/<variant>/raw/<source>/<feed>/<day> \| wc -l`), consistent with (d). (3) The report's Class A writes are in the order of the R2 dashboard figure for the same period; the dashboard is higher because it also counts the rclone listings and the deletes. | All three checks pass | ✅ |
 | 8 | Chat + owner | Findings and Conclusion against the exit criteria. After the last download, tear down V2 (`npx wrangler delete -c wrangler.v2.jsonc`). V4 keeps running as interim capture outside the spike, so no `wrangler logout` and the bucket stays (decided 2026-10-14) | Conclusion written; next ADRs named | ✅ |
 
 Behaviour shared by both capturers:
@@ -123,16 +123,21 @@ Behaviour shared by both capturers:
 
 #### Commands used in 3.2 and 4.2
 
-- Run the Worker on Cloudflare without deploying it (terminal 1) 
+- Run the Worker on Cloudflare without deploying it (terminal 1)
+
   ```bash
   cd spikes/cloudflare-capture-spike/js
   npx wrangler dev --remote src/<file_name>.js 
   ```
+
 - Trigger ONE pass (terminal 2); summary per feed: status, bytes, error. Stop with Ctrl+C
+
   ```bash
   curl -s http://localhost:8787 | python3 -m json.tool
   ```
+
 - List and download the variant's objects from R2
+
   ```bash
   rclone ls r2:bikesharing-capture-spike  # list objects
   rclone copy r2:bikesharing-capture-spike data  # root to root folder
@@ -141,16 +146,18 @@ Behaviour shared by both capturers:
 #### Workers commands
 
 - Deploy workers
+
   ```bash
   cd spikes/cloudflare-capture-spike/js
   npx wrangler deploy -c wrangler.v2.jsonc
   npx wrangler deploy -c wrangler.v4.jsonc
   ```
+
 - Command to delete workers
+
   ```bash
   npx wrangler delete -c wrangler.vN.jsonc # N = {v2, v4}
   ```
-
 
 ## Findings
 
@@ -204,7 +211,6 @@ Every other feed is under 5 KB raw. The platform benchmark estimated ~0.5 MB for
 - `server: envoy`, with no `set-cookie`: Bicing is not behind Cloudflare and sets no bot-management cookie.
 - Passthrough (V3, V4) would need the Worker `fetch` to hand over the compressed bytes. It does not (F8).
 
-
 **F8. Worker `fetch` decompresses the gzip body** (Plan step 2.3, 2026-10-12, `wrangler dev --remote`, `Accept-Encoding: gzip`):
 
 | Source | Feed | Status | `content-encoding` | Bytes read |
@@ -232,16 +238,19 @@ Every other feed is under 5 KB raw. The platform benchmark estimated ~0.5 MB for
 - Open point: whether the runtime does hidden CPU work when the option is set. Only the `cpuTime` of the 7-day run will tell.
 
 **F10. `wrangler dev --remote` writes `state/` objects at startup, with no request**
+
 - Observation (step 3.3, 2026-10-13): starting `wrangler dev --remote` with no request writes `V2/state/` objects (one or both sources) with no log and no raw objects. Reproduced twice; the orphan `system_hours` object of step 3.2 is probably the same effect. Likely an invocation at startup that is cut off mid-pass. Not seen in production (cron). Not blocking. Consequence: smoke-run cleanup before step 5 must include `V2/state/`.
 - Reproduced with V4 (step 4.3, 2026-10-14): `wrangler dev --remote --test-scheduled src/V4.js` wrote both `V4/state/` indexes before any request. Cleanup before step 5 must include `V4/state/` too.
 
 **F11. With `wrangler dev --remote`, a scheduled run cannot be given a simulated time** (step 4.3, 2026-10-14, `--test-scheduled`):
+
 - `/cdn-cgi/handler/scheduled` returns Cloudflare error 1042; `/__scheduled?cron=*+*+*+*+*` works.
 - The `time` parameter is ignored: `scheduledTime` is the real time.
 - Verified on V4 at normal minutes: 4 passes, 3 dynamic feeds each, all valid gzip, one log per pass, no `gbfs` lines (index read from `state/`, then kept in memory).
 - Not verified: minute 17 (static feeds, index refresh) and the even/odd hour alternation. They are checked in the first hours of step 5.
 
 **F12. First hour in production: every pass completes, but only V4's dynamic-only passes fit the 10 ms CPU limit** (step 5.2, 2026-10-14, Workers Logs)
+
 - Both Workers run every minute from the cron, all invocations `scheduled`; one log and the dynamic objects per minute under `V2/` and `V4/`.
 - `cpuTimeMs` per pass:
 
@@ -256,6 +265,7 @@ Every other feed is under 5 KB raw. The platform benchmark estimated ~0.5 MB for
 - Not checked: the number of static objects per minute-17 pass (step 7).
 
 **F13. From the fourth hour, the 10 ms CPU limit is enforced on V2; V4 is unaffected** (step 7.2, 2026-10-14, Workers Logs and the step 7.1 report)
+
 - Every `capture-v2` invocation from 13:50 to 15:25 UTC ends with `outcome: exceededCpu`, `cpuTimeMs: 10` (e.g. `wallTimeMs: 175`). Every `capture-v4` invocation is `ok`.
 - The pass is cut mid-way, so some feeds of a pass are stored and others are not: V2 misses 92, 96 and 84 of 289 expected captures (`ambici/station_status`, `ambici/free_bike_status`, `bicing/station_status`), all between 13 and 15 UTC. V4 misses 1 (`bicing/station_status`, 11 UTC) : HTTP 524 at 11:42 UTC on the same pass in both variants, logged as such.
 - Open: whether V4's minute-17 passes (23–24 ms, F12) will also be cut.

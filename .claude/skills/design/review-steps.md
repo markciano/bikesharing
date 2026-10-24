@@ -19,11 +19,13 @@ Phase shows Steps checked and Steps review unchecked. Otherwise stop and tell th
 4. **Shape.** Each step touches at most 2–3 files, all in File layout, and contradicts no decision in Decision summary. A code step includes its tests. The last step verifies the deliverable end to end. Commit follows the Git conventions in CLAUDE.md. Pending items are marked `TODO:`.
 
 ## Severity
+
 - **Blocking:** `/implement` would build the wrong thing or could not proceed.
 - **Important:** it would cause rework or a deviation during implementation.
 - **Minor:** clarity or wording only.
 
 Present them in two separate sections, writing "None" when empty:
+
 1. **Blocking and important.** Per finding: severity, quote, consequence, suggested fix.
 2. **Minor.** Per finding: quote, short reason.
 
