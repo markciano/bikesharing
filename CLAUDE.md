@@ -54,7 +54,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 
 ## Project structure
 
-```
+```text
 .
 ├── CLAUDE.md               Rules for every session
 ├── .claude/

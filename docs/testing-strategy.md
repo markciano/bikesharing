@@ -40,13 +40,13 @@ TODO: when the collector design (T039) fixes the layout, rename this section's p
 4. **Where:** one shared file, read by relative path by the producer tests and the consumer tests (F35); inside the path filters of every component job that reads it.
 5. **Runs:** inside the test runs of both sides, so a contract change fails both (F18, F35).
 
-#### Docs (`docs/`)
+#### Docs (Markdown)
 
-1. **When:** no test is written; every Markdown change in `docs/` is linted (F49).
+1. **When:** no test is written; every Markdown change in the lint scope is linted (F49, T023).
 2. **Type:** static check (markdownlint), not a test level (F49).
-3. **Format:** the rules in `.markdownlint-cli2.yaml` and the "write them right the first time" list in `.claude/rules/docs.md` (F49).
-4. **Where:** config at the repo root; scope `docs/**/*.md`, which leaves out `CLAUDE.md`, `.claude/**` and the READMEs in `spikes/` (F49).
-5. **Runs:** PR run and `main` run (F49). No local layer today.
+3. **Format:** the default markdownlint rules except MD013 (line length) and MD060 (table column style), with MD024 on `siblings_only`, plus the "write them right the first time" list in `.claude/rules/docs.md`. Cosmetic rules (spacing, blank lines, list numbering) are fixed with `--fix`, not by hand (T023).
+4. **Where:** scope (`globs`) and rules in `.markdownlint-cli2.yaml` at the root, the single source for CI, the hook and local runs: root `*.md`, `docs/`, `.claude/` and `spikes/`, skipping anything Git ignores (`gitignore: true`). `paths:` in `.claude/rules/docs.md` mirrors the scope. Replaces the `docs/`-only scope of s007 (T023).
+5. **Runs:** PR run and `main` run (F49). Local layer: the Claude Code hook `.claude/hooks/markdown-lint.sh` (PostToolUse on Edit/Write) fixes and lints the scope after every Markdown edit and reports only the edited file's remaining errors. The owner lints with `bash scripts/lint-docs.sh` (`--fix` to apply fixes), after `npm ci` once per clone (T023).
 
 ## CI flow
 

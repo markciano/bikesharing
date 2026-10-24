@@ -36,7 +36,7 @@
 | T039 | Capture in production (parent; split into TNNN.M in its design) | 5 | ⬜ | T035 |  |
 | T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
 | T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
-| T023 | Include `.claude/**/*.md` and `spikes/**/*.md` in `.claude/rules/docs.md` and in the docs lint glob (`scripts/lint-docs.sh`), fixing the existing violations (e.g. the design template); decide where the lint run instructions (`npm ci`, `lint-docs.sh`) in the rule's Markdown lint item belong for progressive disclosure (keep in the rule vs `docs/testing-strategy.md` with a pointer) | 1 | ⬜ | — |  |
+| T023 | Markdown lint scope and hook: scope and rules in `.markdownlint-cli2.yaml` as single source (root `*.md`, `docs/`, `.claude/`, `spikes/`; default rules except MD013 and MD060), mirrored in `.claude/rules/docs.md`; `--fix` for cosmetic rules; PostToolUse hook that fixes and lints on every edit; existing violations fixed; run instructions moved to `docs/testing-strategy.md` | 2 | ✅ | — | [testing-strategy](testing-strategy.md) |
 | T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ⬜ |  |  |
 | T024 | Hooks: code conventions for the project's languages | 1 | ⬜ | — |  |
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |

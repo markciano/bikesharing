@@ -23,5 +23,13 @@
 
       "Bash(git push *)", "Bash(git pull *)", "Bash(git fetch *)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/markdown-lint.sh" }]
+      }
+    ]
   }
 }
