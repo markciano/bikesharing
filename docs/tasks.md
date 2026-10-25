@@ -32,7 +32,7 @@
 | T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ✅ |  |  |
 | T034 | Requirements: consumers, questions the data answers, freshness, public or not, whether Bicing history enters | 2 | ✅ | T022 | [requirements](designs/d002-requirements.md) |
 | T043 | Organize `.claude/rules/` (folders or name prefixes), after checking how Claude Code loads them | 2 | ✅ | — |  |
-| T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | 🎬 | T034 |  |
+| T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | 📝 | T034 | [s010](spikes/s010-storage-table-format.md) |
 | T036 | Processing engine (single node) and pipeline language | 3 | ⬜ | T035 |  |
 | T037 | Execution target: where the pipeline runs and what schedules it | 3 | ⬜ | T036 |  |
 | T038 | Visualization: tool and where it is published | 2 | ⬜ | T034, T035, T037 |  |
