@@ -48,6 +48,7 @@ Rationale: it is the only option where cleaning and conforming to the common mod
 Why not the others:
 
 - Two layers: the conformance between operators would be either repeated per question or a silver layer without the name.
+
 **Scope:** applies to all data the project ingests, real-time and archives. It does not decide where layers are stored, the table format, retention per layer, the engine, or the gold data model; those belong to T035, T036 and each slice's design.
 
 ### Consequences

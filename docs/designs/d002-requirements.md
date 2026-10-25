@@ -1,14 +1,14 @@
 # Design: Requirements
 
 - **Task:** T034
-- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md)
+- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md)
 - **New ADRs from this doc:** [ADR-0018](../decisions/0018-medallion-architecture.md)
 
 ## Status
 
-- State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current step: Plan review; F1–F3 fixed, minor findings pending. No Implementation steps: the task closes after the Plan review.
+- State: Done ✅
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
+- Current step: None: closed after the Plan review (Decision summary › Delivery).
 
 ## 1. Spec — what and why
 
@@ -77,15 +77,16 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 | Concern | Decision | R |
 |---|---|---|
 | Traceability in architecture | Every table row, bullet and paragraph of `docs/architecture.md` cites its own source (designs with requirement numbers, ADRs, spikes, source cards): a `Source` column in tables, links at the end of bullets and paragraphs, written as `[doc › section or items](path#anchor)`. A section-level line was rejected because it cannot tell which item each source belongs to (ISO/IEC/IEEE 29148 traceability, per requirement). | — |
-| Architecture style guide | A new path-scoped rule, `.claude/rules/architecture.md`, holds the arc42 style guide and the source rule; the Architecture bullet moves there from `.claude/rules/docs.md`. | — |
+| Architecture style guide | A new path-scoped rule, `.claude/rules/architecture.md`, holds the arc42 style guide (current state only, section purpose, summarise don't copy, tables before prose) and the source rule, from which TODOs and pointers to other sections are exempt; the Architecture bullet moves there from `.claude/rules/docs.md` (arc42, path-scoped rules). | — |
 | ADRs from this task | Only the medallion layering becomes an ADR (ADR-0018); the other requirements turn into decisions in T035–T038. | R6 |
-| Decision references | Decisions are referenced by task ID (T035, T036…); the D1–D5 labels are dropped, since design file numbers follow creation order. | — |
+| Decision references | Decisions are referenced by task ID (T035, T036…); the D1–D5 labels are dropped, since they would be confused with design numbers (dNNN), which follow creation order. | — |
 | Requirements in architecture | Each requirement goes to the arc42 section whose purpose it fits: functional ones and the guiding questions to §1.1, constraints to §2, solution decisions to §4, conventions to §8, quality scenarios to §10. §1 uses the arc42 subsections 1.1–1.3; quality goals are named after ISO/IEC 25010 and ISO/IEC 25012 characteristics; the terms this design introduces go to the glossary (§12). | R1–R14 |
 | Delivery | The File layout is built during the Plan, so there are no Steps; the Plan review checks it against this design. | — |
 
 ### File layout
 
 ```text
+CLAUDE.md                                (modified)  Project structure: rules list removed
 .claude/rules/
 ├── architecture.md                      (new)       arc42 style guide and the Source rule, scoped to docs/architecture.md
 └── docs.md                              (modified)  Architecture bullet moved to architecture.md
