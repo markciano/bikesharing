@@ -8,7 +8,7 @@ A data platform on public bike sharing in the Barcelona area: it captures the AM
 
 ### 1.1 Requirements overview
 
-The platform answers the guiding questions below, each comparable across services (AMBici, Bicing). Must is the minimum and the first vertical slice; storage, engine, execution target and visualization (T035–T038) are sized against Must, Should and Could. [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions).
+The platform answers the guiding questions below, each comparable across services (AMBici, Bicing). Must is the minimum and the first vertical slice; storage, engine, execution target and visualization (T035–T038) are sized against Must, Should and Could. Window is the period gold must answer. [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions).
 
 | Priority | # | Question | Grain | Window | Freshness | Source |
 |---|---|---|---|---|---|---|
@@ -26,7 +26,7 @@ The platform answers the guiding questions below, each comparable across service
 Functional requirements:
 
 - **Public visualization:** read-only and publicly accessible, without login. [d002 › R1](designs/d002-requirements.md#requirements).
-- **Bicing history:** the monthly archives covering the last 12 months are loaded. [d002 › R5](designs/d002-requirements.md#requirements).
+- **Bicing history:** the monthly archives covering the 12 months before the first load are loaded once. [d002 › R5](designs/d002-requirements.md#requirements).
 - **Capture:** dynamic feeds every minute, static feeds once a day, staggered; responses requested gzip-compressed from the origin and stored unchanged; a pass for all feeds needs a few milliseconds of CPU. [s006](spikes/s006-cloudflare-capture.md).
 
 ### 1.2 Quality goals

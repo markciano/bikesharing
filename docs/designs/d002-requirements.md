@@ -8,7 +8,7 @@
 
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current step: Plan review, in a new session (`/design d002 review-plan`). No Implementation steps: the task closes after the Plan review.
+- Current step: Plan review; F1–F3 fixed, minor findings pending. No Implementation steps: the task closes after the Plan review.
 
 ## 1. Spec — what and why
 
@@ -18,7 +18,7 @@ The project is a portfolio piece that shows data engineering skills: near-real-t
 
 ### Guiding questions
 
-Decisions T035–T038 are sized against Must, Should and Could; Must is the minimum, and the first vertical slice. Each question states what sizing needs (measures, grain, window, freshness); exact formulas and thresholds belong to the design of the slice that builds it. Every question can be compared across services (AMBici, Bicing). Bike IDs rotate after each trip, so every question relies on station or zone-level aggregates, never on tracking a bike ([ambici](../sources/ambici.md)).
+Decisions T035–T038 are sized against Must, Should and Could; Must is the minimum, and the first vertical slice. Each question states what sizing needs (measures, grain, window, freshness); exact formulas and thresholds belong to the design of the slice that builds it. *Window* is the period gold must answer; upstream retention is sized from it (T035). Every question can be compared across services (AMBici, Bicing). Bike IDs rotate after each trip, so every question relies on station or zone-level aggregates, never on tracking a bike ([ambici](../sources/ambici.md)).
 
 The data fits Kimball's inventory case: stations are stores, available bikes are stock, each feed capture is a periodic stock count, and pick-ups and returns are stock movements derived from consecutive counts. Every measure derives from these two base facts: the stock snapshot (semi-additive) and the movements (additive); a measure that does not derive from them is not feasible.
 
@@ -48,7 +48,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 - **R2** The visualization shall show the attribution each data source's licence requires.
 - **R3** The visualization shall show current station status (Q1) captured no more than 5 minutes earlier, and no more than 1 minute where the chosen tools allow it within R4.
 - **R4** The solution shall cost less than €10 per month to run.
-- **R5** The solution shall load the Bicing monthly archives covering the last 12 months.
+- **R5** The solution shall load, once, the Bicing monthly archives covering the 12 months before the first load.
 - **R6** The solution shall organize data in medallion layers: bronze (raw as captured), silver (cleaned and conformed), gold (modelled for the guiding questions).
 - **R7** If a feed stops updating, then the visualization shall show the age of the latest data instead of presenting it as current.
 - **R8** If the capture is interrupted, then the solution shall alert the owner.
@@ -61,7 +61,8 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 
 ### Out of scope
 
-- Retention and how much data stays visible in the model (owner's starting point: about 3 months) — T035
+- Retention per layer, sized for the gold windows; if 12 months does not fit R4, about 3 months is the minimum — T035
+- Loading archives published after the initial load
 - Table format (Delta Lake or an alternative) — T035
 - Whether the capture restarts on its own after an interruption — T037
 - Capture completeness target — T037
@@ -80,6 +81,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 | ADRs from this task | Only the medallion layering becomes an ADR (ADR-0018); the other requirements turn into decisions in T035–T038. | R6 |
 | Decision references | Decisions are referenced by task ID (T035, T036…); the D1–D5 labels are dropped, since design file numbers follow creation order. | — |
 | Requirements in architecture | Each requirement goes to the arc42 section whose purpose it fits: functional ones and the guiding questions to §1.1, constraints to §2, solution decisions to §4, conventions to §8, quality scenarios to §10. §1 uses the arc42 subsections 1.1–1.3; quality goals are named after ISO/IEC 25010 and ISO/IEC 25012 characteristics; the terms this design introduces go to the glossary (§12). | R1–R14 |
+| Delivery | The File layout is built during the Plan, so there are no Steps; the Plan review checks it against this design. | — |
 
 ### File layout
 
@@ -105,32 +107,18 @@ docs/
 
 ## 3. Implementation
 
-### Prerequisites
-
-### Steps
-
-#### Step 1 — `<title>`
-
-- **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:**
-- **R:** R1, R3 (or —)
-- **Model:** `<model · effort>` (or —)
-
-##### Scope
-
-##### Reads
-
-##### Do
-
-##### Check
+None: the File layout was delivered during the Plan (Decision summary › Delivery).
 
 ## 4. Close
 
 ### Implemented
 
+Every item in File layout, checked at the Plan review: `docs/architecture.md` states R1–R14 and Q1–Q8 in their arc42 sections, with a source per item; the medallion ADR (ADR-0018); the architecture rule; the task table and s004 re-pointed.
+
 ### Known gaps at close
 
-- `<gap>` — TNNN
+None.
 
 ### Decisions taken during implementation
+
+None.
