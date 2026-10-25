@@ -23,7 +23,7 @@ Chosen option: depends on the contract kind, scored with the same weighted matri
 * **Format and behaviour contracts** (keys, naming, encoding): shared golden test vectors (90 against 50). They express what a schema cannot: a date folder consistent with the timestamp, bytes unchanged. Proven in s008 on the collector contract: one changed rule failed the producer tests (JS) and the consumer tests (Python) (F18, F35).
 * **Data-shape contracts** (silver, gold): an ODCS schema (84 against 54). It declares columns, types, nullability and quality rules, which vectors only show by example. Justified on paper only (F36).
 
-How to write and use the vectors is in `.claude/rules/testing.md` › Contracts between components; the testing model is in `docs/testing-strategy.md` › Contract.
+How to write and use the vectors is in `.claude/rules/code/testing.md` › Contracts between components; the testing model is in `docs/testing-strategy.md` › Contract.
 
 ### Consequences
 

@@ -1,5 +1,5 @@
 # Markdown lint: single source of scope and rules (reasons in docs/testing-strategy.md › Docs).
-# The scope is mirrored in `paths:` of .claude/rules/docs.md (Claude Code cannot read this file); keep both in sync.
+# The scope is mirrored in `paths:` of .claude/rules/docs/general.md (Claude Code cannot read this file); keep both in sync.
 globs:
   - "*.md"
   - "docs/**/*.md"

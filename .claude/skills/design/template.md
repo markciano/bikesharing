@@ -98,7 +98,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 ### File layout
 
-<!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/ci.md`), and its version files, manifest and lockfile (`.claude/rules/dependencies.md`). -->
+<!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
 ```text
 <path>/

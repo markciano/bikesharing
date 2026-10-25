@@ -20,7 +20,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 - **Time:** all stored timestamps in UTC (ADR-0005).
 - **Secrets:** in `.env` (ignored by Git); `.env.example` with empty values is committed. Never hard-code or paste secrets.
 - **Raw data:** never committed to Git, except test fixtures (ADR-0009).
-- **Stack versions and dependencies:** each component pins its runtimes and locks its dependencies in its own files (ADR-0016, ADR-0017); how in `.claude/rules/dependencies.md`.
+- **Stack versions and dependencies:** each component pins its runtimes and locks its dependencies in its own files (ADR-0016, ADR-0017); how in `.claude/rules/code/dependencies.md`.
 - **Pending items:** marked `TODO:` followed by a short description, in docs and code alike.
 - **File names:** proposed by Claude, approved by the owner. English, lowercase. Docs in kebab-case; Python code in snake_case (PEP 8). ADRs as `NNNN-short-title.md`; designs as `dNNN-short-title.md`. spikes as `sNNN-short-title.md`.
 
@@ -60,7 +60,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 ├── .claude/
 │   ├── settings.json       Permissions and environment
 │   ├── agents/             Project subagents (web-researcher)
-│   ├── rules/              Path-specific rules
+│   ├── rules/              Path-specific rules: docs/ (documents), code/ (code, tests, CI)
 │   └── skills/             Session skills: spike, design, implement
 ├── docs/                   Project documentation
 │   ├── architecture.md     Solution architecture (arc42)
