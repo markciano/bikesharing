@@ -75,7 +75,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 
 | Concern | Decision | R |
 |---|---|---|
-| Traceability in architecture | Every section or table of `docs/architecture.md` ends with a `Source:` line naming the design requirements and ADRs it comes from (ISO/IEC/IEEE 29148 traceability). | — |
+| Traceability in architecture | Every table row, bullet and paragraph of `docs/architecture.md` cites its own source (designs with requirement numbers, ADRs, spikes, source cards): a `Source` column in tables, links at the end of bullets and paragraphs, written as `[doc › section or items](path#anchor)`. A section-level line was rejected because it cannot tell which item each source belongs to (ISO/IEC/IEEE 29148 traceability, per requirement). | — |
 | Architecture style guide | A new path-scoped rule, `.claude/rules/architecture.md`, holds the arc42 style guide and the source rule; the Architecture bullet moves there from `.claude/rules/docs.md`. | — |
 | ADRs from this task | Only the medallion layering becomes an ADR (ADR-0018); the other requirements turn into decisions in T035–T038. | R6 |
 | Decision references | Decisions are referenced by task ID (T035, T036…); the D1–D5 labels are dropped, since design file numbers follow creation order. | — |
@@ -88,7 +88,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 ├── architecture.md                      (new)       arc42 style guide and the Source rule, scoped to docs/architecture.md
 └── docs.md                              (modified)  Architecture bullet moved to architecture.md
 docs/
-├── architecture.md                      (modified)  §1.1–1.3, §2, §4, §8, §10 and §12 with the requirements, each with Source lines; TODOs citing T034 resolved or re-pointed; D labels replaced by task IDs
+├── architecture.md                      (modified)  §1.1–1.3, §2, §4, §8, §10 and §12 with the requirements; a source on every item; TODOs citing T034 resolved or re-pointed; D labels replaced by task IDs
 ├── tasks.md                             (modified)  T034 to 📝 with its doc; D labels dropped; T015 removed; T042, T043 added
 ├── decisions/
 │   └── 0018-medallion-architecture.md   (new)       bronze, silver, gold layering (R6)
@@ -100,7 +100,7 @@ docs/
 
 ### What does not change
 
-- `docs/architecture.md` §3, §5–7, §9 and §11, except for re-pointed TODOs, D labels and the §3 consumers line.
+- `docs/architecture.md` §3, §5–7, §9 and §11, except for re-pointed TODOs, D labels, item sources and the §3 consumers line.
 - ADR-0011: reassessed in T035, not here.
 
 ## 3. Implementation
