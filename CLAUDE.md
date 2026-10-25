@@ -60,7 +60,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 ├── .claude/
 │   ├── settings.json       Permissions and environment
 │   ├── agents/             Project subagents (web-researcher)
-│   ├── rules/              Path-specific rules (docs, tasks, python, spikes)
+│   ├── rules/              Path-specific rules
 │   └── skills/             Session skills: spike, design, implement
 ├── docs/                   Project documentation
 │   ├── architecture.md     Solution architecture (arc42)
