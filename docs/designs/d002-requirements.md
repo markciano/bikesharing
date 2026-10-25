@@ -7,8 +7,8 @@
 ## Status
 
 - State: Draft 📝
-- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current step: Plan, rule documents: owner approval of `docs/architecture.md` on its diff; then Plan approval and Plan review in a new session. No Implementation steps: the task closes after the Plan review.
+- Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Current step: Plan review, in a new session (`/design d002 review-plan`). No Implementation steps: the task closes after the Plan review.
 
 ## 1. Spec — what and why
 
