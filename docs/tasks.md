@@ -31,7 +31,7 @@
 | T023 | Markdown lint scope and hook: scope and rules in `.markdownlint-cli2.yaml` as single source (root `*.md`, `docs/`, `.claude/`, `spikes/`; default rules except MD013 and MD060), mirrored in `.claude/rules/docs.md`; `--fix` for cosmetic rules; PostToolUse hook that fixes and lints on every edit; existing violations fixed; run instructions moved to `docs/testing-strategy.md` | 2 | ✅ | — | [testing-strategy](testing-strategy.md) |
 | T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ✅ |  |  |
 | T034 | Requirements: consumers, questions the data answers, freshness, public or not, whether Bicing history enters | 2 | ✅ | T022 | [requirements](designs/d002-requirements.md) |
-| T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | ⬜ | T034 |  |
+| T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | 🎬 | T034 |  |
 | T036 | Processing engine (single node) and pipeline language | 3 | ⬜ | T035 |  |
 | T037 | Execution target: where the pipeline runs and what schedules it | 3 | ⬜ | T036 |  |
 | T038 | Visualization: tool and where it is published | 2 | ⬜ | T034, T035, T037 |  |
@@ -44,3 +44,4 @@
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
 | T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | — |  |
+| T045 |  |  | ⬜ |  |  |
