@@ -57,11 +57,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 ```text
 .
 ├── CLAUDE.md               Rules for every session
-├── .claude/
-│   ├── settings.json       Permissions and environment
-│   ├── agents/             Project subagents (web-researcher)
-│   ├── rules/              Path-specific rules: docs/ (documents), code/ (code, tests, CI)
-│   └── skills/             Session skills: spike, design, implement
+├── .claude/                Claude Code configuration (standard layout)
 ├── docs/                   Project documentation
 │   ├── architecture.md     Solution architecture (arc42)
 │   ├── tasks.md            Task table
