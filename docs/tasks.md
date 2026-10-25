@@ -39,7 +39,7 @@
 | T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
 | T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
 | T042 | Data quality: checks and targets beyond the basics | 3 | ⬜ | T035, T037 |  |
-| T043 | Organize `.claude/rules/` (folders or name prefixes), after checking how Claude Code loads them | 2 | 🔄 | — |  |
+| T043 | Organize `.claude/rules/` (folders or name prefixes), after checking how Claude Code loads them | 2 | ✅ | — |  |
 | T024 | Hooks: code conventions for the project's languages | 1 | 🔄 | — |  |
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
