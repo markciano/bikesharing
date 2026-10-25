@@ -6,7 +6,7 @@ paths:
 
 # Cloudflare Worker testing rules (JS)
 
-General principles are in `testing.md`; reasons and detail in the [testing strategy](../../docs/testing-strategy.md) (Cloudflare Worker section).
+General principles are in `testing.md`; reasons and detail in the [testing strategy](../../../docs/testing-strategy.md) (Cloudflare Worker section).
 
 - Tools: `vitest` with `@cloudflare/vitest-plugin`.
 - Unit tests cover the functional core (pure exported functions such as `objectKey`).

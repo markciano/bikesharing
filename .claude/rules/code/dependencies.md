@@ -12,7 +12,7 @@ paths:
 
 # Runtime versions and dependencies
 
-How to apply ADR-0016 (runtime versions) and ADR-0017 (dependencies). The why is in the ADRs; CI is in `.claude/rules/ci.md`.
+How to apply ADR-0016 (runtime versions) and ADR-0017 (dependencies). The why is in the ADRs; CI is in `.claude/rules/code/ci.md`.
 
 ## Where each component declares its stack
 

@@ -14,7 +14,7 @@ paths:
 
 ## Testing
 
-General principles are in `testing.md`; reasons and detail in the [testing strategy](../../docs/testing-strategy.md) (Python section).
+General principles are in `testing.md`; reasons and detail in the [testing strategy](../../../docs/testing-strategy.md) (Python section).
 
 - Tool: pytest; `pytest` runs every test, `pytest tests/<level>` one level.
 - Line coverage (pytest-cov) is reported, never enforced with a threshold. The source is set in `[tool.coverage.run] source`, so the CI command cannot widen the report to the test files.

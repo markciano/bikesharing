@@ -5,7 +5,7 @@ paths:
 
 # CI workflow rules
 
-Flow and reasons: [testing strategy](../../docs/testing-strategy.md) (CI flow section), ADR-0013, ADR-0014, ADR-0016 and ADR-0017. The jobs of each component are created in that component's design; its version files, manifest and lockfile follow `.claude/rules/dependencies.md`.
+Flow and reasons: [testing strategy](../../../docs/testing-strategy.md) (CI flow section), ADR-0013, ADR-0014, ADR-0016 and ADR-0017. The jobs of each component are created in that component's design; its version files, manifest and lockfile follow `.claude/rules/code/dependencies.md`.
 
 ## Job per component
 

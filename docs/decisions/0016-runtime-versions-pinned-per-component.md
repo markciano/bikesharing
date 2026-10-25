@@ -59,5 +59,5 @@ Rules:
 
 ## More information
 
-- How to apply it: `.claude/rules/dependencies.md`; CI recipe: `.claude/rules/ci.md`.
+- How to apply it: `.claude/rules/code/dependencies.md`; CI recipe: `.claude/rules/code/ci.md`.
 - Related: ADR-0017 (dependencies locked per component).
