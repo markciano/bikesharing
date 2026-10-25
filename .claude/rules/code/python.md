@@ -1,7 +1,8 @@
 ---
 paths:
-  - "src/**"
-  - "tests/**"
+  - "src/**/*.py"
+  - "tests/**/*.py"
+  - "**/pyproject.toml"
 ---
 
 # Python code and testing rules
