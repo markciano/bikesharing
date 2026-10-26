@@ -9,7 +9,7 @@
 - State: Draft 📝
 - Phase: [x] Questions · [ ] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
-- Current step: Method drafted; owner review with another agent before approval
+- Current step: Method review in a fresh session: pass 1 (decisions) applied; passes 2 (traceability) and 3 (step readiness) pending
 
 ## 1. Questions — what we need to know
 
@@ -39,7 +39,7 @@ Every medallion layer (ADR-0018) is stored as files in open formats in an object
 
 #### D3. Bronze is the captured `json.gz` objects as they are
 
-No bronze table is built from them.
+No bronze table is built from them. The Bicing history archives (d002 R5) are bronze too: stored once, as downloaded (`.7z`), in the bronze bucket ([D7](#d7-storage-security-baseline)); their prefix and load procedure are set in the archive-load design.
 
 | | Objects as captured (chosen) | Landing objects + bronze table |
 |---|---|---|
@@ -93,6 +93,8 @@ Scores (total = Σ score × weight, maximum 105, normalised to 0–10):
 - Silver and gold are rebuilt from bronze (d002 R13), so whatever is deleted from bronze can never be rebuilt.
 - The longest gold windows are 12 months (Q3, Q4, Q6, Q7), and Q8 covers changes since the earliest archive loaded.
 - Raw grows about 2.7 GB per month, about 33 GB per year (measured 2026-10-14 to 2026-10-24, `architecture.md` §3); above the free 10 GB it costs about $0.015/GB-month, under $0.40/month at month 12.
+- Review trigger: the total monthly R2 bill above €2 ([Exit criteria](#exit-criteria)), watched by the owner with a Cloudflare billing alert. The review covers the retention of D5 and D6 and the operations, not bronze alone, since the excess can come from any of them.
+- TODO (production design): recalibrate the Cloudflare alerts (budget, Class A, storage) with Q1's figures; consider managing them through the API and updating them monthly, alerting on growth rate or projected cost rather than fixed values.
 - Rejected: a rolling window of 12 months plus a margin, because no rule change could then be applied to older data, and Q8 would depend on what silver kept.
 
 #### D6. Silver keeps a rolling 12 months, gold is kept indefinitely, and Delta keeps 7 days of history
@@ -101,7 +103,7 @@ Scores (total = Σ score × weight, maximum 105, normalised to 0–10):
 - Both are rebuildable from bronze (D5), so their retention trades storage against rebuild cost, with no data at risk.
 - Silver covers the longest gold window (12 months), so gold is recomputed without re-parsing bronze; older silver is rebuilt from bronze if ever needed.
 - Gold is small and is what the public sees.
-- Seven days of Delta history (old file versions removed by vacuum) is Delta's default and is enough to undo a recent error.
+- Seven days of Delta history is enough to undo a recent error. It is Delta's default retention for vacuum, which removes old file versions only when the pipeline runs it (delta-rs does not run it on its own); the transaction log is kept 30 days by default.
 - This is the usual decreasing retention: bronze longest, silver shorter, gold by its use.
 - Rejected: keeping every layer indefinitely; simpler, since no silver partitions are deleted, but silver grows without bound alongside bronze. It is reconsidered if the calculation shows it equally cheap.
 
@@ -112,25 +114,26 @@ Security is treated explicitly, not left implicit: R2 holds the only copy of bro
 | Threat | Impact | Control |
 |---|---|---|
 | Leaked credentials | An attacker deletes or overwrites data, or drives up cost with requests (denial of wallet) | One token per component, with only the access it needs; secrets in `.env`, never in code; bronze protected by a bucket lock |
-| A pipeline bug writes to bronze | Bronze cannot be rebuilt (D5), so the damage is permanent | The pipeline has read-only access to the bronze bucket; only capture writes it |
+| A pipeline bug writes to bronze | Bronze cannot be rebuilt (D5), so the damage is permanent | The pipeline has read-only access to the bronze bucket; only capture writes it, plus the one-off history upload |
 | A bucket is made public by mistake | Anyone can list and read all data, and every read costs | Buckets stay private, which is R2's default; public access to gold only as T038 decides |
 
 Two buckets, because R2 API tokens scope to whole buckets, not key prefixes ([R2 source card](../sources/r2-storage.md)), so a read-only bronze needs its own bucket:
 
-- **bronze**: capture's existing bucket, with an indefinite bucket lock on the `raw/` and `logs/` prefixes that blocks deletes and overwrites. Both only receive new objects and neither can be rebuilt; the logs attribute gaps to capture or provider (QS5). `state/` holds capture's working index, rewritten on every pass and rebuildable from `raw/`, so it stays unlocked;
+- **bronze**: capture's existing bucket, with an indefinite bucket lock on the `raw/`, `logs/` and history archive prefixes that blocks deletes and overwrites. All three only receive new objects and none can be rebuilt; the logs attribute gaps to capture or provider (QS5). `state/` holds capture's working index, rewritten on every pass and rebuildable from `raw/`, so it stays unlocked;
 - **lakehouse**: silver and gold together, since both have the same access pattern.
 
 Access per component:
 
 | Component | Bronze bucket | Lakehouse bucket |
 |---|---|---|
-| Capture | Write | None |
+| Capture | Read and write (R2 has no write-only token; capture reads `state/`) | None |
+| Owner (one-off history upload) | Read and write | None |
 | Pipeline | Read | Read and write |
 | Visualization (T038) | None | Read |
 | Spike probes | None | None; a separate test bucket only |
 
 - R2 has no object versioning, so the bucket lock is the only guard against losing bronze. Only an Admin token can remove a lock rule; the owner keeps that token and uses it only for D5's cost review.
-- TODO: before the lock is enabled, confirm that capture writes each key under `raw/` and `logs/` once (ADR-0012 key layout); the lock would also block a capture retry that rewrites a key.
+- TODO (T039): before the lock is enabled, confirm that capture writes each key under `raw/` and `logs/` once (ADR-0012 key layout); the lock would also block a capture retry that rewrites a key.
 - [Probe A](#a-delta-on-r2) checks that its test token cannot read or write the production buckets, and whether a bucket lock blocks a delete made with an Object Read & Write token (the docs do not say).
 - Rejected: one token with read and write on everything. It is simpler, but a single leak or pipeline bug puts bronze at risk.
 - Rejected: one bucket per layer. It would let the visualization read gold alone, but T038 has not decided how gold is served; gold moves to its own bucket then if needed.
@@ -167,7 +170,7 @@ Against a real R2 bucket with `deltalake`:
 
 - **Standard:** hard constraints first, then a gate per question that confirms or reopens its decision (D2, D4). The choice between options was already made with a weighted decision matrix (D4) and is not repeated in the run.
 - **Timebox:** one day of run. It ends when Q1–Q2 are answered or the day runs out; then the decision is taken on the evidence gathered and the gaps go to Not verified. If the D4 gate fails, half a day is added for the Iceberg probe, recorded in the Decision log.
-- **Storage cost** — no month within 12 months costs more than €2 in R2 storage and operations, in the on-demand cell of 10 catch-ups + 2 h live (Q1) — hard cut. The 24/7 scenarios and the other cells are reported, not judged. The same €2 is the review threshold of D5.
+- **Storage cost** — no month within 12 months costs more than €2 in R2 storage and operations, in the on-demand cell of 10 catch-ups + 2 h live (Q1) — hard cut. The 24/7 scenarios and the other cells are reported, not judged. €2 is 20% of d002 R4's €10/month, leaving the rest for engine, execution and visualization (T036–T038). The same €2, as the total monthly R2 bill, is the review trigger of D5.
 - **D2 gate (Q1)** — if the worst case (1-minute commits 24/7) fits, D2 holds without conditions; if only the on-demand mode fits, D2 holds with an operating constraint, recorded as a Production input; if neither fits, D2 is reopened — hard cut.
 - **D4 gate (Q2)** — `deltalake` on R2 writes, MERGEs and keeps concurrent commits safe; if any fails, Iceberg becomes the candidate and is probed in turn — hard cut.
 - **Maintenance and engine reads (Q2)** — optimize and vacuum work on R2, and Polars and DuckDB read the table; a failure is recorded as a limitation for T036 or a Production input, not a rejection of Delta — guide.
@@ -240,7 +243,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - so in a 1-minute run only 5 tables commit: the 2 dynamic silver tables and gold Q1, Q2, Q5; static silver tables commit once a day, when their feed is captured (`architecture.md` §1.1);
   - a catch-up commits once per table and pending day;
   - table counts and cadences are parameters.
-- **Sizing:** silver size is B's records per day times A's Parquet bytes per row, so no compression ratio is assumed.
+- **Sizing:** bronze is B's `raw/` and `logs/` growth plus the history archives as `.7z`; silver size is B's records per day times A's Parquet bytes per row, so no compression ratio is assumed.
 - **Output:** cost per layer as well as the total; capture's `logs/` and `state/` writes are reported apart from `raw/`, so their share of the quota is visible.
 - **Runs** once, after A and B; parameters are kept apart from the logic so the model can be re-run with new inputs.
 - **Prices, quotas and operation classes** come from the [R2 source card](../sources/r2-storage.md). Assumptions where the pricing page is silent:
@@ -263,7 +266,9 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 9 | Probe B measures `raw/`, `logs/` and `state/` separately on the local copy, plus the Bicing history ([B](#b-measured-volume)) | The local copy mirrors the bucket and spends no operations; `logs/` and `state/` are capture writes too |
 | 10 | Silver is sized from B's records and A's Parquet bytes per row ([C](#c-cost-model)) | Two measurements replace an assumed compression ratio |
 | 11 | The bronze bucket lock covers `raw/` and `logs/`, not `state/` ([D7](#d7-storage-security-baseline)) | `state/` is rewritten on every pass, so a lock would break capture |
-| 12 | Q1 reports cost at months 2, 4, 6 and 12; the hard cut is €2 in any month, raised from €1 ([Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria)) | The measured volume (about 33 GB/year) is 2–4 times s005's estimate, so storage alone could approach €1 at month 12 |
+| 12 | Q1 reports cost at months 2, 4, 6 and 12; the hard cut is €2 in any month, raised from €1 ([Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria)) | €2 is 20% of d002 R4's €10/month for R2 storage and operations; the rest is left for T036–T038 |
+| 13 | The Bicing history archives are bronze, kept as downloaded in the bronze bucket under the lock ([D3](#d3-bronze-is-the-captured-jsongz-objects-as-they-are), [D7](#d7-storage-security-baseline)) | Same principle as D3 and D5: the origin's bytes are kept, and what cannot be rebuilt is not deleted; Open Data BCN does not guarantee the archives stay published. SQL over the raw archives is given up: they are loaded once and queried in silver, and the `.7z` is about 40 times smaller than its contents |
+| 14 | D5's review is triggered by the total monthly R2 bill above €2 and covers every retention and the operations ([D5](#d5-bronze-is-kept-indefinitely-reviewed-only-above-a-cost-threshold)) | Bronze storage alone would take about 10 years to reach €2; the bill is what Cloudflare charges, and an alert can watch it |
 
 ### File layout
 
