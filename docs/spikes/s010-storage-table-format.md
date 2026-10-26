@@ -209,7 +209,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 - **Measures:** the R2 operations per commit, by class (A, B); the latency of each commit; Parquet bytes per row in the written table, so C can size silver and gold; `_delta_log` bytes per commit and bytes rewritten by MERGE and optimize, so C can size Delta's overhead.
 - **Security ([D7](#d7-storage-security-baseline)):** uses a token scoped to the test bucket and checks that it cannot read or write `bikesharing-capture-spike`, the only production bucket that exists yet; tries to delete and overwrite an object under a locked prefix of the test bucket with the Object Read & Write token.
 - **Where it runs:** on the owner's Mac, against a test bucket in the production Cloudflare account, with an Object Read & Write token scoped to it. The owner creates the test bucket, the token and the lock rule in the console before the probe; the script only runs the checks.
-- **Counting:** a local HTTPS-inspecting proxy (mitmproxy) between `deltalake` and R2 logs every request and classifies it by the [R2 source card](../sources/r2-storage.md); the test bucket's R2 metrics give a second, independent count. `deltalake` gets the proxy address and its certificate through `storage_options`, so requests reach R2 unchanged and their signatures stay valid; only the probe process trusts that certificate.
+- **Counting:** a local HTTPS-inspecting proxy (mitmproxy) between `deltalake` and R2 logs every request and classifies it by the [R2 source card](../sources/r2-storage.md); the test bucket's R2 metrics give a second, independent count. `deltalake` gets the proxy address and its certificate through `storage_options`, so requests reach R2 unchanged and their signatures stay valid; only the probe process trusts that certificate. The proxy covers the whole counted run, reads and token and lock checks included; C takes only the commit and maintenance checks from the logs, and requests to other buckets are filtered out ([#22](#decision-log)).
 - **Evidence:**
   - the proxy logs one JSON line per request: UTC time, method, path, status, bytes, duration;
   - the probe logs each check's start, end, result (ok or error message) and commit latency;
@@ -217,7 +217,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - logs and results go to an `output/` folder ignored by Git (ADR-0009); summary tables are copied into Findings.
 - **Analysis checks:**
   - known arithmetic: an append of one file gives one data PUT and one log PUT;
-  - independent count: proxy total against R2 metrics;
+  - independent count: the proxy's total for the test bucket against the bucket's R2 metrics for the day of the counted run, a dashboard day on which nothing else touches the bucket;
   - fault injection: one of two concurrent commits must conflict and retry.
 - **Clean-up:** the owner removes the test lock rule, then deletes the bucket and the token; a locked bucket cannot be emptied, so the lock rule goes first.
 - An Iceberg probe is not planned; it is built only if the D4 gate fails (Exit criteria).
@@ -232,6 +232,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - `logs/` and `state/`: objects, bytes and writes per day, as capture's own Class A operations and storage;
   - history, per archive and type: size as `.7z` and uncompressed, and raw rows (an upper bound); for ESTACIONS (`station_status`), distinct (`station_id`, `last_reported`) rows and snapshots per day; for INFORMACIO (`station_information`), rows at one snapshot per day, the basis of C's daily static commits ([#21](#decision-log));
   - archives are read as a stream, not extracted to disk.
+- Capture's operations are also checked against R2 metrics: the owner reads the daily Class A and Class B of `bikesharing-capture-spike` in the Cloudflare dashboard over days when only capture ran (PutObject alone if the dashboard breaks operations down). Manual downloads of the whole bucket show as Class B peaks and those days are excluded. The daily average × 30 checks the derived `state/` writes and D2's ~270–300k Class A per month; if they disagree, the metric prevails and the gap goes to Findings ([#24](#decision-log)).
 - Writes one volumes file that C reads.
 - s005's estimates are used only where nothing is measured.
 
@@ -245,6 +246,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - in live and 24/7 runs, a gold table commits no more often than its question's freshness (`architecture.md` §1.1): Q1, Q2, Q5 every run; Q3, Q4, Q7 hourly; Q6, Q8 daily;
   - so in a 1-minute run only 5 tables commit: the 2 dynamic silver tables and gold Q1, Q2, Q5; static silver tables commit once a day, when their feed is captured (`architecture.md` §1.1);
   - a catch-up commits once per table and pending day;
+  - the pipeline's LISTs on bronze are derived from ADR-0012's key layout: the provider, feed and day prefixes each run lists, at 1,000 keys per LIST page ([#23](#decision-log));
   - month 1 adds the initial load as one catch-up of the history archives and capture's backlog since capture started; the production start date is a parameter;
   - table counts and cadences are parameters.
 - **Sizing:**
@@ -281,15 +283,20 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 16 | [Cost model](#c-cost-model) | C sizes gold by cardinality and adds Delta's overhead (log and rewritten files) from A's measures; extends #10 | Total storage leaves no layer out; measured data prevails over an assumed margin (#10) | Method review |
 | 17 | [Q1](#q1-cost-calculation), [Cost model](#c-cost-model) | Month 1 includes the initial load (history and capture's backlog) and is judged like any other month; extends #12 | It is the most expensive month, and the bill does not separate one-off from recurring cost | Method review |
 | 18 | [Probe A](#a-delta-on-r2) | Probe A keeps concurrent commits safe with R2's conditional put, with no external lock | It is what D4 scored (only the bucket); a DynamoDB lock adds an AWS service and would reopen D4 | Method review |
-| 19 | [Probe A](#a-delta-on-r2) | The proxy is mitmproxy with HTTPS inspection, trusted by the probe process only; refines #5 | Requests are signed (SigV4) for R2's host, so a plain reverse proxy breaks them; mitmproxy is the standard HTTP inspection tool and needs no signing code | Method review |
+| 19 | [Probe A](#a-delta-on-r2) | The proxy is mitmproxy with HTTPS inspection, trusted by the probe process only; refines #5 → #22 | Requests are signed (SigV4) for R2's host, so a plain reverse proxy breaks them; mitmproxy is the standard HTTP inspection tool and needs no signing code | Method review |
 | 20 | [Probe A](#a-delta-on-r2) | The owner creates and removes the test bucket, token and lock rule in the console; the script only runs the checks; refines #6 | Operational actions are the owner's (CLAUDE.md), and the script never holds an admin credential | Method review |
 | 21 | [Probe B](#b-measured-volume) | B counts history rows per archive type, with the same dedup basis as capture's `station_status` (`station_id`, `last_reported`); INFORMACIO at one snapshot per day; raw rows kept as an upper bound; extends #9 | C sizes silver in rows (#10) and month 1 holds the history (#17); deduplicated rows are what silver stores, and both sources are counted on the same basis | Steps |
+| 22 | [Probe A](#a-delta-on-r2) | The proxy covers the whole counted run, `extra` included; the independent count compares totals for the test bucket on a dashboard day that only step 5 uses; C takes only the commit and maintenance checks, and requests to other buckets are filtered out; refines #5, #19 | The test bucket receives only the probe's requests, so a daily total needs no narrower window | Steps |
+| 23 | [Cost model](#c-cost-model) | The pipeline's LISTs on bronze are derived from ADR-0012's key layout (prefixes per provider, feed and day per run; 1,000 keys per page), not set by hand | They are probably the largest Class A item (about 430k a month for 10 prefixes every minute), so they are derived, not guessed | Steps |
+| 24 | [Probe B](#b-measured-volume) | Capture's daily Class A and B from the dashboard, on capture-only days, check B's derived `state/` writes and D2's ~270–300k Class A; the metric prevails | Measured data prevails over derived counts | Steps |
+| 25 | [File layout](#file-layout) | `output/` is ignored by a `.gitignore` in the spike folder | The spike stays self-contained and the root file is not touched | Steps |
 
 ### File layout
 
 ```text
 spikes/storage-table-format/
 ├── README.md          Question, setup, commands, what each script does; link to s010; How we got here (written at Conclusion)
+├── .gitignore         Ignores output/ (ADR-0009)
 ├── pyproject.toml     Pinned Python and locked dependencies (ADR-0016, ADR-0017)
 ├── uv.lock
 ├── .env.example       Test bucket endpoint and scoped token, empty values
@@ -308,7 +315,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 
 | # | Title | Who | Gate | Files |
 |---|---|---|---|---|
-| 1 | Scaffold the spike folder | Claude | — | `README.md`, `pyproject.toml`, `uv.lock`, `.env.example`, root `.gitignore` |
+| 1 | Scaffold the spike folder | Claude | — | `README.md`, `pyproject.toml`, `uv.lock`, `.env.example`, `.gitignore` |
 | 2 | Write the Delta gate checks | Claude | — | `delta_probe.py` (write, MERGE, concurrent commits) |
 | 3 | Set up the test bucket and run the gate checks | Owner | D4 hard cut | `.env` (local) |
 | 4 | Add counting and the remaining checks | Claude | — | `r2_proxy.py`, `delta_probe.py`, `analyse_ops.py` |
@@ -317,7 +324,8 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 | 7 | Run probe B and verify volumes | Owner | — | `output/` |
 | 8 | Write the cost model | Claude | — | `cost_model.py`, `params.toml` |
 | 9 | Run probe C and verify the model | Owner | D2 gate | `output/` |
-| 10 | Conclusion | Claude, Owner (teardown) | — | this document, `README.md`; test lock rule, bucket and token |
+| 10 | Write the ADRs | Claude | — | `docs/decisions/` |
+| 11 | Conclusion | Claude, Owner (teardown) | — | this document, `README.md`; test lock rule, bucket and token |
 
 ### Step 1 — Scaffold the spike folder
 
@@ -332,21 +340,20 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 - `README.md`: the question (s010 Main question), a link to this document, setup (`uv sync --locked`, `.env` from `.env.example`) and a Commands section that later steps fill.
 - `pyproject.toml` and `uv.lock`: Python pinned in `requires-python`; dependencies `deltalake` (≥ 1.0), `polars`, `duckdb`, `boto3`, `mitmproxy`, `python-dotenv`.
 - `.env.example`, empty values: `R2_ACCOUNT_ID`, `R2_TEST_BUCKET`, `R2_TEST_ACCESS_KEY_ID`, `R2_TEST_SECRET_ACCESS_KEY`, `R2_PROD_BUCKET`, `R2_LOCKED_PREFIX`.
-- Root `.gitignore`: `spikes/storage-table-format/output/` added next to the other spike outputs (ADR-0009).
+- `.gitignore`: ignores `output/` (ADR-0009, #25).
 - Not touched: anything outside these files.
 
 #### Reads
 
 - This document, §2 File layout: the folder's files and their purpose.
 - `.claude/rules/code/spikes.md`: what a spike README holds.
-- Root `.gitignore`, the spike output entries: where the new entry goes.
 
 #### Do
 
 1. Create `pyproject.toml` with `uv init --bare` and add the dependencies with `uv add`, which writes `uv.lock`.
 2. Write `.env.example`.
 3. Write `README.md`.
-4. Add the `output/` entry to the root `.gitignore`.
+4. Write `.gitignore`.
 5. Update this step's Status.
 
 #### Check
@@ -431,14 +438,14 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 
 #### Scope
 
-- `r2_proxy.py`: mitmproxy addon (decision log #19). Logs every request to `output/proxy-<UTC start>.jsonl`, one JSON line each: UTC time, method, path, query, status, request and response bytes, duration, and the operation and its class (A, B or free) as classified by the [R2 source card](../sources/r2-storage.md).
+- `r2_proxy.py`: mitmproxy addon (decision log #19). Logs every request to `output/proxy-<UTC start>.jsonl`, one JSON line each: UTC time, bucket, method, path, query, status, request and response bytes, duration, and the operation and its class (A, B or free) as classified by the [R2 source card](../sources/r2-storage.md).
 - `delta_probe.py`:
-  - subcommand `full`, counted through the proxy: `write` (60 commits, one hour), `merge` (10 commits), `concurrent`, `optimize` (compaction), `vacuum` (a dry run with the 7-day default, then a run with zero retention and the retention check disabled, so the probe sees files deleted). `deltalake` reaches the proxy through `storage_options` (proxy URL and the mitmproxy CA certificate), so only the probe process trusts it;
+  - subcommand `full`, through the proxy: `write` (60 commits, one hour), `merge` (10 commits), `concurrent`, `optimize` (compaction), `vacuum` (a dry run with the 7-day default, then a run with zero retention and the retention check disabled, so the probe sees files deleted). Every client (`deltalake`, Polars, DuckDB, `boto3`) reaches the proxy through its own settings (proxy URL and the mitmproxy CA certificate), so only the probe process trusts it;
   - per check it also logs Parquet bytes per row, `_delta_log` bytes per commit, and bytes rewritten by MERGE and optimize;
-  - subcommand `extra`, not counted, run after `full`: Polars and DuckDB read the table and match its row count (guide); the test token cannot list, read or write `R2_PROD_BUCKET` (a write attempt uses the key `s010-token-check/canary.txt`, so a wrongful success is harmless and easy to remove); under `R2_LOCKED_PREFIX`, a new object is written and then an overwrite and a delete of it are attempted with the test token.
-- `analyse_ops.py`: joins the proxy log and the probe log by time window; writes operations per check, per commit and per class to `output/`; runs the three analysis checks of §2 A:
+  - subcommand `extra`, run after `full`, also through the proxy (#22): Polars and DuckDB read the table and match its row count (guide); the test token cannot list, read or write `R2_PROD_BUCKET` (a write attempt uses the key `s010-token-check/canary.txt`, so a wrongful success is harmless and easy to remove); under `R2_LOCKED_PREFIX`, a new object is written and then an overwrite and a delete of it are attempted with the test token.
+- `analyse_ops.py`: joins the proxy log and the probe log by time window; writes operations per check, per commit and per class to `output/`, for the test bucket only (requests to other buckets are filtered out by bucket); marks the `full` checks as the ones C takes; flags any check with no proxied request, as its client bypassed the proxy; runs the three analysis checks of §2 A:
   - known arithmetic: one append of one file gives one data PUT and one log PUT;
-  - independent count: proxy totals per class for `full` equal the R2 metrics, passed as arguments;
+  - independent count: the proxy's totals per class for the whole run equal the test bucket's R2 metrics for that day, passed as arguments;
   - fault injection: the `concurrent` check shows a rejected log PUT (HTTP 412) followed by a successful retry.
 - Not touched: the `gate` subcommand's behaviour.
 
@@ -446,7 +453,7 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 
 - This document, §2 A (Measures, Security, Counting, Evidence, Analysis checks).
 - [R2 source card](../sources/r2-storage.md): operation classes, for the classifier.
-- mitmproxy addon API and the `object_store` client options for a proxy and its CA certificate, through the `web-researcher`.
+- mitmproxy addon API, and the proxy and CA certificate settings of each client (`object_store` for `deltalake` and Polars, DuckDB's delta extension, `boto3`), through the `web-researcher`. A client with no such setting is reported before step 5; its check then runs on another day, uncounted.
 
 #### Do
 
@@ -479,16 +486,17 @@ A counted run of probe A on the test bucket; operation, size and latency tables 
 
 #### Do
 
-1. Start the proxy in one terminal: `uv run mitmdump -s r2_proxy.py --listen-port 8080`.
-2. In another terminal, run `uv run python delta_probe.py full` and note the UTC start and end it prints.
-3. When R2 metrics have caught up (about 10 minutes), read the test bucket's Class A and Class B operations for that window in the Cloudflare dashboard.
-4. Stop the proxy and run `uv run python delta_probe.py extra`.
-5. Run `uv run python analyse_ops.py --r2-class-a <A> --r2-class-b <B>`.
-6. Report both summaries and the R2 figures.
+1. Pick a day of the Cloudflare dashboard on which only this step touches the test bucket: not step 3's day, and no other run that day.
+2. Start the proxy in one terminal: `uv run mitmdump -s r2_proxy.py --listen-port 8080`.
+3. In another terminal, run `uv run python delta_probe.py full`, then `uv run python delta_probe.py extra`.
+4. Stop the proxy.
+5. Once the day is over, read the test bucket's Class A and Class B operations for that day in the Cloudflare dashboard.
+6. Run `uv run python analyse_ops.py --r2-class-a <A> --r2-class-b <B>`.
+7. Report both probe summaries, the analysis summary and the R2 figures.
 
 #### Check
 
-The three analysis checks pass. Claude records as findings: operations per commit by class, commit latency, Parquet bytes per row, `_delta_log` bytes per commit, rewritten bytes, the maintenance and read results (guide) and the token and lock results.
+The three analysis checks pass and no check is flagged as bypassing the proxy. Claude records as findings: operations per commit by class, commit latency, Parquet bytes per row, `_delta_log` bytes per commit, rewritten bytes, the maintenance and read results (guide) and the token and lock results.
 
 ### Step 6 — Write the volume measurement
 
@@ -547,11 +555,13 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 1. Run `uv run python measure_volume.py`.
 2. Spot-check one provider, feed and day: `find <day folder> -type f | wc -l` and `du -sk <day folder>` against the summary's objects and bytes.
-3. Report the summary and the spot check.
+3. In the Cloudflare dashboard, read the daily Class A and Class B operations of `bikesharing-capture-spike` (PutObject alone if the dashboard breaks operations down) over the longest span of days on which only capture ran; days of manual bucket downloads show as Class B peaks and are excluded (#24).
+4. Report the summary, the spot check and the daily figures with their dates.
 
 #### Check
 
 - The spot check matches the summary.
+- Claude compares the dashboard's daily average × 30 with B's capture writes (`raw/`, `logs/` and the derived `state/` writes) and with D2's ~270–300k Class A per month; if they disagree, the metric prevails and the gap goes to Findings.
 - `raw/` growth per day is consistent with the ~2.7 GB per month measured in `architecture.md` §3; a large gap is explained before C runs.
 - Claude records as findings: volumes per feed and day, `logs/` and `state/` writes per day, history rows per type, and the dedup ratio of both sources.
 
@@ -570,10 +580,12 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
   - scenarios: 24/7 commits every 1, 5, 10, 30 and 60 minutes and every 6 hours; the on-demand grid of 4, 6, 8 and 10 catch-ups by 0.5, 1, 2 and 3 live hours; the judged cell (10 catch-ups + 2 h);
   - months reported (1, 2, 4, 6, 12), capture start date and production start date;
   - retention (D5, D6): bronze and gold indefinite, silver 12 months, 7 days of Delta history, 30 days of log;
-  - the pipeline's bronze listing (keys per LIST page, LISTs per feed and run) and maintenance (optimize and vacuum runs per table and pipeline day);
+  - maintenance: optimize and vacuum runs per table and pipeline day;
+  - an optional override of capture's monthly Class A and B with step 7's dashboard figures (#24);
   - prices and free quotas from the [R2 source card](../sources/r2-storage.md), and the USD→EUR rate with its date, since prices are in USD and the threshold in EUR;
   - paths to A's operation tables and B's `volumes.json`.
 - `cost_model.py`: for each scenario and month, storage per layer (bronze, silver, gold, Delta overhead) and Class A and B operations, split into capture `raw/`, capture `logs/` and `state/`, and pipeline. It computes monthly and accumulated cost against the shared free quotas, with month 1 including the initial load (#17). It writes `output/cost_*.csv` and a summary, and marks per scenario whether it fits the D2 gate (at most €2 in every month up to 12).
+- The pipeline's LISTs on bronze are derived from ADR-0012's key layout: the provider, feed and day prefixes each run lists, at 1,000 keys per LIST page (#23).
 - Silver and gold commits are costed with A's measured MERGE commit (the more expensive one measured), so the model stays pessimistic.
 - Not touched: A's and B's outputs, which are only read.
 
@@ -582,6 +594,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 - This document, Q1, Exit criteria and §2 C: scenarios, commit model, sizing and assumptions.
 - [R2 source card](../sources/r2-storage.md): prices, free quotas and operation classes.
 - `architecture.md` §1.1: each guiding question's freshness and the static feeds' daily capture.
+- ADR-0012 (`docs/decisions/`), the key layout: the prefixes a pipeline run lists.
 
 #### Do
 
@@ -593,7 +606,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 #### Check
 
-The targeted check matches the hand computation for storage, Class A, Class B and cost.
+The targeted check matches the hand computation for storage, Class A (bronze LISTs included), Class B and cost.
 
 ### Step 9 — Run probe C and verify the model
 
@@ -613,7 +626,7 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 
 #### Do
 
-1. Check that `params.toml` points to the outputs of steps 5 and 7 and set the production start date and the USD→EUR rate.
+1. Check that `params.toml` points to the outputs of steps 5 and 7, set the production start date and the USD→EUR rate, and set the capture override if step 7 found a gap.
 2. Run `uv run python cost_model.py`.
 3. Recompute by hand, from the CSV and `params.toml`, the Class A operations of the judged cell in month 1.
 4. Report the summary and the hand recomputation.
@@ -623,7 +636,35 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 - The hand recomputation matches the CSV.
 - Claude records as findings: cost per layer and total per scenario and month, the free quota usage, the judged cell and the 1-minute 24/7 case, and applies the gate.
 
-### Step 10 — Conclusion
+### Step 10 — Write the ADRs
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: record storage and table format decisions as adrs`
+- **Model:** opus · high
+- **Gate:** —
+
+#### Scope
+
+- The ADRs for the decisions D1–D7 that hold after the gates, in `docs/decisions/` (§1 Decided at framing), each with its reason and the findings that confirm it. Whether they go in one step or two is decided at the Steps review.
+- Not touched: the Conclusion, written in step 11.
+
+#### Reads
+
+1. This document, §1 Decided at framing: D1–D7.
+2. This document, §4 Findings: the evidence for D2 and D4.
+3. One existing ADR in `docs/decisions/`: format and numbering.
+
+#### Do
+
+1. Write one ADR per decision that holds.
+2. Update this step's Status.
+
+#### Check
+
+Every decision D1–D7 that holds has an ADR, and the D2 and D4 ADRs cite their findings.
+
+### Step 11 — Conclusion
 
 - **Status:** 💤 todo
 - **Who:** Claude, Owner (teardown)
@@ -634,7 +675,6 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 #### Scope
 
 - This document: Conclusion (Answers, Exit criteria, Verdict, Not verified, Follow-ups), the destination of every Production input, and Status.
-- The ADRs for the decisions D1–D7 that hold, in `docs/decisions/` (§1 Decided at framing).
 - `README.md`: How we got here.
 - Teardown by the owner: the test lock rule, the bucket `bikesharing-s010-test` and its token; the canary `s010-token-check/canary.txt` in `bikesharing-capture-spike` if the token check created it.
 
@@ -648,10 +688,9 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 
 1. Write the Conclusion.
 2. Set the destination of every Production input: a design with its task, or discarded with a reason.
-3. Write the ADRs.
-4. Write How we got here in `README.md`.
-5. Owner: remove the test lock rule, then empty and delete the test bucket, delete the token, and delete the canary if it exists.
-6. Set Status to finished with the UTC date.
+3. Write How we got here in `README.md`.
+4. Owner: remove the test lock rule, then empty and delete the test bucket, delete the token, and delete the canary if it exists.
+5. Set Status to finished with the UTC date.
 
 #### Check
 
