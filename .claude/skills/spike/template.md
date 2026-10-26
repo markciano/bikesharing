@@ -78,13 +78,13 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 -
 
-### Decision log
+### 2.3 Decision log
 
 <!-- Every decision about the method, before and during the run, including changes of course. Oldest first. A decision that replaces an earlier one says which. -->
 
-| Date | Decision | Reason |
-|---|---|---|
-| | | |
+| # | Topic | Decision | Reason | Decided at |
+|---|---|---|---|---|
+| | | | | |
 
 ### File layout
 
