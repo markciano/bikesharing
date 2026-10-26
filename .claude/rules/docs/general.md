@@ -15,3 +15,10 @@ paths: # mirrors the lint scope (globs) in .markdownlint-cli2.yaml; keep both in
   - URLs go between `<>` or as a link;
   - a title is a heading (`##`), not a bold line; levels go up one at a time;
   - placeholders such as `<name>` go in backticks.
+
+## Tone & writing style guidelines
+
+- **Professional & Accessible:** Maintain a rigorous, technical, yet clear and approachable tone. Avoid complex phrasing, or pretentious vocabulary.
+- **Clarity First:** Prioritize practical understanding over formal complexity.
+- **Direct & Action-Oriented:** Use active voice and concise sentences.
+- **Plain Technical English:** Use precise industry terms (e.g., *idempotency, schema evolution, pipeline latency*) without unnecessary buzzwords or fluff.
