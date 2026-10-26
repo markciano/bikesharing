@@ -6,10 +6,10 @@
 
 ## Status
 
-- State: Draft 📝
-- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review
+- State: Ready 🎬
+- Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: — · Finished: —
-- Current step: Steps approved; next: `/spike s010 review-steps` in a new session
+- Current step: Steps review closed; next: step 1 with `/implement`
 
 ## 1. Questions — what we need to know
 
@@ -145,7 +145,7 @@ Main question: does the own lakehouse on R2 with Delta Lake (D1–D7) hold withi
 
 #### Q1. Cost calculation
 
-What storage per layer and how many Class A and Class B operations per month do capture and pipeline need in each scenario, with Delta's operations per commit measured in Q2 and the retention of D5 and D6; do they fit R2's free quotas, and what do they cost per month and accumulated at months 1, 2, 4, 6 and 12? Gate for D2.
+What storage per layer and how many Class A and Class B operations per month do capture and pipeline need in each scenario, with Delta's operations per commit measured in Q2 and the retention of D5 and D6; do they fit R2's free quotas, and what do they cost per month and accumulated, computed for every month 1–12 and reported at months 1, 2, 4, 6 and 12? Gate for D2.
 
 - Scenarios, all with capture always on:
   - pipeline running 24/7 with a commit every 1, 5, 10, 30 and 60 minutes, and every 6 hours;
@@ -171,7 +171,7 @@ Against a real R2 bucket with `deltalake`:
 ### Exit criteria
 
 - **Standard:** hard constraints first, then a gate per question that confirms or reopens its decision (D2, D4). The choice between options was already made with a weighted decision matrix (D4) and is not repeated in the run.
-- **Timebox:** one day of run, counted as effort; waiting for complete dashboard days (steps 5 and 7) does not count. It ends when Q1–Q2 are answered or the day runs out; then the decision is taken on the evidence gathered and the gaps go to Not verified. If the D4 gate fails, half a day is added for the Iceberg probe, recorded in the Decision log.
+- **Timebox:** one day of run, counted as effort; waiting for step 5's counted dashboard day to end does not count. It ends when Q1–Q2 are answered or the day runs out; then the decision is taken on the evidence gathered and the gaps go to Not verified. If the D4 gate fails, half a day is added for the Iceberg probe, recorded in the Decision log.
 - **Storage cost** — no month within 12 months costs more than €2 in R2 storage and operations, in the on-demand cell of 10 catch-ups + 2 h live (Q1) — hard cut. The 24/7 scenarios and the other cells are reported, not judged. €2 is 20% of d002 R4's €10/month, leaving the rest for engine, execution and visualization (T036–T038). The same €2, as the total monthly R2 bill, is the review trigger of D5.
 - **D2 gate (Q1)** — a scenario fits when its total R2 cost (storage and operations) is at most €2 in every month up to 12; fitting R2's free quotas is reported, not judged. If the worst case (1-minute commits 24/7) fits, D2 holds without conditions; if only the on-demand mode fits, D2 holds with an operating constraint, recorded as a Production input; if neither fits, D2 is reopened — hard cut.
 - **D4 gate (Q2)** — `deltalake` on R2 writes, MERGEs and keeps concurrent commits safe; if any fails, Iceberg becomes the candidate and is probed in turn — hard cut.
@@ -233,13 +233,13 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - `logs/` and `state/`: objects, bytes and writes per day, as capture's own Class A operations and storage;
   - history, per archive and type: size as `.7z` and uncompressed, and raw rows (an upper bound); for ESTACIONS (`station_status`), distinct (`station_id`, `last_reported`) rows and snapshots per day; for INFORMACIO (`station_information`), rows at one snapshot per day, the basis of C's daily static commits ([#21](#decision-log));
   - archives are read as a stream, not extracted to disk.
-- Capture's operations are also checked against R2 metrics: the owner reads the daily Class A and Class B of `bikesharing-capture-spike` in the Cloudflare dashboard over days when only capture ran (PutObject alone if the dashboard breaks operations down). Manual downloads of the whole bucket show as Class B peaks and those days are excluded. The daily average × 30 checks the derived `state/` writes and D2's ~270–300k Class A per month; if they disagree, the metric prevails and the gap goes to Findings ([#24](#decision-log)).
+- Capture's operations are also checked against R2 metrics: the owner reads the daily Class A and Class B of `bikesharing-capture-spike` in the Cloudflare dashboard over days when only capture ran (PutObject alone if the dashboard breaks operations down). Manual downloads of the whole bucket show as Class B peaks and those days are excluded. The daily average × 30 checks the derived `state/` writes and D2's ~270–300k Class A per month; within ±10%, B's values are kept; beyond it, the metric prevails and the gap goes to Findings ([#24, #29](#decision-log)).
 - Writes one volumes file that C reads.
 - s005's estimates are used only where nothing is measured.
 
 #### C. Cost model
 
-- **What:** a script that computes, for each scenario in Q1 (24/7 cadences and the on-demand grid) and for months 1, 2, 4, 6 and 12, storage per layer and Class A and Class B operations per month, and their monthly and accumulated cost against R2's free quotas and prices.
+- **What:** a script that computes, for each scenario in Q1 (24/7 cadences and the on-demand grid) and for every month from 1 to 12 (months 1, 2, 4, 6 and 12 reported; the gate judges each one, [#29](#decision-log)), storage per layer and Class A and Class B operations per month, and their monthly and accumulated cost against R2's free quotas and prices.
 - **Inputs:** A's measured operations per commit, Parquet bytes per row, `_delta_log` bytes per commit and bytes rewritten by MERGE and optimize, B's volumes, the commit model below, and the retention of D5 and D6.
 - **Commit model:**
   - silver has one table per feed type on the common model (9: 2 dynamic, 7 static); gold has one table per guiding question (8);
@@ -247,14 +247,15 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - in live and 24/7 runs, a gold table commits no more often than its question's freshness (`architecture.md` §1.1): Q1, Q2, Q5 every run; Q3, Q4, Q7 hourly; Q6, Q8 daily;
   - so in a 1-minute run only 5 tables commit: the 2 dynamic silver tables and gold Q1, Q2, Q5; static silver tables commit once a day, when their feed is captured (`architecture.md` §1.1);
   - a catch-up commits once per table and pending day;
-  - a commit's operations are modelled from A's measures as table-load reads (per JSON commit since the last checkpoint), plus MERGE reads per file in the target partition (files accumulate until the next optimize), plus a checkpoint every N commits; N (delta-rs's default) and the optimize cadence are parameters ([#27](#decision-log));
+  - a commit's operations are modelled from A's measures as table-load reads (per JSON commit since the last checkpoint), plus MERGE reads per file in the target partition (files accumulate until the next optimize), plus a checkpoint every N commits; N (delta-rs's default) is a parameter ([#27](#decision-log));
+  - optimize runs once per table at the end of each catch-up and each live session, and daily in the 24/7 scenarios; vacuum runs right after each optimize, with D6's 7-day retention; for 1-minute 24/7, a sensitivity row compares hourly with daily optimize ([#30](#decision-log));
   - the pipeline's LISTs on bronze are derived from ADR-0012's key layout: the provider, feed and day prefixes each run lists, at 1,000 keys per LIST page ([#23](#decision-log)); each new bronze object is read once (one GET, Class B);
-  - month 1 adds the initial load as one catch-up of the history archives and capture's backlog since capture started; the production start date is a parameter;
+  - month 1 adds the initial load as one catch-up of the history archives and capture's backlog since capture started; the production start date is a parameter, set to the latest date the owner considers plausible, which gives the most pending days in month 1 (pessimistic, [#31](#decision-log));
   - table counts and cadences are parameters.
 - **Sizing:**
   - bronze: B's `raw/` and `logs/` growth plus the history archives as `.7z`;
-  - silver: B's deduplicated records per day (raw records for feeds without a dedup basis) times A's Parquet bytes per row, so no compression ratio is assumed; raw records give an upper bound; it starts in month 1 with the history inside its 12-month window;
-  - gold: stations (B) × time buckets (hours or days) × tables (parameter) × A's bytes per row, an upper bound by cardinality;
+  - silver: B's deduplicated records per day (raw records for feeds without a dedup basis) times the larger of A's Parquet bytes per row before and after optimize ([#29](#decision-log)), so no compression ratio is assumed; raw records give an upper bound; it starts in month 1 with the history inside its 12-month window;
+  - gold: stations (B) × time buckets (hours or days) × tables (parameter) × the same bytes per row, an upper bound by cardinality;
   - Delta overhead in silver and gold: A's `_delta_log` bytes per commit × 30 days of commits, plus the bytes rewritten by MERGE and optimize in 7 days ([D6](#d6-silver-keeps-a-rolling-12-months-gold-is-kept-indefinitely-and-delta-keeps-7-days-of-history)).
 - **Output:** cost per layer as well as the total; capture's `logs/` and `state/` writes are reported apart from `raw/`, so their share of the quota is visible.
 - **Runs** once, after A and B; parameters are kept apart from the logic so the model can be re-run with new inputs.
@@ -296,6 +297,8 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 27 | [Probe A](#a-delta-on-r2), [Cost model](#c-cost-model) | A opens a fresh table before each commit, on a test table with `delta.checkpointInterval = 10`, and logs table-load reads, checkpoints and files per MERGE; C models a commit as table load + per-file MERGE reads + a checkpoint every N commits, with N and the optimize cadence as parameters; refines #4 | A real run loads the table from scratch and its MERGE scans the files written since the last optimize, so a constant from a long-lived process can understate cost by orders of magnitude; a small interval shows several checkpoints in a short run, and each component is measured once and scaled in C | Steps review |
 | 28 | [Probe A](#a-delta-on-r2), [D7](#d7-storage-security-baseline) | The concurrency check is judged as a safety property (no duplicate key or lost row versus a serial run; the stale commit retries or raises a conflict); the independent count accepts the proxy's total with or without failed requests; a failed token or lock check reopens D7 before the Conclusion | The D4 gate asks for safe commits, not for one mechanism; R2's billing of failed requests is undocumented, so a billing rule must not loop step 5; D7 had no rule for a failed security check | Steps review |
 | 29 | [Probe B](#b-measured-volume), [Cost model](#c-cost-model), [Exit criteria](#exit-criteria) | B's history counter is checked against s004's parquet row counts; capture's dashboard figures override B beyond ±10%; C computes every month 1–12, adds one GET per new bronze object, and sizes tables with the larger bytes per row of A (before or after optimize); the timebox counts effort, not waiting days | The extracted CSVs no longer exist; each check needs a yes/no threshold; the gate judges every month; Class B was missing bronze reads; the larger value keeps the model pessimistic | Steps review |
+| 30 | [Cost model](#c-cost-model) | Optimize runs once per table at the end of each catch-up and each live session, and daily in the 24/7 scenarios; vacuum runs right after each optimize, with D6's 7-day retention; C adds a sensitivity row for 1-minute 24/7 with hourly versus daily optimize; refines #27 | Each MERGE reads every file in its target partition, so the optimize cadence drives Class B; a fixed value makes the model executable, and the sensitivity row shows how much the unconditional D2 verdict depends on it | Steps review |
+| 31 | [Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria), [Probe B](#b-measured-volume), [Cost model](#c-cost-model) | The production start date is the latest the owner considers plausible; the timebox excludes only the wait for step 5's counted day; Q1, §2 B and §2 C state #29's ±10% threshold, months 1–12 and larger bytes per row; refines #29 | A later start leaves more pending days in month 1, which keeps it pessimistic; step 7 reads past days and waits for nothing; thresholds belong in the Method, not only in the steps | Steps review |
 
 ### File layout
 
@@ -536,7 +539,7 @@ A counted run of probe A on the test bucket; operation and size tables in `outpu
 - **`raw/`** (`spikes/cloudflare-capture-spike/data/V4/raw/`), per provider, feed and day: objects, bytes and records (entries in the payload's main list; 1 for feeds without one). For `station_status`, also distinct (`station_id`, `last_reported`) records. The first and last days are dropped as incomplete.
 - **`logs/` and `state/`**, per day: objects, bytes and writes. `logs/` writes are its objects. `state/` keeps only its latest version locally, so its writes per day are derived: capture passes per day (from `logs/`) times the `state/` objects one pass writes (from capture's code).
 - **History** (`spikes/bicing-spike/historical-data/raw/*.7z`), per archive: type (ESTACIONS or INFORMACIO, from the file name), month, `.7z` bytes, uncompressed bytes and raw rows. For ESTACIONS, also distinct (`station_id`, `last_reported`) rows and snapshots per day. For INFORMACIO, rows at one snapshot per day (#21).
-- Archives are streamed with macOS's built-in `tar -xOf <archive>` (libarchive reads 7z), never extracted to disk. Rows are counted with a CSV parser on that stream, not by lines (header, quoted newlines).
+- Archives are streamed with macOS's built-in `tar -xOf <archive>` (libarchive reads 7z), never extracted to disk. Rows are counted with a CSV parser on that stream, not by lines (header, quoted newlines); the parser also reports the quoted newlines it finds.
 - Also: `README.md` (Commands) and this step's Status in this document.
 - Not touched: the local copies, which are only read.
 
@@ -558,8 +561,8 @@ A counted run of probe A on the test bucket; operation and size tables in `outpu
 #### Check
 
 - The targeted check gives the expected raw and distinct counts.
-- The 2026-09 ESTACIONS stream gives 290,689,605 bytes uncompressed and 4,528,265 raw rows (4,528,266 lines minus the header), unless the parser reports quoted newlines.
-- The 2026-08 ESTACIONS raw rows equal the row count of its parquet in `work/` (#29).
+- The 2026-09 ESTACIONS stream gives 290,689,605 bytes uncompressed, and its raw rows plus the quoted newlines the parser reports equal 4,528,265 (4,528,266 lines minus the header).
+- The 2026-08 ESTACIONS raw rows equal the row count of its parquet in `work/` (#29); if the s004 code drops rows, they equal instead the row count of DuckDB's `read_csv` on the same stream.
 
 ### Step 7 — Run probe B and verify volumes
 
@@ -606,7 +609,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
   - scenarios: 24/7 commits every 1, 5, 10, 30 and 60 minutes and every 6 hours; the on-demand grid of 4, 6, 8 and 10 catch-ups by 0.5, 1, 2 and 3 live hours; the judged cell (10 catch-ups + 2 h);
   - months reported (1, 2, 4, 6, 12), capture start date and production start date; every month from 1 to 12 is computed, since the gate judges each one;
   - retention (D5, D6): bronze and gold indefinite, silver 12 months, 7 days of Delta history, 30 days of log;
-  - maintenance: optimize and vacuum runs per table and pipeline day;
+  - maintenance: optimize once per table at the end of each catch-up and each live session, and daily in the 24/7 scenarios; vacuum right after each optimize, with D6's 7-day retention (#30);
   - the checkpoint interval N, delta-rs's default as confirmed in step 4;
   - an optional override of capture's monthly Class A and B with step 7's dashboard figures (#24);
   - prices and free quotas from the [R2 source card](../sources/r2-storage.md), and the USD→EUR rate with its date, since prices are in USD and the threshold in EUR;
@@ -614,6 +617,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 - `cost_model.py`: for each scenario and month, storage per layer (bronze, silver, gold, Delta overhead) and Class A and B operations, split into capture `raw/`, capture `logs/` and `state/`, and pipeline. It computes monthly and accumulated cost against the shared free quotas, with month 1 including the initial load (#17). It writes `output/cost_*.csv` and a summary, and marks per scenario whether it fits the D2 gate (at most €2 in every month up to 12).
 - The pipeline's LISTs on bronze are derived from ADR-0012's key layout: the provider, feed and day prefixes each run lists, at 1,000 keys per LIST page (#23). Each new bronze object costs one GET (Class B).
 - Silver and gold commits are costed as MERGE commits from A's measures (#27): table-load reads for the JSON commits since the last checkpoint, plus reads per file in the target partition, which grows with each commit until the next optimize, plus a checkpoint every N commits.
+- A sensitivity row for 1-minute 24/7 compares hourly with daily optimize (#30); it is reported, not judged.
 - Tables are sized with the larger of A's two Parquet bytes per row, before and after optimize (#29).
 - Also: `README.md` (Commands) and this step's Status in this document.
 - Not touched: A's and B's outputs, which are only read.
@@ -655,7 +659,7 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 
 #### Do
 
-1. Check that `params.toml` points to the outputs of steps 5 and 7. Set the production start date, the USD→EUR rate, the capture start date (the earliest day under `raw/` in `bikesharing-capture-spike`, read in the Cloudflare console), and the capture override if step 7 found a gap beyond ±10%.
+1. Check that `params.toml` points to the outputs of steps 5 and 7. Set the production start date (the latest you consider plausible, #31), the USD→EUR rate, the capture start date (the earliest day under `raw/` in `bikesharing-capture-spike`, read in the Cloudflare console), and the capture override if step 7 found a gap beyond ±10%.
 2. Run `uv run python cost_model.py`.
 3. Recompute by hand, from the CSV and `params.toml`, the Class A operations of the judged cell in month 1.
 4. Report the summary and the hand recomputation.
@@ -663,7 +667,7 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 #### Check
 
 - The hand recomputation matches the CSV.
-- Claude records as findings: cost per layer and total per scenario and month, the free quota usage, the judged cell and the 1-minute 24/7 case, and applies the gate.
+- Claude records as findings: cost per layer and total per scenario and month, the free quota usage, the judged cell and the 1-minute 24/7 case with its optimize sensitivity row, and applies the gate.
 
 ### Step 10 — Conclusion
 
