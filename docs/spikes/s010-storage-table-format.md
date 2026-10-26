@@ -9,7 +9,7 @@
 - State: Draft 📝
 - Phase: [x] Questions · [ ] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
-- Current step: Method review in a fresh session: passes 1 (decisions) and 2 (traceability) applied; pass 3 (step readiness) pending
+- Current step: Method review in a fresh session: passes 1 (decisions), 2 (traceability) and 3 (step readiness) applied; final pass (wording) pending
 
 ## 1. Questions — what we need to know
 
@@ -134,6 +134,7 @@ Access per component:
 
 - R2 has no object versioning, so the bucket lock is the only guard against losing bronze. Only an Admin token can remove a lock rule; the owner keeps that token and uses it only for D5's cost review.
 - TODO (T039): before the lock is enabled, confirm that capture writes each key under `raw/` and `logs/` once (ADR-0012 key layout); the lock would also block a capture retry that rewrites a key.
+- TODO (production design): capture's existing bucket is named `bikesharing-capture-spike`; R2 cannot rename buckets, so a production name means copying `raw/` and `logs/` to a new bucket before the lock is enabled.
 - [Probe A](#a-delta-on-r2) checks that its test token cannot read or write the production buckets, and whether a bucket lock blocks a delete made with an Object Read & Write token (the docs do not say).
 - Rejected: one token with read and write on everything. It is simpler, but a single leak or pipeline bug puts bronze at risk.
 - Rejected: one bucket per layer. It would let the visualization read gold alone, but T038 has not decided how gold is served; gold moves to its own bucket then if needed.
@@ -204,11 +205,11 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 
 - **What:** `deltalake` against a test R2 bucket with a small data sample.
 - **Data:** real `station_status` responses from both providers, a few hours from the local capture copy (`spikes/cloudflare-capture-spike/data/V4/raw/`), flattened to rows (station, time, bikes, docks). Commits mimic 1-minute runs, partitioned by day, so each commit touches one partition; MERGE runs on real keys (station + time).
-- **Checks,** in the order of the D4 gate: write, MERGE, two concurrent commits (hard cut); optimize, vacuum, reads from Polars and DuckDB (guide).
+- **Checks,** in the order of the D4 gate: write, MERGE, two concurrent commits (hard cut); optimize, vacuum, reads from Polars and DuckDB (guide). Commits are kept safe by R2's conditional put, with no external lock; the delta-rs option that enables it is checked in the step.
 - **Measures:** the R2 operations per commit, by class (A, B); the latency of each commit; Parquet bytes per row in the written table, so C can size silver and gold; `_delta_log` bytes per commit and bytes rewritten by MERGE and optimize, so C can size Delta's overhead.
-- **Security ([D7](#d7-storage-security-baseline)):** uses a token scoped to the test bucket and checks that it cannot read or write the production buckets; sets a bucket lock on a prefix of the test bucket and tries to delete and overwrite an object under it with the Object Read & Write token.
-- **Where it runs:** on the owner's Mac, against a test bucket in the production Cloudflare account, with an Object Read & Write token scoped to it.
-- **Counting:** a local proxy between `deltalake` and R2 logs every request and classifies it by the [R2 source card](../sources/r2-storage.md); the test bucket's R2 metrics give a second, independent count.
+- **Security ([D7](#d7-storage-security-baseline)):** uses a token scoped to the test bucket and checks that it cannot read or write `bikesharing-capture-spike`, the only production bucket that exists yet; tries to delete and overwrite an object under a locked prefix of the test bucket with the Object Read & Write token.
+- **Where it runs:** on the owner's Mac, against a test bucket in the production Cloudflare account, with an Object Read & Write token scoped to it. The owner creates the test bucket, the token and the lock rule in the console before the probe; the script only runs the checks.
+- **Counting:** a local HTTPS-inspecting proxy (mitmproxy) between `deltalake` and R2 logs every request and classifies it by the [R2 source card](../sources/r2-storage.md); the test bucket's R2 metrics give a second, independent count. `deltalake` gets the proxy address and its certificate through `storage_options`, so requests reach R2 unchanged and their signatures stay valid; only the probe process trusts that certificate.
 - **Evidence:**
   - the proxy logs one JSON line per request: UTC time, method, path, status, bytes, duration;
   - the probe logs each check's start, end, result (ok or error message) and commit latency;
@@ -218,7 +219,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - known arithmetic: an append of one file gives one data PUT and one log PUT;
   - independent count: proxy total against R2 metrics;
   - fault injection: one of two concurrent commits must conflict and retry.
-- **Clean-up:** a final step removes the test lock rule, then deletes the bucket and the token; a locked bucket cannot be emptied, so the lock rule goes first.
+- **Clean-up:** the owner removes the test lock rule, then deletes the bucket and the token; a locked bucket cannot be emptied, so the lock rule goes first.
 - An Iceberg probe is not planned; it is built only if the D4 gate fails (Exit criteria).
 
 #### B. Measured volume
@@ -278,6 +279,9 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 15 | A scenario fits the D2 gate when its total R2 cost is at most €2 in every month up to 12; free quotas are reported, not judged ([Exit criteria](#exit-criteria)) | One threshold for the gate and the cost cut; leaving the free tier is acceptable within budget |
 | 16 | C sizes gold by cardinality and adds Delta's overhead (log and rewritten files) from A's measures ([C](#c-cost-model)) | Total storage leaves no layer out; measured data prevails over an assumed margin (#10) |
 | 17 | Month 1 includes the initial load (history and capture's backlog) and is judged like any other month ([Q1](#q1-cost-calculation), [C](#c-cost-model)) | It is the most expensive month, and the bill does not separate one-off from recurring cost |
+| 18 | Probe A keeps concurrent commits safe with R2's conditional put, with no external lock ([A](#a-delta-on-r2)) | It is what D4 scored (only the bucket); a DynamoDB lock adds an AWS service and would reopen D4 |
+| 19 | The proxy of #5 is mitmproxy with HTTPS inspection, trusted by the probe process only ([A](#a-delta-on-r2)) | Requests are signed (SigV4) for R2's host, so a plain reverse proxy breaks them; mitmproxy is the standard HTTP inspection tool and needs no signing code |
+| 20 | The owner creates and removes the test bucket, token and lock rule in the console; the script only runs the checks ([A](#a-delta-on-r2)) | Operational actions are the owner's (CLAUDE.md), and the script never holds an admin credential |
 
 ### File layout
 
@@ -287,7 +291,7 @@ spikes/storage-table-format/
 ├── pyproject.toml     Pinned Python and locked dependencies (ADR-0016, ADR-0017)
 ├── uv.lock
 ├── .env.example       Test bucket endpoint and scoped token, empty values
-├── r2_proxy.py        A: logging proxy between deltalake and R2, one JSON line per request
+├── r2_proxy.py        A: mitmproxy addon that logs each deltalake request to R2, one JSON line per request
 ├── delta_probe.py     A: write, MERGE, concurrency, optimize, vacuum, reads, token and lock checks
 ├── analyse_ops.py     A: joins proxy and probe logs; operations per check, step and class; the three checks
 ├── measure_volume.py  B: raw/, logs/, state/ and history volumes
