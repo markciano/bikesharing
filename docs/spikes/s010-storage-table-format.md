@@ -7,9 +7,9 @@
 ## Status
 
 - State: Draft 📝
-- Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review
+- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review
 - Started: — · Finished: —
-- Current step: Steps written; next: Steps approval, then `/spike s010 review-steps` in a new session
+- Current step: Steps approved; next: `/spike s010 review-steps` in a new session
 
 ## 1. Questions — what we need to know
 
