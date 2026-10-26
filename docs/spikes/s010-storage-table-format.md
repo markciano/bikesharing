@@ -383,6 +383,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 - **Sample:** `station_status` objects of both providers from `spikes/cloudflare-capture-spike/data/V4/raw/<provider>/station_status/<day>/<UTC time>.json.gz`, for a window given by parameters (default: the first 15 captured minutes of a full day). Each object becomes rows `source`, `station_id`, `last_reported` (UTC), `captured_at` (UTC, from the key), `bikes_available`, `docks_available`, `capture_date` (partition column). The two providers may use different GBFS versions; the field mapping handles both.
 - **Table:** `s3://<R2_TEST_BUCKET>/<run_id>/station_status`, with `run_id` the run's UTC start time, so each run writes a fresh table.
 - **Storage options:** endpoint from `R2_ACCOUNT_ID`, region `auto`, the test token, and the option that enables conditional put for safe commits with no external lock (decision log #18).
+- **Table handle:** a fresh `DeltaTable` is opened before each commit (#27), so each commit's latency includes the table load. `gate` sends its requests directly to R2 and ignores the proxy settings.
 - **Checks,** each logged as one JSON line in `output/probe-<run_id>.jsonl`, or under `output/local/` with `--local` (UTC start and end, check, result `ok` or the error message, table version, commit latency in ms):
   - `write`: creates the table and appends one commit per captured minute (10 by default). Ok when the version count equals the commits and the row count equals the rows written.
   - `merge`: 3 MERGE commits with the following minutes, keyed on `source`, `station_id`, `last_reported` (update when matched, insert otherwise). Ok when no key is duplicated and the row count equals the distinct keys.
@@ -434,7 +435,7 @@ The test bucket, its lock rule and its token in the production Cloudflare accoun
 
 #### Check
 
-The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate holds. Claude records as findings the result, the outcome of the stale MERGE (retried or conflict), and the commit latencies; taken without the proxy, they are Q2's observed latency.
+The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate holds. Claude records as findings the result, the outcome of the stale MERGE (retried or conflict), and the commit latencies; taken without the proxy and with the table load included (#27), they are Q2's observed latency.
 
 ### Step 4 — Add counting and the remaining checks
 
@@ -450,13 +451,15 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 - `delta_probe.py`:
   - subcommand `full`, through the proxy, on a table created with `delta.checkpointInterval = 10` and with a fresh `DeltaTable` opened before each commit (#27): `write` (60 commits, one hour), `merge` (10 commits), on a data window of 70 captured minutes of a full day set by parameters, `concurrent`, `optimize` (compaction), `vacuum` (a dry run with the 7-day default, then a run with zero retention and the retention check disabled, so the probe sees files deleted). Every client (`deltalake`, Polars, DuckDB, `boto3`) reaches the proxy through its own settings (proxy URL and the mitmproxy CA certificate), so only the probe process trusts it; `full` prints its `run_id`;
   - per check it also logs Parquet bytes per row, `_delta_log` bytes per commit, and bytes rewritten by MERGE and optimize; per commit, the JSON commits read since the last checkpoint, whether it wrote a checkpoint and, for MERGE, the files in the target partition;
-  - subcommand `extra --run-id <id>`, run after `full` on the table it wrote, also through the proxy (#22), with `--skip <check>` to leave a check out and `--only <check>` to run one alone: Polars and DuckDB read the table and match its row count (guide); the test token cannot list, read or write `R2_PROD_BUCKET` (a write attempt uses the key `s010-token-check/canary.txt`, so a wrongful success is harmless and easy to remove); under `R2_LOCKED_PREFIX`, a new object is written and then an overwrite and a delete of it are attempted with the test token.
+  - subcommand `extra --run-id <id>`, run after `full` on the table it wrote, also through the proxy (#22), with `--skip <check>` to leave a check out and `--only <check>` to run one alone: Polars and DuckDB read the table and match its row count (guide); the test token cannot list, read or write `R2_PROD_BUCKET` (a write attempt uses the key `s010-token-check/canary.txt`, so a wrongful success is harmless and easy to remove); under `R2_LOCKED_PREFIX`, a new object is written and then an overwrite and a delete of it are attempted with the test token;
+  - `extra` appends its lines to `full`'s `output/probe-<run_id>.jsonl`;
+  - `full` and `extra` abort before their first request if `PROXY_URL` or `PROXY_CA_CERT` is empty, so no request bypasses the proxy; the only exception is `extra --only <check> --no-proxy`, the uncounted run of a check whose client cannot use the proxy.
 - `analyse_ops.py --run-id <id> --proxy-log <file>`: joins that proxy log and the run's probe logs by time window; writes operations per check, per commit and per class to `output/`, for the test bucket only (requests to other buckets are filtered out by bucket); marks the `full` checks as the ones C takes; flags any check with no proxied request, as its client bypassed the proxy; runs the three analysis checks of §2 A:
   - known arithmetic: one append of one file, on a commit that writes no checkpoint, gives one data PUT and one log PUT;
   - independent count: the proxy's totals per class for the whole run, computed both with and without failed (non-2xx) requests, and one of them equals the test bucket's R2 metrics for that day, passed as arguments (#28);
   - fault injection: the `concurrent` check shows a rejected log PUT (HTTP 412) followed by a successful retry or a raised conflict.
 - Synthetic and `--local` logs go under `output/local/`, apart from the counted run's.
-- Also: `README.md` (Commands) and this step's Status in this document.
+- Also: `README.md` (Commands); in this document, a finding with delta-rs's default checkpoint interval N and its source (C's N), and this step's Status.
 - Not touched: the `gate` subcommand's behaviour; `.env.example`, which step 1 wrote.
 
 #### Reads
@@ -472,12 +475,15 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 2. Extend `delta_probe.py` with `full` and `extra`.
 3. Write `analyse_ops.py`, with a small synthetic pair of logs to check its counts.
 4. Run `uv run python delta_probe.py full --local` and `analyse_ops.py` on the synthetic logs.
-5. Update the README Commands section and this step's Status.
+5. Record N with its source as a finding.
+6. Update the README Commands section and this step's Status.
 
 #### Check
 
 - `uv run python delta_probe.py full --local` reports `ok` for every counted check.
 - `analyse_ops.py` on the synthetic logs gives the expected counts per check and class.
+- `full` with `PROXY_URL` empty aborts before any request.
+- N is recorded as a finding with its source.
 
 ### Step 5 — Run probe A and verify the analysis
 
@@ -485,11 +491,11 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 - **Who:** Owner
 - **Commit:** `docs: record probe a results in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
-- **Gate:** the three analysis checks pass → otherwise the scripts are fixed and the probe is run again
+- **Gate:** the three analysis checks pass → otherwise the scripts are fixed and the probe is run again on a new dashboard day
 
 #### Scope
 
-A counted run of probe A on the test bucket; operation, size and latency tables in `output/`; findings for Q2 and for the cost model's inputs.
+A counted run of probe A on the test bucket; operation and size tables in `output/`; findings for Q2 and for the cost model's inputs.
 
 #### Reads
 
@@ -498,18 +504,19 @@ A counted run of probe A on the test bucket; operation, size and latency tables 
 #### Do
 
 1. Pick a day of the Cloudflare dashboard on which only this step touches the test bucket: not step 3's day, and no other run that day. The run must not cross midnight, in UTC or in the dashboard's time zone.
-2. Start the proxy in one terminal: `uv run mitmdump -s r2_proxy.py --listen-port 8080`.
-3. In another terminal, run `uv run python delta_probe.py full` and note the `run_id` it prints.
-4. Run `uv run python delta_probe.py extra --run-id <id>`, adding `--skip <check>` for a check whose client step 4 reported as unable to use the proxy.
-5. Stop the proxy.
-6. Only if a check was skipped: on another day, run `uv run python delta_probe.py extra --run-id <id> --only <check>` without the proxy.
-7. Once the counted day is over, read the test bucket's Class A and Class B operations for that day in the Cloudflare dashboard.
-8. Run `uv run python analyse_ops.py --run-id <id> --proxy-log output/proxy-<UTC start>.jsonl --r2-class-a <A> --r2-class-b <B>`.
-9. Report the probe summaries, the analysis summary and the R2 figures.
+2. Start the proxy in one terminal: `uv run mitmdump -s r2_proxy.py --listen-port 8080`. On its first start, mitmdump creates its CA certificate.
+3. In `.env`, set `PROXY_URL=http://localhost:8080` and `PROXY_CA_CERT` to the absolute path of `~/.mitmproxy/mitmproxy-ca-cert.pem`.
+4. In another terminal, run `uv run python delta_probe.py full` and note the `run_id` it prints.
+5. Run `uv run python delta_probe.py extra --run-id <id>`, adding `--skip <check>` for a check whose client step 4 reported as unable to use the proxy.
+6. Stop the proxy.
+7. Only if a check was skipped: on another day, run `uv run python delta_probe.py extra --run-id <id> --only <check> --no-proxy`.
+8. Once the counted day is over, read the test bucket's Class A and Class B operations for that day in the Cloudflare dashboard.
+9. Run `uv run python analyse_ops.py --run-id <id> --proxy-log output/proxy-<UTC start>.jsonl --r2-class-a <A> --r2-class-b <B>`.
+10. Report the probe summaries, the analysis summary and the R2 figures.
 
 #### Check
 
-- The three analysis checks pass, and no check is flagged as bypassing the proxy apart from one skipped in Do 4. Which total the dashboard matched (with or without failed requests) is recorded as a finding.
+- The three analysis checks pass, and no check is flagged as bypassing the proxy apart from one skipped in Do 5. Which total the dashboard matched (with or without failed requests) is recorded as a finding.
 - If the token check or the lock check fails, it is recorded as a finding and D7 is reopened with the owner before step 10; Decisions to record marks D7 as reopened (#28).
 - Claude records as findings: operations per commit by class, Parquet bytes per row, `_delta_log` bytes per commit, rewritten bytes, the maintenance and read results (guide) and the token and lock results.
 
