@@ -483,6 +483,7 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 - `uv run python delta_probe.py full --local` reports `ok` for every counted check.
 - `analyse_ops.py` on the synthetic logs gives the expected counts per check and class.
 - `full` with `PROXY_URL` empty aborts before any request.
+- `extra --no-proxy` without `--only` is rejected before any request.
 - N is recorded as a finding with its source.
 
 ### Step 5 — Run probe A and verify the analysis
