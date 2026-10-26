@@ -206,7 +206,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 - **What:** `deltalake` against a test R2 bucket with a small data sample.
 - **Data:** real `station_status` responses from both providers, a few hours from the local capture copy (`spikes/cloudflare-capture-spike/data/V4/raw/`), flattened to rows (station, time, bikes, docks). Commits mimic 1-minute runs, partitioned by day, so each commit touches one partition; MERGE runs on real keys (station + time).
 - **Checks,** in the order of the D4 gate: write, MERGE, two concurrent commits (hard cut); optimize, vacuum, reads from Polars and DuckDB (guide). Commits are kept safe by R2's conditional put, with no external lock; the delta-rs option that enables it is checked in the step.
-- **Measures:** the R2 operations per commit, by class (A, B); the latency of each commit; Parquet bytes per row in the written table, so C can size silver and gold; `_delta_log` bytes per commit and bytes rewritten by MERGE and optimize, so C can size Delta's overhead.
+- **Measures:** the R2 operations per commit, by class (A, B); the latency of each commit; Parquet bytes per row in the written table, so C can size silver and gold; `_delta_log` bytes per commit and bytes rewritten by MERGE and optimize, so C can size Delta's overhead. Each commit opens a fresh table handle, as a separate pipeline run would, so its operations include loading the table. The test table sets `delta.checkpointInterval = 10`, so checkpoints occur within the run. Per commit, the probe logs the JSON commits read since the last checkpoint, whether it wrote a checkpoint and, for MERGE, the files in the target partition ([#27](#decision-log)).
 - **Security ([D7](#d7-storage-security-baseline)):** uses a token scoped to the test bucket and checks that it cannot read or write `bikesharing-capture-spike`, the only production bucket that exists yet; tries to delete and overwrite an object under a locked prefix of the test bucket with the Object Read & Write token.
 - **Where it runs:** on the owner's Mac, against a test bucket in the production Cloudflare account, with an Object Read & Write token scoped to it. The owner creates the test bucket, the token and the lock rule in the console before the probe; the script only runs the checks.
 - **Counting:** a local HTTPS-inspecting proxy (mitmproxy) between `deltalake` and R2 logs every request and classifies it by the [R2 source card](../sources/r2-storage.md); the test bucket's R2 metrics give a second, independent count. `deltalake` gets the proxy address and its certificate through `storage_options`, so requests reach R2 unchanged and their signatures stay valid; only the probe process trusts that certificate. The proxy covers the whole counted run, reads and token and lock checks included; C takes only the commit and maintenance checks from the logs, and requests to other buckets are filtered out ([#22](#decision-log)).
@@ -246,6 +246,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - in live and 24/7 runs, a gold table commits no more often than its question's freshness (`architecture.md` §1.1): Q1, Q2, Q5 every run; Q3, Q4, Q7 hourly; Q6, Q8 daily;
   - so in a 1-minute run only 5 tables commit: the 2 dynamic silver tables and gold Q1, Q2, Q5; static silver tables commit once a day, when their feed is captured (`architecture.md` §1.1);
   - a catch-up commits once per table and pending day;
+  - a commit's operations are modelled from A's measures as table-load reads (per JSON commit since the last checkpoint), plus MERGE reads per file in the target partition (files accumulate until the next optimize), plus a checkpoint every N commits; N (delta-rs's default) and the optimize cadence are parameters ([#27](#decision-log));
   - the pipeline's LISTs on bronze are derived from ADR-0012's key layout: the provider, feed and day prefixes each run lists, at 1,000 keys per LIST page ([#23](#decision-log));
   - month 1 adds the initial load as one catch-up of the history archives and capture's backlog since capture started; the production start date is a parameter;
   - table counts and cadences are parameters.
@@ -268,7 +269,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 1 | [Q1](#q1-cost-calculation) | On-demand mode is a grid of catch-ups by live hours; the hard cut is judged at 10 catch-ups + 2 h live | Catch-ups and live use vary independently; the judged cell is the owner's pessimistic expected use | Method |
 | 2 | [Q1](#q1-cost-calculation) | The 24/7 scenarios are calculated and reported, not judged | The calculation is free; the cost curve as freshness is relaxed is an input for T039 | Method |
 | 3 | [Cost model](#c-cost-model) | Commit model: tables commit only with new data, gold at its question's freshness | An incremental pipeline writes only tables with new data; table counts stay pessimistic | Method |
-| 4 | [Cost model](#c-cost-model) | The cost model runs once, with measured operations per commit; the former Q3 is merged into Q1 | Measured data prevails over estimates; the pessimism lives in the scenarios | Method |
+| 4 | [Cost model](#c-cost-model) | The cost model runs once, with measured operations per commit; the former Q3 is merged into Q1 → #27 | Measured data prevails over estimates; the pessimism lives in the scenarios | Method |
 | 5 | [Probe A](#a-delta-on-r2) | Probe A counts operations with a local proxy, cross-checked against R2 metrics → #19 | Exact counts per commit and step; two independent counts check each other | Method |
 | 6 | [Probe A](#a-delta-on-r2) | Probe A runs on the owner's Mac against a scoped test bucket in the production account → #20 | About 1,000 operations per run, under 1% of the quota; the scoped token isolates production ([D7](#d7-storage-security-baseline)) | Method |
 | 7 | [Probe A](#a-delta-on-r2) | Probe A evidence is logged to files and checked by an analysis script | Evidence must be reproducible and checked, not read off the console | Method |
@@ -291,6 +292,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 24 | [Probe B](#b-measured-volume) | Capture's daily Class A and B from the dashboard, on capture-only days, check B's derived `state/` writes and D2's ~270–300k Class A; the metric prevails | Measured data prevails over derived counts | Steps |
 | 25 | [File layout](#file-layout) | `output/` is ignored by a `.gitignore` in the spike folder | The spike stays self-contained and the root file is not touched | Steps |
 | 26 | [Decided at framing](#decided-at-framing), [Step 10](#step-10--conclusion) | The spike writes no ADR. Its Conclusion adds Decisions to record (outcome, findings, ADR grouping, affected sections per decision); the ADRs, `architecture.md` and the R2 source card are written after the spike closes, in a fresh session, as T035's post-spike work | `architecture.md` and the ADRs are the project's most valuable documents and are written with full, clean context, not during a run; the closed spike holds everything they need | Steps review |
+| 27 | [Probe A](#a-delta-on-r2), [Cost model](#c-cost-model) | A opens a fresh table before each commit, on a test table with `delta.checkpointInterval = 10`, and logs table-load reads, checkpoints and files per MERGE; C models a commit as table load + per-file MERGE reads + a checkpoint every N commits, with N and the optimize cadence as parameters; refines #4 | A real run loads the table from scratch and its MERGE scans the files written since the last optimize, so a constant from a long-lived process can understate cost by orders of magnitude; a small interval shows several checkpoints in a short run, and each component is measured once and scaled in C | Steps review |
 
 ### File layout
 
@@ -440,8 +442,8 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 
 - `r2_proxy.py`: mitmproxy addon (decision log #19). Logs every request to `output/proxy-<UTC start>.jsonl`, one JSON line each: UTC time, bucket, method, path, query, status, request and response bytes, duration, and the operation and its class (A, B or free) as classified by the [R2 source card](../sources/r2-storage.md).
 - `delta_probe.py`:
-  - subcommand `full`, through the proxy: `write` (60 commits, one hour), `merge` (10 commits), `concurrent`, `optimize` (compaction), `vacuum` (a dry run with the 7-day default, then a run with zero retention and the retention check disabled, so the probe sees files deleted). Every client (`deltalake`, Polars, DuckDB, `boto3`) reaches the proxy through its own settings (proxy URL and the mitmproxy CA certificate), so only the probe process trusts it;
-  - per check it also logs Parquet bytes per row, `_delta_log` bytes per commit, and bytes rewritten by MERGE and optimize;
+  - subcommand `full`, through the proxy, on a table created with `delta.checkpointInterval = 10` and with a fresh `DeltaTable` opened before each commit (#27): `write` (60 commits, one hour), `merge` (10 commits), `concurrent`, `optimize` (compaction), `vacuum` (a dry run with the 7-day default, then a run with zero retention and the retention check disabled, so the probe sees files deleted). Every client (`deltalake`, Polars, DuckDB, `boto3`) reaches the proxy through its own settings (proxy URL and the mitmproxy CA certificate), so only the probe process trusts it;
+  - per check it also logs Parquet bytes per row, `_delta_log` bytes per commit, and bytes rewritten by MERGE and optimize; per commit, the JSON commits read since the last checkpoint, whether it wrote a checkpoint and, for MERGE, the files in the target partition;
   - subcommand `extra`, run after `full`, also through the proxy (#22): Polars and DuckDB read the table and match its row count (guide); the test token cannot list, read or write `R2_PROD_BUCKET` (a write attempt uses the key `s010-token-check/canary.txt`, so a wrongful success is harmless and easy to remove); under `R2_LOCKED_PREFIX`, a new object is written and then an overwrite and a delete of it are attempted with the test token.
 - `analyse_ops.py`: joins the proxy log and the probe log by time window; writes operations per check, per commit and per class to `output/`, for the test bucket only (requests to other buckets are filtered out by bucket); marks the `full` checks as the ones C takes; flags any check with no proxied request, as its client bypassed the proxy; runs the three analysis checks of §2 A:
   - known arithmetic: one append of one file gives one data PUT and one log PUT;
@@ -453,6 +455,7 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 
 - This document, §2 A (Measures, Security, Counting, Evidence, Analysis checks).
 - [R2 source card](../sources/r2-storage.md): operation classes, for the classifier.
+- delta-rs documentation, through the `web-researcher`: the default checkpoint interval, which C takes as N.
 - mitmproxy addon API, and the proxy and CA certificate settings of each client (`object_store` for `deltalake` and Polars, DuckDB's delta extension, `boto3`), through the `web-researcher`. A client with no such setting is reported before step 5; its check then runs on another day, uncounted.
 
 #### Do
@@ -581,12 +584,13 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
   - months reported (1, 2, 4, 6, 12), capture start date and production start date;
   - retention (D5, D6): bronze and gold indefinite, silver 12 months, 7 days of Delta history, 30 days of log;
   - maintenance: optimize and vacuum runs per table and pipeline day;
+  - the checkpoint interval N, delta-rs's default as confirmed in step 4;
   - an optional override of capture's monthly Class A and B with step 7's dashboard figures (#24);
   - prices and free quotas from the [R2 source card](../sources/r2-storage.md), and the USD→EUR rate with its date, since prices are in USD and the threshold in EUR;
   - paths to A's operation tables and B's `volumes.json`.
 - `cost_model.py`: for each scenario and month, storage per layer (bronze, silver, gold, Delta overhead) and Class A and B operations, split into capture `raw/`, capture `logs/` and `state/`, and pipeline. It computes monthly and accumulated cost against the shared free quotas, with month 1 including the initial load (#17). It writes `output/cost_*.csv` and a summary, and marks per scenario whether it fits the D2 gate (at most €2 in every month up to 12).
 - The pipeline's LISTs on bronze are derived from ADR-0012's key layout: the provider, feed and day prefixes each run lists, at 1,000 keys per LIST page (#23).
-- Silver and gold commits are costed with A's measured MERGE commit (the more expensive one measured), so the model stays pessimistic.
+- Silver and gold commits are costed as MERGE commits from A's measures (#27): table-load reads for the JSON commits since the last checkpoint, plus reads per file in the target partition, which grows with each commit until the next optimize, plus a checkpoint every N commits.
 - Not touched: A's and B's outputs, which are only read.
 
 #### Reads
@@ -606,7 +610,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 #### Check
 
-The targeted check matches the hand computation for storage, Class A (bronze LISTs included), Class B and cost.
+The targeted check matches the hand computation for storage, Class A (bronze LISTs and checkpoints included), Class B (table loads and per-file MERGE reads included) and cost.
 
 ### Step 9 — Run probe C and verify the model
 
