@@ -44,7 +44,7 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
    - 2–3 options, each with its practical consequence;
    - the recommendation marked, with a one-line reason and the standard or pattern that applies.
 
-   Typical concerns: what runs where, schedule and window, what is captured and logged, how the evidence is analysed (checks instead of tests: known arithmetic, independent counts, fault injection), cost limits and tear-down. Each decision is a row in the Decision log with today's date. A cross-cutting decision becomes an ADR, linked in the header.
+   Typical concerns: what runs where, schedule and window, what is captured and logged, how the evidence is analysed (checks instead of tests: known arithmetic, independent counts, fault injection), cost limits and tear-down. The content of each decision goes in the section it belongs to, stated once. The Decision log only records it, pointing to that section. A cross-cutting decision becomes an ADR, linked in the header.
 3. **Shared behaviour,** when several variants follow the same rules.
 4. **File layout** under `spikes/<short-title>/`, README included, captured data and outputs ignored by Git (ADR-0009).
 5. **Approval.** Ask for the Method approval. Once approved, check Method in Phase. Steps may follow in the same session.
