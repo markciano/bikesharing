@@ -9,7 +9,7 @@
 - State: Draft 📝
 - Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
-- Current step: Method approved after review; next: Steps
+- Current step: Steps index approved; next: write each step in full, from Step 1
 
 ## 1. Questions — what we need to know
 
@@ -302,24 +302,85 @@ spikes/storage-table-format/
 
 ## 3. Steps
 
-### Step 1 — `<title>`
+### Step 1 — Scaffold the spike folder
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Gate:** —
+
+TODO: write in full. Files: `README.md`, `pyproject.toml`, `uv.lock`, `.env.example`.
+
+### Step 2 — Write the Delta gate checks
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Gate:** —
+
+TODO: write in full. Files: `delta_probe.py` (write, MERGE, concurrent commits).
+
+### Step 3 — Set up the test bucket and run the gate checks
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md.
-- **R:** —
-- **Model:** —
-- **Gate:** `<condition>` → `<consequence>`
+- **Gate:** write, MERGE and concurrent commits pass (D4 hard cut) → otherwise the run stops, and probe A and the cost model are re-planned for Iceberg
 
-#### Scope
+TODO: write in full. Files: `.env` (local, ignored by Git).
 
-#### Reads
+### Step 4 — Add counting and the remaining checks
 
-#### Do
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Gate:** —
 
-#### Check
+TODO: write in full. Files: `r2_proxy.py`, `delta_probe.py` (optimize, vacuum, reads, token and lock checks), `analyse_ops.py`.
 
-### Step N — Conclusion
+### Step 5 — Run probe A and verify the analysis
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Gate:** the three analysis checks pass → otherwise the scripts are fixed and the probe is run again
+
+TODO: write in full. Files: `output/`.
+
+### Step 6 — Write the volume measurement
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Gate:** —
+
+TODO: write in full. Files: `measure_volume.py`.
+
+### Step 7 — Run probe B and verify volumes
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Gate:** —
+
+TODO: write in full. Files: `output/`.
+
+### Step 8 — Write the cost model
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Gate:** —
+
+TODO: write in full. Files: `cost_model.py`, `params.toml`.
+
+### Step 9 — Run probe C and verify the model
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Gate:** at least one scenario costs at most €2 in every month (D2 gate) → otherwise D2 is re-decided
+
+TODO: write in full. Files: `output/`.
+
+### Step 10 — Conclusion
+
+- **Status:** 💤 todo
+- **Who:** Claude, Owner (teardown)
+- **Gate:** —
+
+TODO: write in full. Files: this document, `README.md`; teardown of the test lock rule, bucket and token.
 
 ## 4. Findings
 
