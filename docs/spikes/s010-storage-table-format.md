@@ -9,7 +9,7 @@
 - State: Draft 📝
 - Phase: [x] Questions · [ ] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
-- Current step: —
+- Current step: Method drafted; owner review with another agent before approval
 
 ## 1. Questions — what we need to know
 
@@ -25,23 +25,21 @@ Decisions taken by analysis while framing the spike, without a run. The ADRs are
 
 #### D1. Own lakehouse on object storage
 
-Decided 2026-10-25. Every medallion layer (ADR-0018) is stored as files in open formats in an object store, and compute runs separately from storage.
+Every medallion layer (ADR-0018) is stored as files in open formats in an object store, and compute runs separately from storage.
 
 - Rejected: silver and gold in a managed analytics platform (warehouse), because it ties storage to that platform's engine and free quotas, and merges this decision with the engine choice (T036).
 
 #### D2. Cloudflare R2 is the object store for every layer, subject to the volume and operations calculation
 
-Decided 2026-10-25.
-
 - Capture already lands in R2 (ADR-0011), so bronze needs no move and capture stays as it is.
 - R2 charges no egress, so the pipeline can run anywhere (T036) without paying to read its data.
 - Storage above the free 10 GB-month costs about $0.015/GB-month: even 50 GB stays well under the project's €10/month (d002 R4).
-- The open risk is operations, not storage: the pipeline's listings, reads and writes add to capture's ~270–300k Class A per month (`raw/`, `logs/`, `state/`; estimate, measured by probe A) against the free 1M. A Q verifies it; R2 is compared with another store only if it fails a hard constraint.
+- The open risk is operations, not storage: the pipeline's listings, reads and writes add to capture's ~270–300k Class A per month (`raw/`, `logs/`, `state/`; estimate, measured by [probe B](#b-measured-volume)) against the free 1M. A Q verifies it; R2 is compared with another store only if it fails a hard constraint.
 - Rejected: comparing another store (e.g. Backblaze B2) from the start, because no constraint currently argues against R2.
 
 #### D3. Bronze is the captured `json.gz` objects as they are
 
-Decided 2026-10-25. No bronze table is built from them.
+No bronze table is built from them.
 
 | | Objects as captured (chosen) | Landing objects + bronze table |
 |---|---|---|
@@ -58,7 +56,7 @@ Decided 2026-10-25. No bronze table is built from them.
 
 #### D4. Delta Lake is the table format for silver and gold, subject to the probe on R2
 
-Decided 2026-10-25. Chosen with a weighted decision matrix: hard cut first, then scores against anchors fixed before scoring. Facts gathered by the `web-researcher` on 2026-10-25 (Sources).
+Chosen with a weighted decision matrix: hard cut first, then scores against anchors fixed before scoring. Facts gathered by the `web-researcher` on 2026-10-25 (Sources).
 
 Hard cut: reads and writes from Python without JVM or cluster, and adds no paid service whose cost breaks the project's €10/month (d002 R4). All three candidates pass; Iceberg only conditionally, because its catalog options are Cloudflare Basin Catalog (formerly R2 Data Catalog; GA 2026-10-01; paid above 1M catalog operations per month) or a SQLite catalog the PyIceberg docs mark as test-only.
 
@@ -92,16 +90,12 @@ Scores (total = Σ score × weight, maximum 105, normalised to 0–10):
 
 #### D5. Bronze is kept indefinitely, reviewed only above a cost threshold
 
-Decided 2026-10-25.
-
 - Silver and gold are rebuilt from bronze (d002 R13), so whatever is deleted from bronze can never be rebuilt.
 - The longest gold windows are 12 months (Q3, Q4, Q6, Q7), and Q8 covers changes since the earliest archive loaded.
 - Raw grows about 2.7 GB per month, about 33 GB per year (measured 2026-10-14 to 2026-10-24, `architecture.md` §3); above the free 10 GB it costs about $0.015/GB-month, under $0.40/month at month 12.
 - Rejected: a rolling window of 12 months plus a margin, because no rule change could then be applied to older data, and Q8 would depend on what silver kept.
 
 #### D6. Silver keeps a rolling 12 months, gold is kept indefinitely, and Delta keeps 7 days of history
-
-Decided 2026-10-25.
 
 - Silver holds bronze's observations as a table: parsed, deduplicated, typed, in UTC and on the common model (ADR-0008); gold holds hourly and daily aggregates.
 - Both are rebuildable from bronze (D5), so their retention trades storage against rebuild cost, with no data at risk.
@@ -113,7 +107,7 @@ Decided 2026-10-25.
 
 #### D7. Storage security baseline
 
-Decided 2026-10-26. Security is treated explicitly, not left implicit: R2 holds the only copy of bronze, and its credentials give access to both the data and the bill. Threats are listed with STRIDE, and each control follows least privilege (NIST SP 800-53, AC-6).
+Security is treated explicitly, not left implicit: R2 holds the only copy of bronze, and its credentials give access to both the data and the bill. Threats are listed with STRIDE, and each control follows least privilege (NIST SP 800-53, AC-6).
 
 | Threat | Impact | Control |
 |---|---|---|
@@ -137,7 +131,7 @@ Access per component:
 
 - R2 has no object versioning, so the bucket lock is the only guard against losing bronze. Only an Admin token can remove a lock rule; the owner keeps that token and uses it only for D5's cost review.
 - TODO: before the lock is enabled, confirm that capture writes each key under `raw/` and `logs/` once (ADR-0012 key layout); the lock would also block a capture retry that rewrites a key.
-- Probe C checks that its test token cannot read or write the production buckets, and whether a bucket lock blocks a delete made with an Object Read & Write token (the docs do not say).
+- [Probe A](#a-delta-on-r2) checks that its test token cannot read or write the production buckets, and whether a bucket lock blocks a delete made with an Object Read & Write token (the docs do not say).
 - Rejected: one token with read and write on everything. It is simpler, but a single leak or pipeline bug puts bronze at risk.
 - Rejected: one bucket per layer. It would let the visualization read gold alone, but T038 has not decided how gold is served; gold moves to its own bucket then if needed.
 
@@ -194,21 +188,21 @@ Against a real R2 bucket with `deltalake`:
 
 ### Approach
 
-Three probes run in this order. C goes first because it tests the riskiest assumption (D4) and its result changes B: if Delta fails on R2, Iceberg is probed in turn and Basin Catalog's cost enters the model.
+Three probes run in order A, B, C. A goes first because it tests the riskiest assumption (D4) and its result changes C: if Delta fails on R2, Iceberg is probed in turn and Basin Catalog's cost enters the model.
 
-| Order | Probe | Answers | Feeds |
-|---|---|---|---|
-| 1 | C. Delta on R2 | Q2 (D4 gate); commit latency (observed) | Measured operations per commit → B |
-| 2 | A. Measured volume | Inputs for Q1 | Storage and capture operations → B |
-| 3 | B. Cost model | Q1 (D2 gate) | — |
+| Probe | Answers | Feeds |
+|---|---|---|
+| A. Delta on R2 | Q2 (D4 gate); commit latency (observed) | Measured operations per commit and Parquet bytes per row → C |
+| B. Measured volume | Inputs for Q1 | Storage and capture operations → C |
+| C. Cost model | Q1 (D2 gate) | — |
 
-#### C. Delta on R2
+#### A. Delta on R2
 
 - **What:** `deltalake` against a test R2 bucket with a small data sample.
 - **Data:** real `station_status` responses from both providers, a few hours from the local capture copy (`spikes/cloudflare-capture-spike/data/V4/raw/`), flattened to rows (station, time, bikes, docks). Commits mimic 1-minute runs, partitioned by day, so each commit touches one partition; MERGE runs on real keys (station + time).
 - **Checks,** in the order of the D4 gate: write, MERGE, two concurrent commits (hard cut); optimize, vacuum, reads from Polars and DuckDB (guide).
-- **Measures:** the R2 operations per commit, by class (A, B); the latency of each commit; Parquet bytes per row in the written table, so B can size silver.
-- **Security (D7):** uses a token scoped to the test bucket and checks that it cannot read or write the production buckets; sets a bucket lock on a prefix of the test bucket and tries to delete and overwrite an object under it with the Object Read & Write token.
+- **Measures:** the R2 operations per commit, by class (A, B); the latency of each commit; Parquet bytes per row in the written table, so C can size silver.
+- **Security ([D7](#d7-storage-security-baseline)):** uses a token scoped to the test bucket and checks that it cannot read or write the production buckets; sets a bucket lock on a prefix of the test bucket and tries to delete and overwrite an object under it with the Object Read & Write token.
 - **Where it runs:** on the owner's Mac, against a test bucket in the production Cloudflare account, with an Object Read & Write token scoped to it.
 - **Counting:** a local proxy between `deltalake` and R2 logs every request and classifies it by the [R2 source card](../sources/r2-storage.md); the test bucket's R2 metrics give a second, independent count.
 - **Evidence:**
@@ -223,7 +217,7 @@ Three probes run in this order. C goes first because it tests the riskiest assum
 - **Clean-up:** a final step removes the test lock rule, then deletes the bucket and the token; a locked bucket cannot be emptied, so the lock rule goes first.
 - An Iceberg probe is not planned; it is built only if the D4 gate fails (Exit criteria).
 
-#### A. Measured volume
+#### B. Measured volume
 
 - Runs on the owner's local copies, not the production bucket, so it spends no R2 operations:
   - `spikes/cloudflare-capture-spike/data/V4/`: about 10 days of the production bucket, with the same layout (`raw/`, `logs/`, `state/`);
@@ -232,13 +226,13 @@ Three probes run in this order. C goes first because it tests the riskiest assum
   - `raw/`: objects, bytes and records per feed and day; the first and last days are dropped as incomplete;
   - `logs/` and `state/`: objects, bytes and writes per day, as capture's own Class A operations and storage;
   - history: size as `.7z` and uncompressed.
-- Writes one volumes file that B reads.
+- Writes one volumes file that C reads.
 - s005's estimates are used only where nothing is measured.
 
-#### B. Cost model
+#### C. Cost model
 
 - **What:** a script that computes, for each scenario in Q1 (24/7 cadences and the on-demand grid) and for months 2, 4, 6 and 12, storage per layer and Class A and Class B operations per month, and their monthly and accumulated cost against R2's free quotas and prices.
-- **Inputs:** A's volumes, C's measured operations per commit, the commit model below, and the retention of D5 and D6.
+- **Inputs:** A's measured operations per commit and Parquet bytes per row, B's volumes, the commit model below, and the retention of D5 and D6.
 - **Commit model:**
   - silver has one table per feed type on the common model (9: 2 dynamic, 7 static); gold has one table per guiding question (8);
   - a table commits at most once per run, and only when it has new data;
@@ -246,30 +240,30 @@ Three probes run in this order. C goes first because it tests the riskiest assum
   - so in a 1-minute run only 5 tables commit: the 2 dynamic silver tables and gold Q1, Q2, Q5; static silver tables commit once a day, when their feed is captured (`architecture.md` §1.1);
   - a catch-up commits once per table and pending day;
   - table counts and cadences are parameters.
-- **Sizing:** silver size is A's records per day times C's Parquet bytes per row, so no compression ratio is assumed.
+- **Sizing:** silver size is B's records per day times A's Parquet bytes per row, so no compression ratio is assumed.
 - **Output:** cost per layer as well as the total; capture's `logs/` and `state/` writes are reported apart from `raw/`, so their share of the quota is visible.
-- **Runs** once, after C and A; parameters are kept apart from the logic so the model can be re-run with new inputs.
+- **Runs** once, after A and B; parameters are kept apart from the logic so the model can be re-run with new inputs.
 - **Prices, quotas and operation classes** come from the [R2 source card](../sources/r2-storage.md). Assumptions where the pricing page is silent:
   - the free tier is shared by every bucket in the account (pessimistic);
-  - a conditional PutObject is Class A, ListObjectsV2 is Class A as ListObjects, and DeleteObjects is free as DeleteObject; C confirms them on the test bucket's metrics;
+  - a conditional PutObject is Class A, ListObjectsV2 is Class A as ListObjects, and DeleteObjects is free as DeleteObject; A confirms them on the test bucket's metrics;
   - deletes (silver retention, vacuum) are free, so they add no cost.
 
 ### Decision log
 
-| Date | Decision | Reason |
+| # | Decision | Reason |
 |---|---|---|
-| 2026-10-25 | On-demand mode is a grid of catch-ups by live hours; the hard cut is judged at 10 catch-ups + 2 h live (see Q1) | Catch-ups and live use vary independently; the judged cell is the owner's pessimistic expected use |
-| 2026-10-25 | The 24/7 scenarios are calculated and reported, not judged (see Q1) | The calculation is free; the cost curve as freshness is relaxed is an input for T039 |
-| 2026-10-25 | Commit model: tables commit only with new data, gold at its question's freshness (see B) | An incremental pipeline writes only tables with new data; table counts stay pessimistic |
-| 2026-10-26 | The cost model runs once, with measured operations per commit; the former Q3 is merged into Q1 (see B) | Measured data prevails over estimates; the pessimism lives in the scenarios |
-| 2026-10-26 | Probe C counts operations with a local proxy, cross-checked against R2 metrics (see C) | Exact counts per commit and step; two independent counts check each other |
-| 2026-10-26 | Probe C runs on the owner's Mac against a scoped test bucket in the production account (see C) | About 1,000 operations per run, under 1% of the quota; the scoped token isolates production (D7) |
-| 2026-10-26 | Probe C evidence is logged to files and checked by an analysis script (see C) | Evidence must be reproducible and checked, not read off the console |
-| 2026-10-26 | Probe C writes real `station_status` data from the local capture copy (see C) | File sizes and MERGE keys match the real pipeline; synthetic data would invent both |
-| 2026-10-26 | Probe A measures `raw/`, `logs/` and `state/` separately on the local copy, plus the Bicing history (see A) | The local copy mirrors the bucket and spends no operations; `logs/` and `state/` are capture writes too |
-| 2026-10-26 | Silver is sized from A's records and C's Parquet bytes per row (see B) | Two measurements replace an assumed compression ratio |
-| 2026-10-26 | The bronze bucket lock covers `raw/` and `logs/`, not `state/` (see D7) | `state/` is rewritten on every pass, so a lock would break capture |
-| 2026-10-26 | Q1 reports cost at months 2, 4, 6 and 12; the hard cut is €2 in any month, raised from €1 (see Q1, Exit criteria) | The measured volume (about 33 GB/year) is 2–4 times s005's estimate, so storage alone could approach €1 at month 12 |
+| 1 | On-demand mode is a grid of catch-ups by live hours; the hard cut is judged at 10 catch-ups + 2 h live ([Q1](#q1-cost-calculation)) | Catch-ups and live use vary independently; the judged cell is the owner's pessimistic expected use |
+| 2 | The 24/7 scenarios are calculated and reported, not judged ([Q1](#q1-cost-calculation)) | The calculation is free; the cost curve as freshness is relaxed is an input for T039 |
+| 3 | Commit model: tables commit only with new data, gold at its question's freshness ([C](#c-cost-model)) | An incremental pipeline writes only tables with new data; table counts stay pessimistic |
+| 4 | The cost model runs once, with measured operations per commit; the former Q3 is merged into Q1 ([C](#c-cost-model)) | Measured data prevails over estimates; the pessimism lives in the scenarios |
+| 5 | Probe A counts operations with a local proxy, cross-checked against R2 metrics ([A](#a-delta-on-r2)) | Exact counts per commit and step; two independent counts check each other |
+| 6 | Probe A runs on the owner's Mac against a scoped test bucket in the production account ([A](#a-delta-on-r2)) | About 1,000 operations per run, under 1% of the quota; the scoped token isolates production ([D7](#d7-storage-security-baseline)) |
+| 7 | Probe A evidence is logged to files and checked by an analysis script ([A](#a-delta-on-r2)) | Evidence must be reproducible and checked, not read off the console |
+| 8 | Probe A writes real `station_status` data from the local capture copy ([A](#a-delta-on-r2)) | File sizes and MERGE keys match the real pipeline; synthetic data would invent both |
+| 9 | Probe B measures `raw/`, `logs/` and `state/` separately on the local copy, plus the Bicing history ([B](#b-measured-volume)) | The local copy mirrors the bucket and spends no operations; `logs/` and `state/` are capture writes too |
+| 10 | Silver is sized from B's records and A's Parquet bytes per row ([C](#c-cost-model)) | Two measurements replace an assumed compression ratio |
+| 11 | The bronze bucket lock covers `raw/` and `logs/`, not `state/` ([D7](#d7-storage-security-baseline)) | `state/` is rewritten on every pass, so a lock would break capture |
+| 12 | Q1 reports cost at months 2, 4, 6 and 12; the hard cut is €2 in any month, raised from €1 ([Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria)) | The measured volume (about 33 GB/year) is 2–4 times s005's estimate, so storage alone could approach €1 at month 12 |
 
 ### File layout
 
@@ -279,12 +273,12 @@ spikes/storage-table-format/
 ├── pyproject.toml     Pinned Python and locked dependencies (ADR-0016, ADR-0017)
 ├── uv.lock
 ├── .env.example       Test bucket endpoint and scoped token, empty values
-├── r2_proxy.py        C: logging proxy between deltalake and R2, one JSON line per request
-├── delta_probe.py     C: write, MERGE, concurrency, optimize, vacuum, reads, token and lock checks
-├── analyse_ops.py     C: joins proxy and probe logs; operations per check, step and class; the three checks
-├── measure_volume.py  A: raw/, logs/, state/ and history volumes
-├── cost_model.py      B: scenarios × months, cost per layer and total
-├── params.toml        B: every parameter (tables, cadences, retention, prices), apart from the logic
+├── r2_proxy.py        A: logging proxy between deltalake and R2, one JSON line per request
+├── delta_probe.py     A: write, MERGE, concurrency, optimize, vacuum, reads, token and lock checks
+├── analyse_ops.py     A: joins proxy and probe logs; operations per check, step and class; the three checks
+├── measure_volume.py  B: raw/, logs/, state/ and history volumes
+├── cost_model.py      C: scenarios × months, cost per layer and total
+├── params.toml        C: every parameter (tables, cadences, retention, prices), apart from the logic
 └── output/            Ignored by Git (ADR-0009): logs, volumes, operation and cost tables
 ```
 
