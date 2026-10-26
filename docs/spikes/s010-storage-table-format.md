@@ -7,9 +7,9 @@
 ## Status
 
 - State: Draft 📝
-- Phase: [x] Questions · [ ] Method · [ ] Steps · [ ] Steps review
+- Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
-- Current step: Method review in a fresh session: passes 1 (decisions), 2 (traceability) and 3 (step readiness) applied; final pass (wording) pending
+- Current step: Method approved after review; next: Steps
 
 ## 1. Questions — what we need to know
 
@@ -135,7 +135,7 @@ Access per component:
 - R2 has no object versioning, so the bucket lock is the only guard against losing bronze. Only an Admin token can remove a lock rule; the owner keeps that token and uses it only for D5's cost review.
 - TODO (T039): before the lock is enabled, confirm that capture writes each key under `raw/` and `logs/` once (ADR-0012 key layout); the lock would also block a capture retry that rewrites a key.
 - TODO (production design): capture's existing bucket is named `bikesharing-capture-spike`; R2 cannot rename buckets, so a production name means copying `raw/` and `logs/` to a new bucket before the lock is enabled.
-- [Probe A](#a-delta-on-r2) checks that its test token cannot read or write the production buckets, and whether a bucket lock blocks a delete made with an Object Read & Write token (the docs do not say).
+- [Probe A](#a-delta-on-r2) checks that its test token cannot read or write `bikesharing-capture-spike`, the only production bucket that exists yet, and whether a bucket lock blocks a delete made with an Object Read & Write token (the docs do not say).
 - Rejected: one token with read and write on everything. It is simpler, but a single leak or pipeline bug puts bronze at risk.
 - Rejected: one bucket per layer. It would let the visualization read gold alone, but T038 has not decided how gold is served; gold moves to its own bucket then if needed.
 
@@ -197,7 +197,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 
 | Probe | Answers | Feeds |
 |---|---|---|
-| A. Delta on R2 | Q2 (D4 gate); commit latency (observed) | Measured operations per commit and Parquet bytes per row → C |
+| A. Delta on R2 | Q2 (D4 gate); commit latency (observed) | Measured operations per commit, Parquet bytes per row, `_delta_log` and rewritten bytes → C |
 | B. Measured volume | Inputs for Q1 | Storage and capture operations → C |
 | C. Cost model | Q1 (D2 gate) | — |
 
@@ -226,7 +226,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 
 - Runs on the owner's local copies, not the production bucket, so it spends no R2 operations:
   - `spikes/cloudflare-capture-spike/data/V4/`: about 10 days of the production bucket, with the same layout (`raw/`, `logs/`, `state/`);
-  - `spikes/bicing-spike/historical-data/raw/`: the Bicing history archives (`.7z`, January–September 2026, d002 R5).
+  - `spikes/bicing-spike/historical-data/raw/`: the Bicing history archives (`.7z`, December 2025–September 2026, d002 R5).
 - Measures:
   - `raw/`: objects, bytes and records per feed and day; the first and last days are dropped as incomplete;
   - `logs/` and `state/`: objects, bytes and writes per day, as capture's own Class A operations and storage;
@@ -237,7 +237,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 #### C. Cost model
 
 - **What:** a script that computes, for each scenario in Q1 (24/7 cadences and the on-demand grid) and for months 1, 2, 4, 6 and 12, storage per layer and Class A and Class B operations per month, and their monthly and accumulated cost against R2's free quotas and prices.
-- **Inputs:** A's measured operations per commit and Parquet bytes per row, B's volumes, the commit model below, and the retention of D5 and D6.
+- **Inputs:** A's measured operations per commit, Parquet bytes per row, `_delta_log` bytes per commit and bytes rewritten by MERGE and optimize, B's volumes, the commit model below, and the retention of D5 and D6.
 - **Commit model:**
   - silver has one table per feed type on the common model (9: 2 dynamic, 7 static); gold has one table per guiding question (8);
   - a table commits at most once per run, and only when it has new data;
