@@ -9,7 +9,7 @@
 - State: Draft 📝
 - Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
-- Current step: Steps index approved; next: write each step in full, from Step 1
+- Current step: Steps written; next: Steps approval, then `/spike s010 review-steps` in a new session
 
 ## 1. Questions — what we need to know
 
@@ -228,9 +228,10 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - `spikes/cloudflare-capture-spike/data/V4/`: about 10 days of the production bucket, with the same layout (`raw/`, `logs/`, `state/`);
   - `spikes/bicing-spike/historical-data/raw/`: the Bicing history archives (`.7z`, December 2025–September 2026, d002 R5).
 - Measures:
-  - `raw/`: objects, bytes and records per feed and day; the first and last days are dropped as incomplete;
+  - `raw/`: objects, bytes and records per feed and day; for `station_status`, also distinct (`station_id`, `last_reported`) records, silver's dedup basis; the first and last days are dropped as incomplete;
   - `logs/` and `state/`: objects, bytes and writes per day, as capture's own Class A operations and storage;
-  - history: size as `.7z` and uncompressed.
+  - history, per archive and type: size as `.7z` and uncompressed, and raw rows (an upper bound); for ESTACIONS (`station_status`), distinct (`station_id`, `last_reported`) rows and snapshots per day; for INFORMACIO (`station_information`), rows at one snapshot per day, the basis of C's daily static commits ([#21](#decision-log));
+  - archives are read as a stream, not extracted to disk.
 - Writes one volumes file that C reads.
 - s005's estimates are used only where nothing is measured.
 
@@ -248,7 +249,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - table counts and cadences are parameters.
 - **Sizing:**
   - bronze: B's `raw/` and `logs/` growth plus the history archives as `.7z`;
-  - silver: B's records per day times A's Parquet bytes per row, so no compression ratio is assumed; it starts in month 1 with the history inside its 12-month window;
+  - silver: B's deduplicated records per day (raw records for feeds without a dedup basis) times A's Parquet bytes per row, so no compression ratio is assumed; raw records give an upper bound; it starts in month 1 with the history inside its 12-month window;
   - gold: stations (B) × time buckets (hours or days) × tables (parameter) × A's bytes per row, an upper bound by cardinality;
   - Delta overhead in silver and gold: A's `_delta_log` bytes per commit × 30 days of commits, plus the bytes rewritten by MERGE and optimize in 7 days ([D6](#d6-silver-keeps-a-rolling-12-months-gold-is-kept-indefinitely-and-delta-keeps-7-days-of-history)).
 - **Output:** cost per layer as well as the total; capture's `logs/` and `state/` writes are reported apart from `raw/`, so their share of the quota is visible.
@@ -270,7 +271,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 6 | [Probe A](#a-delta-on-r2) | Probe A runs on the owner's Mac against a scoped test bucket in the production account → #20 | About 1,000 operations per run, under 1% of the quota; the scoped token isolates production ([D7](#d7-storage-security-baseline)) | Method |
 | 7 | [Probe A](#a-delta-on-r2) | Probe A evidence is logged to files and checked by an analysis script | Evidence must be reproducible and checked, not read off the console | Method |
 | 8 | [Probe A](#a-delta-on-r2) | Probe A writes real `station_status` data from the local capture copy | File sizes and MERGE keys match the real pipeline; synthetic data would invent both | Method |
-| 9 | [Probe B](#b-measured-volume) | Probe B measures `raw/`, `logs/` and `state/` separately on the local copy, plus the Bicing history | The local copy mirrors the bucket and spends no operations; `logs/` and `state/` are capture writes too | Method |
+| 9 | [Probe B](#b-measured-volume) | Probe B measures `raw/`, `logs/` and `state/` separately on the local copy, plus the Bicing history → #21 | The local copy mirrors the bucket and spends no operations; `logs/` and `state/` are capture writes too | Method |
 | 10 | [Cost model](#c-cost-model) | Silver is sized from B's records and A's Parquet bytes per row → #16 | Two measurements replace an assumed compression ratio | Method |
 | 11 | [D7](#d7-storage-security-baseline) | The bronze bucket lock covers `raw/` and `logs/`, not `state/` → #13 | `state/` is rewritten on every pass, so a lock would break capture | Method |
 | 12 | [Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria) | Q1 reports cost at months 2, 4, 6 and 12; the hard cut is €2 in any month, raised from €1 → #17 | €2 is 20% of d002 R4's €10/month for R2 storage and operations; the rest is left for T036–T038 | Method |
@@ -282,6 +283,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 18 | [Probe A](#a-delta-on-r2) | Probe A keeps concurrent commits safe with R2's conditional put, with no external lock | It is what D4 scored (only the bucket); a DynamoDB lock adds an AWS service and would reopen D4 | Method review |
 | 19 | [Probe A](#a-delta-on-r2) | The proxy is mitmproxy with HTTPS inspection, trusted by the probe process only; refines #5 | Requests are signed (SigV4) for R2's host, so a plain reverse proxy breaks them; mitmproxy is the standard HTTP inspection tool and needs no signing code | Method review |
 | 20 | [Probe A](#a-delta-on-r2) | The owner creates and removes the test bucket, token and lock rule in the console; the script only runs the checks; refines #6 | Operational actions are the owner's (CLAUDE.md), and the script never holds an admin credential | Method review |
+| 21 | [Probe B](#b-measured-volume) | B counts history rows per archive type, with the same dedup basis as capture's `station_status` (`station_id`, `last_reported`); INFORMACIO at one snapshot per day; raw rows kept as an upper bound; extends #9 | C sizes silver in rows (#10) and month 1 holds the history (#17); deduplicated rows are what silver stores, and both sources are counted on the same basis | Steps |
 
 ### File layout
 
@@ -302,85 +304,359 @@ spikes/storage-table-format/
 
 ## 3. Steps
 
+The cheapest test of the riskiest assumption runs first: steps 2–3 check the D4 gate on R2 without instrumentation, before counting is built on it (steps 4–5). Paths in the steps are relative to `spikes/storage-table-format/` unless they start at the repository root.
+
+| # | Title | Who | Gate | Files |
+|---|---|---|---|---|
+| 1 | Scaffold the spike folder | Claude | — | `README.md`, `pyproject.toml`, `uv.lock`, `.env.example`, root `.gitignore` |
+| 2 | Write the Delta gate checks | Claude | — | `delta_probe.py` (write, MERGE, concurrent commits) |
+| 3 | Set up the test bucket and run the gate checks | Owner | D4 hard cut | `.env` (local) |
+| 4 | Add counting and the remaining checks | Claude | — | `r2_proxy.py`, `delta_probe.py`, `analyse_ops.py` |
+| 5 | Run probe A and verify the analysis | Owner | Analysis checks | `output/` |
+| 6 | Write the volume measurement | Claude | — | `measure_volume.py` |
+| 7 | Run probe B and verify volumes | Owner | — | `output/` |
+| 8 | Write the cost model | Claude | — | `cost_model.py`, `params.toml` |
+| 9 | Run probe C and verify the model | Owner | D2 gate | `output/` |
+| 10 | Conclusion | Claude, Owner (teardown) | — | this document, `README.md`; test lock rule, bucket and token |
+
 ### Step 1 — Scaffold the spike folder
 
 - **Status:** 💤 todo
 - **Who:** Claude
+- **Commit:** `chore: scaffold storage and table format spike`
+- **Model:** sonnet · medium
 - **Gate:** —
 
-TODO: write in full. Files: `README.md`, `pyproject.toml`, `uv.lock`, `.env.example`.
+#### Scope
+
+- `README.md`: the question (s010 Main question), a link to this document, setup (`uv sync --locked`, `.env` from `.env.example`) and a Commands section that later steps fill.
+- `pyproject.toml` and `uv.lock`: Python pinned in `requires-python`; dependencies `deltalake` (≥ 1.0), `polars`, `duckdb`, `boto3`, `mitmproxy`, `python-dotenv`.
+- `.env.example`, empty values: `R2_ACCOUNT_ID`, `R2_TEST_BUCKET`, `R2_TEST_ACCESS_KEY_ID`, `R2_TEST_SECRET_ACCESS_KEY`, `R2_PROD_BUCKET`, `R2_LOCKED_PREFIX`.
+- Root `.gitignore`: `spikes/storage-table-format/output/` added next to the other spike outputs (ADR-0009).
+- Not touched: anything outside these files.
+
+#### Reads
+
+- This document, §2 File layout: the folder's files and their purpose.
+- `.claude/rules/code/spikes.md`: what a spike README holds.
+- Root `.gitignore`, the spike output entries: where the new entry goes.
+
+#### Do
+
+1. Create `pyproject.toml` with `uv init --bare` and add the dependencies with `uv add`, which writes `uv.lock`.
+2. Write `.env.example`.
+3. Write `README.md`.
+4. Add the `output/` entry to the root `.gitignore`.
+5. Update this step's Status.
+
+#### Check
+
+- `uv sync --locked` succeeds and `uv run python -c "import deltalake, polars, duckdb, boto3; print(deltalake.__version__)"` prints a version ≥ 1.0.
+- `git check-ignore spikes/storage-table-format/output/x` prints the path.
 
 ### Step 2 — Write the Delta gate checks
 
 - **Status:** 💤 todo
 - **Who:** Claude
+- **Commit:** `chore: add delta gate checks to storage spike`
+- **Model:** opus · high
 - **Gate:** —
 
-TODO: write in full. Files: `delta_probe.py` (write, MERGE, concurrent commits).
+#### Scope
+
+`delta_probe.py`, subcommand `gate`, with a `--local` option that runs against a temporary local table instead of R2:
+
+- **Sample:** `station_status` objects of both providers from `spikes/cloudflare-capture-spike/data/V4/raw/<provider>/station_status/<day>/<UTC time>.json.gz`, for a window given by parameters (default: the first 15 captured minutes of a full day). Each object becomes rows `source`, `station_id`, `last_reported` (UTC), `captured_at` (UTC, from the key), `bikes_available`, `docks_available`, `capture_date` (partition column). The two providers may use different GBFS versions; the field mapping handles both.
+- **Table:** `s3://<R2_TEST_BUCKET>/<run_id>/station_status`, with `run_id` the run's UTC start time, so each run writes a fresh table.
+- **Storage options:** endpoint from `R2_ACCOUNT_ID`, region `auto`, the test token, and the option that enables conditional put for safe commits with no external lock (decision log #18).
+- **Checks,** each logged as one JSON line in `output/probe-<run_id>.jsonl` (UTC start and end, check, result `ok` or the error message, table version, commit latency in ms):
+  - `write`: creates the table and appends one commit per captured minute (10 by default). Ok when the version count equals the commits and the row count equals the rows written.
+  - `merge`: 3 MERGE commits with the following minutes, keyed on `source`, `station_id`, `last_reported` (update when matched, insert otherwise). Ok when no key is duplicated and the row count equals the distinct keys.
+  - `concurrent`: fault injection by stale writers. Two handles are opened at the same version; one commits, then the other commits on its stale snapshot. For two appends, both land on consecutive versions with no row lost (compatible commits are retried). For two MERGEs that touch the same partition, the second fails with a commit conflict and the table holds the first one's result. Ok when both behave like this.
+- The run stops at the first failed check and prints a summary table.
+
+#### Reads
+
+- This document, Q2, D4 (gate paragraph) and §2 A: what the gate requires and how it is checked.
+- delta-rs documentation on writing to S3-compatible stores and concurrent writes, through the `web-researcher`: the option that enables conditional put on R2, and the exception raised on a commit conflict.
+- One `station_status` sample per provider in the local copy: the field names of each GBFS version.
+
+#### Do
+
+1. Write the sample loader and the row mapping.
+2. Write the three checks and the JSON-lines log.
+3. Run `uv run python delta_probe.py gate --local`.
+4. Update the README Commands section and this step's Status.
+
+#### Check
+
+`uv run python delta_probe.py gate --local` reports `ok` for `write`, `merge` and `concurrent`, and makes no request to R2.
 
 ### Step 3 — Set up the test bucket and run the gate checks
 
 - **Status:** 💤 todo
 - **Who:** Owner
+- **Commit:** `docs: record delta gate result in s010` (Claude writes the findings and Status from the owner's report)
+- **Model:** —
 - **Gate:** write, MERGE and concurrent commits pass (D4 hard cut) → otherwise the run stops, and probe A and the cost model are re-planned for Iceberg
 
-TODO: write in full. Files: `.env` (local, ignored by Git).
+#### Scope
+
+The test bucket, its lock rule and its token in the production Cloudflare account (decision log #20); the local `.env` (ignored by Git); the first findings.
+
+#### Reads
+
+- `README.md`: setup and the `gate` command.
+
+#### Do
+
+1. In the Cloudflare console, create the private R2 bucket `bikesharing-s010-test`.
+2. Add a bucket lock rule on the prefix `locked/`, with indefinite retention.
+3. Create an R2 API token with Object Read & Write, scoped to `bikesharing-s010-test` only.
+4. Copy `.env.example` to `.env` and fill it: account ID, bucket, the token's access key ID and secret, `R2_PROD_BUCKET=bikesharing-capture-spike`, `R2_LOCKED_PREFIX=locked/`.
+5. Run `uv run python delta_probe.py gate`.
+6. Report the summary table and the `run_id`.
+
+#### Check
+
+The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate holds. Claude records the result and commit latencies as findings.
 
 ### Step 4 — Add counting and the remaining checks
 
 - **Status:** 💤 todo
 - **Who:** Claude
+- **Commit:** `chore: add request counting and remaining checks to storage spike`
+- **Model:** opus · high
 - **Gate:** —
 
-TODO: write in full. Files: `r2_proxy.py`, `delta_probe.py` (optimize, vacuum, reads, token and lock checks), `analyse_ops.py`.
+#### Scope
+
+- `r2_proxy.py`: mitmproxy addon (decision log #19). Logs every request to `output/proxy-<UTC start>.jsonl`, one JSON line each: UTC time, method, path, query, status, request and response bytes, duration, and the operation and its class (A, B or free) as classified by the [R2 source card](../sources/r2-storage.md).
+- `delta_probe.py`:
+  - subcommand `full`, counted through the proxy: `write` (60 commits, one hour), `merge` (10 commits), `concurrent`, `optimize` (compaction), `vacuum` (a dry run with the 7-day default, then a run with zero retention and the retention check disabled, so the probe sees files deleted). `deltalake` reaches the proxy through `storage_options` (proxy URL and the mitmproxy CA certificate), so only the probe process trusts it;
+  - per check it also logs Parquet bytes per row, `_delta_log` bytes per commit, and bytes rewritten by MERGE and optimize;
+  - subcommand `extra`, not counted, run after `full`: Polars and DuckDB read the table and match its row count (guide); the test token cannot list, read or write `R2_PROD_BUCKET` (a write attempt uses the key `s010-token-check/canary.txt`, so a wrongful success is harmless and easy to remove); under `R2_LOCKED_PREFIX`, a new object is written and then an overwrite and a delete of it are attempted with the test token.
+- `analyse_ops.py`: joins the proxy log and the probe log by time window; writes operations per check, per commit and per class to `output/`; runs the three analysis checks of §2 A:
+  - known arithmetic: one append of one file gives one data PUT and one log PUT;
+  - independent count: proxy totals per class for `full` equal the R2 metrics, passed as arguments;
+  - fault injection: the `concurrent` check shows a rejected log PUT (HTTP 412) followed by a successful retry.
+- Not touched: the `gate` subcommand's behaviour.
+
+#### Reads
+
+- This document, §2 A (Measures, Security, Counting, Evidence, Analysis checks).
+- [R2 source card](../sources/r2-storage.md): operation classes, for the classifier.
+- mitmproxy addon API and the `object_store` client options for a proxy and its CA certificate, through the `web-researcher`.
+
+#### Do
+
+1. Write `r2_proxy.py`.
+2. Extend `delta_probe.py` with `full` and `extra`.
+3. Write `analyse_ops.py`, with a small synthetic pair of logs to check its counts.
+4. Run `uv run python delta_probe.py full --local` and `analyse_ops.py` on the synthetic logs.
+5. Update the README Commands section and this step's Status.
+
+#### Check
+
+- `uv run python delta_probe.py full --local` reports `ok` for every counted check.
+- `analyse_ops.py` on the synthetic logs gives the expected counts per check and class.
 
 ### Step 5 — Run probe A and verify the analysis
 
 - **Status:** 💤 todo
 - **Who:** Owner
+- **Commit:** `docs: record probe a results in s010` (Claude writes the findings and Status from the owner's report)
+- **Model:** —
 - **Gate:** the three analysis checks pass → otherwise the scripts are fixed and the probe is run again
 
-TODO: write in full. Files: `output/`.
+#### Scope
+
+A counted run of probe A on the test bucket; operation, size and latency tables in `output/`; findings for Q2 and for the cost model's inputs.
+
+#### Reads
+
+- `README.md`: the `full`, `extra` and `analyse_ops.py` commands.
+
+#### Do
+
+1. Start the proxy in one terminal: `uv run mitmdump -s r2_proxy.py --listen-port 8080`.
+2. In another terminal, run `uv run python delta_probe.py full` and note the UTC start and end it prints.
+3. When R2 metrics have caught up (about 10 minutes), read the test bucket's Class A and Class B operations for that window in the Cloudflare dashboard.
+4. Stop the proxy and run `uv run python delta_probe.py extra`.
+5. Run `uv run python analyse_ops.py --r2-class-a <A> --r2-class-b <B>`.
+6. Report both summaries and the R2 figures.
+
+#### Check
+
+The three analysis checks pass. Claude records as findings: operations per commit by class, commit latency, Parquet bytes per row, `_delta_log` bytes per commit, rewritten bytes, the maintenance and read results (guide) and the token and lock results.
 
 ### Step 6 — Write the volume measurement
 
 - **Status:** 💤 todo
 - **Who:** Claude
+- **Commit:** `chore: add volume measurement to storage spike`
+- **Model:** sonnet · high
 - **Gate:** —
 
-TODO: write in full. Files: `measure_volume.py`.
+#### Scope
+
+`measure_volume.py`, which writes `output/volumes.json` (the file C reads) and prints a summary:
+
+- **`raw/`** (`spikes/cloudflare-capture-spike/data/V4/raw/`), per provider, feed and day: objects, bytes and records (entries in the payload's main list; 1 for feeds without one). For `station_status`, also distinct (`station_id`, `last_reported`) records. The first and last days are dropped as incomplete.
+- **`logs/` and `state/`**, per day: objects, bytes and writes. `logs/` writes are its objects. `state/` keeps only its latest version locally, so its writes per day are derived: capture passes per day (from `logs/`) times the `state/` objects one pass writes (from capture's code).
+- **History** (`spikes/bicing-spike/historical-data/raw/*.7z`), per archive: type (ESTACIONS or INFORMACIO, from the file name), month, `.7z` bytes, uncompressed bytes and raw rows. For ESTACIONS, also distinct (`station_id`, `last_reported`) rows and snapshots per day. For INFORMACIO, rows at one snapshot per day (#21).
+- Archives are streamed with macOS's built-in `tar -xOf <archive>` (libarchive reads 7z), never extracted to disk. Rows are counted with a CSV parser on that stream, not by lines (header, quoted newlines).
+- Not touched: the local copies, which are only read.
+
+#### Reads
+
+- This document, §2 B and decision log #21: what is measured and on which basis.
+- Capture's code in `spikes/cloudflare-capture-spike/js/`, the part that writes `state/` and `logs/`: objects written per pass.
+- The header of one extracted CSV per archive type (the July–September 2026 CSVs under `spikes/bicing-spike/historical-data/`; find them by listing): the column names for the station, `last_reported` and the snapshot time.
+
+#### Do
+
+1. Write the `raw/`, `logs/` and `state/` measurements.
+2. Write the history measurement.
+3. Write a targeted check of the counting: a small hand-made sample with known raw and distinct counts, including a quoted newline.
+4. Run the targeted check and the 2026-09 ESTACIONS archive alone.
+5. Update the README Commands section and this step's Status.
+
+#### Check
+
+- The targeted check gives the expected raw and distinct counts.
+- The 2026-09 ESTACIONS archive gives the same raw rows as its extracted `.csv` parsed the same way (reference: 4,528,266 lines including the header, 290,689,605 bytes uncompressed).
 
 ### Step 7 — Run probe B and verify volumes
 
 - **Status:** 💤 todo
 - **Who:** Owner
+- **Commit:** `docs: record probe b volumes in s010` (Claude writes the findings and Status from the owner's report)
+- **Model:** —
 - **Gate:** —
 
-TODO: write in full. Files: `output/`.
+#### Scope
+
+A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost model's inputs.
+
+#### Reads
+
+- `README.md`: the `measure_volume.py` command.
+
+#### Do
+
+1. Run `uv run python measure_volume.py`.
+2. Spot-check one provider, feed and day: `find <day folder> -type f | wc -l` and `du -sk <day folder>` against the summary's objects and bytes.
+3. Report the summary and the spot check.
+
+#### Check
+
+- The spot check matches the summary.
+- `raw/` growth per day is consistent with the ~2.7 GB per month measured in `architecture.md` §3; a large gap is explained before C runs.
+- Claude records as findings: volumes per feed and day, `logs/` and `state/` writes per day, history rows per type, and the dedup ratio of both sources.
 
 ### Step 8 — Write the cost model
 
 - **Status:** 💤 todo
 - **Who:** Claude
+- **Commit:** `chore: add cost model to storage spike`
+- **Model:** opus · high
 - **Gate:** —
 
-TODO: write in full. Files: `cost_model.py`, `params.toml`.
+#### Scope
+
+- `params.toml`, every parameter apart from the logic:
+  - tables (9 silver: 2 dynamic, 7 static; 8 gold) and each gold question's freshness (§2 C commit model);
+  - scenarios: 24/7 commits every 1, 5, 10, 30 and 60 minutes and every 6 hours; the on-demand grid of 4, 6, 8 and 10 catch-ups by 0.5, 1, 2 and 3 live hours; the judged cell (10 catch-ups + 2 h);
+  - months reported (1, 2, 4, 6, 12), capture start date and production start date;
+  - retention (D5, D6): bronze and gold indefinite, silver 12 months, 7 days of Delta history, 30 days of log;
+  - the pipeline's bronze listing (keys per LIST page, LISTs per feed and run) and maintenance (optimize and vacuum runs per table and pipeline day);
+  - prices and free quotas from the [R2 source card](../sources/r2-storage.md), and the USD→EUR rate with its date, since prices are in USD and the threshold in EUR;
+  - paths to A's operation tables and B's `volumes.json`.
+- `cost_model.py`: for each scenario and month, storage per layer (bronze, silver, gold, Delta overhead) and Class A and B operations, split into capture `raw/`, capture `logs/` and `state/`, and pipeline. It computes monthly and accumulated cost against the shared free quotas, with month 1 including the initial load (#17). It writes `output/cost_*.csv` and a summary, and marks per scenario whether it fits the D2 gate (at most €2 in every month up to 12).
+- Silver and gold commits are costed with A's measured MERGE commit (the more expensive one measured), so the model stays pessimistic.
+- Not touched: A's and B's outputs, which are only read.
+
+#### Reads
+
+- This document, Q1, Exit criteria and §2 C: scenarios, commit model, sizing and assumptions.
+- [R2 source card](../sources/r2-storage.md): prices, free quotas and operation classes.
+- `architecture.md` §1.1: each guiding question's freshness and the static feeds' daily capture.
+
+#### Do
+
+1. Write `params.toml`.
+2. Write `cost_model.py`.
+3. Write a targeted check: a minimal parameter set and inputs for which one scenario and month are computed by hand.
+4. Run the targeted check.
+5. Update the README Commands section and this step's Status.
+
+#### Check
+
+The targeted check matches the hand computation for storage, Class A, Class B and cost.
 
 ### Step 9 — Run probe C and verify the model
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Gate:** at least one scenario costs at most €2 in every month (D2 gate) → otherwise D2 is re-decided
+- **Commit:** `docs: record cost model results in s010` (Claude writes the findings and Status from the owner's report)
+- **Model:** —
+- **Gate:** the judged on-demand cell (10 catch-ups + 2 h live) costs at most €2 in every month up to 12 (D2 gate, hard cut) → otherwise D2 is reopened. If 1-minute commits 24/7 also fit, D2 holds without conditions; if not, it holds with an operating constraint, recorded as a Production input.
 
-TODO: write in full. Files: `output/`.
+#### Scope
+
+A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the findings that answer Q1.
+
+#### Reads
+
+- `README.md`: the `cost_model.py` command.
+
+#### Do
+
+1. Check that `params.toml` points to the outputs of steps 5 and 7 and set the production start date and the USD→EUR rate.
+2. Run `uv run python cost_model.py`.
+3. Recompute by hand, from the CSV and `params.toml`, the Class A operations of the judged cell in month 1.
+4. Report the summary and the hand recomputation.
+
+#### Check
+
+- The hand recomputation matches the CSV.
+- Claude records as findings: cost per layer and total per scenario and month, the free quota usage, the judged cell and the 1-minute 24/7 case, and applies the gate.
 
 ### Step 10 — Conclusion
 
 - **Status:** 💤 todo
 - **Who:** Claude, Owner (teardown)
+- **Commit:** `docs: conclude spike s010`
+- **Model:** opus · high
 - **Gate:** —
 
-TODO: write in full. Files: this document, `README.md`; teardown of the test lock rule, bucket and token.
+#### Scope
+
+- This document: Conclusion (Answers, Exit criteria, Verdict, Not verified, Follow-ups), the destination of every Production input, and Status.
+- The ADRs for the decisions D1–D7 that hold, in `docs/decisions/` (§1 Decided at framing).
+- `README.md`: How we got here.
+- Teardown by the owner: the test lock rule, the bucket `bikesharing-s010-test` and its token; the canary `s010-token-check/canary.txt` in `bikesharing-capture-spike` if the token check created it.
+
+#### Reads
+
+1. This document, §1 Questions and Exit criteria.
+2. This document, §2 Decision log.
+3. This document, §4 Findings and Production inputs.
+
+#### Do
+
+1. Write the Conclusion.
+2. Set the destination of every Production input: a design with its task, or discarded with a reason.
+3. Write the ADRs.
+4. Write How we got here in `README.md`.
+5. Owner: remove the test lock rule, then empty and delete the test bucket, delete the token, and delete the canary if it exists.
+6. Set Status to finished with the UTC date.
+
+#### Check
+
+- Every Q is answered, every exit criterion has a result and every Production input has a destination.
+- The Cloudflare console lists neither the test bucket nor its token.
 
 ## 4. Findings
 
