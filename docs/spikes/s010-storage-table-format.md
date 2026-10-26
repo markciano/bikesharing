@@ -260,28 +260,28 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 
 ### Decision log
 
-| # | Decision | Reason |
-|---|---|---|
-| 1 | On-demand mode is a grid of catch-ups by live hours; the hard cut is judged at 10 catch-ups + 2 h live ([Q1](#q1-cost-calculation)) | Catch-ups and live use vary independently; the judged cell is the owner's pessimistic expected use |
-| 2 | The 24/7 scenarios are calculated and reported, not judged ([Q1](#q1-cost-calculation)) | The calculation is free; the cost curve as freshness is relaxed is an input for T039 |
-| 3 | Commit model: tables commit only with new data, gold at its question's freshness ([C](#c-cost-model)) | An incremental pipeline writes only tables with new data; table counts stay pessimistic |
-| 4 | The cost model runs once, with measured operations per commit; the former Q3 is merged into Q1 ([C](#c-cost-model)) | Measured data prevails over estimates; the pessimism lives in the scenarios |
-| 5 | Probe A counts operations with a local proxy, cross-checked against R2 metrics ([A](#a-delta-on-r2)) | Exact counts per commit and step; two independent counts check each other |
-| 6 | Probe A runs on the owner's Mac against a scoped test bucket in the production account ([A](#a-delta-on-r2)) | About 1,000 operations per run, under 1% of the quota; the scoped token isolates production ([D7](#d7-storage-security-baseline)) |
-| 7 | Probe A evidence is logged to files and checked by an analysis script ([A](#a-delta-on-r2)) | Evidence must be reproducible and checked, not read off the console |
-| 8 | Probe A writes real `station_status` data from the local capture copy ([A](#a-delta-on-r2)) | File sizes and MERGE keys match the real pipeline; synthetic data would invent both |
-| 9 | Probe B measures `raw/`, `logs/` and `state/` separately on the local copy, plus the Bicing history ([B](#b-measured-volume)) | The local copy mirrors the bucket and spends no operations; `logs/` and `state/` are capture writes too |
-| 10 | Silver is sized from B's records and A's Parquet bytes per row ([C](#c-cost-model)) | Two measurements replace an assumed compression ratio |
-| 11 | The bronze bucket lock covers `raw/` and `logs/`, not `state/` ([D7](#d7-storage-security-baseline)) | `state/` is rewritten on every pass, so a lock would break capture |
-| 12 | Q1 reports cost at months 2, 4, 6 and 12; the hard cut is €2 in any month, raised from €1 ([Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria)) | €2 is 20% of d002 R4's €10/month for R2 storage and operations; the rest is left for T036–T038 |
-| 13 | The Bicing history archives are bronze, kept as downloaded in the bronze bucket under the lock ([D3](#d3-bronze-is-the-captured-jsongz-objects-as-they-are), [D7](#d7-storage-security-baseline)) | Same principle as D3 and D5: the origin's bytes are kept, and what cannot be rebuilt is not deleted; Open Data BCN does not guarantee the archives stay published. SQL over the raw archives is given up: they are loaded once and queried in silver, and the `.7z` is about 40 times smaller than its contents |
-| 14 | D5's review is triggered by the total monthly R2 bill above €2 and covers every retention and the operations ([D5](#d5-bronze-is-kept-indefinitely-reviewed-only-above-a-cost-threshold)) | Bronze storage alone would take about 10 years to reach €2; the bill is what Cloudflare charges, and an alert can watch it |
-| 15 | A scenario fits the D2 gate when its total R2 cost is at most €2 in every month up to 12; free quotas are reported, not judged ([Exit criteria](#exit-criteria)) | One threshold for the gate and the cost cut; leaving the free tier is acceptable within budget |
-| 16 | C sizes gold by cardinality and adds Delta's overhead (log and rewritten files) from A's measures ([C](#c-cost-model)) | Total storage leaves no layer out; measured data prevails over an assumed margin (#10) |
-| 17 | Month 1 includes the initial load (history and capture's backlog) and is judged like any other month ([Q1](#q1-cost-calculation), [C](#c-cost-model)) | It is the most expensive month, and the bill does not separate one-off from recurring cost |
-| 18 | Probe A keeps concurrent commits safe with R2's conditional put, with no external lock ([A](#a-delta-on-r2)) | It is what D4 scored (only the bucket); a DynamoDB lock adds an AWS service and would reopen D4 |
-| 19 | The proxy of #5 is mitmproxy with HTTPS inspection, trusted by the probe process only ([A](#a-delta-on-r2)) | Requests are signed (SigV4) for R2's host, so a plain reverse proxy breaks them; mitmproxy is the standard HTTP inspection tool and needs no signing code |
-| 20 | The owner creates and removes the test bucket, token and lock rule in the console; the script only runs the checks ([A](#a-delta-on-r2)) | Operational actions are the owner's (CLAUDE.md), and the script never holds an admin credential |
+| # | Applies to | Decision | Reason | Decided at |
+|---|---|---|---|---|
+| 1 | [Q1](#q1-cost-calculation) | On-demand mode is a grid of catch-ups by live hours; the hard cut is judged at 10 catch-ups + 2 h live | Catch-ups and live use vary independently; the judged cell is the owner's pessimistic expected use | Method |
+| 2 | [Q1](#q1-cost-calculation) | The 24/7 scenarios are calculated and reported, not judged | The calculation is free; the cost curve as freshness is relaxed is an input for T039 | Method |
+| 3 | [Cost model](#c-cost-model) | Commit model: tables commit only with new data, gold at its question's freshness | An incremental pipeline writes only tables with new data; table counts stay pessimistic | Method |
+| 4 | [Cost model](#c-cost-model) | The cost model runs once, with measured operations per commit; the former Q3 is merged into Q1 | Measured data prevails over estimates; the pessimism lives in the scenarios | Method |
+| 5 | [Probe A](#a-delta-on-r2) | Probe A counts operations with a local proxy, cross-checked against R2 metrics | Exact counts per commit and step; two independent counts check each other | Method |
+| 6 | [Probe A](#a-delta-on-r2) | Probe A runs on the owner's Mac against a scoped test bucket in the production account | About 1,000 operations per run, under 1% of the quota; the scoped token isolates production ([D7](#d7-storage-security-baseline)) | Method |
+| 7 | [Probe A](#a-delta-on-r2) | Probe A evidence is logged to files and checked by an analysis script | Evidence must be reproducible and checked, not read off the console | Method |
+| 8 | [Probe A](#a-delta-on-r2) | Probe A writes real `station_status` data from the local capture copy | File sizes and MERGE keys match the real pipeline; synthetic data would invent both | Method |
+| 9 | [Probe B](#b-measured-volume) | Probe B measures `raw/`, `logs/` and `state/` separately on the local copy, plus the Bicing history | The local copy mirrors the bucket and spends no operations; `logs/` and `state/` are capture writes too | Method |
+| 10 | [Cost model](#c-cost-model) | Silver is sized from B's records and A's Parquet bytes per row | Two measurements replace an assumed compression ratio | Method |
+| 11 | [D7](#d7-storage-security-baseline) | The bronze bucket lock covers `raw/` and `logs/`, not `state/` | `state/` is rewritten on every pass, so a lock would break capture | Method |
+| 12 | [Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria) | Q1 reports cost at months 2, 4, 6 and 12; the hard cut is €2 in any month, raised from €1 | €2 is 20% of d002 R4's €10/month for R2 storage and operations; the rest is left for T036–T038 | Method |
+| 13 | [D3](#d3-bronze-is-the-captured-jsongz-objects-as-they-are), [D7](#d7-storage-security-baseline) | The Bicing history archives are bronze, kept as downloaded in the bronze bucket under the lock | Same principle as D3 and D5: the origin's bytes are kept, and what cannot be rebuilt is not deleted; Open Data BCN does not guarantee the archives stay published. SQL over the raw archives is given up: they are loaded once and queried in silver, and the `.7z` is about 40 times smaller than its contents | Method review |
+| 14 | [D5](#d5-bronze-is-kept-indefinitely-reviewed-only-above-a-cost-threshold) | D5's review is triggered by the total monthly R2 bill above €2 and covers every retention and the operations | Bronze storage alone would take about 10 years to reach €2; the bill is what Cloudflare charges, and an alert can watch it | Method review |
+| 15 | [Exit criteria](#exit-criteria) | A scenario fits the D2 gate when its total R2 cost is at most €2 in every month up to 12; free quotas are reported, not judged | One threshold for the gate and the cost cut; leaving the free tier is acceptable within budget | Method review |
+| 16 | [Cost model](#c-cost-model) | C sizes gold by cardinality and adds Delta's overhead (log and rewritten files) from A's measures | Total storage leaves no layer out; measured data prevails over an assumed margin (#10) | Method review |
+| 17 | [Q1](#q1-cost-calculation), [Cost model](#c-cost-model) | Month 1 includes the initial load (history and capture's backlog) and is judged like any other month; extends #12 | It is the most expensive month, and the bill does not separate one-off from recurring cost | Method review |
+| 18 | [Probe A](#a-delta-on-r2) | Probe A keeps concurrent commits safe with R2's conditional put, with no external lock | It is what D4 scored (only the bucket); a DynamoDB lock adds an AWS service and would reopen D4 | Method review |
+| 19 | [Probe A](#a-delta-on-r2) | The proxy of #5 is mitmproxy with HTTPS inspection, trusted by the probe process only | Requests are signed (SigV4) for R2's host, so a plain reverse proxy breaks them; mitmproxy is the standard HTTP inspection tool and needs no signing code | Method review |
+| 20 | [Probe A](#a-delta-on-r2) | The owner creates and removes the test bucket, token and lock rule in the console; the script only runs the checks | Operational actions are the owner's (CLAUDE.md), and the script never holds an admin credential | Method review |
 
 ### File layout
 

@@ -80,9 +80,12 @@ If some block contains `options considered`, include them with pros and cons.
 <!-- It logs decisions about the plan, before and during the run, including changes.
 Decision in one sentence, naming the standard it follows or the ADR for the deviation, and the requirements it covers. 
 Oldest first.
-- Column Decided at: `<anchor link to the place where it is aplied>` - Phase where it was decided: `<Plan or Steps>` -->
+- Applies to: anchor link(s) to the section where the decision is applied, named in one or two words.
+- Decided at: the Status phase where it was decided (Plan, Steps).
+- R: Requirement affected.
+-->
 
-| # | Concern | Decision | Reason | R | Decided at |
+| # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | | | | | | |
 
