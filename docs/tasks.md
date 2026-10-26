@@ -28,12 +28,14 @@
 | T031 | Add a dated amendment note to ADR-0013 for the commit format change (`type(TNNN)` → `type: description`), edited in place on the T021 branch | 1 | ✅ | — |  |
 | T032 | Move web-research delegation from Claude's memory to a project subagent (`.claude/agents/web-researcher.md`) | 1 | ✅ | — |  |
 | T022 | Order the project's decisions by dependency (requirements and volume → storage and format → engine → execution target → visualization) and review the affected ADRs and tasks | 3 | ✅ | — | [architecture](architecture.md) |
-| T023 | Markdown lint scope and hook: scope and rules in `.markdownlint-cli2.yaml` as single source (root `*.md`, `docs/`, `.claude/`, `spikes/`; default rules except MD013 and MD060), mirrored in `.claude/rules/docs.md`; `--fix` for cosmetic rules; PostToolUse hook that fixes and lints on every edit; existing violations fixed; run instructions moved to `docs/testing-strategy.md` | 2 | ✅ | — | [testing-strategy](testing-strategy.md) |
+| T023 | Markdown lint scope and hook: scope and rules in `.markdownlint-cli2.yaml` as single source (root `*.md`, `docs/`, `.claude/`, `spikes/`; default rules except MD013 and MD060), mirrored in `.claude/rules/docs.md`; `--fix` for cosmetic rules; PostToolUse hook that fixes and lints on every edit; existing violations fixed; run instructions moved to `docs/testing-strategy.md` | 2 | ✅ | — | [testing-strategy.md](testing-strategy.md) |
 | T026 | Include `model` in the steps of skills/{design,spike}/template.md | 1 | ✅ |  |  |
-| T034 | Requirements: consumers, questions the data answers, freshness, public or not, whether Bicing history enters | 2 | ✅ | T022 | [requirements](designs/d002-requirements.md) |
+| T034 | Requirements: consumers, questions the data answers, freshness, public or not, whether Bicing history enters | 2 | ✅ | T022 | [d002-requirements.md](designs/d002-requirements.md) |
 | T043 | Organize `.claude/rules/` (folders or name prefixes), after checking how Claude Code loads them | 2 | ✅ | — |  |
-| T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | 📝 | T034 | [s010](spikes/s010-storage-table-format.md) |
-| T036 | Processing engine (single node) and pipeline language | 3 | ⬜ | T035 |  |
+| T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | 📝 | T034 | [s010-storage-table-format.md](spikes/s010-storage-table-format.md) |
+| T046 | Documentation wording conventions: how technical docs name who acts instead of "owner" (`docs/` only, `.claude/` keeps it), and the `TODO (<destination>):` format; rule in `.claude/rules/docs/` and CLAUDE.md, existing docs updated | 2 | ⬜ | — |  |
+| T045 | Requirements: review d002 to add a general security requirement covering every component (capture, storage, pipeline, visualization) | 1 | ⬜ | T034 | [d002-requirements.md](designs/d002-requirements.md) |
+| T036 | Processing engine (single node) and pipeline language | 3 | ⬜ | T035, T045 |  |
 | T037 | Execution target: where the pipeline runs and what schedules it | 3 | ⬜ | T036 |  |
 | T038 | Visualization: tool and where it is published | 2 | ⬜ | T034, T035, T037 |  |
 | T039 | Capture in production (parent; split into TNNN.M in its design) | 5 | ⬜ | T035 |  |
@@ -44,5 +46,4 @@
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
 | T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | — |  |
-| T045 | Requirements: review d002 to add a general security requirement covering every component (capture, storage, pipeline, visualization) | 1 | ⬜ | T034 | [requirements](designs/d002-requirements.md) |
-| T046 |  |  | ⬜ |  |  |
+| T047 |  |  | ⬜ |  |  |
