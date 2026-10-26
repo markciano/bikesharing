@@ -24,11 +24,11 @@ Current step: the step being implemented, or —. -->
 
 <!-- The problem and the expected behaviour, not the solution. External systems and their data (feeds, fields) may be named; our own choices (formats, libraries, files, schemas) belong to the Plan. -->
 
-### Context
+### 1.1 Context
 
 <!-- 2–4 sentences: why this exists, what the owner wants, and which design it extends, if any. For a correction: current vs expected behaviour and how to reproduce it. -->
 
-### Done when
+### 1.2 Done when
 
 <!-- The first three lines are the general closing rule; the first one goes if there are no Requirements. Below them, only what they do not cover: operational actions, checks on real data, understanding. -->
 
@@ -37,7 +37,7 @@ Current step: the step being implemented, or —. -->
 - Every TODO citing this task is resolved or re-pointed.
 - `<extra condition>`
 
-### Requirements
+### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps.
 One behaviour per requirement, verifiable, with a measurable threshold where one applies. Written in EARS:
@@ -50,53 +50,53 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 - **R1** `<EARS statement>`
 
-### Out of scope
+### 1.4 Out of scope
 
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
 - `<item>` — TNNN
 
-### Open questions
+### 1.5 Open questions
 
 <!-- Optional. Unresolved questions about the what. Questions about the how are Plan decisions. -->
 
-| Question | Notes |
-|---|---|
-| | |
+| # | Question | Notes |
+|---|---|---|
+| | | |
 
 ## 2. Plan — how
 
-### Options considered
+### 2.1 Options considered
 
 <!-- Optional. One subsection per alternative weighed, rejected ones included. -->
 
-#### Option A — `<name>` (chosen)
+#### 2.1.1 Option A — `<name>` (chosen)
 
 `<2–3 sentences.>`
 
 **Pros:**
 **Cons:**
 
-#### Option B — `<name>` (rejected)
+#### 2.1.2 Option B — `<name>` (rejected)
 
 `<2–3 sentences.>`
 
 **Pros:**
 **Cons:** `<including the reason for rejection, in one sentence>`
 
-### Decision summary
+### 2.2 Decision summary
 
 <!-- One row per concern: the decision in one sentence, naming the standard it follows or the ADR for the deviation, and the requirements it covers. -->
 
-| Concern | Decision | R |
-|---|---|---|
-| | | |
+| # | Concern | Decision | Reason | R |
+|---|---|---|---|---|
+| | | | | |
 
-### Architecture
+### 2.3 Architecture
 
 <!-- Optional. One diagram and 2–3 sentences. -->
 
-### File layout
+### 2.4 File layout
 
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
@@ -105,11 +105,11 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 └── <file>      (new)        <purpose>
 ```
 
-### Components
+### 2.5 Components
 
 <!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
-#### `<ComponentName>`
+#### 2.5.N `<ComponentName>`
 
 - **Responsibility:** `<one sentence>`
 - **Location:** `path/to/file`
@@ -118,7 +118,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 ```python
 ```
 
-### Test plan
+### 2.6 Test plan
 
 <!-- Optional. Every requirement has at least one test, at the lowest level that can verify it. -->
 
@@ -126,7 +126,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 |---|---|---|
 | R1 | | unit / integration / e2e |
 
-### Breaking changes
+### 2.7 Breaking changes
 
 <!-- Optional. Shared models or interfaces this design changes, and how their dependants are handled. -->
 
@@ -134,7 +134,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 |---|---|---|
 | | | |
 
-### What does not change
+### 2.8 What does not change
 
 <!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
 
@@ -142,11 +142,11 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 ## 3. Implementation
 
-### Prerequisites
+### 3.1 Prerequisites
 
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
-### Steps
+### 3.2 Steps
 
 <!-- Each step is one reviewable result and one commit, touching at most 2–3 files.
 - Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
@@ -155,7 +155,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - Commit: the proposed message, following the Git conventions in CLAUDE.md.
 - Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner. -->
 
-#### Step 1 — `<title>`
+#### 3.2.1 Step 1 — `<title>`
 
 - **Status:** 💤 todo
 - **Who:** Owner
@@ -163,19 +163,19 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R:** R1, R3 (or —)
 - **Model:** `<model · effort>` (or —)
 
-##### Scope
+##### 3.2.1.1 Scope
 
 <!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
 
-##### Reads
+##### 3.2.1.2 Reads
 
 <!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
 
-##### Do
+##### 3.2.1.3 Do
 
 <!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
-##### Check
+##### 3.2.1.4 Check
 
 <!-- command/s or verification with a yes/no result. -->
 
@@ -183,16 +183,16 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- The record of what the task delivered, for whoever opens this design later. -->
 
-### Implemented
+### 4.1 Implemented
 
 <!-- Component — what was delivered; tests passing. -->
 
-### Known gaps at close
+### 4.2 Known gaps at close
 
 <!-- What the task leaves undone or imperfect, each with the task that covers it: requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
 
 - `<gap>` — TNNN
 
-### Decisions taken during implementation
+### 4.3 Decisions taken during implementation
 
 <!-- Decisions made after the Plan was approved: <decision> — <reason>. "None" is valid. -->

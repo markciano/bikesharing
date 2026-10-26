@@ -24,11 +24,17 @@ Current step: the step being executed, or —. -->
 
 ## 1. Questions — what we need to know
 
-### Context
+### 1.1 Context
 
 <!-- 2–4 sentences: the decision this spike unblocks, why it cannot be taken without evidence, and the spikes or designs it builds on. -->
 
-### Questions
+### 1.2 Decided at framing
+
+#### 1.2.N Title of decision N
+
+<!-- Description of description N -->
+
+### 1.3 Questions
 
 <!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
 "Observe only": things to note during the run with no dedicated effort. -->
@@ -38,7 +44,7 @@ Main question: `<one sentence>`
 - **Q1.** `<question>`
 - **Observe only:** `<item>`
 
-### Exit criteria
+### 1.4 Exit criteria
 
 <!-- Fixed before the first run; a later change is recorded in the Decision log.
 Derived from the standard that applies to this kind of question, named in the first line: e.g. DAMA data quality dimensions for a data source, a weighted decision matrix for a technology choice.
@@ -48,13 +54,13 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 - **Timebox:** `<window, and what ends it>`
 - `<criterion>` — `<threshold>` — hard cut | guide
 
-### Out of scope
+### 1.5 Out of scope
 
 <!-- Optional. What someone could expect this spike to answer and it will not. -->
 
 - `<item>`
 
-### Open questions
+### 1.6 Open questions
 
 <!-- Optional. Unresolved questions about what to find out. Questions about how belong to Method. -->
 
@@ -64,7 +70,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 ## 2. Method — how we find out
 
-### Approach
+### 2.1 Approach
 
 <!-- The variants, options or probes compared, and what each one tells that the others do not. -->
 
@@ -72,7 +78,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 |---|---|---|
 | | | |
 
-### Shared behaviour
+### 2.2 Shared behaviour
 
 <!-- Optional. Rules every variant follows (schedules, formats, key layouts, logs), stated once so the steps can cite them. -->
 
@@ -86,7 +92,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 |---|---|---|---|---|
 | | | | | |
 
-### File layout
+### 2.4 File layout
 
 <!-- Every file and folder the spike creates, as a tree with its purpose in one line. Captured data and outputs are marked as ignored by Git (ADR-0009). The README is always included. -->
 
@@ -106,7 +112,7 @@ spikes/<name>/
 - Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>.
 The last step is the Conclusion. -->
 
-### Step 1 — `<title>`
+### 3.1 Step 1 — `<title>`
 
 - **Status:** 💤 todo
 - **Who:** Owner
@@ -115,23 +121,23 @@ The last step is the Conclusion. -->
 - **Model:** `<model · effort>` (or —)
 - **Gate:** `<condition>` → `<consequence>`
 
-#### Scope
+#### 3.1.1 Scope
 
 <!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
 
-#### Reads
+#### 3.1.2 Reads
 
 <!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
 
-#### Do
+#### 3.1.3 Do
 
 <!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
-#### Check
+#### 3.1.4 Check
 
 <!-- command/s or verification with a yes/no result. -->
 
-### Step N — Conclusion
+### 3.N Step N — Conclusion
 
 <!-- 
 Same structure as the example before before but: 
@@ -154,7 +160,7 @@ Same structure as the example before before but:
 - `<evidence>`
 - Consequence: `<for variants, steps or questions>`
 
-### Production inputs
+### 4.1 Production inputs
 
 <!-- Points worth taking to production that are not fixed in the spike code. Added in the step where they are detected, by Claude or the owner. The Destination is set in the Conclusion: a design (with its task) or discarded with a reason. -->
 
@@ -168,7 +174,7 @@ Same structure as the example before before but:
 
 Observed window: `<from–to, UTC; what it does not cover>`
 
-### Answers
+### 5.1 Answers
 
 - **Q1.** `<answer>` (FN)
 
@@ -178,23 +184,23 @@ Observed window: `<from–to, UTC; what it does not cover>`
 |---|---|---|
 | | | |
 
-### Verdict
+### 5.2 Verdict
 
 <!-- The answer to the main question in 2–3 sentences. -->
 
-### Not verified
+### 5.3 Not verified
 
 <!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
 
 - `<item>` — `<risk>` — `<mitigation>`
 
-### Follow-ups
+### 5.4 Follow-ups
 
 <!-- ADRs to write (each in its own commit) and new tasks agreed with the owner. Production inputs are not repeated here. -->
 
 - `<ADR or task>`
 
-## Sources
+## 5.4.1 Sources
 
 <!-- Optional. Earlier spikes, benchmarks and documentation used. -->
 
