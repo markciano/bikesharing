@@ -38,6 +38,6 @@ Facts about the object store used for every medallion layer (s010 D2). Living do
 | Buckets are private by default; public only through a custom domain or the r2.dev URL, both enabled explicitly and removable | [Public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/) | 2026-10-26 |
 | Objects and metadata are encrypted at rest by default (AES-256), with keys managed by Cloudflare | [Data security](https://developers.cloudflare.com/r2/reference/data-security/) | 2026-10-26 |
 
-TODO: confirm in s010 probe C (bucket metrics) the class of conditional PutObject, ListObjectsV2 and DeleteObjects, which the pricing page does not name.
+TODO: confirm in s010 probe A (bucket metrics) the class of conditional PutObject, ListObjectsV2 and DeleteObjects, which the pricing page does not name.
 TODO: confirm whether the free tier is per account or per bucket; the pricing page does not say.
-TODO: confirm in s010 probe C whether a bucket lock blocks a delete made with an Object Read & Write token; the bucket locks page does not say.
+TODO: confirm in s010 probe A whether a bucket lock blocks a delete made with an Object Read & Write token; the bucket locks page does not say.
