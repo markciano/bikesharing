@@ -93,12 +93,13 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 <!-- It logs decisions about the method, before and during the run, including changes of course. Oldest first.
 A decision that replaces an earlier one says which. 
 It only logs the decisions, the detail is where it belongs to.
-- Column Decided at: `<anchor link to the place where it is aplied>` - Phase where it was decided: `<Method or Steps>` 
+- Column Applies to: anchor link(s) to the section where the decision is applied, named in one or two words (e.g. Q1, Probe A, File layout).
+- Column Decided at: the Status phase where it was decided (Method, Steps), or `<phase> review` when decided while reviewing that phase.
 -->
 
-| # | Decision | Reason | Decided at |
-|---|---|---|---|
-| `<N>` |  |  |  |
+| # | Applies to | Decision | Reason | Decided at |
+|---|---|---|---|---|
+| `<N>` |  |  |  |  |
 
 ### 2.4 File layout
 
