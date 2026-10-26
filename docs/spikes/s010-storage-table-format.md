@@ -21,7 +21,7 @@ The owner runs capture always on and the pipeline on demand: it can stay off for
 
 ### Decided at framing
 
-Decisions taken by analysis while framing the spike, without a run. The ADRs are written at Conclusion unless decided otherwise per case.
+Decisions taken by analysis while framing the spike, without a run. The ADRs and the matching `architecture.md` changes are written after the spike closes, in a fresh session, from the Conclusion's Decisions to record ([#26](#decision-log)).
 
 #### D1. Own lakehouse on object storage
 
@@ -290,6 +290,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 23 | [Cost model](#c-cost-model) | The pipeline's LISTs on bronze are derived from ADR-0012's key layout (prefixes per provider, feed and day per run; 1,000 keys per page), not set by hand | They are probably the largest Class A item (about 430k a month for 10 prefixes every minute), so they are derived, not guessed | Steps |
 | 24 | [Probe B](#b-measured-volume) | Capture's daily Class A and B from the dashboard, on capture-only days, check B's derived `state/` writes and D2's ~270–300k Class A; the metric prevails | Measured data prevails over derived counts | Steps |
 | 25 | [File layout](#file-layout) | `output/` is ignored by a `.gitignore` in the spike folder | The spike stays self-contained and the root file is not touched | Steps |
+| 26 | [Decided at framing](#decided-at-framing), [Step 10](#step-10--conclusion) | The spike writes no ADR. Its Conclusion adds Decisions to record (outcome, findings, ADR grouping, affected sections per decision); the ADRs, `architecture.md` and the R2 source card are written after the spike closes, in a fresh session, as T035's post-spike work | `architecture.md` and the ADRs are the project's most valuable documents and are written with full, clean context, not during a run; the closed spike holds everything they need | Steps review |
 
 ### File layout
 
@@ -324,8 +325,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 | 7 | Run probe B and verify volumes | Owner | — | `output/` |
 | 8 | Write the cost model | Claude | — | `cost_model.py`, `params.toml` |
 | 9 | Run probe C and verify the model | Owner | D2 gate | `output/` |
-| 10 | Write the ADRs | Claude | — | `docs/decisions/` |
-| 11 | Conclusion | Claude, Owner (teardown) | — | this document, `README.md`; test lock rule, bucket and token |
+| 10 | Conclusion | Claude, Owner (teardown) | — | this document, `README.md`; test lock rule, bucket and token |
 
 ### Step 1 — Scaffold the spike folder
 
@@ -636,35 +636,7 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 - The hand recomputation matches the CSV.
 - Claude records as findings: cost per layer and total per scenario and month, the free quota usage, the judged cell and the 1-minute 24/7 case, and applies the gate.
 
-### Step 10 — Write the ADRs
-
-- **Status:** 💤 todo
-- **Who:** Claude
-- **Commit:** `docs: record storage and table format decisions as adrs`
-- **Model:** opus · high
-- **Gate:** —
-
-#### Scope
-
-- The ADRs for the decisions D1–D7 that hold after the gates, in `docs/decisions/` (§1 Decided at framing), each with its reason and the findings that confirm it. Whether they go in one step or two is decided at the Steps review.
-- Not touched: the Conclusion, written in step 11.
-
-#### Reads
-
-1. This document, §1 Decided at framing: D1–D7.
-2. This document, §4 Findings: the evidence for D2 and D4.
-3. One existing ADR in `docs/decisions/`: format and numbering.
-
-#### Do
-
-1. Write one ADR per decision that holds.
-2. Update this step's Status.
-
-#### Check
-
-Every decision D1–D7 that holds has an ADR, and the D2 and D4 ADRs cite their findings.
-
-### Step 11 — Conclusion
+### Step 10 — Conclusion
 
 - **Status:** 💤 todo
 - **Who:** Claude, Owner (teardown)
@@ -674,8 +646,11 @@ Every decision D1–D7 that holds has an ADR, and the D2 and D4 ADRs cite their 
 
 #### Scope
 
-- This document: Conclusion (Answers, Exit criteria, Verdict, Not verified, Follow-ups), the destination of every Production input, and Status.
+- This document: Conclusion (Answers, Exit criteria, Verdict, Decisions to record, Not verified, Follow-ups), the destination of every Production input, and Status.
+- Decisions to record: for each of D1–D7, whether it holds, changes or is reopened; the findings that support it; its grouping into ADRs; and the sections of `architecture.md` and of the [R2 source card](../sources/r2-storage.md) it affects. It is enough to write the ADRs from the closed spike (#26).
+- Follow-ups: the post-spike documentation work of T035 (ADRs, `architecture.md`, R2 source card), in a fresh session from the closed spike (#26).
 - `README.md`: How we got here.
+- Not touched: `docs/decisions/`, `architecture.md` and the R2 source card, which the post-spike work writes.
 - Teardown by the owner: the test lock rule, the bucket `bikesharing-s010-test` and its token; the canary `s010-token-check/canary.txt` in `bikesharing-capture-spike` if the token check created it.
 
 #### Reads
@@ -686,7 +661,7 @@ Every decision D1–D7 that holds has an ADR, and the D2 and D4 ADRs cite their 
 
 #### Do
 
-1. Write the Conclusion.
+1. Write the Conclusion, Decisions to record included.
 2. Set the destination of every Production input: a design with its task, or discarded with a reason.
 3. Write How we got here in `README.md`.
 4. Owner: remove the test lock rule, then empty and delete the test bucket, delete the token, and delete the canary if it exists.
@@ -695,6 +670,7 @@ Every decision D1–D7 that holds has an ADR, and the D2 and D4 ADRs cite their 
 #### Check
 
 - Every Q is answered, every exit criterion has a result and every Production input has a destination.
+- Every decision D1–D7 has an entry in Decisions to record, with its findings and affected sections.
 - The Cloudflare console lists neither the test bucket nor its token.
 
 ## 4. Findings
@@ -725,6 +701,12 @@ Observed window: `<from–to, UTC; what it does not cover>`
 | | | |
 
 ### Verdict
+
+### Decisions to record
+
+| D | Outcome | Findings | ADR | Sections affected |
+|---|---|---|---|---|
+| D1 | `<holds, changes or reopened>` | | | |
 
 ### Not verified
 
