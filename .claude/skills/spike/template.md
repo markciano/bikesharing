@@ -30,7 +30,7 @@ Current step: the step being executed, or —. -->
 
 ### 1.2 Decided at framing
 
-#### 1.2.N Title of decision N
+#### 1.2.N D`<N>` Title of decision `<N>`
 
 <!-- Description of description N -->
 
@@ -78,19 +78,27 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 |---|---|---|
 | | | |
 
-### 2.2 Shared behaviour
+#### 2.1.1 Shared behaviour
 
 <!-- Optional. Rules every variant follows (schedules, formats, key layouts, logs), stated once so the steps can cite them. -->
 
 -
 
+#### 2.1.2 `<A>`. `<Title of variant, option or probe A>`
+
+<!-- Detailed description -->
+
 ### 2.3 Decision log
 
-<!-- Every decision about the method, before and during the run, including changes of course. Oldest first. A decision that replaces an earlier one says which. -->
+<!-- It logs decisions about the method, before and during the run, including changes of course. Oldest first.
+A decision that replaces an earlier one says which. 
+It only logs the decisions, the detail is where it belongs to.
+- Column Decided at: `<anchor link to the place where it is aplied>` - Phase where it was decided: `<Method or Steps>` 
+-->
 
-| # | Topic | Decision | Reason | Decided at |
-|---|---|---|---|---|
-| | | | | |
+| # | Decision | Reason | Decided at |
+|---|---|---|---|
+| `<N>` |  |  |  |
 
 ### 2.4 File layout
 

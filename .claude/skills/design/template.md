@@ -66,31 +66,25 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 ## 2. Plan — how
 
-### 2.1 Options considered
+<!-- 2-3 sentences -->
 
-<!-- Optional. One subsection per alternative weighed, rejected ones included. -->
+### 2.1 Approach
 
-#### 2.1.1 Option A — `<name>` (chosen)
-
-`<2–3 sentences.>`
-
-**Pros:**
-**Cons:**
-
-#### 2.1.2 Option B — `<name>` (rejected)
-
-`<2–3 sentences.>`
-
-**Pros:**
-**Cons:** `<including the reason for rejection, in one sentence>`
+<!-- Detailed plan organized by #### blocks.
+Block `3. Implementation` is writen using this plan.
+If some block contains `options considered`, include them with pros and cons.
+-->
 
 ### 2.2 Decision summary
 
-<!-- One row per concern: the decision in one sentence, naming the standard it follows or the ADR for the deviation, and the requirements it covers. -->
+<!-- It logs decisions about the plan, before and during the run, including changes.
+Decision in one sentence, naming the standard it follows or the ADR for the deviation, and the requirements it covers. 
+Oldest first.
+- Column Decided at: `<anchor link to the place where it is aplied>` - Phase where it was decided: `<Plan or Steps>` -->
 
-| # | Concern | Decision | Reason | R |
-|---|---|---|---|---|
-| | | | | |
+| # | Concern | Decision | Reason | R | Decided at |
+|---|---|---|---|---|---|
+| | | | | | |
 
 ### 2.3 Architecture
 
