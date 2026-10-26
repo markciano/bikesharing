@@ -91,8 +91,9 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 ### 2.3 Decision log
 
 <!-- It logs decisions about the method, before and during the run, including changes of course. Oldest first.
-A decision that replaces an earlier one says which. 
-It only logs the decisions, the detail is where it belongs to.
+It only logs the decisions (naming the standard it follows or the ADR for the deviation), the detail is where it belongs to. 
+A decision that changes an earlier one ends its Decision with `extends #N`, `refines #N` or `replaces #N`; the earlier one gets `→ #M` at the end of its Decision and is not otherwise rewritten.
+Oldest first.
 - Column Applies to: anchor link(s) to the section where the decision is applied, named in one or two words (e.g. Q1, Probe A, File layout).
 - Column Decided at: the Status phase where it was decided (Method, Steps), or `<phase> review` when decided while reviewing that phase.
 -->
