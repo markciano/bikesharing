@@ -6,10 +6,10 @@
 
 ## Status
 
-- State: Ready 🎬
+- State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
-- Started: — · Finished: —
-- Current step: Steps review closed; next: step 1 with `/implement`
+- Started: 2026-10-27 · Finished: —
+- Current step: Step 1 ✅; next: step 2 with `/implement` (first confirm the provisional Python version, TODO in the spike README)
 
 ## 1. Questions — what we need to know
 
@@ -338,7 +338,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 
 ### Step 1 — Scaffold the spike folder
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: scaffold storage and table format spike`
 - **Model:** sonnet · medium
