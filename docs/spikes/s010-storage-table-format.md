@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: Step 3 ✅; next: step 4 (Claude) with `/implement`
+- Current step: Step 4 ✅; next: step 5 (Owner) with `/implement`
 
 ## 1. Questions — what we need to know
 
@@ -443,7 +443,7 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 
 ### Step 4 — Add counting and the remaining checks
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: step 4 - add request counting and remaining checks to storage spike`
 - **Model:** opus · high
@@ -735,6 +735,17 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 | concurrent | 5 | 3636 | 5432 |
 
 - These are Q2's observed latency. A MERGE takes about 2.5 times the median of an append.
+
+**F5. delta-rs's default checkpoint interval is 100 commits; C takes it as N** (step 4, 2026-10-27, `web-researcher`: delta-rs source; `delta_probe.py full --local`)
+
+- `delta.checkpointInterval` defaults to 100 when unset (`crates/core/src/table/config.rs`). The post-commit hook, on by default in Python, writes a checkpoint and `_last_checkpoint` when `(version + 1)` is a multiple of the interval (`crates/core/src/kernel/transaction/mod.rs`).
+- Observed locally with the test table's interval of 10: checkpoints at versions 9, 19, …, 69, and a fresh handle loads 0–9 JSON commits after the last checkpoint.
+
+**F6. DuckDB's delta extension cannot send its log reads through the proxy; `deltalake`, Polars and `boto3` can** (step 4, 2026-10-27, `web-researcher`: duckdb-delta `delta_multi_file_list.cpp`; local routing test, `output/local/proxy-routing-test.jsonl`)
+
+- The extension builds the delta-kernel engine from the secret's credentials, endpoint and region only; DuckDB's `http_proxy` and `ca_cert_file` do not reach it.
+- Local test, a mitmproxy on a fake `.invalid` endpoint (no request to R2): `deltalake` (log reads), Polars (log and its own Parquet reads) and `boto3` went through the proxy and trusted its CA. DuckDB's kernel request did not; only its `httpfs` extension download did.
+- Consequence: step 5 runs `extra --skip duckdb` in the counted run and `extra --only duckdb --no-proxy` on another day, uncounted.
 
 ### Production inputs
 

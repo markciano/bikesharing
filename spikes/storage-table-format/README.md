@@ -47,3 +47,45 @@ Writes `station_status` rows of both providers from the local capture copy (`../
 Appends write only keys not yet seen in the window; MERGEs take each minute's full rows (s010 decision log #32). Options: `--day` (default: the first full captured day), `--start` (UTC `HH:MM`, default `00:00`), `--minutes` (default and minimum 17).
 
 Output: a summary table on the console and one JSON line per check in `output/probe-<run_id>.jsonl` (`output/local/` with `--local`): UTC start and end, result, table version, commit latencies in ms and, for `concurrent`, which outcome each pair had.
+
+### `r2_proxy.py` — request counter (step 4)
+
+```bash
+uv run mitmdump -s r2_proxy.py   # listens on 127.0.0.1:8080; the first run creates ~/.mitmproxy/
+```
+
+Logs every request to `output/proxy-<UTC start>.jsonl`, one JSON line each: UTC time, host, bucket, key, method, path, query, status, request and response bytes, duration, and the S3 operation with its R2 class (`A`, `B`, `free`, or `unknown` for operations the R2 source card does not name, such as `DeleteObjects`). Only the probe process trusts the mitmproxy CA, through each client's own settings: `proxy_url` and `proxy_ca_certificate` (PEM content) for `deltalake` and Polars, `Config(proxies=...)` and `verify` for `boto3`. DuckDB's delta extension cannot use the proxy (s010 F6).
+
+### `delta_probe.py full` — counted run (step 4)
+
+```bash
+uv run python delta_probe.py full           # against R2, through the proxy; prints its run_id
+uv run python delta_probe.py full --local   # against a temporary local table, no request to R2
+```
+
+Same data and table layout as `gate`, on a window of 74 captured minutes, and a table created with `delta.checkpointInterval = 10`. Every commit opens a fresh table handle. Checks, in order: `write` (60 appends), `merge` (10), `concurrent` (as in `gate`), `optimize` (compaction), `vacuum` (a dry run with the 7-day default, then a run with zero retention). Against R2 it aborts before any request if `PROXY_URL` or `PROXY_CA_CERT` is empty.
+
+Each check's line adds its operation windows (`ops`: each commit, load or vacuum, with its versions, JSON commits loaded, checkpoint, files and bytes added and removed, and, for MERGE, the files in the target partition) and a `measure` window, in which the probe reads the table's `_delta_log` to get Parquet bytes per row, `_delta_log` bytes per commit, checkpoints and bytes rewritten.
+
+### `delta_probe.py extra` — reads, token and lock checks (step 4)
+
+```bash
+uv run python delta_probe.py extra --run-id <run_id> --skip duckdb              # counted, through the proxy
+uv run python delta_probe.py extra --run-id <run_id> --only duckdb --no-proxy   # uncounted, on another day
+```
+
+Runs on the table `full` wrote and appends to its `output/probe-<run_id>.jsonl`. Checks: `polars` and `duckdb` read the table and match its row count; `token` checks that the test token cannot list, read or write `R2_PROD_BUCKET` (the write uses the key `s010-token-check/canary.txt`); `lock` writes a new object under `R2_LOCKED_PREFIX`, then checks that an overwrite and a delete of it fail. The object stays under the lock until the owner removes the lock rule. `--skip <check>` (repeatable) leaves a check out and `--only <check>` runs one alone. `--no-proxy` is accepted only with `--only`. With the proxy on, `duckdb` is refused: its log reads would bypass the proxy.
+
+### `analyse_ops.py` — operations per check, commit and class (step 4)
+
+```bash
+uv run python analyse_ops.py --run-id <run_id> --proxy-log output/proxy-<UTC start>.jsonl
+uv run python analyse_ops.py --run-id <run_id> --proxy-log <file> --r2-class-a <n> --r2-class-b <n>   # with the day's R2 metrics
+uv run python analyse_ops.py --synthetic   # self-check on generated logs in output/local/
+```
+
+Assigns each test-bucket request to a check by time window. Inside a check, a request goes to an operation window or else to the check's verification reads; requests in a measure window are the probe's own reads. Requests to other buckets are filtered out. Writes `output/ops-<run_id>-by-check.csv`, `-by-op.csv`, `-by-class.csv` and `output/analysis-<run_id>.json`. The operation windows of the `full` checks are marked as the ones C takes. A check with no proxied request is flagged, since its client bypassed the proxy. It also runs the analysis checks of s010 §2 A:
+
+- known arithmetic: one data PUT and one log PUT per single-file append without a checkpoint;
+- independent count: the proxy's totals, with and without failed requests, against the R2 metrics;
+- fault injection: a 412 on a log PUT in each concurrent pair, then a retry or a conflict.
