@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: Step 2 ✅; next: step 3 (Owner) with `/implement`
+- Current step: Step 3 ✅; next: step 4 (Claude) with `/implement`
 
 ## 1. Questions — what we need to know
 
@@ -414,7 +414,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 
 ### Step 3 — Set up the test bucket and run the gate checks
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `docs: step 3 - record delta gate result in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
@@ -714,6 +714,27 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 - The delta-rs S3 docs list R2 among the stores that support `aws_conditional_put`. The default log store commits as put-if-absent; `object_store` sends PutObject with `If-None-Match: *`, and R2 evaluates it atomically, returning 412 to the loser.
 - The DynamoDB locking provider (`AWS_S3_LOCKING_PROVIDER`) is no longer supported by delta-rs; `AWS_S3_ALLOW_UNSAFE_RENAME` is documented as unsafe. Neither is set.
 - Consequence: D4 scored R2 fit 4 because delta-rs did not document R2; that premise no longer holds. Step 3 confirms the behaviour on R2.
+
+**F2. The D4 gate holds on R2: write, MERGE and concurrent commits pass** (step 3, 2026-10-27, run `20261027T192323Z`, `output/probe-20261027T192323Z.jsonl`)
+
+- Window: 2026-10-15 from 00:00, 17 minutes of `station_status` from both providers; table `s3://bikesharing-s010-test/20261027T192323Z/station_status`.
+- `write`: 10 commits, version 9, 4,523 rows. `merge`: 3 commits, version 12, no duplicate key. `concurrent`: 5 commits, version 16, no duplicate key and the same result as a serial run of the same commits.
+
+**F3. A stale MERGE on the same partition fails with a commit conflict; a stale append is retried** (step 3, 2026-10-27, run `20261027T192323Z`)
+
+- Stale MERGE (base version 12): `CommitFailedError`, "a concurrent transactions added new data", with advice to rerun the query. The table stayed at version 14 with no duplicate key and no lost row.
+- Stale append (base version 14): retried and landed on version 16 with no row lost.
+- This confirms P1: the MERGE is not auto-resolved.
+
+**F4. Commit latency on R2, direct (no proxy) and with the table load included (#27)** (step 3, 2026-10-27, run `20261027T192323Z`)
+
+| Check | Commits | Median ms | Max ms |
+|---|---|---|---|
+| write | 10 | 2250 | 2560 |
+| merge | 3 | 5528 | 7223 |
+| concurrent | 5 | 3636 | 5432 |
+
+- These are Q2's observed latency. A MERGE takes about 2.5 times the median of an append.
 
 ### Production inputs
 
