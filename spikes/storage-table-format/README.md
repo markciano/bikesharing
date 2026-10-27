@@ -27,7 +27,7 @@ Fill `.env` (ignored by Git). Usual local values:
 
 `.python-version` pins `3.13.17`; `requires-python` is `>=3.13`.
 
-TODO: confirm the Python version before step 2. It was set provisionally in step 1 because the step did not define it. To check: (1) wheels for `deltalake`, `polars`, `duckdb` and `mitmproxy` on the candidate version, macOS arm64 (the owner's Mac runs the probes); (2) the Python version of the capture and deployment target (s009, d002), so the spike code stays close to what will run in production; (3) the support status of 3.13 versus 3.14. If it changes, edit only `.python-version`, run `uv lock` if `requires-python` moves, and re-run `uv sync --locked`.
+The step 1 did not define the version. `3.13.17` was kept because it passed the step 1 Check and was the latest 3.13 patch available in uv. The production Python is not fixed yet: T036 decides it, and the spike's results (operations per commit, bytes per row, costs) do not depend on it. To change it, edit only `.python-version`, run `uv lock` if `requires-python` moves, and re-run `uv sync --locked`.
 
 ## Commands
 

@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: Step 1 ✅; next: step 2 with `/implement` (first confirm the provisional Python version, TODO in the spike README)
+- Current step: Step 1 ✅; next: step 2 with `/implement`
 
 ## 1. Questions — what we need to know
 
@@ -340,7 +340,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 
 - **Status:** ✅ done
 - **Who:** Claude
-- **Commit:** `chore: scaffold storage and table format spike`
+- **Commit:** `chore: step 1 - scaffold storage and table format spike`
 - **Model:** sonnet · medium
 - **Gate:** —
 
@@ -375,7 +375,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** `chore: add delta gate checks to storage spike`
+- **Commit:** `chore: step 2 - add delta gate checks to storage spike`
 - **Model:** opus · high
 - **Gate:** —
 
@@ -415,7 +415,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** `docs: record delta gate result in s010` (Claude writes the findings and Status from the owner's report)
+- **Commit:** `docs: step 3 - record delta gate result in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
 - **Gate:** write, MERGE and concurrent commits pass (D4 hard cut) → otherwise the run stops, and probe A and the cost model are re-planned for Iceberg
 
@@ -444,7 +444,7 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** `chore: add request counting and remaining checks to storage spike`
+- **Commit:** `chore: step 4 - add request counting and remaining checks to storage spike`
 - **Model:** opus · high
 - **Gate:** —
 
@@ -493,7 +493,7 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** `docs: record probe a results in s010` (Claude writes the findings and Status from the owner's report)
+- **Commit:** `docs: step 5 - record probe a results in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
 - **Gate:** the three analysis checks pass → otherwise the scripts are fixed and the probe is run again on a new dashboard day
 
@@ -528,7 +528,7 @@ A counted run of probe A on the test bucket; operation and size tables in `outpu
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** `chore: add volume measurement to storage spike`
+- **Commit:** `chore: step 6 - add volume measurement to storage spike`
 - **Model:** sonnet · high
 - **Gate:** —
 
@@ -568,7 +568,7 @@ A counted run of probe A on the test bucket; operation and size tables in `outpu
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** `docs: record probe b volumes in s010` (Claude writes the findings and Status from the owner's report)
+- **Commit:** `docs: step 7 - record probe b volumes in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
 - **Gate:** —
 
@@ -598,7 +598,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** `chore: add cost model to storage spike`
+- **Commit:** `chore: step 8 - add cost model to storage spike`
 - **Model:** opus · high
 - **Gate:** —
 
@@ -645,7 +645,7 @@ The targeted check matches the hand computation for storage, Class A (bronze LIS
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** `docs: record cost model results in s010` (Claude writes the findings and Status from the owner's report)
+- **Commit:** `docs: step 9 - record cost model results in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
 - **Gate:** the judged on-demand cell (10 catch-ups + 2 h live) costs at most €2 in every month up to 12 (D2 gate, hard cut) → otherwise D2 is reopened. If 1-minute commits 24/7 also fit, D2 holds without conditions; if not, it holds with an operating constraint, recorded as a Production input.
 
@@ -673,7 +673,7 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 
 - **Status:** 💤 todo
 - **Who:** Claude, Owner (teardown)
-- **Commit:** `docs: conclude spike s010`
+- **Commit:** `docs: step 10 - conclude spike s010`
 - **Model:** opus · high
 - **Gate:** —
 
