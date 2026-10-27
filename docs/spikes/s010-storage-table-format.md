@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: Step 1 ✅; next: step 2 with `/implement`
+- Current step: Step 2 ✅; next: step 3 (Owner) with `/implement`
 
 ## 1. Questions — what we need to know
 
@@ -374,7 +374,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 
 ### Step 2 — Write the Delta gate checks
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: step 2 - add delta gate checks to storage spike`
 - **Model:** opus · high
@@ -709,16 +709,18 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 
 ## 4. Findings
 
-**F1. `<one-line statement>`** (step N, YYYY-MM-DD, `<source of evidence>`)
+**F1. delta-rs documents safe commits on R2 with `aws_conditional_put: "etag"`, enforced by R2 with no external lock** (step 2, 2026-10-27, `web-researcher`: delta-rs docs and source, `object_store` source, R2 S3 API; Sources)
 
-- `<evidence>`
-- Consequence: `<for variants, steps or questions>`
+- The delta-rs S3 docs list R2 among the stores that support `aws_conditional_put`. The default log store commits as put-if-absent; `object_store` sends PutObject with `If-None-Match: *`, and R2 evaluates it atomically, returning 412 to the loser.
+- The DynamoDB locking provider (`AWS_S3_LOCKING_PROVIDER`) is no longer supported by delta-rs; `AWS_S3_ALLOW_UNSAFE_RENAME` is documented as unsafe. Neither is set.
+- Consequence: D4 scored R2 fit 4 because delta-rs did not document R2; that premise no longer holds. Step 3 confirms the behaviour on R2.
 
 ### Production inputs
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | | Step N · FN | |
+| P1 | A MERGE that conflicts with a concurrent commit on the same partition raises `CommitFailedError` and is not auto-resolved; the pipeline retries it on a fresh table handle | Step 2 · `web-researcher` (delta-rs conflict checker) | |
+| P2 | Tables are created before any concurrent writer (version-0 race on R2, delta-rs #3505), and concurrent writers do not use `schema_mode="merge"` (metadata changes are never retried, #3829 on R2) | Step 2 · `web-researcher` (delta-rs issues) | |
 
 ## 5. Conclusion
 
@@ -765,3 +767,13 @@ Gathered by the `web-researcher` on 2026-10-25 for D4:
 - Polars Delta and Iceberg support: <https://pola.rs/posts/polars-in-aggregate-apr26>, <https://docs.pola.rs/api/python/stable/reference/api/polars.LazyFrame.sink_iceberg.html>
 - DuckDB Delta and Iceberg: <https://duckdb.org/2026/05/07/delta-uc-updates>, <https://duckdb.org/docs/2.0/core_extensions/iceberg/overview.html>, <https://duckdb.org/2025/11/28/iceberg-writes-in-duckdb>
 - Format adoption trend (vendor blog, directional): <https://risingwave.com/blog/apache-iceberg-vs-delta-lake-vs-hudi-2026/>
+
+Gathered by the `web-researcher` on 2026-10-27 for step 2 (delta-rs `main`; `deltalake` 1.6.6):
+
+- delta-rs on S3-compatible stores: <https://raw.githubusercontent.com/delta-io/delta-rs/main/docs/integrations/object-storage/s3-like.md>
+- delta-rs AWS storage options and locking provider: <https://raw.githubusercontent.com/delta-io/delta-rs/main/crates/aws/src/storage.rs>
+- delta-rs commit loop and retries: <https://raw.githubusercontent.com/delta-io/delta-rs/main/crates/core/src/kernel/transaction/mod.rs>
+- delta-rs conflict checker: <https://raw.githubusercontent.com/delta-io/delta-rs/main/crates/core/src/kernel/transaction/conflict_checker.rs>
+- delta-rs Python exceptions: <https://raw.githubusercontent.com/delta-io/delta-rs/main/python/deltalake/exceptions.py>
+- `object_store` conditional put on S3: <https://raw.githubusercontent.com/apache/arrow-rs-object-store/main/src/aws/mod.rs>
+- delta-rs issues on R2: <https://github.com/delta-io/delta-rs/issues/3505>, <https://github.com/delta-io/delta-rs/issues/3829>
