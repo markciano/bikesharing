@@ -46,4 +46,5 @@
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
 | T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | — |  |
-| T047 |  |  | ⬜ |  |  |
+| T047 | Decision log rules apply only at creation: the change-link convention (`extends`/`refines`/`replaces #N`, and `→ #M` on the earlier row) lives only in the spike and design templates, which are read when a doc is created, not when a decision is added later (s010 missed the `→` marks on #22, #24, #29 and #34); decide where it should live | 1 | ⬜ | — |  |
+| T048 |  |  | ⬜ |  |  |
