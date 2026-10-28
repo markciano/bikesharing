@@ -64,7 +64,7 @@ uv run python delta_probe.py full           # against R2, through the proxy; pri
 uv run python delta_probe.py full --local   # against a temporary local table, no request to R2
 ```
 
-Same data and table layout as `gate`, on a window of 74 captured minutes, and a table created with `delta.checkpointInterval = 10`. Every commit opens a fresh table handle. Checks, in order: `write` (60 appends), `merge` (10), `concurrent` (as in `gate`), `optimize` (compaction), `vacuum` (a dry run with the 7-day default, then a run with zero retention). Against R2 it aborts before any request if `PROXY_URL` or `PROXY_CA_CERT` is empty.
+Same data and table layout as `gate`, on a window of 74 captured minutes, and a table created with `delta.checkpointInterval = 10`. Every commit opens a fresh table handle. Checks, in order: `write` (60 appends), `merge` (10), `concurrent` (as in `gate`), `optimize` (compaction), `vacuum` (a dry run with the 7-day default, then a run with zero retention). Against R2 it aborts before any request if `PROXY_URL` or `PROXY_CA_CERT` is empty. Against R2 through the proxy it takes about 5 minutes; `extra` takes a few seconds per check.
 
 Each check's line adds its operation windows (`ops`: each commit, load or vacuum, with its versions, JSON commits loaded, checkpoint, files and bytes added and removed, and, for MERGE, the files in the target partition) and a `measure` window, in which the probe reads the table's `_delta_log` to get Parquet bytes per row, `_delta_log` bytes per commit, checkpoints and bytes rewritten.
 

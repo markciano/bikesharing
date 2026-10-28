@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: Step 5 🔄, Do 1–9 done (run `20261028T132108Z`); fault injection failed with no 412 (F15); next: re-run with `extra --only race` ([#40](#decision-log)), its R2 total, then `analyse_ops.py` on both proxy logs; then step 8 (Claude)
+- Current step: Step 5 ✅ (run `20261028T132108Z`, analysis checks ok after the `race` re-run, [#40](#decision-log)); next: step 8 (Claude)
 
 ## 1. Questions — what we need to know
 
@@ -500,7 +500,7 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 
 ### Step 5 — Run probe A and verify the analysis
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `docs: step 5 - record probe a results in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
@@ -526,7 +526,7 @@ A counted run of probe A on the test bucket; operation and size tables in `outpu
 
    ```bash
    set -a; source .env; set +a
-   LOG=output/proxy-<UTC start>.jsonl
+   LOG=$(ls output/proxy-*.jsonl | tail -1); echo $LOG
    START=$(jq -rs 'map(.ts) | min - 60 | floor | todate' $LOG)
    END=$(jq -rs 'map(.ts) | max + 60 | ceil | todate' $LOG)
    echo "$START .. $END"
@@ -537,7 +537,7 @@ A counted run of probe A on the test bucket; operation and size tables in `outpu
    ```
 
 8. Only if a check was skipped, and after Do 7's query has returned: run `uv run python delta_probe.py extra --run-id <id> --only <check> --no-proxy`, the same day (#38).
-9. Run `uv run python analyse_ops.py --run-id <id> --proxy-log output/proxy-<UTC start>.jsonl --r2-total <N>`, with Claude's sum from Do 7.
+9. In the same shell as Do 7, run `uv run python analyse_ops.py --run-id <id> --proxy-log $LOG --r2-total <N>`, with Claude's sum from Do 7.
 10. Report the probe summaries, the analysis summary and the R2 figures.
 
 #### Check
@@ -826,6 +826,7 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 **F14. R2's operation metrics are sampled: the total matches the proxy, per-object counts do not** (step 5, 2026-10-28, GraphQL Analytics API, `r2OperationsAdaptiveGroups`, run `20261028T132108Z`, window 13:20:09–13:40:41 UTC, #39)
 
 - Total requests to the test bucket, failed ones included: proxy 6,048, R2 6,049 (+0.02%).
+- With the `race` re-run's window (30 requests, matched exactly), the independent count is proxy 6,078 against R2 6,079 (−0.016%), within #39's ±0.5%.
 - Per class: Class A proxy 514, R2 527 (+2.5%); Class B proxy 5,532, R2 5,519 (−0.2%); DeleteObjects proxy 1, R2 2.
 - Per object: data files written once show 0, 2 or 6 PutObject in R2; data files the proxy saw read 54 times each show 38 to 78 GetObject.
 - Failed requests appear in R2 as `userError` and match the proxy: 13 GetObject 404, 1 PutObject 409 and 1 DeleteObject 409 (the lock check).
@@ -839,6 +840,43 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 - Append pair (base v71): the stale writer PUT v73 with `If-None-Match: *` (200) after the other writer's v72; no failed log PUT.
 - Both pairs: 0 duplicate keys and the same rows as a serial run.
 - Consequence: R2's put-if-absent was not exercised by delta-rs; the `race` check exercises it directly (#40).
+
+**F16. Operations per commit: an append costs 6 Class A and 14 Class B plus 2 per JSON commit since the last checkpoint** (step 5, 2026-10-28, run `20261028T132108Z`, `analyse_ops.py` operation windows, proxy counts)
+
+| Operation | Commits | Class A | Class B |
+|---|---|---|---|
+| Append, no checkpoint | 54 | 6 (5–6) | 14 + 2 per JSON commit loaded (5–30) |
+| Append, writing a checkpoint | 6 | 9 | 61 (43–65) |
+| MERGE, no checkpoint | 9 | 6 | 194 (187–201) |
+| MERGE, writing a checkpoint | 1 | 9 | 236 |
+| Stale append, retried (`concurrent`) | 2 | 5.5 (5–6) | 3.5 (2–5) |
+| Optimize | 1 | 8 | 202 |
+| Vacuum dry run (7-day retention) | 1 | 1 | 35 |
+| Vacuum (zero retention) | 1 | 9, plus 1 DeleteObjects | 39 |
+
+- An append's Class A is 2 PutObject (data and log) and 4 ListObjectsV2 (3 on the table's first commit); a checkpoint commit adds 2 PutObject and 1 ListObjectsV2. Its Class B grows from 14 to 28 as JSON commits accumulate after a checkpoint (`delta.checkpointInterval = 10`).
+- A MERGE reads each data file of the target partition 3 times: 57 files × 3 = 171 of its about 190 GetObject.
+- Median commit latency through the proxy: append 3.7 s, MERGE 24.8 s, concurrent 23.9 s, optimize 28.2 s, vacuum 5.9 s.
+
+**F17. Parquet costs 17.3 bytes per row in per-minute files and 3.7 after optimize; a log commit is 1.2–2.1 KB** (step 5, 2026-10-28, run `20261028T132108Z`, measure windows)
+
+- Parquet bytes per row: 17.34 after 60 appends (60 files), 15.04 after 10 MERGEs, 14.85 after `concurrent`, 3.72 after optimize (1 file); 30,858 rows at the end.
+- `_delta_log` bytes per commit: append 1,218, MERGE 2,076, `concurrent` 1,601, optimize 16,596, vacuum 292.
+- Checkpoints: 6 during the appends (211,211 bytes, about 35 KB each), 1 during the MERGEs (50,739 bytes).
+- Bytes rewritten: 309,728 over 10 MERGEs (about 31 KB each), 85,469 in `concurrent`; optimize writes 114,738 bytes and removes 458,258.
+
+**F18. Optimize, vacuum and both readers work on R2** (step 5, 2026-10-28, run `20261028T132108Z`)
+
+- Optimize compacts 59 files into 1 in one partition, keeping 30,858 rows.
+- Vacuum's dry run with the 7-day default finds no file; with zero retention it deletes 74 files.
+- Polars reads 30,858 rows through the proxy; DuckDB's delta extension reads 30,858 rows, uncounted (F6, #38).
+
+**F19. The test token is isolated from production, the bucket lock holds against an Object Read & Write token, and R2 enforces put-if-absent under a race** (step 5, 2026-10-28, run `20261028T132108Z`, `extra`)
+
+- Token: list, read and write on `bikesharing-capture-spike` each return 403 `AccessDenied`; the canary was not created.
+- Lock: under `locked/`, a new object is created (200); its overwrite and delete return 409 `ObjectLockedByBucketPolicy`, and its body is unchanged.
+- Race: in 10 of 10 rounds both PUTs were in flight at once; R2 accepted one (200) and rejected the other (412 `PreconditionFailed`), and the winner's body was stored; each writer won 5 rounds.
+- D7 is not reopened.
 
 ### Production inputs
 
