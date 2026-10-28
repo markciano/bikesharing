@@ -9,7 +9,8 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: Step 4 ✅; next: step 5 (Owner) with `/implement`
+- Current step: Step 6 ✅; step 5 (Owner) waits for a clean dashboard day (2026-10-29 at the earliest; 2026-10-28 already has test-bucket operations, [#34](#decision-log)); next: step 7 (Owner) with `/implement`
+- Constraint: step 7's Do 3 (reading the capture bucket in the dashboard) is not done on step 5's counted day
 
 ## 1. Questions — what we need to know
 
@@ -301,6 +302,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 31 | [Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria), [Probe B](#b-measured-volume), [Cost model](#c-cost-model) | The production start date is the latest the owner considers plausible; the timebox excludes only the wait for step 5's counted day; Q1, §2 B and §2 C state #29's ±10% threshold, months 1–12 and larger bytes per row; refines #29 | A later start leaves more pending days in month 1, which keeps it pessimistic; step 7 reads past days and waits for nothing; thresholds belong in the Method, not only in the steps | Steps review |
 | 32 | [Probe A](#a-delta-on-r2), [Step 2](#step-2--write-the-delta-gate-checks), [Step 4](#step-4--add-counting-and-the-remaining-checks) | Appends write only keys not yet seen in the data window, deduplicated on silver's basis (`station_id`, `last_reported`); the second minute of the concurrent append pair is also deduplicated against the first; MERGEs take each minute's full rows, and the concurrent MERGE pair keeps overlapping new keys. The window grows to 17 captured minutes in `gate` (10 write, 3 merge, 2 + 2 concurrent) and to 74 in `full` (60, 10, 2 + 2); step criteria unchanged | Bicing repeats keys across minutes when a station has not reported (2026-10-15, minutes 1–10: Bicing 5,430 rows / 2,153 distinct keys; AMBici 2,370 / 2,370), so raw appends leave duplicate keys and the `merge` check would fail with Delta correct; overlapping new keys in the MERGE pair are the insert race that matters for safety | Running step 2 |
 | 33 | [Step 10](#step-10--conclusion) | The spike transfers its security requirements to d002 Requirements; the spike of each other component does the same | The spike holds the threat model and the evidence; d002 stays the single list read before each spike | T045 |
+| 34 | [Step 5](#step-5--run-probe-a-and-verify-the-analysis) | Step 5 waits for a clean dashboard day; steps 6–8 run before it; step 9 still needs step 5's operation tables | Opening the test bucket in the dashboard on 2026-10-28 added operations that cannot be subtracted, so that day fails #22's independent count; steps 6–8 do not read probe A's outputs | Running step 6 |
 
 ### File layout
 
@@ -528,7 +530,7 @@ A counted run of probe A on the test bucket; operation and size tables in `outpu
 
 ### Step 6 — Write the volume measurement
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: step 6 - add volume measurement to storage spike`
 - **Model:** sonnet · high

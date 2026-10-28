@@ -89,3 +89,18 @@ Assigns each test-bucket request to a check by time window. Inside a check, a re
 - known arithmetic: one data PUT and one log PUT per single-file append without a checkpoint;
 - independent count: the proxy's totals, with and without failed requests, against the R2 metrics;
 - fault injection: a 412 on a log PUT in each concurrent pair, then a retry or a conflict.
+
+### `measure_volume.py` — measured volume (step 6)
+
+```bash
+uv run python measure_volume.py                         # full run: writes output/volumes.json
+uv run python measure_volume.py --archive <file> [...]  # history archives alone, by file name; no volumes file
+uv run python measure_volume.py --synthetic             # self-check on a hand-made sample in output/local/
+```
+
+Reads only the local copies, so it sends no request to R2:
+
+- capture (`../cloudflare-capture-spike/data/V4/`): `raw/` objects, bytes and records per provider, feed and day (entries of the payload's main list, 1 for feeds without one), plus distinct (`station_id`, `last_reported`) records for `station_status`; `logs/` objects, bytes and writes per day; `state/` writes per day, derived as one per `gbfs` log line with no error (capture writes the index to `state/` after each successful fetch). The first and last captured days are dropped as incomplete.
+- history (`../bicing-spike/historical-data/raw/*.7z`): per archive, streamed with `tar -xOf` and never extracted: `.7z` and uncompressed bytes, raw rows counted by a CSV parser with the quoted newlines it finds, distinct (`station_id`, `last_reported`) rows, snapshots (`last_updated`) per UTC day and rows of each day's first snapshot.
+
+Output: a summary on the console (means per day for capture, one line per archive) and, in the full run, `output/volumes.json` with every per-day figure.
