@@ -34,10 +34,10 @@
 | T043 | Organize `.claude/rules/` (folders or name prefixes), after checking how Claude Code loads them | 2 | ✅ | — |  |
 | T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | 🔄 | T034 | [s010-storage-table-format.md](spikes/s010-storage-table-format.md) |
 | T046 | Documentation wording conventions: how technical docs name who acts instead of "owner" (`docs/` only, `.claude/` keeps it), and the `TODO (<destination>):` format; rule in `.claude/rules/docs/` and CLAUDE.md, existing docs updated | 2 | ⬜ | — |  |
-| T045 | Requirements: review d002 to add a general security requirement covering every component (capture, storage, pipeline, visualization) | 1 | ⬜ | T034 | [d002-requirements.md](designs/d002-requirements.md) |
-| T036 | Processing engine (single node) and pipeline language | 3 | ⬜ | T035, T045 |  |
-| T037 | Execution target: where the pipeline runs and what schedules it | 3 | ⬜ | T036 |  |
-| T038 | Visualization: tool and where it is published | 2 | ⬜ | T034, T035, T037 |  |
+| T045 | Security requirements: each component's spike adds them to d002 | 1 | ⬜ | T034 | [d002-requirements.md](designs/d002-requirements.md) |
+| T036 | Processing engine (single node) and pipeline language; its spike models the component's threats and adds new requirements to d002 | 3 | ⬜ | T035, T045 |  |
+| T037 | Execution target: where the pipeline runs and what schedules it; its spike models the component's threats and adds new requirements to d002 | 3 | ⬜ | T036 |  |
+| T038 | Visualization: tool and where it is published; its spike models the component's threats and adds new requirements to d002 | 2 | ⬜ | T034, T035, T037 |  |
 | T039 | Capture in production (parent; split into TNNN.M in its design) | 5 | ⬜ | T035 |  |
 | T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
 | T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |

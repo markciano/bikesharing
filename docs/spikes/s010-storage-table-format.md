@@ -300,6 +300,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 30 | [Cost model](#c-cost-model) | Optimize runs once per table at the end of each catch-up and each live session, and daily in the 24/7 scenarios; vacuum runs right after each optimize, with D6's 7-day retention; C adds a sensitivity row for 1-minute 24/7 with hourly versus daily optimize; refines #27 | Each MERGE reads every file in its target partition, so the optimize cadence drives Class B; a fixed value makes the model executable, and the sensitivity row shows how much the unconditional D2 verdict depends on it | Steps review |
 | 31 | [Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria), [Probe B](#b-measured-volume), [Cost model](#c-cost-model) | The production start date is the latest the owner considers plausible; the timebox excludes only the wait for step 5's counted day; Q1, §2 B and §2 C state #29's ±10% threshold, months 1–12 and larger bytes per row; refines #29 | A later start leaves more pending days in month 1, which keeps it pessimistic; step 7 reads past days and waits for nothing; thresholds belong in the Method, not only in the steps | Steps review |
 | 32 | [Probe A](#a-delta-on-r2), [Step 2](#step-2--write-the-delta-gate-checks), [Step 4](#step-4--add-counting-and-the-remaining-checks) | Appends write only keys not yet seen in the data window, deduplicated on silver's basis (`station_id`, `last_reported`); the second minute of the concurrent append pair is also deduplicated against the first; MERGEs take each minute's full rows, and the concurrent MERGE pair keeps overlapping new keys. The window grows to 17 captured minutes in `gate` (10 write, 3 merge, 2 + 2 concurrent) and to 74 in `full` (60, 10, 2 + 2); step criteria unchanged | Bicing repeats keys across minutes when a station has not reported (2026-10-15, minutes 1–10: Bicing 5,430 rows / 2,153 distinct keys; AMBici 2,370 / 2,370), so raw appends leave duplicate keys and the `merge` check would fail with Delta correct; overlapping new keys in the MERGE pair are the insert race that matters for safety | Running step 2 |
+| 33 | [Step 10](#step-10--conclusion) | The spike transfers its security requirements to d002 Requirements; the spike of each other component does the same | The spike holds the threat model and the evidence; d002 stays the single list read before each spike | T045 |
 
 ### File layout
 
@@ -682,6 +683,7 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 
 - This document: Conclusion (Answers, Exit criteria, Verdict, Decisions to record, Not verified, Follow-ups), the destination of every Production input, and Status.
 - Decisions to record: for each of D1–D7, whether it holds, changes or is reopened; the findings that support it; its grouping into ADRs; and the sections of `architecture.md` and of the [R2 source card](../sources/r2-storage.md) it affects. It is enough to write the ADRs from the closed spike (#26).
+- Security requirements: from D7 and the security checks of probe A, the requirements the system needs, transferred to d002 Requirements after R14.
 - Follow-ups: the post-spike documentation work of T035 (ADRs, `architecture.md`, R2 source card), in a fresh session from the closed spike (#26).
 - `README.md`: How we got here.
 - Not touched: `docs/decisions/`, `architecture.md` and the R2 source card, which the post-spike work writes.
@@ -696,15 +698,17 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 #### Do
 
 1. Write the Conclusion, Decisions to record included.
-2. Set the destination of every Production input: a design with its task, or discarded with a reason.
-3. Write How we got here in `README.md`.
-4. Owner: remove the test lock rule, then empty and delete the test bucket, delete the token, and delete the canary if it exists.
-5. Set Status to finished with the UTC date.
+2. Transfer the security requirements to d002 Requirements in its EARS form, numbered from R15; leave out any the evidence does not support, and mark D7 as reopened if probe A's token or lock check failed.
+3. Set the destination of every Production input: a design with its task, or discarded with a reason.
+4. Write How we got here in `README.md`.
+5. Owner: remove the test lock rule, then empty and delete the test bucket, delete the token, and delete the canary if it exists.
+6. Set Status to finished with the UTC date.
 
 #### Check
 
 - Every Q is answered, every exit criterion has a result and every Production input has a destination.
 - Every decision D1–D7 has an entry in Decisions to record, with its findings and affected sections.
+- d002 lists the security requirements, each traceable to a D7 threat or control.
 - The Cloudflare console lists neither the test bucket nor its token.
 
 ## 4. Findings
