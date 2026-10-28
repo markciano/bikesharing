@@ -108,3 +108,14 @@ Reads only the local copies, so it sends no request to R2:
 Output: a summary on the console (means per day for capture, one line per archive) and, in the full run, `output/volumes.json` with every per-day figure.
 
 The full run takes about 2–3 minutes (capture about 1, history the rest) and prints each part only when it ends.
+
+### `cost_model.py` — cost model (step 8)
+
+```bash
+uv run python cost_model.py               # full run: params.toml, output/volumes.json and A's ops-<run_id>-by-op.csv
+uv run python cost_model.py --synthetic   # hand-computed minimal case; writes to output/local/
+```
+
+Every value the model uses is in `params.toml`: dates, scenarios, tables and their commit cadence, retention, Delta settings, prices and the USD→EUR rate; set the dates, the rate and the capture override before a run (s010 step 9). A's operations per commit, optimize and vacuum are derived from its per-operation table and printed at the start. For each scenario (24/7 cadences, the optimize sensitivity row and the on-demand grid) and every month 1–12 it computes storage per layer, billed as the month's mean of daily values, and Class A and B per component (capture `raw/`, `logs/`, `state/`; bronze LIST and GET; silver; gold), and their cost against R2's free quotas. Month 1 adds the initial load of the history and capture's backlog.
+
+Output: `output/cost_months.csv` (one row per scenario and month, with cost per layer and accumulated), `output/cost_summary.csv` (one row per scenario: the reported months, the worst month and whether it fits the D2 gate) and the summary on the console. It takes a few seconds.

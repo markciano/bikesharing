@@ -1,0 +1,159 @@
+# Parameters of the s010 cost model (probe C, §2 C). cost_model.py holds only the logic; every value it uses is here.
+# The owner sets in step 9: dates.capture_start, dates.production_start, prices.usd_to_eur(_date) and capture.override.
+
+[inputs]
+volumes = "output/volumes.json"                       # probe B (step 7)
+ops_by_op = "output/ops-20261028T132108Z-by-op.csv"   # probe A (step 5): operations per commit, optimize and vacuum
+
+[dates]
+capture_start = "2026-10-14"      # earliest day under raw/ in bikesharing-capture-spike; set in step 9
+production_start = "2027-01-01"   # latest plausible start, the most pending days in month 1 (#31); set in step 9
+
+[gate]
+months = 12                       # every month 1-12 is computed and judged (#29)
+reported_months = [1, 2, 4, 6, 12]
+max_eur_per_month = 2.0           # D2 gate and D5 review trigger (#12, #15)
+
+[scenarios]
+cadences_min = [1, 5, 10, 30, 60, 360]   # 24/7, a commit every N minutes
+optimize_24_7_min = 1440                 # daily optimize in the 24/7 scenarios (#30)
+sensitivity = { cadence_min = 1, optimize_min = 60 }   # reported, not judged (#30)
+catch_ups = [4, 6, 8, 10]                # on-demand grid, per month
+live_hours = [0.5, 1, 2, 3]              # on-demand grid, per month; one live session per catch-up (#41)
+live_cadence_min = 1
+judged = { catch_ups = 10, live_hours = 2 }
+
+[capture]
+dynamic_feeds = ["ambici/free_bike_status", "ambici/station_status", "bicing/station_status"]
+static_captures_per_day = 1       # production's planned cadence; B measured the current worker's hourly one
+state_writes_per_static_pass = 2  # F8: each static pass writes both indexes
+class_b_per_day = 17              # F11: 7-17 GetObject a day; the maximum
+# Capture's monthly Class A and B from R2 metrics, used instead of B's when step 7 found a gap beyond ±10% (#24, #36).
+override = { enabled = false, class_a_per_month = 0, class_b_per_month = 0 }
+
+[pipeline]
+list_page_keys = 1000             # S3 ListObjectsV2 page (#23)
+
+[delta]
+checkpoint_interval = 100         # delta-rs default (F5); A ran with 10, its measured_checkpoint_interval
+measured_checkpoint_interval = 10
+catchup_partition_files = 1       # a catch-up commit finds the boundary day's compacted file in its partition
+bytes_per_row = [17.34, 3.72]     # F17, before and after optimize; the larger is used (#29)
+checkpoint_bytes = 35202          # F17: 211,211 bytes over 6 checkpoints
+
+[retention]                       # D5, D6: bronze and gold are kept indefinitely
+silver_days = 365
+delta_history_days = 7            # removed files kept until vacuum
+delta_log_days = 30               # _delta_log commits kept
+
+# Silver: one table per feed type on the common model (§2 C). `commits`: "run" commits every run, "day" once a day,
+# after its feed's daily capture. `history`: the archive type that feeds the table, and how its rows are counted (#21).
+# gbfs_versions is captured to bronze but feeds no silver table.
+[[silver]]
+name = "station_status"
+commits = "run"
+feeds = ["ambici/station_status", "bicing/station_status"]
+history = { type = "ESTACIONS", rows = "distinct" }
+
+[[silver]]
+name = "vehicle_status"
+commits = "run"
+feeds = ["ambici/free_bike_status"]
+
+[[silver]]
+name = "station_information"
+commits = "day"
+feeds = ["ambici/station_information", "bicing/station_information"]
+history = { type = "INFORMACIO", rows = "one_snapshot_per_day" }
+
+[[silver]]
+name = "system_information"
+commits = "day"
+feeds = ["ambici/system_information", "bicing/system_information"]
+
+[[silver]]
+name = "system_pricing_plans"
+commits = "day"
+feeds = ["ambici/system_pricing_plans", "bicing/system_pricing_plans"]
+
+[[silver]]
+name = "system_regions"
+commits = "day"
+feeds = ["ambici/system_regions", "bicing/system_regions"]
+
+[[silver]]
+name = "vehicle_types"
+commits = "day"
+feeds = ["ambici/vehicle_types", "bicing/vehicle_types"]
+
+[[silver]]
+name = "geofencing_zones"
+commits = "day"
+feeds = ["ambici/geofencing_zones", "bicing/geofencing_zones"]
+
+[[silver]]
+name = "system_hours"
+commits = "day"
+feeds = ["ambici/system_hours"]
+
+# Gold: one table per guiding question (architecture.md §1.1). `commits` follows the question's freshness:
+# "run" (≤ 5 min), "hour", "day". Rows by cardinality (#44): `entity` (stations or feeds) × buckets of `grain`;
+# a snapshot holds one row per entity.
+[[gold]]
+name = "q1"
+commits = "run"
+grain = "snapshot"
+entity = "stations"
+
+[[gold]]
+name = "q2"
+commits = "run"
+grain = "minute"
+entity = "feeds"
+
+[[gold]]
+name = "q3"
+commits = "hour"
+grain = "hour"
+entity = "stations"
+
+[[gold]]
+name = "q4"
+commits = "hour"
+grain = "day"
+entity = "stations"
+
+[[gold]]
+name = "q5"
+commits = "run"
+grain = "snapshot"
+entity = "stations"
+
+[[gold]]
+name = "q6"
+commits = "day"
+grain = "day"
+entity = "stations"
+
+[[gold]]
+name = "q7"
+commits = "hour"
+grain = "hour"
+entity = "stations"
+
+[[gold]]
+name = "q8"
+commits = "day"
+grain = "day"
+entity = "stations"
+
+[prices]                          # R2 source card, Standard storage, confirmed 2026-10-26
+storage_usd_per_gb_month = 0.015
+class_a_usd_per_million = 4.50
+class_b_usd_per_million = 0.36
+free_storage_gb_month = 10        # free tier shared by every bucket in the account (§2 C, pessimistic)
+free_class_a = 1_000_000
+free_class_b = 10_000_000
+gb_bytes = 1_000_000_000
+usd_to_eur = 1.0                  # placeholder (pessimistic); set in step 9
+usd_to_eur_date = ""              # date of the rate; set in step 9
