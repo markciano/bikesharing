@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: Step 7 ✅; next: step 5 (Owner) with `/implement`, counted by run window ([#37](#decision-log)); then step 8 (Claude)
+- Current step: Step 5 🔄, Do 1–7 done (run `20261028T132108Z`); the independent count compares totals ([#39](#decision-log)); next: Do 8 (DuckDB, uncounted), Do 9 (`analyse_ops.py --r2-total 6049`); then step 8 (Claude)
 
 ## 1. Questions — what we need to know
 
@@ -217,7 +217,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - logs and results go to an `output/` folder ignored by Git (ADR-0009); summary tables are copied into Findings.
 - **Analysis checks:**
   - known arithmetic: an append of one file gives one data PUT and one log PUT;
-  - independent count: the proxy's total for the test bucket against the bucket's R2 metrics over the counted run's UTC window, from the GraphQL Analytics API, with nothing else touching the bucket during the run ([#37](#decision-log)); totals are computed with and without failed requests, since R2's billing of them is undocumented;
+  - independent count: the proxy's total requests for the test bucket, failed ones included, within ±0.5% of the bucket's R2 metrics total over the counted run's UTC window, from the GraphQL Analytics API, with nothing else touching the bucket during the run ([#37, #39](#decision-log)); R2's metrics are sampled, so only the total is compared and the per-class counts come from the proxy ([F14](#4-findings));
   - fault injection: of two concurrent commits, the stale one is rejected and then retried or raises a conflict, with no key duplicated or row lost.
 - **Security outcome:** a failed token or lock check reopens D7 with the owner before the Conclusion.
 - **Clean-up:** the owner removes the test lock rule, then deletes the bucket and the token; a locked bucket cannot be emptied, so the lock rule goes first.
@@ -289,13 +289,13 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 19 | [Probe A](#a-delta-on-r2) | The proxy is mitmproxy with HTTPS inspection, trusted by the probe process only; refines #5 → #22 | Requests are signed (SigV4) for R2's host, so a plain reverse proxy breaks them; mitmproxy is the standard HTTP inspection tool and needs no signing code | Method review |
 | 20 | [Probe A](#a-delta-on-r2) | The owner creates and removes the test bucket, token and lock rule in the console; the script only runs the checks; refines #6 | Operational actions are the owner's (CLAUDE.md), and the script never holds an admin credential | Method review |
 | 21 | [Probe B](#b-measured-volume) | B counts history rows per archive type, with the same dedup basis as capture's `station_status` (`station_id`, `last_reported`); INFORMACIO at one snapshot per day; raw rows kept as an upper bound; extends #9 | C sizes silver in rows (#10) and month 1 holds the history (#17); deduplicated rows are what silver stores, and both sources are counted on the same basis | Steps |
-| 22 | [Probe A](#a-delta-on-r2) | The proxy covers the whole counted run, `extra` included; the independent count compares totals for the test bucket on a dashboard day that only step 5 uses; C takes only the commit and maintenance checks, and requests to other buckets are filtered out; refines #5, #19 → #37 | The test bucket receives only the probe's requests, so a daily total needs no narrower window | Steps |
+| 22 | [Probe A](#a-delta-on-r2) | The proxy covers the whole counted run, `extra` included; the independent count compares totals for the test bucket on a dashboard day that only step 5 uses; C takes only the commit and maintenance checks, and requests to other buckets are filtered out; refines #5, #19 → #37, #39 | The test bucket receives only the probe's requests, so a daily total needs no narrower window | Steps |
 | 23 | [Cost model](#c-cost-model) | The pipeline's LISTs on bronze are derived from ADR-0012's key layout (prefixes per provider, feed and day per run; 1,000 keys per page), not set by hand | They are probably the largest Class A item (about 430k a month for 10 prefixes every minute), so they are derived, not guessed | Steps |
 | 24 | [Probe B](#b-measured-volume) | Capture's daily Class A and B from the dashboard, on capture-only days, check B's derived `state/` writes and D2's ~270–300k Class A; the metric prevails → #36 | Measured data prevails over derived counts | Steps |
 | 25 | [File layout](#file-layout) | `output/` is ignored by a `.gitignore` in the spike folder | The spike stays self-contained and the root file is not touched | Steps |
 | 26 | [Decided at framing](#decided-at-framing), [Step 10](#step-10--conclusion) | The spike writes no ADR. Its Conclusion adds Decisions to record (outcome, findings, ADR grouping, affected sections per decision); the ADRs, `architecture.md` and the R2 source card are written after the spike closes, in a fresh session, as T035's post-spike work | `architecture.md` and the ADRs are the project's most valuable documents and are written with full, clean context, not during a run; the closed spike holds everything they need | Steps review |
 | 27 | [Probe A](#a-delta-on-r2), [Cost model](#c-cost-model) | A opens a fresh table before each commit, on a test table with `delta.checkpointInterval = 10`, and logs table-load reads, checkpoints and files per MERGE; C models a commit as table load + per-file MERGE reads + a checkpoint every N commits, with N and the optimize cadence as parameters; refines #4 → #30 | A real run loads the table from scratch and its MERGE scans the files written since the last optimize, so a constant from a long-lived process can understate cost by orders of magnitude; a small interval shows several checkpoints in a short run, and each component is measured once and scaled in C | Steps review |
-| 28 | [Probe A](#a-delta-on-r2), [D7](#d7-storage-security-baseline) | The concurrency check is judged as a safety property (no duplicate key or lost row versus a serial run; the stale commit retries or raises a conflict); the independent count accepts the proxy's total with or without failed requests; a failed token or lock check reopens D7 before the Conclusion | The D4 gate asks for safe commits, not for one mechanism; R2's billing of failed requests is undocumented, so a billing rule must not loop step 5; D7 had no rule for a failed security check | Steps review |
+| 28 | [Probe A](#a-delta-on-r2), [D7](#d7-storage-security-baseline) | The concurrency check is judged as a safety property (no duplicate key or lost row versus a serial run; the stale commit retries or raises a conflict); the independent count accepts the proxy's total with or without failed requests; a failed token or lock check reopens D7 before the Conclusion → #39 | The D4 gate asks for safe commits, not for one mechanism; R2's billing of failed requests is undocumented, so a billing rule must not loop step 5; D7 had no rule for a failed security check | Steps review |
 | 29 | [Probe B](#b-measured-volume), [Cost model](#c-cost-model), [Exit criteria](#exit-criteria) | B's history counter is checked against s004's parquet row counts; capture's dashboard figures override B beyond ±10%; C computes every month 1–12, adds one GET per new bronze object, and sizes tables with the larger bytes per row of A (before or after optimize); the timebox counts effort, not waiting days → #31, #36 | The extracted CSVs no longer exist; each check needs a yes/no threshold; the gate judges every month; Class B was missing bronze reads; the larger value keeps the model pessimistic | Steps review |
 | 30 | [Cost model](#c-cost-model) | Optimize runs once per table at the end of each catch-up and each live session, and daily in the 24/7 scenarios; vacuum runs right after each optimize, with D6's 7-day retention; C adds a sensitivity row for 1-minute 24/7 with hourly versus daily optimize; refines #27 | Each MERGE reads every file in its target partition, so the optimize cadence drives Class B; a fixed value makes the model executable, and the sensitivity row shows how much the unconditional D2 verdict depends on it | Steps review |
 | 31 | [Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria), [Probe B](#b-measured-volume), [Cost model](#c-cost-model) | The production start date is the latest the owner considers plausible; the timebox excludes only the wait for step 5's counted day; Q1, §2 B and §2 C state #29's ±10% threshold, months 1–12 and larger bytes per row; refines #29 | A later start leaves more pending days in month 1, which keeps it pessimistic; step 7 reads past days and waits for nothing; thresholds belong in the Method, not only in the steps | Steps review |
@@ -304,7 +304,9 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 34 | [Step 5](#step-5--run-probe-a-and-verify-the-analysis) | Step 5 waits for a clean dashboard day; steps 6–8 run before it; step 9 still needs step 5's operation tables → #37 | Opening the test bucket in the dashboard on 2026-10-28 added operations that cannot be subtracted, so that day fails #22's independent count; steps 6–8 do not read probe A's outputs | Running step 6 |
 | 35 | [Step 7](#step-7--run-probe-b-and-verify-volumes) | The spot check sums the day's file sizes with `stat` instead of `du -sk` | B sums object bytes; `du` rounds each file up (to 4 KB blocks, or to 512 bytes with `-A`) and adds the directory itself, so on ~1,400 small objects it never matches; the exact sum needs no tolerance | Running step 7 |
 | 36 | [Probe B](#b-measured-volume), [Step 7](#step-7--run-probe-b-and-verify-volumes) | Capture's R2 operations come from the GraphQL Analytics API (`r2OperationsAdaptiveGroups`) per UTC day, operation and status, not from the dashboard; the check uses PutObject alone, and ListObjects and GetObject are reported apart; refines #24, #29 | The dashboard's summary and charts disagree, and neither its day boundary nor an operation breakdown is documented; the owner downloaded the bucket almost daily, so no day is capture-only, and PutObject alone excludes those downloads ([R2 metrics](https://developers.cloudflare.com/r2/platform/metrics-analytics/)) | Running step 7 |
-| 37 | [Probe A](#a-delta-on-r2), [Step 5](#step-5--run-probe-a-and-verify-the-analysis) | Step 5's independent count uses the test bucket's R2 metrics over the run's UTC window (proxy's first to last request, one minute of margin each side) from the GraphQL Analytics API, not a clean dashboard day; refines #22, #34 | The API accepts `datetime` range filters; for 2026-10-27 23:00 UTC it returned exactly the owner's 13 operations (7 Class A, 6 Class B), so a window isolates the run without a day free of other activity | After step 7 |
+| 37 | [Probe A](#a-delta-on-r2), [Step 5](#step-5--run-probe-a-and-verify-the-analysis) | Step 5's independent count uses the test bucket's R2 metrics over the run's UTC window (proxy's first to last request, one minute of margin each side) from the GraphQL Analytics API, not a clean dashboard day; refines #22, #34 → #38, #39 | The API accepts `datetime` range filters; for 2026-10-27 23:00 UTC it returned exactly the owner's 13 operations (7 Class A, 6 Class B), so a window isolates the run without a day free of other activity | After step 7 |
+| 38 | [Step 5](#step-5--run-probe-a-and-verify-the-analysis) | The uncounted DuckDB read runs on the same day as the counted run, after Do 7's R2 metrics query has returned; refines #37 | The run window, not the day, isolates the counted run, so a later read outside the window does not change it | Running step 5 |
+| 39 | [Probe A](#a-delta-on-r2), [Step 5](#step-5--run-probe-a-and-verify-the-analysis) | The independent count compares the proxy's total requests for the test bucket, failed ones included, with R2's total over the run window, within ±0.5%; per-class counts come from the proxy; refines #22, #28, #37 | R2's operation metrics are sampled ([F14](#4-findings)): per-object counts scatter around the proxy's exact ones, while the totals differ by 0.02%; ±0.5% (about 30 requests in a 6,000-request run) still exposes a client that bypasses the proxy for part of a check; the query returns failed requests as `userError`, so both totals include them | Running step 5 |
 
 ### File layout
 
@@ -501,7 +503,7 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 - **Who:** Owner
 - **Commit:** `docs: step 5 - record probe a results in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
-- **Gate:** the three analysis checks pass → otherwise the scripts are fixed and the probe is run again on a new dashboard day
+- **Gate:** the three analysis checks pass → otherwise the scripts are fixed and the probe is run again in a new run window
 
 #### Scope
 
@@ -519,8 +521,7 @@ A counted run of probe A on the test bucket; operation and size tables in `outpu
 4. In another terminal, run `uv run python delta_probe.py full` and note the `run_id` it prints.
 5. Run `uv run python delta_probe.py extra --run-id <id>`, adding `--skip <check>` for a check whose client step 4 reported as unable to use the proxy.
 6. Stop the proxy.
-7. Only if a check was skipped: on another day, run `uv run python delta_probe.py extra --run-id <id> --only <check> --no-proxy`.
-8. About 10 minutes after the run, so that the metrics are in, query the test bucket's R2 operations over the run's window: from one minute before the proxy's first request to one minute after its last (#37). Claude sums the output into Class A and Class B with the [R2 source card](../sources/r2-storage.md)'s operation classes.
+7. About 20 minutes after the run, so that every operation's metrics are in (F14), query the test bucket's R2 operations over the run's window: from one minute before the proxy's first request to one minute after its last (#37). Claude sums the output into the total of requests, failed ones included (#39).
 
    ```bash
    set -a; source .env; set +a
@@ -534,12 +535,13 @@ A counted run of probe A on the test bucket; operation and size tables in `outpu
      | jq -r '.errors // (.data.viewer.accounts[0].r2OperationsAdaptiveGroups | sort_by(.dimensions.actionType) | .[] | [.dimensions.actionType, .dimensions.actionStatus, .sum.requests] | @tsv)'
    ```
 
-9. Run `uv run python analyse_ops.py --run-id <id> --proxy-log output/proxy-<UTC start>.jsonl --r2-class-a <A> --r2-class-b <B>`, with Claude's sums from Do 8.
+8. Only if a check was skipped, and after Do 7's query has returned: run `uv run python delta_probe.py extra --run-id <id> --only <check> --no-proxy`, the same day (#38).
+9. Run `uv run python analyse_ops.py --run-id <id> --proxy-log output/proxy-<UTC start>.jsonl --r2-total <N>`, with Claude's sum from Do 7.
 10. Report the probe summaries, the analysis summary and the R2 figures.
 
 #### Check
 
-- The three analysis checks pass, and no check is flagged as bypassing the proxy apart from one skipped in Do 5. Which total the dashboard matched (with or without failed requests) is recorded as a finding.
+- The three analysis checks pass, and no check is flagged as bypassing the proxy apart from one skipped in Do 5. The gap between the proxy's and R2's totals is recorded as a finding.
 - If the token check or the lock check fails, it is recorded as a finding and D7 is reopened with the owner before step 10; Decisions to record marks D7 as reopened (#28).
 - Claude records as findings: operations per commit by class, Parquet bytes per row, `_delta_log` bytes per commit, rewritten bytes, the maintenance and read results (guide) and the token and lock results.
 
@@ -819,6 +821,16 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 - Live capture, distinct over raw records: Bicing 0.331, AMBici 0.987.
 - History ESTACIONS: 0.985 (0.939–0.997 per month).
 - Capture polls every minute and Bicing repeats a station until it reports again (#32); the history samples every few minutes, so fewer repeats remain.
+
+**F14. R2's operation metrics are sampled: the total matches the proxy, per-object counts do not** (step 5, 2026-10-28, GraphQL Analytics API, `r2OperationsAdaptiveGroups`, run `20261028T132108Z`, window 13:20:09–13:40:41 UTC, #39)
+
+- Total requests to the test bucket, failed ones included: proxy 6,048, R2 6,049 (+0.02%).
+- Per class: Class A proxy 514, R2 527 (+2.5%); Class B proxy 5,532, R2 5,519 (−0.2%); DeleteObjects proxy 1, R2 2.
+- Per object: data files written once show 0, 2 or 6 PutObject in R2; data files the proxy saw read 54 times each show 38 to 78 GetObject.
+- Failed requests appear in R2 as `userError` and match the proxy: 13 GetObject 404, 1 PutObject 409 and 1 DeleteObject 409 (the lock check).
+- A query about 10 minutes after the run returned only DeleteObject, DeleteObjects and GetObject; a later one returned every operation.
+- Not confirmed by the API: the dataset exposes neither `count` nor `avg { sampleInterval }` ("unknown field"), so the sampling is inferred from the per-object pattern.
+- Consequence: the independent count compares totals (#39), and C takes per-class counts from the proxy.
 
 ### Production inputs
 

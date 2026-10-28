@@ -72,7 +72,7 @@ Each check's line adds its operation windows (`ops`: each commit, load or vacuum
 
 ```bash
 uv run python delta_probe.py extra --run-id <run_id> --skip duckdb              # counted, through the proxy
-uv run python delta_probe.py extra --run-id <run_id> --only duckdb --no-proxy   # uncounted, on another day
+uv run python delta_probe.py extra --run-id <run_id> --only duckdb --no-proxy   # uncounted, after the R2 metrics query
 ```
 
 Runs on the table `full` wrote and appends to its `output/probe-<run_id>.jsonl`. Checks: `polars` and `duckdb` read the table and match its row count; `token` checks that the test token cannot list, read or write `R2_PROD_BUCKET` (the write uses the key `s010-token-check/canary.txt`); `lock` writes a new object under `R2_LOCKED_PREFIX`, then checks that an overwrite and a delete of it fail. The object stays under the lock until the owner removes the lock rule. `--skip <check>` (repeatable) leaves a check out and `--only <check>` runs one alone. `--no-proxy` is accepted only with `--only`. With the proxy on, `duckdb` is refused: its log reads would bypass the proxy.
@@ -81,14 +81,14 @@ Runs on the table `full` wrote and appends to its `output/probe-<run_id>.jsonl`.
 
 ```bash
 uv run python analyse_ops.py --run-id <run_id> --proxy-log output/proxy-<UTC start>.jsonl
-uv run python analyse_ops.py --run-id <run_id> --proxy-log <file> --r2-class-a <n> --r2-class-b <n>   # with the day's R2 metrics
+uv run python analyse_ops.py --run-id <run_id> --proxy-log <file> --r2-total <n>   # with the run window's R2 total
 uv run python analyse_ops.py --synthetic   # self-check on generated logs in output/local/
 ```
 
 Assigns each test-bucket request to a check by time window. Inside a check, a request goes to an operation window or else to the check's verification reads; requests in a measure window are the probe's own reads. Requests to other buckets are filtered out. Writes `output/ops-<run_id>-by-check.csv`, `-by-op.csv`, `-by-class.csv` and `output/analysis-<run_id>.json`. The operation windows of the `full` checks are marked as the ones C takes. A check with no proxied request is flagged, since its client bypassed the proxy. It also runs the analysis checks of s010 §2 A:
 
 - known arithmetic: one data PUT and one log PUT per single-file append without a checkpoint;
-- independent count: the proxy's totals, with and without failed requests, against the R2 metrics;
+- independent count: the proxy's total requests, failed ones included, within ±0.5% of R2's total over the run window (R2's metrics are sampled, s010 F14);
 - fault injection: a 412 on a log PUT in each concurrent pair, then a retry or a conflict.
 
 ### `measure_volume.py` — measured volume (step 6)
