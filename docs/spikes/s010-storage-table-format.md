@@ -9,8 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: Step 6 ✅; step 5 (Owner) waits for a clean dashboard day (2026-10-29 at the earliest; 2026-10-28 already has test-bucket operations, [#34](#decision-log)); next: step 7 (Owner) with `/implement`
-- Constraint: step 7's Do 3 (reading the capture bucket in the dashboard) is not done on step 5's counted day
+- Current step: Step 7 ✅; step 5 (Owner) waits for a clean dashboard day (2026-10-29 at the earliest; 2026-10-28 already has test-bucket operations, [#34](#decision-log)); next: step 8 (Claude) with `/implement`
 
 ## 1. Questions — what we need to know
 
@@ -234,7 +233,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - `logs/` and `state/`: objects, bytes and writes per day, as capture's own Class A operations and storage;
   - history, per archive and type: size as `.7z` and uncompressed, and raw rows (an upper bound); for ESTACIONS (`station_status`), distinct (`station_id`, `last_reported`) rows and snapshots per day; for INFORMACIO (`station_information`), rows at one snapshot per day, the basis of C's daily static commits ([#21](#decision-log));
   - archives are read as a stream, not extracted to disk.
-- Capture's operations are also checked against R2 metrics: the owner reads the daily Class A and Class B of `bikesharing-capture-spike` in the Cloudflare dashboard over days when only capture ran (PutObject alone if the dashboard breaks operations down). Manual downloads of the whole bucket show as Class B peaks and those days are excluded. The daily average × 30 checks the derived `state/` writes and D2's ~270–300k Class A per month; within ±10%, B's values are kept; beyond it, the metric prevails and the gap goes to Findings ([#24, #29](#decision-log)).
+- Capture's operations are also checked against R2 metrics: the owner queries the GraphQL Analytics API (`r2OperationsAdaptiveGroups`) for `bikesharing-capture-spike`, per UTC day, operation and status. PutObject is capture's writes; ListObjects and GetObject, which also come from the owner's downloads of the bucket, are reported apart ([#36](#decision-log)). The daily PutObject average × 30 checks the derived `state/` writes and D2's ~270–300k Class A per month; within ±10%, B's values are kept; beyond it, the metric prevails and the gap goes to Findings ([#24, #29](#decision-log)).
 - Writes one volumes file that C reads.
 - s005's estimates are used only where nothing is measured.
 
@@ -303,6 +302,8 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 32 | [Probe A](#a-delta-on-r2), [Step 2](#step-2--write-the-delta-gate-checks), [Step 4](#step-4--add-counting-and-the-remaining-checks) | Appends write only keys not yet seen in the data window, deduplicated on silver's basis (`station_id`, `last_reported`); the second minute of the concurrent append pair is also deduplicated against the first; MERGEs take each minute's full rows, and the concurrent MERGE pair keeps overlapping new keys. The window grows to 17 captured minutes in `gate` (10 write, 3 merge, 2 + 2 concurrent) and to 74 in `full` (60, 10, 2 + 2); step criteria unchanged | Bicing repeats keys across minutes when a station has not reported (2026-10-15, minutes 1–10: Bicing 5,430 rows / 2,153 distinct keys; AMBici 2,370 / 2,370), so raw appends leave duplicate keys and the `merge` check would fail with Delta correct; overlapping new keys in the MERGE pair are the insert race that matters for safety | Running step 2 |
 | 33 | [Step 10](#step-10--conclusion) | The spike transfers its security requirements to d002 Requirements; the spike of each other component does the same | The spike holds the threat model and the evidence; d002 stays the single list read before each spike | T045 |
 | 34 | [Step 5](#step-5--run-probe-a-and-verify-the-analysis) | Step 5 waits for a clean dashboard day; steps 6–8 run before it; step 9 still needs step 5's operation tables | Opening the test bucket in the dashboard on 2026-10-28 added operations that cannot be subtracted, so that day fails #22's independent count; steps 6–8 do not read probe A's outputs | Running step 6 |
+| 35 | [Step 7](#step-7--run-probe-b-and-verify-volumes) | The spot check sums the day's file sizes with `stat` instead of `du -sk` | B sums object bytes; `du` rounds each file up (to 4 KB blocks, or to 512 bytes with `-A`) and adds the directory itself, so on ~1,400 small objects it never matches; the exact sum needs no tolerance | Running step 7 |
+| 36 | [Probe B](#b-measured-volume), [Step 7](#step-7--run-probe-b-and-verify-volumes) | Capture's R2 operations come from the GraphQL Analytics API (`r2OperationsAdaptiveGroups`) per UTC day, operation and status, not from the dashboard; the check uses PutObject alone, and ListObjects and GetObject are reported apart; refines #24 | The dashboard's summary and charts disagree, and neither its day boundary nor an operation breakdown is documented; the owner downloaded the bucket almost daily, so no day is capture-only, and PutObject alone excludes those downloads ([R2 metrics](https://developers.cloudflare.com/r2/platform/metrics-analytics/)) | Running step 7 |
 
 ### File layout
 
@@ -570,7 +571,7 @@ A counted run of probe A on the test bucket; operation and size tables in `outpu
 
 ### Step 7 — Run probe B and verify volumes
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `docs: step 7 - record probe b volumes in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
@@ -587,14 +588,23 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 #### Do
 
 1. Run `uv run python measure_volume.py`.
-2. Spot-check one provider, feed and day: `find <day folder> -type f | wc -l` and `du -sk <day folder>` against the summary's objects and bytes.
-3. In the Cloudflare dashboard, read the daily Class A and Class B operations of `bikesharing-capture-spike` (PutObject alone if the dashboard breaks operations down) over the longest span of days on which only capture ran; days of manual bucket downloads show as Class B peaks and are excluded (#24).
-4. Report the summary, the spot check and the daily figures with their dates.
+2. Spot-check one provider, feed and day: `find <day folder> -type f | wc -l` and `find <day folder> -type f -exec stat -f %z {} + | awk '{s+=$1} END {print s}'` ([#35](#decision-log)) against that day's objects and bytes in `output/volumes.json`.
+3. From `spikes/storage-table-format/`, query the R2 metrics of `bikesharing-capture-spike` per UTC day, operation and status (#24, #36):
+
+   ```bash
+   set -a; source .env; set +a
+   curl -s https://api.cloudflare.com/client/v4/graphql \
+     -H "Authorization: Bearer $CF_ANALYTICS_API_TOKEN" -H "Content-Type: application/json" \
+     --data "$(jq -n --arg acc "$R2_ACCOUNT_ID" '{variables: {acc: $acc}, query: "query($acc: String!) { viewer { accounts(filter: {accountTag: $acc}) { r2OperationsAdaptiveGroups(limit: 10000, filter: {bucketName: \"bikesharing-capture-spike\", date_geq: \"2026-10-14\", date_leq: \"2026-10-27\"}) { sum { requests } dimensions { date actionType actionStatus } } } } }"}')" \
+     | jq -r '.errors // (.data.viewer.accounts[0].r2OperationsAdaptiveGroups | sort_by(.dimensions.date, .dimensions.actionType) | .[] | [.dimensions.date, .dimensions.actionType, .dimensions.actionStatus, .sum.requests] | @tsv)'
+   ```
+
+4. Report the summary, the spot check and the query's output.
 
 #### Check
 
 - The spot check matches the summary.
-- Claude compares the dashboard's daily average × 30 with B's capture writes (`raw/`, `logs/` and the derived `state/` writes): within ±10%, B's values are kept; outside it, the dashboard figures override capture's operations in `params.toml` (step 9) and the gap is recorded as a finding (#29). D2's ~270–300k Class A per month is compared the same way, and the result is a finding.
+- Claude compares the metrics' daily PutObject average × 30, over B's complete days, with B's capture writes (`raw/`, `logs/` and the derived `state/` writes): within ±10%, B's values are kept; outside it, the metrics' figures override capture's operations in `params.toml` (step 9) and the gap is recorded as a finding (#29). D2's ~270–300k Class A per month is compared the same way, and the result is a finding.
 - `raw/` growth per day is within ±10% of the ~2.7 GB per month measured in `architecture.md` §3; otherwise the gap is recorded as a finding before step 8, and C uses B's measured volumes.
 - Claude records as findings: volumes per feed and day, `logs/` and `state/` writes per day, history rows per type, and the dedup ratio of both sources.
 
@@ -615,7 +625,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
   - retention (D5, D6): bronze and gold indefinite, silver 12 months, 7 days of Delta history, 30 days of log;
   - maintenance: optimize once per table at the end of each catch-up and each live session, and daily in the 24/7 scenarios; vacuum right after each optimize, with D6's 7-day retention (#30);
   - the checkpoint interval N, delta-rs's default as confirmed in step 4;
-  - an optional override of capture's monthly Class A and B with step 7's dashboard figures (#24);
+  - an optional override of capture's monthly Class A and B with step 7's R2 metrics figures (#24, #36);
   - prices and free quotas from the [R2 source card](../sources/r2-storage.md), and the USD→EUR rate with its date, since prices are in USD and the threshold in EUR;
   - paths to A's operation tables and B's `volumes.json`.
 - `cost_model.py`: for each scenario and month, storage per layer (bronze, silver, gold, Delta overhead) and Class A and B operations, split into capture `raw/`, capture `logs/` and `state/`, and pipeline. It computes monthly and accumulated cost against the shared free quotas, with month 1 including the initial load (#17). It writes `output/cost_*.csv` and a summary, and marks per scenario whether it fits the D2 gate (at most €2 in every month up to 12).
@@ -752,6 +762,49 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 - The extension builds the delta-kernel engine from the secret's credentials, endpoint and region only; DuckDB's `http_proxy` and `ca_cert_file` do not reach it.
 - Local test, a mitmproxy on a fake `.invalid` endpoint (no request to R2): `deltalake` (log reads), Polars (log and its own Parquet reads) and `boto3` went through the proxy and trusted its CA. DuckDB's kernel request did not; only its `httpfs` extension download did.
 - Consequence: step 5 runs `extra --skip duckdb` in the counted run and `extra --only duckdb --no-proxy` on another day, uncounted.
+
+**F7. Capture's `raw/` grows 95 MB a day, 2.85 GB a month, within ±10% of `architecture.md`'s 2.7 GB** (step 7, 2026-10-28, `measure_volume.py`, `output/volumes.json`; 11 complete days, 2026-10-15 to 2026-10-25)
+
+- Means per day: AMBici `free_bike_status` 73.2 MB (77%), Bicing `station_status` 17.0 MB, AMBici `station_status` 3.2 MB, all static feeds together 1.5 MB.
+- Objects per day: about 1,425 per dynamic feed (3 feeds) and 24 per static feed (14 feeds), 4,620 in all.
+- +5.5% against the 2.7 GB per month of `architecture.md` §3, so C uses B's measured volumes either way.
+- Spot check, Bicing `station_status` on 2026-10-15: 1,431 objects and 16,944,054 bytes, on disk and in `volumes.json` (#35).
+
+**F8. Capture writes 1,440 `logs/` objects and 48 `state/` objects a day** (step 7, 2026-10-28, `measure_volume.py`)
+
+- `logs/`: one object per pass, 1,440 a day (0.58 MB).
+- `state/`: 48 writes a day, from 24 static passes that each write both indexes (4 KB in all; only the latest version is kept).
+- Capture's writes: 6,094 a day on average (`raw/` 4,620, `logs/` 1,440, `state/` 48).
+
+**F9. R2's PutObject count matches B's capture writes within 0.1% (4.05% with 2026-10-15)** (step 7, 2026-10-28, GraphQL Analytics API, `r2OperationsAdaptiveGroups`, `bikesharing-capture-spike`, #36)
+
+- Daily PutObject `success` over B's 11 days: 6,343.8 on average, against B's 6,096.7 (+4.05%, within ±10%); B's values are kept (#29).
+- Without 2026-10-15: 6,098.8 against 6,094.4 (+0.07%); the other days differ by −9 to +29.
+- 2026-10-15 has 8,794 PutObject, 2,674 over B: 2,671 are under `V2/` (an earlier capture variant still running that day, outside B's `V4/` copy) and `V4/` has 6,123 against B's 6,120 (GraphQL `objectName` grouped by prefix).
+- Failed PutObject (`internalError`): 42 on 2026-10-16, when B also counts fewer objects (5,980), and 1 on 2026-10-18.
+
+**F10. Capture's Class A is about 183k a month, below D2's ~270–300k estimate** (step 7, 2026-10-28, F8, F9)
+
+- B's 6,097 writes a day × 30 = 182,902 a month (190,315 with R2's mean including 2026-10-15); capture makes no LIST.
+- D2's ~270–300k is 32–39% higher than measured; C uses the measured value.
+
+**F11. Capture's own Class B is about 10 GetObject a day** (step 7, 2026-10-28, GraphQL Analytics API)
+
+- On days with no download of the bucket (2026-10-17, 18, 20 and 22): 7 to 17 GetObject and at most 1 HeadObject a day; on download days, thousands of GetObject and HeadObject and hundreds of ListObjects.
+- They match capture's code: a fresh Worker isolate reads `state/` once per source (`loadPersistedFeeds` in `V4.js`).
+
+**F12. The Bicing history has 44.3M rows per type over 10 months, and INFORMACIO is a snapshot every few minutes, not daily** (step 7, 2026-10-28, `measure_volume.py`; 20 archives, 2025-12 to 2026-09)
+
+- ESTACIONS: 202.6 MB as `.7z`, 2.88 GB uncompressed, 44,307,568 raw rows, 43,658,302 distinct (`station_id`, `last_reported`).
+- INFORMACIO: 81.0 MB as `.7z`, 9.13 GB uncompressed, 44,306,142 raw rows; at one snapshot per day (#21), 165,131 rows.
+- Both types have 238 to 278 snapshots per day on monthly average, about 541–557 stations each; no quoted newline in any archive.
+- 2026-08 ESTACIONS raw rows equal its s004 parquet (3,987,120, #29); 2026-09 matches its bytes and lines.
+
+**F13. Deduplication keeps 33% of Bicing's live `station_status` rows, but 98.5% of its history rows** (step 7, 2026-10-28, F7, F12)
+
+- Live capture, distinct over raw records: Bicing 0.331, AMBici 0.987.
+- History ESTACIONS: 0.985 (0.939–0.997 per month).
+- Capture polls every minute and Bicing repeats a station until it reports again (#32); the history samples every few minutes, so fewer repeats remain.
 
 ### Production inputs
 

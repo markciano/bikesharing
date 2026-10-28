@@ -20,6 +20,7 @@ Fill `.env` (ignored by Git). Usual local values:
 | `R2_TEST_ACCESS_KEY_ID`, `R2_TEST_SECRET_ACCESS_KEY` | Token scoped to the test bucket only |
 | `R2_PROD_BUCKET` | Name of the production bucket, used only to check the token cannot reach it |
 | `R2_LOCKED_PREFIX` | Prefix covered by the test lock rule |
+| `CF_ANALYTICS_API_TOKEN` | Token with Account Analytics Read only, for the R2 metrics query of step 7 |
 | `PROXY_URL` | `http://127.0.0.1:8080` |
 | `PROXY_CA_CERT` | `~/.mitmproxy/mitmproxy-ca-cert.pem` |
 
@@ -104,3 +105,5 @@ Reads only the local copies, so it sends no request to R2:
 - history (`../bicing-spike/historical-data/raw/*.7z`): per archive, streamed with `tar -xOf` and never extracted: `.7z` and uncompressed bytes, raw rows counted by a CSV parser with the quoted newlines it finds, distinct (`station_id`, `last_reported`) rows, snapshots (`last_updated`) per UTC day and rows of each day's first snapshot.
 
 Output: a summary on the console (means per day for capture, one line per archive) and, in the full run, `output/volumes.json` with every per-day figure.
+
+The full run takes about 2–3 minutes (capture about 1, history the rest) and prints each part only when it ends.
