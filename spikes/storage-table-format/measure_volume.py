@@ -158,7 +158,9 @@ def measure_csv(lines: Iterable[bytes]) -> dict:
     # The CSV parser joins quoted fields that span lines, so rows are records, not lines.
     reader = csv.reader(counter)
     header = next(reader)
-    station, reported, updated = (header.index(c) for c in ("station_id", "last_reported", "last_updated"))
+    station, updated = header.index("station_id"), header.index("last_updated")
+    # Only ESTACIONS (station_status) has last_reported, the dedup basis; INFORMACIO gets no distinct count.
+    reported = header.index("last_reported") if "last_reported" in header else None
 
     rows = quoted_newlines = bad_snapshot = 0
     keys = set()
@@ -166,7 +168,8 @@ def measure_csv(lines: Iterable[bytes]) -> dict:
     for row in reader:
         rows += 1
         quoted_newlines += sum(field.count("\n") for field in row)
-        keys.add((row[station], row[reported]))
+        if reported is not None:
+            keys.add((row[station], row[reported]))
         try:
             ts = int(row[updated])
         except ValueError:
@@ -180,7 +183,7 @@ def measure_csv(lines: Iterable[bytes]) -> dict:
         "uncompressed_bytes": counter.bytes,
         "raw_rows": rows,
         "quoted_newlines": quoted_newlines,
-        "distinct_rows": len(keys),
+        "distinct_rows": len(keys) if reported is not None else None,
         "rows_without_snapshot": bad_snapshot,
         "snapshots_per_day": {d: len(snapshots[d]) for d in days},
         # The day's first snapshot stands for one snapshot per day (#21).
@@ -244,8 +247,9 @@ def print_history(history: list[dict]):
     print(f"  {'archive':42} {'7z MB':>7} {'csv bytes':>12} {'raw rows':>10} {'q.nl':>5}"
           f" {'distinct':>10} {'snap/day':>8} {'rows@1snap/day':>14}")
     for a in history:
+        distinct = f"{a['distinct_rows']:10,}" if a["distinct_rows"] is not None else f"{'-':>10}"
         print(f"  {a['archive']:42} {a['archive_bytes'] / 1e6:7.1f} {a['uncompressed_bytes']:12,}"
-              f" {a['raw_rows']:10,} {a['quoted_newlines']:5} {a['distinct_rows']:10,}"
+              f" {a['raw_rows']:10,} {a['quoted_newlines']:5} {distinct}"
               f" {mean(a['snapshots_per_day'].values()):8.1f} {mean(a['rows_one_snapshot_per_day'].values()):14.1f}")
 
 
@@ -270,6 +274,18 @@ SAMPLE_EXPECTED = {
     "rows_without_snapshot": 0,
     "snapshots_per_day": {"1970-01-01": 2, "1970-01-02": 1},
     "rows_one_snapshot_per_day": {"1970-01-01": 2, "1970-01-02": 2},
+}
+# An INFORMACIO-like sample: no last_reported column, so no distinct count.
+SAMPLE_INFO_CSV = (
+    b'"station_id","name","last_updated"\n'
+    b'1,"A",1000\n'
+    b'2,"B",1000\n'
+    b'1,"A",86410\n'
+)
+SAMPLE_INFO_EXPECTED = {
+    "raw_rows": 3,
+    "distinct_rows": None,
+    "rows_one_snapshot_per_day": {"1970-01-01": 2, "1970-01-02": 1},
 }
 
 
@@ -308,6 +324,10 @@ def synthetic() -> int:
     for key, expected in SAMPLE_EXPECTED.items():
         if got[key] != expected:
             errors.append(f"csv {key}: {got[key]} != {expected}")
+    got = measure_csv(iter(SAMPLE_INFO_CSV.splitlines(keepends=True)))
+    for key, expected in SAMPLE_INFO_EXPECTED.items():
+        if got[key] != expected:
+            errors.append(f"info csv {key}: {got[key]} != {expected}")
 
     root = OUTPUT / "local" / "synthetic-volume"
     build_sample_capture(root)
