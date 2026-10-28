@@ -6,7 +6,8 @@
 #   full  (step 4) the counted run, through the proxy (r2_proxy.py): write (60 commits), merge (10),
 #         concurrent, optimize, vacuum, on a table with delta.checkpointInterval = 10 (#27). After each
 #         check, a measure window reads the table's log to record versions, bytes and checkpoints.
-#   extra (step 4) after full, on its table: Polars and DuckDB reads, token scope, bucket lock (#22).
+#   extra (step 4) after full, on its table: Polars and DuckDB reads, token scope, bucket lock (#22),
+#         and a put-if-absent race on keys outside the table (#40).
 # Input:  station_status objects of both providers from the local capture copy
 #         (spikes/cloudflare-capture-spike/data/V4/raw/<provider>/station_status/<day>/<UTC time>.json.gz).
 # Target: s3://<R2_TEST_BUCKET>/<run_id>/station_status on R2, or a temporary local table with --local.
@@ -24,7 +25,9 @@ import os
 import statistics
 import sys
 import tempfile
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -54,7 +57,8 @@ MODES = {
 for _mode in MODES.values():
     _mode["minutes"] = _mode["write"] + _mode["merge"] + CONCURRENT_MINUTES
 
-EXTRA_CHECKS = ("polars", "duckdb", "token", "lock")
+EXTRA_CHECKS = ("polars", "duckdb", "token", "lock", "race")
+RACE_ROUNDS = 10
 # The delta extension's log reads (delta-kernel) take no proxy or CA setting (F6): its check runs uncounted.
 NO_PROXY_CLIENTS = {"duckdb"}
 
@@ -721,7 +725,44 @@ def extra_lock(ctx: dict) -> dict:
     return details
 
 
-EXTRA = {"polars": extra_polars, "duckdb": extra_duckdb, "token": extra_token, "lock": extra_lock}
+def extra_race(ctx: dict) -> dict:
+    # Two clients PUT one new key at once with If-None-Match: *, the put-if-absent delta-rs commits rely on
+    # (F1, #18). R2 must accept exactly one and reject the other, keeping the winner's body (#40). Keys sit
+    # under <run_id>/race/, outside the table. A barrier releases both PUTs together in each round.
+    bucket = os.environ["R2_TEST_BUCKET"]
+    clients = [s3_client(ctx["proxy"]) for _ in range(2)]
+    barrier = threading.Barrier(2)
+
+    def put(writer: int, key: str) -> dict:
+        barrier.wait()
+        t0 = time.perf_counter()
+        result = attempt(lambda: clients[writer].put_object(
+            Bucket=bucket, Key=key, Body=f"writer-{writer}".encode(), IfNoneMatch="*"))
+        return {"writer": writer, "start": t0, "end": time.perf_counter(), **result}
+
+    rounds = []
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        for i in range(RACE_ROUNDS):
+            key = f"{ctx['run_id']}/race/{i:02}.txt"
+            attempts = list(pool.map(put, (0, 1), (key, key)))
+            winners = [a["writer"] for a in attempts if a["allowed"]]
+            stored = clients[0].get_object(Bucket=bucket, Key=key)["Body"].read().decode()
+            rounds.append({
+                "key": key,
+                "statuses": [a["status"] for a in attempts],
+                "codes": [a.get("code") for a in attempts],
+                # both PUTs in flight at once: each started before the other ended
+                "overlap": all(a["start"] < b["end"] for a, b in (attempts, attempts[::-1])),
+                "ok": len(winners) == 1 and stored == f"writer-{winners[0]}",
+            })
+    details = {"rounds": len(rounds), "overlapping": sum(r["overlap"] for r in rounds), "per_round": rounds}
+    if not all(r["ok"] for r in rounds):
+        raise CheckFailed(f"race: {[r for r in rounds if not r['ok']]}")
+    return details
+
+
+EXTRA = {"polars": extra_polars, "duckdb": extra_duckdb, "token": extra_token, "lock": extra_lock,
+         "race": extra_race}
 
 
 def run_extra(args, parser) -> int:
@@ -731,7 +772,7 @@ def run_extra(args, parser) -> int:
     proxy = None if args.no_proxy else proxy_settings()  # aborts before any request if the proxy is not set
     if proxy and NO_PROXY_CLIENTS & set(names):
         sys.exit(f"{', '.join(sorted(NO_PROXY_CLIENTS & set(names)))} cannot use the proxy (F6): "
-                 "add --skip duckdb, and run --only duckdb --no-proxy on another day")
+                 "add --skip duckdb, and run --only duckdb --no-proxy after the R2 metrics query")
     log_path = OUTPUT_DIR / f"probe-{args.run_id}.jsonl"
     if not log_path.is_file():
         sys.exit(f"No log of run {args.run_id}: {log_path.relative_to(HERE)}")
@@ -748,6 +789,7 @@ def run_extra(args, parser) -> int:
         "uri": f"s3://{os.environ['R2_TEST_BUCKET']}/{args.run_id}/station_status",
         "options": options,
         "expected_rows": full_lines[-1]["details"]["rows"],
+        "proxy": proxy,
         "s3": s3_client(proxy),
     }
     print(f"run_id {args.run_id} · extra checks {', '.join(names)} · proxy {'on' if proxy else 'off (uncounted)'}")

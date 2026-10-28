@@ -68,20 +68,21 @@ Same data and table layout as `gate`, on a window of 74 captured minutes, and a 
 
 Each check's line adds its operation windows (`ops`: each commit, load or vacuum, with its versions, JSON commits loaded, checkpoint, files and bytes added and removed, and, for MERGE, the files in the target partition) and a `measure` window, in which the probe reads the table's `_delta_log` to get Parquet bytes per row, `_delta_log` bytes per commit, checkpoints and bytes rewritten.
 
-### `delta_probe.py extra` — reads, token and lock checks (step 4)
+### `delta_probe.py extra` — reads, token, lock and race checks (step 4)
 
 ```bash
 uv run python delta_probe.py extra --run-id <run_id> --skip duckdb              # counted, through the proxy
 uv run python delta_probe.py extra --run-id <run_id> --only duckdb --no-proxy   # uncounted, after the R2 metrics query
 ```
 
-Runs on the table `full` wrote and appends to its `output/probe-<run_id>.jsonl`. Checks: `polars` and `duckdb` read the table and match its row count; `token` checks that the test token cannot list, read or write `R2_PROD_BUCKET` (the write uses the key `s010-token-check/canary.txt`); `lock` writes a new object under `R2_LOCKED_PREFIX`, then checks that an overwrite and a delete of it fail. The object stays under the lock until the owner removes the lock rule. `--skip <check>` (repeatable) leaves a check out and `--only <check>` runs one alone. `--no-proxy` is accepted only with `--only`. With the proxy on, `duckdb` is refused: its log reads would bypass the proxy.
+Runs on the table `full` wrote and appends to its `output/probe-<run_id>.jsonl`. Checks: `polars` and `duckdb` read the table and match its row count; `token` checks that the test token cannot list, read or write `R2_PROD_BUCKET` (the write uses the key `s010-token-check/canary.txt`); `lock` writes a new object under `R2_LOCKED_PREFIX`, then checks that an overwrite and a delete of it fail. The object stays under the lock until the owner removes the lock rule. `race` runs 10 rounds of two clients PUTting one new key under `<run_id>/race/` at once with `If-None-Match: *`; each round needs one success, one rejection and the winner's body stored (s010 #40). `--skip <check>` (repeatable) leaves a check out and `--only <check>` runs one alone. `--no-proxy` is accepted only with `--only`. With the proxy on, `duckdb` is refused: its log reads would bypass the proxy.
 
 ### `analyse_ops.py` — operations per check, commit and class (step 4)
 
 ```bash
 uv run python analyse_ops.py --run-id <run_id> --proxy-log output/proxy-<UTC start>.jsonl
 uv run python analyse_ops.py --run-id <run_id> --proxy-log <file> --r2-total <n>   # with the run window's R2 total
+uv run python analyse_ops.py --run-id <run_id> --proxy-log <file> <re-run file> --r2-total <n>   # a re-run: both logs, both windows' totals summed
 uv run python analyse_ops.py --synthetic   # self-check on generated logs in output/local/
 ```
 
@@ -89,7 +90,7 @@ Assigns each test-bucket request to a check by time window. Inside a check, a re
 
 - known arithmetic: one data PUT and one log PUT per single-file append without a checkpoint;
 - independent count: the proxy's total requests, failed ones included, within ±0.5% of R2's total over the run window (R2's metrics are sampled, s010 F14);
-- fault injection: a 412 on a log PUT in each concurrent pair, then a retry or a conflict.
+- fault injection: each concurrent pair ends safely (the stale MERGE conflicts, the stale append is retried, no duplicate key, the same rows as a serial run), and the `race` check's proxied PUTs show one 200 and one 412 per round (s010 #40, F15).
 
 ### `measure_volume.py` — measured volume (step 6)
 
