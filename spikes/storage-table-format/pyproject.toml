@@ -6,6 +6,7 @@ dependencies = [
     "boto3>=1.43.119",
     "deltalake>=1.0",
     "duckdb>=2.0.0",
+    "matplotlib>=3.11.2",
     "mitmproxy>=12.3.1",
     "polars>=2.1.0",
     "python-dotenv>=1.2.4",
