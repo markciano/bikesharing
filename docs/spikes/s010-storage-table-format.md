@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: Step 8 ✅ (cost model, synthetic check ok); next: step 9 (Owner)
+- Current step: step 8 (Claude): bytes per row ([#46](#decision-log)), sensitivity and charts ([#45](#decision-log)); the cost model itself is done
 
 ## 1. Questions — what we need to know
 
@@ -254,7 +254,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - table counts and cadences are parameters.
 - **Sizing:**
   - bronze: B's `raw/` and `logs/` growth plus the history archives as `.7z`;
-  - silver: B's deduplicated records per day (raw records for feeds without a dedup basis) times the larger of A's Parquet bytes per row before and after optimize ([#29](#decision-log)), so no compression ratio is assumed; raw records give an upper bound; it starts in month 1 with the history inside its 12-month window;
+  - silver: B's deduplicated records per day (raw records for feeds without a dedup basis) times the larger of A's Parquet bytes per row before and after optimize ([#29](#decision-log)), weighted by rows with an estimate for vehicles, which A did not write: 22.0 bytes per row ([#46](#decision-log)), so no compression ratio is assumed; raw records give an upper bound; it starts in month 1 with the history inside its 12-month window;
   - gold: an upper bound by cardinality, each table's rows × the same bytes per row: one row per station for the snapshot questions (Q1, Q5), feeds × minutes for Q2, and stations (B) × hours or days by grain for the others, accumulated over every loaded day ([#44](#decision-log));
   - Delta overhead in silver and gold: A's `_delta_log` bytes per commit × 30 days of commits, plus the bytes rewritten by MERGE and optimize in 7 days ([D6](#d6-silver-keeps-a-rolling-12-months-gold-is-kept-indefinitely-and-delta-keeps-7-days-of-history)).
 - **Output:** cost per layer as well as the total; capture's `logs/` and `state/` writes are reported apart from `raw/`, so their share of the quota is visible.
@@ -296,7 +296,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 26 | [Decided at framing](#decided-at-framing), [Step 10](#step-10--conclusion) | The spike writes no ADR. Its Conclusion adds Decisions to record (outcome, findings, ADR grouping, affected sections per decision); the ADRs, `architecture.md` and the R2 source card are written after the spike closes, in a fresh session, as T035's post-spike work | `architecture.md` and the ADRs are the project's most valuable documents and are written with full, clean context, not during a run; the closed spike holds everything they need | Steps review |
 | 27 | [Probe A](#a-delta-on-r2), [Cost model](#c-cost-model) | A opens a fresh table before each commit, on a test table with `delta.checkpointInterval = 10`, and logs table-load reads, checkpoints and files per MERGE; C models a commit as table load + per-file MERGE reads + a checkpoint every N commits, with N and the optimize cadence as parameters; refines #4 → #30, #42 | A real run loads the table from scratch and its MERGE scans the files written since the last optimize, so a constant from a long-lived process can understate cost by orders of magnitude; a small interval shows several checkpoints in a short run, and each component is measured once and scaled in C | Steps review |
 | 28 | [Probe A](#a-delta-on-r2), [D7](#d7-storage-security-baseline) | The concurrency check is judged as a safety property (no duplicate key or lost row versus a serial run; the stale commit retries or raises a conflict); the independent count accepts the proxy's total with or without failed requests; a failed token or lock check reopens D7 before the Conclusion → #39, #40 | The D4 gate asks for safe commits, not for one mechanism; R2's billing of failed requests is undocumented, so a billing rule must not loop step 5; D7 had no rule for a failed security check | Steps review |
-| 29 | [Probe B](#b-measured-volume), [Cost model](#c-cost-model), [Exit criteria](#exit-criteria) | B's history counter is checked against s004's parquet row counts; capture's dashboard figures override B beyond ±10%; C computes every month 1–12, adds one GET per new bronze object, and sizes tables with the larger bytes per row of A (before or after optimize); the timebox counts effort, not waiting days → #31, #36 | The extracted CSVs no longer exist; each check needs a yes/no threshold; the gate judges every month; Class B was missing bronze reads; the larger value keeps the model pessimistic | Steps review |
+| 29 | [Probe B](#b-measured-volume), [Cost model](#c-cost-model), [Exit criteria](#exit-criteria) | B's history counter is checked against s004's parquet row counts; capture's dashboard figures override B beyond ±10%; C computes every month 1–12, adds one GET per new bronze object, and sizes tables with the larger bytes per row of A (before or after optimize); the timebox counts effort, not waiting days → #31, #36, #46 | The extracted CSVs no longer exist; each check needs a yes/no threshold; the gate judges every month; Class B was missing bronze reads; the larger value keeps the model pessimistic | Steps review |
 | 30 | [Cost model](#c-cost-model) | Optimize runs once per table at the end of each catch-up and each live session, and daily in the 24/7 scenarios; vacuum runs right after each optimize, with D6's 7-day retention; C adds a sensitivity row for 1-minute 24/7 with hourly versus daily optimize; refines #27 → #41 | Each MERGE reads every file in its target partition, so the optimize cadence drives Class B; a fixed value makes the model executable, and the sensitivity row shows how much the unconditional D2 verdict depends on it | Steps review |
 | 31 | [Q1](#q1-cost-calculation), [Exit criteria](#exit-criteria), [Probe B](#b-measured-volume), [Cost model](#c-cost-model) | The production start date is the latest the owner considers plausible; the timebox excludes only the wait for step 5's counted day; Q1, §2 B and §2 C state #29's ±10% threshold, months 1–12 and larger bytes per row; refines #29 | A later start leaves more pending days in month 1, which keeps it pessimistic; step 7 reads past days and waits for nothing; thresholds belong in the Method, not only in the steps | Steps review |
 | 32 | [Probe A](#a-delta-on-r2), [Step 2](#step-2--write-the-delta-gate-checks), [Step 4](#step-4--add-counting-and-the-remaining-checks) | Appends write only keys not yet seen in the data window, deduplicated on silver's basis (`station_id`, `last_reported`); the second minute of the concurrent append pair is also deduplicated against the first; MERGEs take each minute's full rows, and the concurrent MERGE pair keeps overlapping new keys. The window grows to 17 captured minutes in `gate` (10 write, 3 merge, 2 + 2 concurrent) and to 74 in `full` (60, 10, 2 + 2); step criteria unchanged | Bicing repeats keys across minutes when a station has not reported (2026-10-15, minutes 1–10: Bicing 5,430 rows / 2,153 distinct keys; AMBici 2,370 / 2,370), so raw appends leave duplicate keys and the `merge` check would fail with Delta correct; overlapping new keys in the MERGE pair are the insert race that matters for safety | Running step 2 |
@@ -312,6 +312,8 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 42 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | A commit that writes a checkpoint adds 3 Class A and 33 × N / 10 Class B, scaling A's measure at N = 10 to the model's N; extends #27 | Writing a checkpoint rereads the commits since the previous one, so it grows with N but occurs N times less often: about 3.3 reads per commit, against about 100 to load the table at N = 100 ([F5, F16](#4-findings)) | Running step 8 |
 | 43 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | Each pipeline run lists in full the current day prefix of the 3 dynamic feeds, at 1,000 keys per page; static feeds' day prefixes are listed once a day; a catch-up lists every pending day prefix of the 17 feeds; refines #23 | Listing static feeds every minute would cost about 770k Class A a month (77% of the free quota) for data captured once a day; a full listing assumes no watermark, which is T039's; listing after the last processed key would save about 5% | Running step 8 |
 | 44 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | C sizes gold snapshot tables (Q1, Q5) at one row per station, Q2 at feeds × minutes, and the other tables at stations × hours or days by their grain, accumulated over every loaded day; extends #16 | The sizing in §2 C covered only hour and day grains; Q2 measures the feeds, not the stations, and by station it would add about 0.6 GB a month that the question never holds | Running step 8 |
+| 45 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model), [Step 9](#step-9--run-probe-c-and-verify-the-model) | Step 8 adds, in a new session, a sensitivity analysis and charts. Sensitivity: A's four extrapolated measures (reads per file, checkpoint interval N, Parquet bytes per row, bytes rewritten per MERGE), one at a time at ×0.5 and ×2, on the judged cell and 1-minute 24/7, giving each case's worst month; reported, not judged. Charts, with matplotlib in `output/cost-model/`: monthly cost against the €2 gate, the on-demand grid as a heat map, the worst month by 24/7 cadence, cost per layer by month for the judged cell, and the sensitivity as a tornado chart | A measured these four on one small `station_status` table at N = 10, so they are the model's least certain inputs; the analysis shows whether any could push the judged cell over €2 and which to watch in production. Capture volume and prices are measured or published, so they are not varied. The charts make the gate and the cost curve for T039 readable | After step 8 |
+| 46 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | Silver and gold are sized at 22.0 Parquet bytes per row: the mean of `station_status` (17.34, A's larger value) and vehicles (22.85, estimated) weighted by silver rows (16% and 84%). Vehicles are estimated as A's value × their gzip bytes per record in bronze over `station_status`'s (24.07 / 18.26, step 7's `volumes.json`); extends #29 | A wrote only `station_status`, but vehicles are 84% of silver's rows and carry more columns; the bronze ratio estimates them without a new measurement, and #45's ×0.5 and ×2 cover its error | After step 8 |
 
 ### File layout
 
@@ -327,9 +329,9 @@ spikes/storage-table-format/
 ├── delta_probe.py     A: write, MERGE, concurrency, optimize, vacuum, reads, token and lock checks
 ├── analyse_ops.py     A: joins proxy and probe logs; operations per check, step and class; the three checks
 ├── measure_volume.py  B: raw/, logs/, state/ and history volumes
-├── cost_model.py      C: scenarios × months, cost per layer and total
+├── cost_model.py      C: scenarios × months, cost per layer and total; sensitivity and charts (#45)
 ├── params.toml        C: every parameter (tables, cadences, retention, prices), apart from the logic
-└── output/            Ignored by Git (ADR-0009): logs, volumes, operation and cost tables
+└── output/            Ignored by Git (ADR-0009): logs, volumes, operation and cost tables; cost-model/ charts
 ```
 
 ## 3. Steps
@@ -345,7 +347,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 | 5 | Run probe A and verify the analysis | Owner | Analysis checks | `output/` |
 | 6 | Write the volume measurement | Claude | — | `measure_volume.py`, `README.md` |
 | 7 | Run probe B and verify volumes | Owner | — | `output/` |
-| 8 | Write the cost model | Claude | — | `cost_model.py`, `params.toml`, `README.md` |
+| 8 | Write the cost model | Claude | — | `cost_model.py`, `params.toml`, `README.md`, `pyproject.toml`, `uv.lock` |
 | 9 | Run probe C and verify the model | Owner | D2 gate | `output/` |
 | 10 | Conclusion | Claude, Owner (teardown) | — | this document, `README.md`; test lock rule, bucket and token |
 
@@ -631,9 +633,9 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 ### Step 8 — Write the cost model
 
-- **Status:** ✅ done
+- **Status:** 🔄 in progress (cost model done; sensitivity and charts pending, #45)
 - **Who:** Claude
-- **Commit:** `chore: step 8 - add cost model to storage spike`
+- **Commit:** `chore: step 8 - add cost model to storage spike`; then `chore: step 8 - add sensitivity and charts to cost model` (#45)
 - **Model:** opus · high
 - **Gate:** —
 
@@ -654,8 +656,10 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 - Silver and gold commits are costed as MERGE commits from A's measures (#27): table-load reads for the JSON commits since the last checkpoint, plus reads per file in the target partition, which grows with each commit until the next optimize, plus a checkpoint every N commits, which adds 3 Class A and 33 × N / 10 Class B (#42).
 - A sensitivity row for 1-minute 24/7 compares hourly with daily optimize (#30); it is reported, not judged.
 - Gold is sized by cardinality: one row per station for Q1 and Q5, feeds × minutes for Q2, stations × hours or days for the others (#44).
-- Tables are sized with the larger of A's two Parquet bytes per row, before and after optimize (#29).
-- Also: `README.md` (Commands) and this step's Status in this document.
+- Tables are sized with the larger of A's two Parquet bytes per row, before and after optimize (#29); `params.toml` sets 22.0, weighted by rows with the vehicles' estimate (#46).
+- Sensitivity (#45): reads per file, N, Parquet bytes per row and bytes rewritten per MERGE, each at ×0.5 and ×2 with the rest unchanged, on the judged cell and 1-minute 24/7; `output/cost-model/sensitivity.csv` holds each case's worst month; reported, not judged.
+- Charts (#45), PNG in `output/cost-model/` with matplotlib: monthly cost against the €2 gate (judged cell and 24/7 cadences), the on-demand grid as a heat map with the judged cell marked, the worst month by 24/7 cadence, cost per layer by month for the judged cell, and the sensitivity as a tornado chart.
+- Also: `README.md` (Commands), `pyproject.toml` and `uv.lock` (matplotlib), and this step's Status in this document.
 - Not touched: A's and B's outputs, which are only read.
 
 #### Reads
@@ -672,10 +676,14 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 3. Write a targeted check: a minimal parameter set and inputs for which one scenario and month are computed by hand.
 4. Run the targeted check.
 5. Update the README Commands section and this step's Status.
+6. Set bytes per row to 22.0 in `params.toml` (#46); add matplotlib, the sensitivity analysis and the charts (#45).
+7. Extend the targeted check with one sensitivity case computed by hand: reads per file × 2 on the synthetic case.
+8. Run the targeted check and generate the charts from it; update the README Commands section and this step's Status.
 
 #### Check
 
-The targeted check matches the hand computation for storage, Class A (bronze LISTs and checkpoints included), Class B (bronze GETs, table loads and per-file MERGE reads included) and cost.
+- The targeted check matches the hand computation for storage, Class A (bronze LISTs and checkpoints included), Class B (bronze GETs, table loads and per-file MERGE reads included) and cost.
+- The sensitivity case matches its hand computation, and the five charts are written to `output/local/cost-model/`.
 
 ### Step 9 — Run probe C and verify the model
 
@@ -687,7 +695,7 @@ The targeted check matches the hand computation for storage, Class A (bronze LIS
 
 #### Scope
 
-A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the findings that answer Q1.
+A full run of the cost model on A's and B's outputs; `output/cost_*.csv` and `output/cost-model/`; the findings that answer Q1.
 
 #### Reads
 
@@ -703,7 +711,7 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 #### Check
 
 - The hand recomputation matches the CSV.
-- Claude records as findings: cost per layer and total per scenario and month, the free quota usage, the judged cell and the 1-minute 24/7 case with its optimize sensitivity row, and applies the gate.
+- Claude records as findings: cost per layer and total per scenario and month, the free quota usage, the judged cell and the 1-minute 24/7 case with its optimize sensitivity row, the sensitivity of A's measures (#45), and applies the gate.
 
 ### Step 10 — Conclusion
 
@@ -890,6 +898,7 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv`; the fi
 | P1 | A MERGE that conflicts with a concurrent commit on the same partition raises `CommitFailedError` and is not auto-resolved; the pipeline retries it on a fresh table handle | Step 2 · `web-researcher` (delta-rs conflict checker) | |
 | P2 | Tables are created before any concurrent writer (version-0 race on R2, delta-rs #3505), and concurrent writers do not use `schema_mode="merge"` (metadata changes are never retried, #3829 on R2) | Step 2 · `web-researcher` (delta-rs issues) | |
 | P3 | The checkpoint interval N is tuned per table: it sets how many JSON commits each table load reads (2 Class B each) against how often a checkpoint is written | Step 8 · owner (#42) | |
+| P4 | The cost model is recalibrated once the pipeline runs: R2's GraphQL Analytics metrics per bucket (#36) give the actual Class A, Class B and storage, which are compared with the model's prediction to adjust `params.toml` and re-run it | Step 8 · owner | |
 
 ## 5. Conclusion
 
