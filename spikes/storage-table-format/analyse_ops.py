@@ -6,11 +6,11 @@
 # operation window that holds it (a commit, a load, a vacuum), or else to the check's verification reads;
 # requests in a measure window are the probe's own log reads. C takes the operation windows of the
 # full checks. Counts are for the test bucket only; requests to other buckets are filtered out.
-# Input:  output/probe-<run_id>.jsonl and the proxy log given; R2 metrics of the day, if known.
+# Input:  output/probe-<run_id>.jsonl and the proxy log given; R2's total over the run window, if known.
 # Output: output/ops-<run_id>-by-check.csv, -by-op.csv, -by-class.csv and output/analysis-<run_id>.json.
 #
 # Usage: uv run python analyse_ops.py --run-id ID --proxy-log output/proxy-<UTC start>.jsonl
-#                                     [--r2-class-a N --r2-class-b N]
+#                                     [--r2-total N]
 #        uv run python analyse_ops.py --synthetic   (self-check on generated logs in output/local/)
 
 import argparse
@@ -96,18 +96,18 @@ def known_arithmetic(lines, reqs) -> dict:
     return {"result": result, "cases": cases, "failures": failures}
 
 
-def independent_count(totals: dict, metrics: dict | None) -> dict:
-    # The proxy's totals for the test bucket against its R2 metrics for the day, with and without failed
-    # requests (R2's billing of them is undocumented, #28); `unknown` operations are tried as A, B or neither.
-    if not metrics:
-        return {"result": "skipped (no R2 metrics given)"}
-    matches = []
-    for basis in ("all", "ok_only"):
-        a, b, u = (totals[basis][c] for c in ("A", "B", "unknown"))
-        for unknown_as, (ca, cb) in (("none", (a, b)), ("A", (a + u, b)), ("B", (a, b + u))):
-            if (ca, cb) == (metrics["A"], metrics["B"]):
-                matches.append({"basis": basis, "unknown_as": unknown_as})
-    return {"result": "ok" if matches else "FAIL", "metrics": metrics, "matches": matches}
+COUNT_TOLERANCE = 0.005
+
+
+def independent_count(totals: dict, r2_total: int | None) -> dict:
+    # The proxy's total requests for the test bucket, failed ones and every class included, against R2's
+    # total over the run window. R2's metrics are sampled, so only the total is compared (s010 F14, #39).
+    if r2_total is None:
+        return {"result": "skipped (no R2 total given)"}
+    proxy_total = sum(totals["all"].values())
+    gap = (proxy_total - r2_total) / r2_total
+    return {"result": "ok" if abs(gap) <= COUNT_TOLERANCE else "FAIL",
+            "proxy_total": proxy_total, "r2_total": r2_total, "gap_pct": round(100 * gap, 3)}
 
 
 def fault_injection(lines, reqs) -> dict:
@@ -136,7 +136,7 @@ def fault_injection(lines, reqs) -> dict:
 # --- Run --------------------------------------------------------------------
 
 
-def analyse(lines: list[dict], proxy: list[dict], bucket: str, metrics: dict | None) -> dict:
+def analyse(lines: list[dict], proxy: list[dict], bucket: str, r2_total: int | None) -> dict:
     for req in proxy:
         req["at"] = attribute(req, lines)
     test = [r for r in proxy if r["bucket"] == bucket]
@@ -180,7 +180,7 @@ def analyse(lines: list[dict], proxy: list[dict], bucket: str, metrics: dict | N
         "bypassed_proxy": bypass,
         "checks": {
             "known_arithmetic": known_arithmetic(lines, test),
-            "independent_count": independent_count(totals, metrics),
+            "independent_count": independent_count(totals, r2_total),
             "fault_injection": fault_injection(lines, test),
         },
     }
@@ -301,7 +301,7 @@ SYNTHETIC_EXPECTED = {
     "other_buckets": {"prod-bucket": 3},
     "bypassed_proxy": ["polars"],
     "known_arithmetic": {"result": "ok", "cases": 1},
-    "independent_count": {"result": "ok", "matches": [{"basis": "ok_only", "unknown_as": "A"}]},
+    "independent_count": {"result": "ok", "proxy_total": 35},
     "fault_injection": "ok",
 }
 
@@ -335,7 +335,7 @@ def run_synthetic() -> int:
     probe_path, proxy_path = out_dir / "probe-synthetic.jsonl", out_dir / "proxy-synthetic.jsonl"
     probe_path.write_text("".join(json.dumps(line) + "\n" for line in lines))
     proxy_path.write_text("".join(json.dumps(r) + "\n" for r in proxy))
-    result = analyse(load_jsonl(probe_path), load_jsonl(proxy_path), "test-bucket", {"A": 24, "B": 7})
+    result = analyse(load_jsonl(probe_path), load_jsonl(proxy_path), "test-bucket", 35)
     report(result, "synthetic", out_dir)
 
     exp = SYNTHETIC_EXPECTED
@@ -353,7 +353,7 @@ def run_synthetic() -> int:
         "other_buckets": result["other_buckets"],
         "bypassed_proxy": result["bypassed_proxy"],
         "known_arithmetic": {k: result["checks"]["known_arithmetic"][k] for k in ("result", "cases")},
-        "independent_count": {k: result["checks"]["independent_count"][k] for k in ("result", "matches")},
+        "independent_count": {k: result["checks"]["independent_count"][k] for k in ("result", "proxy_total")},
         "fault_injection": result["checks"]["fault_injection"]["result"],
     }
     errors += [f"{k}: got {actual[k]}, expected {v}" for k, v in exp.items() if actual[k] != v]
@@ -365,16 +365,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="s010 probe A: R2 operations per check, operation and class")
     parser.add_argument("--run-id", help="run_id printed by delta_probe.py full")
     parser.add_argument("--proxy-log", type=Path, help="output/proxy-<UTC start>.jsonl covering the run")
-    parser.add_argument("--r2-class-a", type=int, help="Class A operations of the test bucket in R2 metrics, that day")
-    parser.add_argument("--r2-class-b", type=int, help="Class B operations of the test bucket in R2 metrics, that day")
+    parser.add_argument("--r2-total", type=int,
+                        help="total requests of the test bucket in R2 metrics over the run window, failed ones included")
     parser.add_argument("--synthetic", action="store_true", help="self-check on generated logs in output/local/")
     args = parser.parse_args()
     if args.synthetic:
         return run_synthetic()
     if not args.run_id or not args.proxy_log:
         parser.error("--run-id and --proxy-log are required")
-    if (args.r2_class_a is None) != (args.r2_class_b is None):
-        parser.error("--r2-class-a and --r2-class-b go together")
 
     load_dotenv(HERE / ".env")
     bucket = os.environ.get("R2_TEST_BUCKET") or sys.exit("Missing in .env: R2_TEST_BUCKET")
@@ -382,8 +380,7 @@ def main() -> int:
     lines = [line for line in load_jsonl(probe_path) if line.get("phase") in ("full", "extra")]
     if not lines:
         sys.exit(f"No full or extra lines in {probe_path.relative_to(HERE)}")
-    metrics = {"A": args.r2_class_a, "B": args.r2_class_b} if args.r2_class_a is not None else None
-    result = analyse(lines, load_jsonl(args.proxy_log), bucket, metrics)
+    result = analyse(lines, load_jsonl(args.proxy_log), bucket, args.r2_total)
     report(result, args.run_id, OUTPUT_DIR)
     failed = [n for n, c in result["checks"].items() if c["result"] == "FAIL"]
     return 1 if failed or result["bypassed_proxy"] else 0
