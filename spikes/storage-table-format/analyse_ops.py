@@ -9,7 +9,7 @@
 # Input:  output/probe-<run_id>.jsonl and the proxy log given; R2's total over the run window, if known.
 # Output: output/ops-<run_id>-by-check.csv, -by-op.csv, -by-class.csv and output/analysis-<run_id>.json.
 #
-# Usage: uv run python analyse_ops.py --run-id ID --proxy-log output/proxy-<UTC start>.jsonl
+# Usage: uv run python analyse_ops.py --run-id ID --proxy-log output/proxy-<UTC start>.jsonl [more logs]
 #                                     [--r2-total N]
 #        uv run python analyse_ops.py --synthetic   (self-check on generated logs in output/local/)
 
@@ -111,26 +111,30 @@ def independent_count(totals: dict, r2_total: int | None) -> dict:
 
 
 def fault_injection(lines, reqs) -> dict:
-    # Each stale pair of `concurrent` shows a log PUT rejected with 412, then a successful log PUT
-    # (the stale append retried) or a raised conflict (the stale MERGE).
-    pairs = {}
+    # Each stale pair of `concurrent` ends safely: the stale MERGE raises a conflict and the stale append
+    # is retried, with no duplicate key and the same rows as a serial run. delta-rs may find the winner
+    # before its log PUT (s010 F15), so R2's put-if-absent is shown by the `race` check: one 412 per round
+    # among its proxied PUTs (#40).
+    pairs, race = {}, None
     for line in lines:
-        if line.get("phase") != "full" or line["check"] != "concurrent" or line["result"] != "ok":
-            continue
-        for name in ("merge_pair", "append_pair"):
-            pair = line["details"][name]
-            inside = sorted((r for r in reqs if ts(pair["start"]) <= r["ts"] <= ts(pair["end"])),
-                            key=lambda r: r["ts"])
-            rejected = [r for r in inside if is_log_put(r) and r["status"] == 412]
-            retried = rejected and any(is_log_put(r) and ok(r) and r["ts"] > rejected[0]["ts"] for r in inside)
-            conflict = pair["outcome"].startswith("conflict")
-            pairs[name] = {
-                "outcome": "conflict" if conflict else pair["outcome"],
-                "rejected_log_puts": len(rejected),
-                "result": "ok" if rejected and (retried if not conflict else True) else "FAIL",
-            }
-    result = "ok" if len(pairs) == 2 and all(p["result"] == "ok" for p in pairs.values()) else "FAIL"
-    return {"result": result, "pairs": pairs}
+        if line["check"] == "concurrent" and line.get("phase") == "full" and line["result"] == "ok":
+            for name, expected in (("merge_pair", "conflict"), ("append_pair", "retried")):
+                pair = line["details"][name]
+                outcome = "conflict" if pair["outcome"].startswith("conflict") else pair["outcome"]
+                safe = outcome == expected and pair.get("duplicate_keys") == 0 and pair.get("matches_serial") is True
+                pairs[name] = {"outcome": outcome, "result": "ok" if safe else "FAIL"}
+        if line["check"] == "race" and line.get("phase") == "extra" and line["result"] == "ok":
+            puts = [r for r in reqs if r["method"] == "PUT" and "/race/" in (r["key"] or "")
+                    and ts(line["start"]) <= r["ts"] <= ts(line["end"])]
+            rounds = line["details"]["rounds"]
+            rejected = sum(r["status"] == 412 for r in puts)
+            race = {"rounds": rounds, "overlapping": line["details"].get("overlapping"),
+                    "accepted": sum(map(ok, puts)), "rejected_412": rejected,
+                    "result": "ok" if rounds and sum(map(ok, puts)) == rejected == rounds else "FAIL"}
+    race = race or {"result": "FAIL (no race check in the run)"}
+    result = "ok" if len(pairs) == 2 and all(p["result"] == "ok" for p in pairs.values()) and race["result"] == "ok" \
+        else "FAIL"
+    return {"result": result, "pairs": pairs, "race": race}
 
 
 # --- Run --------------------------------------------------------------------
@@ -247,8 +251,10 @@ def synthetic_logs() -> tuple[list[dict], list[dict]]:
                  op("append", 3, 5, handle_version=0, files_added=1, checkpoint=False, versions=[1])],
          "measure": {"start": iso(11), "end": iso(12)}},
         {"phase": "full", "check": "concurrent", "start": iso(20), "end": iso(40), "result": "ok",
-         "details": {"merge_pair": {"start": iso(20), "end": iso(28), "outcome": "conflict: concurrent data"},
-                     "append_pair": {"start": iso(30), "end": iso(38), "outcome": "retried"}},
+         "details": {"merge_pair": {"start": iso(20), "end": iso(28), "outcome": "conflict: concurrent data",
+                                    "duplicate_keys": 0, "matches_serial": True},
+                     "append_pair": {"start": iso(30), "end": iso(38), "outcome": "retried",
+                                     "duplicate_keys": 0, "matches_serial": True}},
          "ops": [op("load", 20, 21), op("load", 21, 22), op("merge", 22, 24), op("merge", 24, 27),
                  op("merge", 28.5, 29.5), op("load", 30, 31), op("load", 31, 32), op("append", 32, 34),
                  op("append", 34, 37)]},
@@ -256,6 +262,8 @@ def synthetic_logs() -> tuple[list[dict], list[dict]]:
          "ops": [op("vacuum_dry_run", 61, 62), op("vacuum", 63, 66)]},
         {"phase": "extra", "check": "polars", "start": iso(80), "end": iso(85), "result": "ok", "proxied": True},
         {"phase": "extra", "check": "token", "start": iso(90), "end": iso(95), "result": "ok", "proxied": True},
+        {"phase": "extra", "check": "race", "start": iso(100), "end": iso(105), "result": "ok", "proxied": True,
+         "details": {"rounds": 2, "overlapping": 2}},
     ]
     proxy = [
         # write: create (data + log PUT), append (list, read, data + log PUT), a verify HEAD, measure reads
@@ -287,21 +295,26 @@ def synthetic_logs() -> tuple[list[dict], list[dict]]:
         request(91, "GET", "/prod-bucket?list-type=2&max-keys=1", 403),
         request(92, "GET", "/prod-bucket/raw/ambici/x.json.gz", 403),
         request(93, "PUT", "/prod-bucket/s010-token-check/canary.txt", 403),
+        # race: per round, two put-if-absent PUTs on one key (one 200, one 412), then a read of the winner
+        *(r for i in range(2) for r in (
+            request(101 + i, "PUT", f"/test-bucket/synthetic/race/{i:02}.txt", headers=put_if_absent),
+            request(101.1 + i, "PUT", f"/test-bucket/synthetic/race/{i:02}.txt", 412, put_if_absent),
+            request(101.2 + i, "GET", f"/test-bucket/synthetic/race/{i:02}.txt"))),
     ]
     return lines, proxy
 
 
 # Hand-counted from synthetic_logs().
 SYNTHETIC_EXPECTED = {
-    "totals": {"all": {"A": 25, "B": 8, "free": 1, "unknown": 1},
-               "ok_only": {"A": 23, "B": 7, "free": 1, "unknown": 1}},
+    "totals": {"all": {"A": 29, "B": 10, "free": 1, "unknown": 1},
+               "ok_only": {"A": 25, "B": 9, "free": 1, "unknown": 1}},
     "per_check": {"write": {"A": 6, "B": 4}, "concurrent": {"A": 15, "B": 3}, "vacuum": {"A": 4, "unknown": 1, "free": 1}},
     "write_parts": {"op": {"A": 5, "B": 1}, "verify": {"B": 1}, "measure": {"A": 1, "B": 2}},
     "unattributed_test_bucket": 1,
     "other_buckets": {"prod-bucket": 3},
     "bypassed_proxy": ["polars"],
     "known_arithmetic": {"result": "ok", "cases": 1},
-    "independent_count": {"result": "ok", "proxy_total": 35},
+    "independent_count": {"result": "ok", "proxy_total": 41},
     "fault_injection": "ok",
 }
 
@@ -335,7 +348,7 @@ def run_synthetic() -> int:
     probe_path, proxy_path = out_dir / "probe-synthetic.jsonl", out_dir / "proxy-synthetic.jsonl"
     probe_path.write_text("".join(json.dumps(line) + "\n" for line in lines))
     proxy_path.write_text("".join(json.dumps(r) + "\n" for r in proxy))
-    result = analyse(load_jsonl(probe_path), load_jsonl(proxy_path), "test-bucket", 35)
+    result = analyse(load_jsonl(probe_path), load_jsonl(proxy_path), "test-bucket", 41)
     report(result, "synthetic", out_dir)
 
     exp = SYNTHETIC_EXPECTED
@@ -364,7 +377,8 @@ def run_synthetic() -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="s010 probe A: R2 operations per check, operation and class")
     parser.add_argument("--run-id", help="run_id printed by delta_probe.py full")
-    parser.add_argument("--proxy-log", type=Path, help="output/proxy-<UTC start>.jsonl covering the run")
+    parser.add_argument("--proxy-log", type=Path, nargs="+",
+                        help="output/proxy-<UTC start>.jsonl files covering the run and any re-run (#40)")
     parser.add_argument("--r2-total", type=int,
                         help="total requests of the test bucket in R2 metrics over the run window, failed ones included")
     parser.add_argument("--synthetic", action="store_true", help="self-check on generated logs in output/local/")
@@ -380,7 +394,8 @@ def main() -> int:
     lines = [line for line in load_jsonl(probe_path) if line.get("phase") in ("full", "extra")]
     if not lines:
         sys.exit(f"No full or extra lines in {probe_path.relative_to(HERE)}")
-    result = analyse(lines, load_jsonl(args.proxy_log), bucket, args.r2_total)
+    proxy = [req for path in args.proxy_log for req in load_jsonl(path)]
+    result = analyse(lines, proxy, bucket, args.r2_total)
     report(result, args.run_id, OUTPUT_DIR)
     failed = [n for n, c in result["checks"].items() if c["result"] == "FAIL"]
     return 1 if failed or result["bypassed_proxy"] else 0
