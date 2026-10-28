@@ -11,21 +11,33 @@
 # - storage is computed per day and billed as the month's mean, as R2 does; bronze and gold are kept, silver keeps
 #   retention.silver_days. Delta overhead is the month's activity scaled to its log and history windows.
 # - month 1 adds the initial load: one catch-up over the history archives and capture's backlog (#17).
+# Sensitivity (#45, #47): A's four extrapolated measures, one at a time, re-run through the same model; reported only.
 # Input:  params.toml, probe B's volumes.json, probe A's ops-<run_id>-by-op.csv (paths in params.toml).
-# Output: output/cost_months.csv (scenario × month), output/cost_summary.csv (scenario, D2 gate) and a console summary.
+# Output: output/cost_months.csv (scenario × month), output/cost_summary.csv (scenario, D2 gate), four charts in
+#         output/cost-model/, and sensitivity.csv, break_even.csv and the tornado chart in
+#         output/cost-model/sensitivity/; plus a console summary.
 #
 # Usage: uv run python cost_model.py [--params params.toml]
 #        uv run python cost_model.py --synthetic   (hand-computed minimal case; writes to output/local/)
 
 import argparse
+import copy
 import csv
+import dataclasses
 import json
 import math
 import sys
+import time
 import tomllib
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")  # files only, no display
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.patches import Rectangle  # noqa: E402
 
 HERE = Path(__file__).parent
 OUTPUT_DIR = HERE / "output"
@@ -390,7 +402,7 @@ def backlog_days(params: dict) -> int:
 def storage_means(params: dict, inputs: Inputs, start: date, days: int) -> dict:
     """Mean bytes per layer over the month's days (R2 bills the mean of the daily peaks)."""
     capture_start = date.fromisoformat(params["dates"]["capture_start"])
-    bpr = max(params["delta"]["bytes_per_row"])
+    bpr = params["delta"]["bytes_per_row"]
     window = params["retention"]["silver_days"]
     capture_bytes = sum(f.bytes_per_day for f in inputs.feeds.values()) + inputs.logs_bytes_per_day
     capture_rows = sum(silver_rows_per_day(t, inputs) for t in params["silver"])
@@ -419,7 +431,7 @@ def delta_overhead(params: dict, ops: Ops, days: int, commits: float, optimizes:
     ret, delta = params["retention"], params["delta"]
     log = (commits * ops.commit_log_bytes + optimizes * (ops.optimize_log_bytes + ops.vacuum_log_bytes)
            + checkpoints * delta["checkpoint_bytes"])
-    removed = commits * ops.merge_rewritten_bytes + rows * max(delta["bytes_per_row"])
+    removed = commits * ops.merge_rewritten_bytes + rows * delta["bytes_per_row"]
     return log / days * ret["delta_log_days"] + removed / days * ret["delta_history_days"]
 
 
@@ -537,6 +549,264 @@ def report(params: dict, inputs: Inputs, rows: list[dict], out_dir: Path) -> lis
     return summary
 
 
+# ---------------------------------------------------------------- sensitivity and break-even (#45, #47)
+
+# A's four extrapolated measures and where each lives: in Ops (A's per-operation table) or in params["delta"].
+MEASURES = {
+    "reads per file": ("ops", "b_per_file"),
+    "checkpoint interval N": ("delta", "checkpoint_interval"),
+    "Parquet bytes per row": ("delta", "bytes_per_row"),
+    "bytes rewritten per MERGE": ("ops", "merge_rewritten_bytes"),
+}
+
+
+def measure_value(params: dict, inputs: Inputs, measure: str) -> float:
+    where, key = MEASURES[measure]
+    return getattr(inputs.ops, key) if where == "ops" else params["delta"][key]
+
+
+def vary(params: dict, inputs: Inputs, measure: str, factor: float) -> tuple[dict, Inputs]:
+    """Copies of params and inputs with one measure scaled by `factor`; the originals are untouched."""
+    where, key = MEASURES[measure]
+    if where == "ops":
+        ops = dataclasses.replace(inputs.ops, **{key: getattr(inputs.ops, key) * factor})
+        return params, dataclasses.replace(inputs, ops=ops)
+    varied = copy.deepcopy(params)
+    varied["delta"][key] *= factor
+    return varied, inputs
+
+
+def worst_month(params: dict, inputs: Inputs, sc: Scenario) -> tuple[float, int]:
+    worst = max(model(params, inputs, only=[sc]), key=lambda r: r["eur_total"])
+    return worst["eur_total"], worst["month"]
+
+
+def sensitivity(params: dict, inputs: Inputs, cases: list[Scenario]) -> list[dict]:
+    """Each case's worst month with each measure at each factor, the rest unchanged."""
+    out = []
+    for sc in cases:
+        base, _ = worst_month(params, inputs, sc)
+        for measure in MEASURES:
+            for factor in params["sensitivity"]["factors"]:
+                eur, month = worst_month(*vary(params, inputs, measure, factor), sc)
+                out.append({"scenario": sc.name, "measure": measure, "factor": factor,
+                            "value": measure_value(params, inputs, measure) * factor, "eur_max_month": eur,
+                            "worst_month": month, "eur_baseline": base, "eur_change": eur - base})
+    return out
+
+
+def break_even(params: dict, inputs: Inputs, sc: Scenario, measure: str) -> float | None:
+    """The factor above 1 at which the worst month reaches the gate; None if not by sensitivity.break_even_max.
+    A doubling scan finds the first factor over the gate, then bisection narrows it to a relative 1e-9."""
+    limit, top = params["gate"]["max_eur_per_month"], params["sensitivity"]["break_even_max"]
+
+    def over(factor: float) -> bool:
+        return worst_month(*vary(params, inputs, measure, factor), sc)[0] >= limit
+
+    if over(1):
+        return 1.0
+    lo, hi = 1.0, 2.0
+    while not over(min(hi, top)):
+        if hi >= top:
+            return None
+        lo, hi = hi, hi * 2
+    hi = min(hi, top)
+    while hi / lo - 1 > 1e-9:
+        mid = (lo + hi) / 2
+        lo, hi = (lo, mid) if over(mid) else (mid, hi)
+    return hi
+
+
+def break_evens(params: dict, inputs: Inputs, sc: Scenario) -> list[dict]:
+    out = []
+    for measure in MEASURES:
+        t0 = time.monotonic()
+        factor = break_even(params, inputs, sc, measure)
+        value = measure_value(params, inputs, measure)
+        out.append({"scenario": sc.name, "measure": measure, "value": value,
+                    "break_even_factor": factor if factor is not None else "",
+                    "break_even_value": value * factor if factor is not None else "",
+                    "note": "" if factor is not None else f"break-even > ×{params['sensitivity']['break_even_max']}"})
+        print(f"  break-even {measure}: "
+              + (f"×{factor:.3f}" if factor is not None else out[-1]["note"]) + f" ({time.monotonic() - t0:.1f} s)")
+    return out
+
+
+def sensitivity_cases(params: dict) -> tuple[Scenario, list[Scenario]]:
+    """The judged cell, and the cases the sensitivity runs on: the judged cell and 24/7 at cadence_24_7_min."""
+    all_sc = scenarios(params)
+    judged = next(s for s in all_sc if s.judged)
+    cadence = params["sensitivity"]["cadence_24_7_min"]
+    return judged, [judged, next(s for s in all_sc if s.kind == "24/7" and s.cadence_min == cadence)]
+
+
+def sensitivity_report(params: dict, inputs: Inputs, out_dir: Path) -> tuple[list[dict], list[dict]]:
+    judged, cases = sensitivity_cases(params)
+    print(f"\nsensitivity on {', '.join(s.name for s in cases)}; break-even on the judged cell")
+    sens = sensitivity(params, inputs, cases)
+    be = break_evens(params, inputs, judged)
+    write_csv(out_dir / "cost-model" / "sensitivity" / "sensitivity.csv", sens)
+    write_csv(out_dir / "cost-model" / "sensitivity" / "break_even.csv", be)
+    for r in sens:
+        print(f"  {r['scenario']:<40}{r['measure']:<28}×{r['factor']:<5}{r['eur_max_month']:>8.2f}"
+              f"{r['eur_change']:>+8.2f}")
+    return sens, be
+
+
+# ---------------------------------------------------------------- charts (light theme, dataviz reference palette)
+
+SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]  # fixed order
+INK, INK_2, MUTED, GRID, SURFACE = "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#fcfcfb"
+SEQUENTIAL = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]  # blue, light to dark
+
+
+def style() -> None:
+    plt.rcParams.update({
+        "figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "savefig.facecolor": SURFACE,
+        "axes.edgecolor": GRID, "axes.labelcolor": INK_2, "axes.titlecolor": INK, "axes.titlesize": 12,
+        "axes.titleweight": "bold", "axes.titlelocation": "left", "axes.spines.top": False,
+        "axes.spines.right": False, "axes.grid": True, "axes.axisbelow": True, "grid.color": GRID,
+        "grid.linewidth": 0.8, "xtick.color": MUTED, "ytick.color": MUTED, "xtick.labelcolor": INK_2,
+        "ytick.labelcolor": INK_2, "legend.frameon": False, "legend.labelcolor": INK_2, "font.size": 9,
+    })
+
+
+def gate_line(ax, limit: float, horizontal: bool = True) -> None:
+    (ax.axhline if horizontal else ax.axvline)(limit, color=INK, linewidth=1, linestyle=(0, (4, 3)))
+    if horizontal:
+        ax.annotate(f"€{limit:g} gate", (1, limit), xycoords=("axes fraction", "data"), xytext=(0, 3),
+                    textcoords="offset points", ha="right", va="bottom", color=INK)
+
+
+def save(fig, path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
+def chart_monthly(params: dict, rows: list[dict], path: Path) -> Path:
+    limit = params["gate"]["max_eur_per_month"]
+    series = [s for s in dict.fromkeys(r["scenario"] for r in rows)
+              if any(r["scenario"] == s and (r["kind"] == "24/7" or r["judged"]) for r in rows)]
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    for i, name in enumerate(series):
+        sc_rows = [r for r in rows if r["scenario"] == name]
+        label = name + (" (judged)" if sc_rows[0]["judged"] else "")
+        ax.plot([r["month"] for r in sc_rows], [r["eur_total"] for r in sc_rows], color=SERIES[i % len(SERIES)],
+                linewidth=2, marker="o", markersize=4, label=label)
+    gate_line(ax, limit)
+    ax.set(title="Monthly cost against the D2 gate", xlabel="Month", ylabel="EUR per month")
+    ax.set_xticks(range(1, params["gate"]["months"] + 1))
+    ax.set_ylim(bottom=0)
+    ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
+    return save(fig, path)
+
+
+def chart_grid(params: dict, summary: list[dict], path: Path) -> Path:
+    s = params["scenarios"]
+    by_name = {r["scenario"]: r["eur_max_month"] for r in summary}
+    grid = [[by_name[f"on-demand {k} catch-ups + {h} h live"] for h in s["live_hours"]] for k in s["catch_ups"]]
+    fig, ax = plt.subplots(figsize=(6, 4.5))
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("blue", SEQUENTIAL)
+    # The scale spans the grid's own range, so neighbouring cells differ; the values are printed in each cell.
+    im = ax.imshow(grid, cmap=cmap, vmin=min(map(min, grid)), vmax=max(map(max, grid)), origin="lower",
+                   aspect="auto")
+    ax.grid(False)
+    for i, row in enumerate(grid):
+        for j, v in enumerate(row):
+            dark = im.norm(v) > 0.55  # light ink on the darker cells
+            judged = (s["catch_ups"][i], s["live_hours"][j]) == (s["judged"]["catch_ups"], s["judged"]["live_hours"])
+            ax.text(j, i, f"{v:.2f}" + ("\njudged" if judged else ""), ha="center", va="center",
+                    color=SURFACE if dark else INK, fontweight="bold" if judged else "normal")
+    ki, hj = s["catch_ups"].index(s["judged"]["catch_ups"]), s["live_hours"].index(s["judged"]["live_hours"])
+    ax.add_patch(Rectangle((hj - 0.5, ki - 0.5), 1, 1, fill=False, edgecolor=INK, linewidth=2))
+    ax.set_xticks(range(len(s["live_hours"])), [f"{h:g} h" for h in s["live_hours"]])
+    ax.set_yticks(range(len(s["catch_ups"])), [str(k) for k in s["catch_ups"]])
+    ax.set(title="On-demand: worst month (EUR)", xlabel="Live hours per month", ylabel="Catch-ups per month")
+    fig.colorbar(im, ax=ax, label="EUR, worst month").outline.set_visible(False)
+    return save(fig, path)
+
+
+def chart_cadence(params: dict, summary: list[dict], path: Path) -> Path:
+    rows = [r for r in summary if r["kind"] == "24/7"]
+    labels = [r["scenario"].removeprefix("24/7 ") for r in rows]
+    fig, ax = plt.subplots(figsize=(7, 4))
+    bars = ax.bar(labels, [r["eur_max_month"] for r in rows], color=SERIES[0], width=0.6)
+    ax.bar_label(bars, fmt="%.2f", padding=2, color=INK_2)
+    gate_line(ax, params["gate"]["max_eur_per_month"])
+    ax.grid(axis="x", visible=False)
+    ax.set(title="24/7: worst month by commit cadence", xlabel="Commit every", ylabel="EUR, worst month")
+    return save(fig, path)
+
+
+def chart_layers(rows: list[dict], path: Path) -> Path:
+    judged = [r for r in rows if r["judged"]]
+    layers = ["bronze", "silver", "gold", "delta_overhead"]
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    bottom = [0.0] * len(judged)
+    for i, layer in enumerate(layers):
+        values = [r[f"eur_{layer}"] for r in judged]
+        ax.bar([r["month"] for r in judged], values, bottom=bottom, color=SERIES[i], width=0.7,
+               edgecolor=SURFACE, linewidth=1, label=layer.replace("_", " "))
+        bottom = [b + v for b, v in zip(bottom, values)]
+    ax.grid(axis="x", visible=False)
+    ax.set_xticks([r["month"] for r in judged])
+    ax.set(title=f"Cost per layer: {judged[0]['scenario']} (judged)", xlabel="Month", ylabel="EUR per month")
+    ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
+    return save(fig, path)
+
+
+def chart_tornado(params: dict, sens: list[dict], be: list[dict], path: Path) -> Path:
+    cases = list(dict.fromkeys(r["scenario"] for r in sens))
+    lo_f, hi_f = min(params["sensitivity"]["factors"]), max(params["sensitivity"]["factors"])
+    be_label = {r["measure"]: (f"break-even ×{r['break_even_factor']:.1f}" if r["break_even_factor"] != ""
+                               else r["note"]) for r in be}
+    judged = be[0]["scenario"] if be else None
+    fig, axes = plt.subplots(len(cases), 1, figsize=(8, 2.4 * len(cases) + 0.6), squeeze=False)
+    for ax, case in zip(axes[:, 0], cases):
+        rows = [r for r in sens if r["scenario"] == case]
+        base = rows[0]["eur_baseline"]
+        # Widest swing on top, as a tornado reads.
+        order = sorted(MEASURES, key=lambda m: max(abs(r["eur_change"]) for r in rows if r["measure"] == m))
+        for y, m in enumerate(order):
+            for f, color in ((lo_f, SERIES[0]), (hi_f, SERIES[1])):
+                eur = next(r["eur_max_month"] for r in rows if r["measure"] == m and r["factor"] == f)
+                ax.barh(y, eur - base, left=base, color=color, height=0.55,
+                        label=f"×{f:g}" if y == 0 else None)
+        labels = [m + (f"\n{be_label[m]}" if case == judged else "") for m in order]
+        ax.set_yticks(range(len(order)), labels)
+        ax.axvline(base, color=INK_2, linewidth=1)
+        ax.grid(axis="y", visible=False)
+        ax.set_title(case + (" (judged)" if case == judged else ""))
+        ax.set_xlabel(f"EUR, worst month (baseline {base:.2f})")
+        ax.legend(loc="lower right")
+    fig.suptitle("Sensitivity: one measure at a time", x=0.01, ha="left", fontweight="bold", color=INK)
+    return save(fig, path)
+
+
+def charts(params: dict, rows: list[dict], summary: list[dict], sens: list[dict], be: list[dict],
+           out_dir: Path) -> list[Path]:
+    style()
+    d = out_dir / "cost-model"
+    written = [chart_monthly(params, rows, d / "monthly_cost.png"),
+               chart_grid(params, summary, d / "on_demand_grid.png"),
+               chart_cadence(params, summary, d / "worst_month_by_cadence.png"),
+               chart_layers(rows, d / "judged_cost_per_layer.png"),
+               chart_tornado(params, sens, be, d / "sensitivity" / "tornado.png")]
+    print("\ncharts: " + ", ".join(str(p.relative_to(HERE)) for p in written))
+    return written
+
+
+def analyse(params: dict, inputs: Inputs, rows: list[dict], out_dir: Path) -> tuple[list[dict], list[dict]]:
+    """Summary, sensitivity, break-even and charts for a model run."""
+    summary = report(params, inputs, rows, out_dir)
+    sens, be = sensitivity_report(params, inputs, out_dir)
+    charts(params, rows, summary, sens, be, out_dir)
+    return sens, be
+
+
 # ---------------------------------------------------------------- synthetic check
 
 
@@ -545,12 +815,17 @@ def synthetic() -> tuple[dict, Inputs]:
     params = {
         "dates": {"capture_start": "2026-10-30", "production_start": "2026-11-01"},  # 2 backlog days
         "gate": {"months": 1, "reported_months": [1], "max_eur_per_month": 2.0},
-        "scenarios": {"cadences_min": [60], "optimize_24_7_min": 1440, "live_cadence_min": 1},
+        # The checked scenario is 24/7 at 60 min; the others only feed the charts.
+        "scenarios": {"cadences_min": [30, 60], "optimize_24_7_min": 1440,
+                      "sensitivity": {"cadence_min": 60, "optimize_min": 60},
+                      "catch_ups": [4, 10], "live_hours": [1, 2], "live_cadence_min": 1,
+                      "judged": {"catch_ups": 10, "live_hours": 2}},
+        "sensitivity": {"factors": [0.5, 2], "cadence_24_7_min": 60, "break_even_max": 1000},
         "capture": {"static_captures_per_day": 1, "state_writes_per_static_pass": 2, "class_b_per_day": 10,
                     "override": {"enabled": False}},
         "pipeline": {"list_page_keys": 1000},
         "delta": {"checkpoint_interval": 10, "measured_checkpoint_interval": 10, "catchup_partition_files": 1,
-                  "bytes_per_row": [20, 5], "checkpoint_bytes": 35000},
+                  "bytes_per_row": 20, "checkpoint_bytes": 35000},
         "retention": {"silver_days": 365, "delta_history_days": 7, "delta_log_days": 30},
         "silver": [{"name": "dyn", "commits": "run", "feeds": ["p/dyn"], "history": {"type": "X", "rows": "distinct"}},
                    {"name": "static", "commits": "day", "feeds": ["p/static"]}],
@@ -600,15 +875,33 @@ SYNTHETIC_EXPECTED = {
     "eur_total": 0.24376520988,
 }
 
+# Sensitivity, reads per file × 2 (3 → 6 Class B per file): B adds 3 per file read and per file compacted, that is
+# 3 × (8,280 + 724) = 27,012 for dyn and g, and 3 × 32 = 96 for static: b_total 191,849. Cost B (191,849 - 10,000)
+# × 0.36e-6 = 0.06546564; USD 0.2903334332; EUR 0.26130008988.
+# Break-even of reads per file: B is linear in the factor x, B(x) = 83,609 + 54,120·x (18,040 files × 3), with
+# storage and Class A fixed; EUR 2 = 0.9 × (0.0004392932 + 0.2244285 + (B(x) - 10,000) × 0.36e-6) gives
+# x = ((2 / 0.9 - 0.2248677932) / 0.36e-6 + 10,000 - 83,609) / 54,120 = 101.15664721515.
+SYNTHETIC_SENSITIVITY_EUR = 0.26130008988
+SYNTHETIC_BREAK_EVEN = 101.15664721515061
+
 
 def run_synthetic() -> int:
     params, inputs = synthetic()
-    sc = Scenario("24/7 60 min", "24/7", cadence_min=60, optimize_min=1440)
-    rows = model(params, inputs, only=[sc])
-    report(params, inputs, rows, OUTPUT_DIR / "local")
-    row = rows[0]
+    out_dir = OUTPUT_DIR / "local"
+    rows = model(params, inputs)
+    sens, _ = analyse(params, inputs, rows, out_dir)
+    checked = Scenario("24/7 60 min", "24/7", cadence_min=60, optimize_min=1440)
+    row = next(r for r in rows if r["scenario"] == checked.name)
     errors = [f"{k}: model {row[k]!r}, hand {v!r}" for k, v in SYNTHETIC_EXPECTED.items()
               if not math.isclose(row[k], v, rel_tol=1e-9, abs_tol=1e-12)]
+    case = next(r for r in sens
+                if r["scenario"] == checked.name and r["measure"] == "reads per file" and r["factor"] == 2)
+    if not math.isclose(case["eur_max_month"], SYNTHETIC_SENSITIVITY_EUR, rel_tol=1e-9):
+        errors.append(f"sensitivity reads per file ×2: model {case['eur_max_month']!r}, "
+                      f"hand {SYNTHETIC_SENSITIVITY_EUR!r}")
+    factor = break_even(params, inputs, checked, "reads per file")
+    if factor is None or not math.isclose(factor, SYNTHETIC_BREAK_EVEN, rel_tol=1e-6):
+        errors.append(f"break-even reads per file: model {factor!r}, hand {SYNTHETIC_BREAK_EVEN!r}")
     print("\nsynthetic check: " + ("ok" if not errors else "FAIL\n  " + "\n  ".join(errors)))
     return 1 if errors else 0
 
@@ -623,7 +916,9 @@ def main() -> int:
     params = tomllib.loads((HERE / args.params).read_text())
     inputs = derive_inputs(params)
     print(f"A's operations: {inputs.ops}\n")
-    report(params, inputs, model(params, inputs), OUTPUT_DIR)
+    t0 = time.monotonic()
+    analyse(params, inputs, model(params, inputs), OUTPUT_DIR)
+    print(f"\nelapsed {time.monotonic() - t0:.0f} s")
     return 0
 
 

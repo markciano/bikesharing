@@ -118,4 +118,14 @@ uv run python cost_model.py --synthetic   # hand-computed minimal case; writes t
 
 Every value the model uses is in `params.toml`: dates, scenarios, tables and their commit cadence, retention, Delta settings, prices and the USD→EUR rate; set the dates, the rate and the capture override before a run (s010 step 9). A's operations per commit, optimize and vacuum are derived from its per-operation table and printed at the start. For each scenario (24/7 cadences, the optimize sensitivity row and the on-demand grid) and every month 1–12 it computes storage per layer, billed as the month's mean of daily values, and Class A and B per component (capture `raw/`, `logs/`, `state/`; bronze LIST and GET; silver; gold), and their cost against R2's free quotas. Month 1 adds the initial load of the history and capture's backlog.
 
-Output: `output/cost_months.csv` (one row per scenario and month, with cost per layer and accumulated), `output/cost_summary.csv` (one row per scenario: the reported months, the worst month and whether it fits the D2 gate) and the summary on the console. It takes a few seconds.
+Sensitivity (s010 #45, #47): A's four extrapolated measures (reads per file, checkpoint interval N, Parquet bytes per row, bytes rewritten per MERGE) are scaled one at a time by `sensitivity.factors` on the judged cell and 24/7 at `sensitivity.cadence_24_7_min`, re-running the same model. For the judged cell, each measure's break-even is the factor at which the worst month reaches the €2 gate, searched up to `sensitivity.break_even_max`. Both are reported, not judged.
+
+Output:
+
+- `output/cost_months.csv`: one row per scenario and month, with cost per layer and accumulated.
+- `output/cost_summary.csv`: one row per scenario, with the reported months, the worst month and whether it fits the D2 gate.
+- `output/cost-model/`: `monthly_cost.png`, `on_demand_grid.png`, `worst_month_by_cadence.png` and `judged_cost_per_layer.png`.
+- `output/cost-model/sensitivity/`: `sensitivity.csv`, `break_even.csv` and `tornado.png`.
+- The summary on the console.
+
+The synthetic run writes the same files under `output/local/`. It takes a few seconds.

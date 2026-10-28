@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: step 8 (Claude): bytes per row ([#46](#decision-log)), sensitivity and charts ([#45](#decision-log)); the cost model itself is done
+- Current step: step 9 (Owner): run probe C and verify the model
 
 ## 1. Questions — what we need to know
 
@@ -314,6 +314,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 44 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | C sizes gold snapshot tables (Q1, Q5) at one row per station, Q2 at feeds × minutes, and the other tables at stations × hours or days by their grain, accumulated over every loaded day; extends #16 | The sizing in §2 C covered only hour and day grains; Q2 measures the feeds, not the stations, and by station it would add about 0.6 GB a month that the question never holds | Running step 8 |
 | 45 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model), [Step 9](#step-9--run-probe-c-and-verify-the-model) | Step 8 adds, in a new session, a sensitivity analysis and charts. Sensitivity: A's four extrapolated measures (reads per file, checkpoint interval N, Parquet bytes per row, bytes rewritten per MERGE), one at a time at ×0.5 and ×2, on the judged cell and 1-minute 24/7, giving each case's worst month; reported, not judged. Charts, with matplotlib in `output/cost-model/`: monthly cost against the €2 gate, the on-demand grid as a heat map, the worst month by 24/7 cadence, cost per layer by month for the judged cell, and the sensitivity as a tornado chart | A measured these four on one small `station_status` table at N = 10, so they are the model's least certain inputs; the analysis shows whether any could push the judged cell over €2 and which to watch in production. Capture volume and prices are measured or published, so they are not varied. The charts make the gate and the cost curve for T039 readable | After step 8 |
 | 46 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | Silver and gold are sized at 22.0 Parquet bytes per row: the mean of `station_status` (17.34, A's larger value) and vehicles (22.85, estimated) weighted by silver rows (16% and 84%). Vehicles are estimated as A's value × their gzip bytes per record in bronze over `station_status`'s (24.07 / 18.26, step 7's `volumes.json`); extends #29 | A wrote only `station_status`, but vehicles are 84% of silver's rows and carry more columns; the bronze ratio estimates them without a new measurement, and #45's ×0.5 and ×2 cover its error | After step 8 |
+| 47 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | The sensitivity adds a break-even per measure: the factor above 1 at which the judged cell's worst month reaches the €2 gate, searched up to ×1,000. Sensitivity outputs (CSVs and tornado chart) go in `output/cost-model/sensitivity/`; extends #45 | ×0.5 and ×2 rank the measures but do not show the margin to the gate, which is what Q1 judges; a subfolder keeps the sensitivity apart from the model's charts | Running step 8 |
 
 ### File layout
 
@@ -633,9 +634,9 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 ### Step 8 — Write the cost model
 
-- **Status:** 🔄 in progress (cost model done; sensitivity and charts pending, #45)
+- **Status:** ✅ done
 - **Who:** Claude
-- **Commit:** `chore: step 8 - add cost model to storage spike`; then `chore: step 8 - add sensitivity and charts to cost model` (#45)
+- **Commit:** `chore: step 8 - add cost model to storage spike`; then `chore: step 8 - add sensitivity, break-even and charts to cost model` (#45, #47)
 - **Model:** opus · high
 - **Gate:** —
 
@@ -657,8 +658,9 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 - A sensitivity row for 1-minute 24/7 compares hourly with daily optimize (#30); it is reported, not judged.
 - Gold is sized by cardinality: one row per station for Q1 and Q5, feeds × minutes for Q2, stations × hours or days for the others (#44).
 - Tables are sized with the larger of A's two Parquet bytes per row, before and after optimize (#29); `params.toml` sets 22.0, weighted by rows with the vehicles' estimate (#46).
-- Sensitivity (#45): reads per file, N, Parquet bytes per row and bytes rewritten per MERGE, each at ×0.5 and ×2 with the rest unchanged, on the judged cell and 1-minute 24/7; `output/cost-model/sensitivity.csv` holds each case's worst month; reported, not judged.
-- Charts (#45), PNG in `output/cost-model/` with matplotlib: monthly cost against the €2 gate (judged cell and 24/7 cadences), the on-demand grid as a heat map with the judged cell marked, the worst month by 24/7 cadence, cost per layer by month for the judged cell, and the sensitivity as a tornado chart.
+- Sensitivity (#45): reads per file, N, Parquet bytes per row and bytes rewritten per MERGE, each at ×0.5 and ×2 with the rest unchanged, on the judged cell and 1-minute 24/7; `output/cost-model/sensitivity/sensitivity.csv` holds each case's worst month; reported, not judged.
+- Break-even (#47): for each of those measures, the factor above 1 at which the judged cell's worst month reaches €2, up to ×1,000, in `output/cost-model/sensitivity/break_even.csv`; reported, not judged.
+- Charts (#45), PNG with matplotlib: in `output/cost-model/`, monthly cost against the €2 gate (judged cell and 24/7 cadences), the on-demand grid as a heat map with the judged cell marked, the worst month by 24/7 cadence and cost per layer by month for the judged cell; in `output/cost-model/sensitivity/`, the sensitivity as a tornado chart with each measure's break-even (#47).
 - Also: `README.md` (Commands), `pyproject.toml` and `uv.lock` (matplotlib), and this step's Status in this document.
 - Not touched: A's and B's outputs, which are only read.
 
@@ -677,13 +679,13 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 4. Run the targeted check.
 5. Update the README Commands section and this step's Status.
 6. Set bytes per row to 22.0 in `params.toml` (#46); add matplotlib, the sensitivity analysis and the charts (#45).
-7. Extend the targeted check with one sensitivity case computed by hand: reads per file × 2 on the synthetic case.
+7. Extend the targeted check with one sensitivity case and one break-even computed by hand: reads per file × 2, and the reads per file factor that reaches the gate, on the synthetic case.
 8. Run the targeted check and generate the charts from it; update the README Commands section and this step's Status.
 
 #### Check
 
 - The targeted check matches the hand computation for storage, Class A (bronze LISTs and checkpoints included), Class B (bronze GETs, table loads and per-file MERGE reads included) and cost.
-- The sensitivity case matches its hand computation, and the five charts are written to `output/local/cost-model/`.
+- The sensitivity case and the break-even match their hand computation, and the five charts are written to `output/local/cost-model/` (the tornado to its `sensitivity/` subfolder).
 
 ### Step 9 — Run probe C and verify the model
 

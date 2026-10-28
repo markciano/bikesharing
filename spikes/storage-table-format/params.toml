@@ -23,6 +23,13 @@ live_hours = [0.5, 1, 2, 3]              # on-demand grid, per month; one live s
 live_cadence_min = 1
 judged = { catch_ups = 10, live_hours = 2 }
 
+# A's four extrapolated measures, one at a time, on the judged cell and 24/7 at cadence_24_7_min (#45); and the
+# factor at which each one takes the judged cell to the gate, searched up to break_even_max (#47). Reported, not judged.
+[sensitivity]
+factors = [0.5, 2]
+cadence_24_7_min = 1
+break_even_max = 1000
+
 [capture]
 dynamic_feeds = ["ambici/free_bike_status", "ambici/station_status", "bicing/station_status"]
 static_captures_per_day = 1       # production's planned cadence; B measured the current worker's hourly one
@@ -38,7 +45,9 @@ list_page_keys = 1000             # S3 ListObjectsV2 page (#23)
 checkpoint_interval = 100         # delta-rs default (F5); A ran with 10, its measured_checkpoint_interval
 measured_checkpoint_interval = 10
 catchup_partition_files = 1       # a catch-up commit finds the boundary day's compacted file in its partition
-bytes_per_row = [17.34, 3.72]     # F17, before and after optimize; the larger is used (#29)
+# Parquet bytes per row of silver and gold (#46): A's larger value for station_status (17.34, F17, #29) and the
+# vehicles' estimate (22.85), weighted by silver rows (16% and 84%).
+bytes_per_row = 22.0
 checkpoint_bytes = 35202          # F17: 211,211 bytes over 6 checkpoints
 
 [retention]                       # D5, D6: bronze and gold are kept indefinitely
