@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: step 9 (Owner): run and hand check done (#48); sensitivity on 24/7 10 min and charts (#49), then findings and gate, pending
+- Current step: step 9 (Owner): run and hand check done (#48); sensitivity on 24/7 10 min and charts written (#49), synthetic check ok; re-run of `cost_model.py` and the hand check, then findings and gate, pending
 
 ## 1. Questions — what we need to know
 
@@ -319,10 +319,11 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 42 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | A commit that writes a checkpoint adds 3 Class A and 33 × N / 10 Class B, scaling A's measure at N = 10 to the model's N; extends #27 | Writing a checkpoint rereads the commits since the previous one, so it grows with N but occurs N times less often: about 3.3 reads per commit, against about 100 to load the table at N = 100 ([F5, F16](#4-findings)) | Running step 8 |
 | 43 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | Each pipeline run lists in full the current day prefix of the 3 dynamic feeds, at 1,000 keys per page; static feeds' day prefixes are listed once a day; a catch-up lists every pending day prefix of the 17 feeds; refines #23 | Listing static feeds every minute would cost about 770k Class A a month (77% of the free quota) for data captured once a day; a full listing assumes no watermark, which is T039's; listing after the last processed key would save about 5% | Running step 8 |
 | 44 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | C sizes gold snapshot tables (Q1, Q5) at one row per station, Q2 at feeds × minutes, and the other tables at stations × hours or days by their grain, accumulated over every loaded day; extends #16 | The sizing in §2 C covered only hour and day grains; Q2 measures the feeds, not the stations, and by station it would add about 0.6 GB a month that the question never holds | Running step 8 |
-| 45 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model), [Step 9](#step-9--run-probe-c-and-verify-the-model) | Step 8 adds, in a new session, a sensitivity analysis and charts. Sensitivity: A's four extrapolated measures (reads per file, checkpoint interval N, Parquet bytes per row, bytes rewritten per MERGE), one at a time at ×0.5 and ×2, on the judged cell and 1-minute 24/7, giving each case's worst month; reported, not judged. Charts, with matplotlib in `output/cost-model/`: monthly cost against the €2 gate, the on-demand grid as a heat map, the worst month by 24/7 cadence, cost per layer by month for the judged cell, and the sensitivity as a tornado chart | A measured these four on one small `station_status` table at N = 10, so they are the model's least certain inputs; the analysis shows whether any could push the judged cell over €2 and which to watch in production. Capture volume and prices are measured or published, so they are not varied. The charts make the gate and the cost curve for T039 readable | After step 8 |
+| 45 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model), [Step 9](#step-9--run-probe-c-and-verify-the-model) | Step 8 adds, in a new session, a sensitivity analysis and charts. Sensitivity: A's four extrapolated measures (reads per file, checkpoint interval N, Parquet bytes per row, bytes rewritten per MERGE), one at a time at ×0.5 and ×2, on the judged cell and 1-minute 24/7, giving each case's worst month; reported, not judged. Charts, with matplotlib in `output/cost-model/`: monthly cost against the €2 gate, the on-demand grid as a heat map, the worst month by 24/7 cadence, cost per layer by month for the judged cell, and the sensitivity as a tornado chart → #49 | A measured these four on one small `station_status` table at N = 10, so they are the model's least certain inputs; the analysis shows whether any could push the judged cell over €2 and which to watch in production. Capture volume and prices are measured or published, so they are not varied. The charts make the gate and the cost curve for T039 readable | After step 8 |
 | 46 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | Silver and gold are sized at 22.0 Parquet bytes per row: the mean of `station_status` (17.34, A's larger value) and vehicles (22.85, estimated) weighted by silver rows (16% and 84%). Vehicles are estimated as A's value × their gzip bytes per record in bronze over `station_status`'s (24.07 / 18.26, step 7's `volumes.json`); extends #29 | A wrote only `station_status`, but vehicles are 84% of silver's rows and carry more columns; the bronze ratio estimates them without a new measurement, and #45's ×0.5 and ×2 cover its error | After step 8 |
-| 47 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | The sensitivity adds a break-even per measure: the factor above 1 at which the judged cell's worst month reaches the €2 gate, searched up to ×1,000. Sensitivity outputs (CSVs and tornado chart) go in `output/cost-model/sensitivity/`; extends #45 | ×0.5 and ×2 rank the measures but do not show the margin to the gate, which is what Q1 judges; a subfolder keeps the sensitivity apart from the model's charts | Running step 8 |
+| 47 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | The sensitivity adds a break-even per measure: the factor above 1 at which the judged cell's worst month reaches the €2 gate, searched up to ×1,000. Sensitivity outputs (CSVs and tornado chart) go in `output/cost-model/sensitivity/`; extends #45 → #49 | ×0.5 and ×2 rank the measures but do not show the margin to the gate, which is what Q1 judges; a subfolder keeps the sensitivity apart from the model's charts | Running step 8 |
 | 48 | [Cost model](#c-cost-model), [Step 9](#step-9--run-probe-c-and-verify-the-model) | Step 9's hand recomputation is a script, `cost_model_handcheck.py`, covering month 1's Class A and Class B of the judged cell and 24/7 at 10 minutes; §2 C gets a Hand check bullet with the rules the model applies and §2 C left implicit, the backlog counted at production's daily static capture included | The spec is the source of truth, so rules found only in the code are written into it; a script makes the check repeatable after a re-run; 24/7 at 10 minutes uses 89% of the free Class B in month 1, so Class B is where it can break the gate | Running step 9 |
+| 49 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model), [Step 9](#step-9--run-probe-c-and-verify-the-model) | The sensitivity runs on the judged cell and 24/7 at 10 minutes (`sensitivity.cadence_24_7_min = 10`), and the break-even is computed for both. Charts: `monthly_cost.png` leaves out 24/7 at 1 and 5 minutes (`charts.monthly_skip_cadences_min`); cost per layer is drawn for the judged cell (`ondemand_cost_per_layer.png`, renamed from `judged_cost_per_layer.png`) and for 24/7 at 10 minutes (`24_7_10min_cost_per_layer.png`); `on_demand_grid.png` and `worst_month_by_cadence.png` are dropped; the tornado shows both cells, each measure labelled with that cell's break-even; refines #45, #47 | 10 minutes is the fastest 24/7 cadence that fits the gate, so it is the 24/7 case whose margin matters to T039; 1 and 5 minutes are over the gate and squash the other lines; the grid and the cadence chart add nothing to the verdict that `cost_summary.csv` does not already hold | Running step 9 |
 
 ### File layout
 
@@ -338,7 +339,7 @@ spikes/storage-table-format/
 ├── delta_probe.py     A: write, MERGE, concurrency, optimize, vacuum, reads, token and lock checks
 ├── analyse_ops.py     A: joins proxy and probe logs; operations per check, step and class; the three checks
 ├── measure_volume.py  B: raw/, logs/, state/ and history volumes
-├── cost_model.py      C: scenarios × months, cost per layer and total; sensitivity and charts (#45)
+├── cost_model.py      C: scenarios × months, cost per layer and total; sensitivity and charts (#45, #49)
 ├── params.toml        C: every parameter (tables, cadences, retention, prices), apart from the logic
 ├── cost_model_handcheck.py  C: month 1's Class A and B of two cells, recomputed without the model (#48)
 └── output/            Ignored by Git (ADR-0009): logs, volumes, operation and cost tables; cost-model/ charts
@@ -667,9 +668,9 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 - A sensitivity row for 1-minute 24/7 compares hourly with daily optimize (#30); it is reported, not judged.
 - Gold is sized by cardinality: one row per station for Q1 and Q5, feeds × minutes for Q2, stations × hours or days for the others (#44).
 - Tables are sized with the larger of A's two Parquet bytes per row, before and after optimize (#29); `params.toml` sets 22.0, weighted by rows with the vehicles' estimate (#46).
-- Sensitivity (#45): reads per file, N, Parquet bytes per row and bytes rewritten per MERGE, each at ×0.5 and ×2 with the rest unchanged, on the judged cell and 1-minute 24/7; `output/cost-model/sensitivity/sensitivity.csv` holds each case's worst month; reported, not judged.
-- Break-even (#47): for each of those measures, the factor above 1 at which the judged cell's worst month reaches €2, up to ×1,000, in `output/cost-model/sensitivity/break_even.csv`; reported, not judged.
-- Charts (#45), PNG with matplotlib: in `output/cost-model/`, monthly cost against the €2 gate (judged cell and 24/7 cadences), the on-demand grid as a heat map with the judged cell marked, the worst month by 24/7 cadence and cost per layer by month for the judged cell; in `output/cost-model/sensitivity/`, the sensitivity as a tornado chart with each measure's break-even (#47).
+- Sensitivity (#45, #49): reads per file, N, Parquet bytes per row and bytes rewritten per MERGE, each at ×0.5 and ×2 with the rest unchanged, on the judged cell and 10-minute 24/7; `output/cost-model/sensitivity/sensitivity.csv` holds each case's worst month; reported, not judged.
+- Break-even (#47, #49): for each of those measures and both cells, the factor above 1 at which the cell's worst month reaches €2, up to ×1,000, in `output/cost-model/sensitivity/break_even.csv`; reported, not judged.
+- Charts (#45, #49), PNG with matplotlib: in `output/cost-model/`, monthly cost against the €2 gate (judged cell and 24/7 cadences except 1 and 5 minutes), and cost per layer by month for the judged cell (`ondemand_cost_per_layer.png`) and for 10-minute 24/7 (`24_7_10min_cost_per_layer.png`); in `output/cost-model/sensitivity/`, the sensitivity as a tornado chart, one panel per cell with each measure's break-even (#47).
 - Also: `README.md` (Commands), `pyproject.toml` and `uv.lock` (matplotlib), and this step's Status in this document.
 - Not touched: A's and B's outputs, which are only read.
 
@@ -694,11 +695,11 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 #### Check
 
 - The targeted check matches the hand computation for storage, Class A (bronze LISTs and checkpoints included), Class B (bronze GETs, table loads and per-file MERGE reads included) and cost.
-- The sensitivity case and the break-even match their hand computation, and the five charts are written to `output/local/cost-model/` (the tornado to its `sensitivity/` subfolder).
+- The sensitivity case and the break-even match their hand computation, the break-even rows cover both cells (#49), and the four charts are written to `output/local/cost-model/` (the tornado to its `sensitivity/` subfolder).
 
 ### Step 9 — Run probe C and verify the model
 
-- **Status:** 💤 todo
+- **Status:** 🔄 doing
 - **Who:** Owner
 - **Commit:** `docs: step 9 - record cost model results in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
@@ -706,9 +707,9 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 #### Scope
 
-- A full run of the cost model on A's and B's outputs; 
+- A full run of the cost model on A's and B's outputs;
 - `output/cost_*.csv` and `output/cost-model/`;
-- `cost_model_handcheck.py` and its `README.md` entry (#48); 
+- `cost_model_handcheck.py` and its `README.md` entry (#48);
 - the findings that answer Q1.
 
 #### Reads

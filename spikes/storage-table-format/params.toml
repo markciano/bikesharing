@@ -23,12 +23,16 @@ live_hours = [0.5, 1, 2, 3]              # on-demand grid, per month; one live s
 live_cadence_min = 1
 judged = { catch_ups = 10, live_hours = 2 }
 
-# A's four extrapolated measures, one at a time, on the judged cell and 24/7 at cadence_24_7_min (#45); and the
-# factor at which each one takes the judged cell to the gate, searched up to break_even_max (#47). Reported, not judged.
+# A's four extrapolated measures, one at a time, on the judged cell and 24/7 at cadence_24_7_min (#45, #49); and the
+# factor at which each one takes each of those cells to the gate, searched up to break_even_max (#47, #49).
+# Reported, not judged.
 [sensitivity]
 factors = [0.5, 2]
-cadence_24_7_min = 1
+cadence_24_7_min = 10
 break_even_max = 1000
+
+[charts]
+monthly_skip_cadences_min = [1, 5]   # 24/7 cadences left out of monthly_cost.png (#49)
 
 [capture]
 dynamic_feeds = ["ambici/free_bike_status", "ambici/station_status", "bicing/station_status"]
