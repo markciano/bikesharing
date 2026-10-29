@@ -6,10 +6,10 @@
 
 ## Status
 
-- State: Running 🔄
+- State: Concluded ✅
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
-- Started: 2026-10-27 · Finished: —
-- Current step: step 10 (Conclusion), part A ✅ (Observed window, Answers, Exit criteria, Verdict, Not verified); next, part B: Decisions to record, security requirements to d002, Production input destinations, Follow-ups, How we got here and teardown
+- Started: 2026-10-27 · Finished: 2026-10-29
+- Current step: all steps ✅; T035 stays 🔄 until its post-spike work in [Follow-ups](#follow-ups) is done
 
 ## 1. Questions — what we need to know
 
@@ -730,7 +730,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 ### Step 10 — Conclusion
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude, Owner (teardown)
 - **Commit:** `docs: step 10 - conclude spike s010`
 - **Model:** opus · high
@@ -1051,7 +1051,19 @@ Transferred to [d002 Requirements](../designs/d002-requirements.md#requirements)
 
 ### Follow-ups
 
-- `<ADR or task>`
+Post-spike documentation work of T035, in a fresh session from the closed spike ([#26](#decision-log)):
+
+- **ADRs:** the four in [Proposed ADRs](#proposed-adrs).
+- **`architecture.md`:** what to bring there is decided by an analysis in that session. Points worth checking: the outcomes of [D1–D7](#decided-at-framing) in [Decisions to record](#decisions-to-record), and the security requirements R15–R18 added to [d002](../designs/d002-requirements.md#requirements).
+- **[R2 source card](../sources/r2-storage.md):** facts the run established about R2:
+  - R2 enforces put-if-absent (`If-None-Match: *`) under a race: one PUT wins, the other gets 412 `PreconditionFailed`; delta-rs relies on it for safe commits with `aws_conditional_put: "etag"` and no external lock ([F1, F19](#4-findings)).
+  - A bucket lock lets an Object Read & Write token create new objects but blocks their overwrite and delete with 409 `ObjectLockedByBucketPolicy`, which the docs did not state ([F19](#4-findings)).
+  - A token scoped to one bucket gets 403 `AccessDenied` on list, read and write in another ([F19](#4-findings)).
+  - The GraphQL Analytics API (`r2OperationsAdaptiveGroups`) gives operations per bucket, operation and status, filtered by a `datetime` range, with failed requests as `userError` ([#36, #37, #39](#decision-log)).
+  - Operation metrics are sampled: the total matches an exact count within 0.02%, per-object counts do not ([F14](#4-findings)).
+  - The dashboard's summary and charts disagree, and neither its day boundary nor an operation breakdown is documented ([#36](#decision-log)).
+
+No new tasks: every Production input has a destination in task T040.
 
 ## Sources
 

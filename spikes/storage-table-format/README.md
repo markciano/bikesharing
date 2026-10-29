@@ -4,6 +4,14 @@ Question: does the own lakehouse on R2 with Delta Lake (D1–D7) hold within the
 
 Report: [s010-storage-table-format.md](../../docs/spikes/s010-storage-table-format.md)
 
+## How we got here
+
+This spike took on everything a `lakehouse` needs from its storage at once: the platform, the layers, the table format, how long each layer is kept and how it is secured. We settled them by analysis while framing and left the run to prove the two that analysis could not: that Delta Lake works on Cloudflare R2, and that R2 stays within budget.
+A `cost model` is only as good as its inputs, so we set out to count every request rather than estimate it. Requests to R2 are signed, and a plain proxy breaks them; we put `mitmproxy` in the middle ([#19](../../docs/spikes/s010-storage-table-format.md#decision-log)) and checked its totals against R2's own metrics, queried through the `GraphQL Analytics API` over each run's time window ([#37](../../docs/spikes/s010-storage-table-format.md#decision-log)).
+`Delta` passed its gate, but concurrency was quieter than expected: `delta-rs` resolved stale commits before writing, so R2 never had to reject one ([F15](../../docs/spikes/s010-storage-table-format.md#4-findings)). We wanted to see the guarantee itself, so we staged a `race`: two clients writing the same key at once, ten rounds, one winner every time ([F19](../../docs/spikes/s010-storage-table-format.md#4-findings)).
+We worried about capture's writes, which came in lower than estimated ([F10](../../docs/spikes/s010-storage-table-format.md#4-findings)); the limit turned out to be the pipeline's reads ([F22](../../docs/spikes/s010-storage-table-format.md#4-findings)).
+We keep `R2` for every layer, in `two buckets`: bronze, locked and read-only to the pipeline, and a lakehouse bucket for silver and gold, with `Delta Lake` as their table format. Next comes the engine: DuckDB or Polars for the pipeline (T036).
+
 ## Setup
 
 ```bash
