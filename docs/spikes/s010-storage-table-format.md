@@ -953,11 +953,11 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | A MERGE that conflicts with a concurrent commit on the same partition raises `CommitFailedError` and is not auto-resolved; the pipeline retries it on a fresh table handle | Step 2 · `web-researcher` (delta-rs conflict checker) | |
-| P2 | Tables are created before any concurrent writer (version-0 race on R2, delta-rs #3505), and concurrent writers do not use `schema_mode="merge"` (metadata changes are never retried, #3829 on R2) | Step 2 · `web-researcher` (delta-rs issues) | |
-| P3 | The checkpoint interval N is tuned per table: it sets how many JSON commits each table load reads (2 Class B each) against how often a checkpoint is written | Step 8 · owner (#42) | |
-| P4 | The cost model is recalibrated once the pipeline runs: R2's GraphQL Analytics metrics per bucket (#36) give the actual Class A, Class B and storage, which are compared with the model's prediction to adjust `params.toml` and re-run it | Step 8 · owner | |
-| P5 | Running 24/7, the pipeline commits every 10 minutes or more: at 5 and 1 minutes Class B exceeds the free quota and the D2 gate ([F20](#4-findings)). This conflicts with the ≤ 5-minute freshness of Q1, Q2 and Q5 (`architecture.md` §1.1); ways to go below 10 minutes (e.g. more frequent optimize) are not analysed in the spike | Step 9 · owner (D2 gate) | |
+| P1 | A MERGE that conflicts with a concurrent commit on the same partition raises `CommitFailedError` and is not auto-resolved; the pipeline retries it on a fresh table handle | Step 2 · `web-researcher` (delta-rs conflict checker) | Task T040 (Processing pipeline) design |
+| P2 | Tables are created before any concurrent writer (version-0 race on R2, delta-rs #3505), and concurrent writers do not use `schema_mode="merge"` (metadata changes are never retried, #3829 on R2) | Step 2 · `web-researcher` (delta-rs issues) | Task T040 (Processing pipeline) design |
+| P3 | The checkpoint interval N is tuned per table: it sets how many JSON commits each table load reads (2 Class B each) against how often a checkpoint is written | Step 8 · owner (#42) | Task T040 (Processing pipeline) design |
+| P4 | The cost model is recalibrated once the pipeline runs: R2's GraphQL Analytics metrics per bucket (#36) give the actual Class A, Class B and storage, which are compared with the model's prediction to adjust `params.toml` and re-run it | Step 8 · owner | Task T040 (Processing pipeline) design, once the pipeline runs; together with [D5](#d5-bronze-is-kept-indefinitely-reviewed-only-above-a-cost-threshold)'s TODO on recalibrating the Cloudflare alerts |
+| P5 | Running 24/7, the pipeline commits every 10 minutes or more: at 5 and 1 minutes Class B exceeds the free quota and the D2 gate ([F20](#4-findings)). This conflicts with the ≤ 5-minute freshness of Q1, Q2 and Q5 (`architecture.md` §1.1); ways to go below 10 minutes (e.g. more frequent optimize) are not analysed in the spike | Step 9 · owner (D2 gate) | Task T040 (Processing pipeline) design, which sets when the pipeline commits and resolves the tension with [d002](../designs/d002-requirements.md#requirements) R3 |
 
 ## 5. Conclusion
 
@@ -976,7 +976,7 @@ Not covered:
 
 ### Answers
 
-Q1's figures are estimates from the [cost model](#c-cost-model) (probe C), built on probe A's measured operations per commit and probe B's measured volumes; Q2's are measured on R2 by probe A. The model covered every scenario in Q1: 24/7 at six cadences and the 16-cell on-demand grid (F20). Two are carried forward as references: the judged on-demand cell (10 catch-ups + 2 h live), and 24/7 at 10 minutes, the fastest 24/7 cadence that fits the gate (#49). T039 chooses the mode and cadence.
+Q1's figures are estimates from the [cost model](#c-cost-model) (probe C), built on probe A's measured operations per commit and probe B's measured volumes; Q2's are measured on R2 by probe A. The model covered every scenario in Q1: 24/7 at six cadences and the 16-cell on-demand grid (F20). Two are carried forward as references: the judged on-demand cell (10 catch-ups + 2 h live), and 24/7 at 10 minutes, the fastest 24/7 cadence that fits the gate (#49). Task T040 (Processing pipeline) chooses the mode and cadence.
 
 - **Q1. Cost calculation.** Both references fit the €2 gate in every month up to 12: €0.14–0.15 in month 1 and €0.83 in month 12, their worst month; about €6 accumulated over months 1–12. Months 1, 2, 4, 6 and 12 are in F20's table (F20).
   - **Storage:** 20.6 GB in month 1 to 71 GB in month 12, the same in both; at month 12, bronze 40.7 GB, silver 29.2 GB, gold 1.0 GB, Delta overhead 0.59–0.85 GB. It exceeds the free 10 GB from month 1, so it is billed from the start (F21).
@@ -1007,9 +1007,35 @@ Yes: the own lakehouse on R2 with Delta Lake holds within the €2 share of the 
 
 ### Decisions to record
 
-| D | Outcome | Findings | ADR | Sections affected |
-|---|---|---|---|---|
-| D1 | `<holds, changes or reopened>` | | | |
+| D | Outcome | Why |
+|---|---|---|
+| D1. Own lakehouse on object storage | Holds | It is what the project sets out to build; the run did not test it and found nothing against it |
+| D2. Cloudflare R2 for every layer | Holds, with an operating constraint: running 24/7, the pipeline commits every 10 minutes or more (P5) | R2 gave everything the lakehouse needs from one service: an S3-compatible API with the conditional put that Delta's safe commits rely on (F1, F19), a bucket lock that protects bronze (F19), and per-bucket operation metrics through the GraphQL Analytics API, which made the run measurable and will drive the cost recalibration (#36, #37, P4). It charges no egress, so the engine can run anywhere (T036), and capture already lands there, so ADR-0011 holds. The bill stays well within the €2 share of the budget (F20) |
+| D3. Bronze is the captured `json.gz` objects as they are | Holds | Bronze is the largest layer (F21), so a bronze table would duplicate most of the storage. SQL over raw is still possible, more slowly: engines such as DuckDB read the `json.gz` directly from R2 |
+| D4. Delta Lake for silver and gold | Holds: the gate passed | Delta writes, MERGEs and keeps concurrent commits safe on R2 with conditional put and no external lock (F1, F2): a stale MERGE fails with a conflict and a stale append is retried, with no duplicate or lost row (F3, F15), and R2 enforces put-if-absent under a race (F19). Optimize, vacuum, Polars and DuckDB work (F18). Iceberg, second in the matrix for its dependence on a catalog, was not probed, since the gate passed. Limitations, not rejections: conflicting MERGEs are not auto-resolved, and table creation and schema merge have races (P1, P2); DuckDB's reads were not counted (F6) |
+| D5. Bronze kept indefinitely | Holds | Bronze cannot be rebuilt, and keeping it costs little: the whole bill, bronze included, stays within the €2 share every month (F20, F21) |
+| D6. Silver 12 months, gold indefinitely, 7 days of Delta history | Holds | Up to month 12 the rolling window and keeping silver indefinitely cost the same, since the window is not yet full; beyond it, keeping silver would add its growth to bronze's and bring D5's review earlier (F21, F23). Vacuum with 7 days of history works on R2 (F18) |
+| D7. Storage security baseline | Holds, not reopened | Both checks of probe A passed: the test token cannot list, read or write the production bucket, and the bucket lock blocks overwrite and delete by an Object Read & Write token, which R2's docs did not state (F19). The rest of the baseline (two buckets, one token per component) is configuration, set up in production |
+
+#### Proposed ADRs
+
+To be written after the spike (#26):
+
+- Own lakehouse on Cloudflare R2: D1, D2.
+- Bronze as captured objects, and layer retention: D3, D5, D6.
+- Delta Lake as the table format for silver and gold: D4.
+- Storage security baseline: D7.
+
+#### Security requirements
+
+Transferred to [d002 Requirements](../designs/d002-requirements.md#requirements) ([#33](#decision-log)), each from a threat in [D7](#d7-storage-security-baseline):
+
+| R | Threat in D7 | Evidence |
+|---|---|---|
+| R15 | Leaked credentials | [F19](#4-findings): the scoped test token is denied on the production bucket |
+| R16 | Leaked credentials; a pipeline bug writes to bronze | [F19](#4-findings): the bucket lock blocks overwrite and delete by an Object Read & Write token |
+| R17 | A pipeline bug writes to bronze | R2 scopes tokens to whole buckets ([R2 source card](../sources/r2-storage.md)), hence [D7](#d7-storage-security-baseline)'s two buckets |
+| R18 | A bucket is made public by mistake | R2's buckets are private by default ([D7](#d7-storage-security-baseline)); not tested |
 
 ### Not verified
 

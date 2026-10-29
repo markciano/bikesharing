@@ -58,6 +58,10 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 - **R12** The solution shall compute and show hour and day boundaries in Europe/Madrid local time.
 - **R13** The solution shall be able to rebuild silver and gold from bronze.
 - **R14** The solution shall distinguish gaps caused by its own capture from gaps in a provider's feed.
+- **R15** The solution shall give each component its own storage credential, limited to the buckets and access its role needs.
+- **R16** The solution shall prevent deleting or overwriting bronze data that cannot be rebuilt: captured objects, capture logs and history archives.
+- **R17** The solution shall give write access to bronze only to capture and to the one-off history load.
+- **R18** The solution shall keep stored data private, except what the visualization publishes.
 
 ### Out of scope
 
