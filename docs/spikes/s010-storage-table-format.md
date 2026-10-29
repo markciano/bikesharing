@@ -906,7 +906,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 - Race: in 10 of 10 rounds both PUTs were in flight at once; R2 accepted one (200) and rejected the other (412 `PreconditionFailed`), and the winner's body was stored; each writer won 5 rounds.
 - D7 is not reopened.
 
-**F20. The judged cell and 24/7 at 10 minutes or more cost €0.83 at most, all of it storage; 24/7 at 5 and 1 minutes breaks the gate on Class B** (step 9, 2026-10-29, `output/cost_summary.csv`, `output/cost_months.csv`)
+**F20. Mode and regime: the judged cell and 24/7 at 10 minutes or more cost €0.83 at most, all of it storage; 24/7 at 5 and 1 minutes breaks the gate on Class B** (step 9, 2026-10-29, `output/cost_summary.csv`, `output/cost_months.csv`)
 
 | Scenario | Month 1 | Month 2 | Month 4 | Month 6 | Month 12 | Accumulated 1–12 |
 |---|---|---|---|---|---|---|
@@ -922,14 +922,14 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 - What to watch in production: stored GB in the storage-bound regime; in 24/7 at 10 minutes, also monthly Class B against the free 10 million, since crossing it switches regime.
 - D2 gate: the judged cell fits in every month up to 12, so D2 holds; 1-minute 24/7 does not, so it holds with an operating constraint ([P5](#production-inputs)).
 
-**F21. Storage grows from 20.6 to 71 GB in 12 months, 98% of it bronze and silver, and is the same in every scenario but for Delta's overhead** (step 9, 2026-10-29, `output/cost_months.csv`)
+**F21. Storage: it grows from 20.6 to 71 GB in 12 months, 98% of it bronze and silver, and is the same in every scenario but for Delta's overhead** (step 9, 2026-10-29, `output/cost_months.csv`)
 
 - Storage exceeds the free 10 GB from month 1 (20.6 GB, 206% of the quota), so it is billed from the first month.
 - Month 12, judged cell: bronze 40.7 GB (57%, growing about 2.9 GB a month), silver 29.2 GB (41%, flat from month 11 as its 12-month window fills), gold 1.0 GB (1.4%), Delta overhead 0.59 GB (0.8%).
 - Month 1's overhead is 12% of storage (2.39 GB), from the initial load's commits.
 - Within 24/7, only the overhead changes with the cadence: 0.85 GB at 10 minutes, 1.09 at 5, 3.04 at 1. Within on-demand, every cell stores the same (overhead 0.58–0.59 GB).
 
-**F22. Capture dominates Class A; silver and gold reads dominate Class B and grow faster than the commits** (step 9, 2026-10-29, `output/cost_months.csv`)
+**F22. Operations: capture dominates Class A; silver and gold reads dominate Class B and grow faster than the commits** (step 9, 2026-10-29, `output/cost_months.csv`)
 
 - Capture's `raw/` and `logs/` writes are about 178k Class A a month: 93% of the judged cell's Class A and 50% of 24/7 at 10 minutes'.
 - Judged cell: Class A at 18–19% of the free quota, Class B at 3.7% (12% in month 1, from the initial load). Other on-demand cells: Class A 17–19%, Class B 2.5–3.7%.
@@ -937,12 +937,12 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 - From 10 to 1 minute, commits grow 9× and Class B 63× (8.1 to 509 million a month): each MERGE rereads the files accumulated since the daily optimize ([F16](#4-findings)).
 - Month 1 is the peak of operations; month 12 is the peak of storage.
 
-**F23. After month 12 the bill grows about €0.04 a month and would reach D5's €2 around month 41–42** (step 9, 2026-10-29, `output/cost_months.csv`, simple linear extrapolation)
+**F23. Time: after month 12 the bill grows about €0.04 a month and would reach D5's €2 around month 41–42** (step 9, 2026-10-29, `output/cost_months.csv`, simple linear extrapolation)
 
 - Months 2–10 grow about €0.07 a month while silver fills its window; from month 11 only bronze and gold grow, about 2.9 GB a month at about €0.0135 per GB.
 - At that rate the judged cell and 24/7 at 10 minutes reach €2 about 30 months after month 12, some 3.5 years after the production start. Bronze's growth drives it, so D5's review is the lever.
 
-**F24. Sensitivity depends on the regime: the judged cell is sensitive only to Parquet bytes per row, 24/7 at 10 minutes also to the operation measures** (step 9, 2026-10-29, `output/cost-model/sensitivity/sensitivity.csv`, `break_even.csv`)
+**F24. Sensitivity: it depends on the regime; the judged cell is sensitive only to Parquet bytes per row, 24/7 at 10 minutes also to the operation measures** (step 9, 2026-10-29, `output/cost-model/sensitivity/sensitivity.csv`, `break_even.csv`)
 
 - Judged cell: bytes per row at ×2 gives €1.24 and reaches the gate at ×3.8 (about 84 bytes per row); reads per file (×440), N (×24.6) and bytes rewritten per MERGE (over ×1,000) have no visible effect.
 - 24/7 at 10 minutes: reads per file at ×2 gives €1.81 and reaches the gate at ×2.1, the narrowest margin in the model; N reaches it at ×3.1 and bytes per row at ×3.8.
