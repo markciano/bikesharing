@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: step 9 (Owner): run probe C and verify the model
+- Current step: step 9 (Owner): run and hand check done (#48); sensitivity on 24/7 10 min and charts (#49), then findings and gate, pending
 
 ## 1. Questions — what we need to know
 
@@ -259,6 +259,13 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - Delta overhead in silver and gold: A's `_delta_log` bytes per commit × 30 days of commits, plus the bytes rewritten by MERGE and optimize in 7 days ([D6](#d6-silver-keeps-a-rolling-12-months-gold-is-kept-indefinitely-and-delta-keeps-7-days-of-history)).
 - **Output:** cost per layer as well as the total; capture's `logs/` and `state/` writes are reported apart from `raw/`, so their share of the quota is visible.
 - **Runs** once, after A and B; parameters are kept apart from the logic so the model can be re-run with new inputs.
+- **Hand check** ([#48](#decision-log)): `cost_model_handcheck.py` recomputes month 1's Class A and Class B, and their cost after the free quotas, for the judged cell and 24/7 at 10 minutes, without importing the model, and compares each component with `output/cost_months.csv`. It follows this section and these rules, which the model applies and the bullets above leave implicit:
+  - A's measures: a table load is 14 Class B plus 2 per JSON commit since the last checkpoint ((N − 1) / 2 on average), fitted on the appends after the first checkpoint; MERGE and optimize read 3 Class B per data file; optimize and vacuum each load the table at N like a commit, plus their fixed extra over A's measured load (3 and 15 Class B);
+  - initial load: one commit per table and day with data on a new table, reading no file, and one optimize per table over all of them; silver tables without history archives load the backlog only, and gold loads history and backlog; bronze adds the backlog's day prefixes, one LIST of the history prefix, the archives' upload (one PUT each) and a GET of every backlog object and archive;
+  - the backlog is counted at production's capture cadence (static feeds once a day), not the current worker's hourly one, since static feeds rarely change;
+  - catch-ups: each one redoes the previous session's day, so a month has days + catch-ups day partitions per table; each commit finds the day's compacted file, and the catch-up's optimize compacts two files per day;
+  - live sessions: `live_hours` are per month, split evenly over the sessions; static silver and daily gold commit only in catch-ups, and an hourly table commits once per started hour of a session;
+  - LIST pages: each run lists the day prefix as it stands at that run, at least one page, so pages grow through the day.
 - **Prices, quotas and operation classes** come from the [R2 source card](../sources/r2-storage.md). Assumptions where the pricing page is silent:
   - the free tier is shared by every bucket in the account (pessimistic);
   - a conditional PutObject is Class A, ListObjectsV2 is Class A as ListObjects, and DeleteObjects is free as DeleteObject; A confirms them on the test bucket's metrics;
@@ -315,6 +322,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 | 45 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model), [Step 9](#step-9--run-probe-c-and-verify-the-model) | Step 8 adds, in a new session, a sensitivity analysis and charts. Sensitivity: A's four extrapolated measures (reads per file, checkpoint interval N, Parquet bytes per row, bytes rewritten per MERGE), one at a time at ×0.5 and ×2, on the judged cell and 1-minute 24/7, giving each case's worst month; reported, not judged. Charts, with matplotlib in `output/cost-model/`: monthly cost against the €2 gate, the on-demand grid as a heat map, the worst month by 24/7 cadence, cost per layer by month for the judged cell, and the sensitivity as a tornado chart | A measured these four on one small `station_status` table at N = 10, so they are the model's least certain inputs; the analysis shows whether any could push the judged cell over €2 and which to watch in production. Capture volume and prices are measured or published, so they are not varied. The charts make the gate and the cost curve for T039 readable | After step 8 |
 | 46 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | Silver and gold are sized at 22.0 Parquet bytes per row: the mean of `station_status` (17.34, A's larger value) and vehicles (22.85, estimated) weighted by silver rows (16% and 84%). Vehicles are estimated as A's value × their gzip bytes per record in bronze over `station_status`'s (24.07 / 18.26, step 7's `volumes.json`); extends #29 | A wrote only `station_status`, but vehicles are 84% of silver's rows and carry more columns; the bronze ratio estimates them without a new measurement, and #45's ×0.5 and ×2 cover its error | After step 8 |
 | 47 | [Cost model](#c-cost-model), [Step 8](#step-8--write-the-cost-model) | The sensitivity adds a break-even per measure: the factor above 1 at which the judged cell's worst month reaches the €2 gate, searched up to ×1,000. Sensitivity outputs (CSVs and tornado chart) go in `output/cost-model/sensitivity/`; extends #45 | ×0.5 and ×2 rank the measures but do not show the margin to the gate, which is what Q1 judges; a subfolder keeps the sensitivity apart from the model's charts | Running step 8 |
+| 48 | [Cost model](#c-cost-model), [Step 9](#step-9--run-probe-c-and-verify-the-model) | Step 9's hand recomputation is a script, `cost_model_handcheck.py`, covering month 1's Class A and Class B of the judged cell and 24/7 at 10 minutes; §2 C gets a Hand check bullet with the rules the model applies and §2 C left implicit, the backlog counted at production's daily static capture included | The spec is the source of truth, so rules found only in the code are written into it; a script makes the check repeatable after a re-run; 24/7 at 10 minutes uses 89% of the free Class B in month 1, so Class B is where it can break the gate | Running step 9 |
 
 ### File layout
 
@@ -332,6 +340,7 @@ spikes/storage-table-format/
 ├── measure_volume.py  B: raw/, logs/, state/ and history volumes
 ├── cost_model.py      C: scenarios × months, cost per layer and total; sensitivity and charts (#45)
 ├── params.toml        C: every parameter (tables, cadences, retention, prices), apart from the logic
+├── cost_model_handcheck.py  C: month 1's Class A and B of two cells, recomputed without the model (#48)
 └── output/            Ignored by Git (ADR-0009): logs, volumes, operation and cost tables; cost-model/ charts
 ```
 
@@ -349,7 +358,7 @@ The cheapest test of the riskiest assumption runs first: steps 2–3 check the D
 | 6 | Write the volume measurement | Claude | — | `measure_volume.py`, `README.md` |
 | 7 | Run probe B and verify volumes | Owner | — | `output/` |
 | 8 | Write the cost model | Claude | — | `cost_model.py`, `params.toml`, `README.md`, `pyproject.toml`, `uv.lock` |
-| 9 | Run probe C and verify the model | Owner | D2 gate | `output/` |
+| 9 | Run probe C and verify the model | Owner | D2 gate | `cost_model_handcheck.py`, `README.md`, `output/` |
 | 10 | Conclusion | Claude, Owner (teardown) | — | this document, `README.md`; test lock rule, bucket and token |
 
 ### Step 1 — Scaffold the spike folder
@@ -697,7 +706,10 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 #### Scope
 
-A full run of the cost model on A's and B's outputs; `output/cost_*.csv` and `output/cost-model/`; the findings that answer Q1.
+- A full run of the cost model on A's and B's outputs; 
+- `output/cost_*.csv` and `output/cost-model/`;
+- `cost_model_handcheck.py` and its `README.md` entry (#48); 
+- the findings that answer Q1.
 
 #### Reads
 
@@ -707,12 +719,12 @@ A full run of the cost model on A's and B's outputs; `output/cost_*.csv` and `ou
 
 1. Check that `params.toml` points to the outputs of steps 5 and 7. Set the production start date (the latest you consider plausible, #31), the USD→EUR rate, the capture start date (the earliest day under `raw/` in `bikesharing-capture-spike`, read in the Cloudflare console), and the capture override if step 7 found a gap beyond ±10%.
 2. Run `uv run python cost_model.py`.
-3. Recompute by hand, from the CSV and `params.toml`, the Class A operations of the judged cell in month 1.
+3. Run `uv run python cost_model_handcheck.py`: month 1's Class A and Class B of the judged cell and 24/7 at 10 minutes, recomputed without the model (#48).
 4. Report the summary and the hand recomputation.
 
 #### Check
 
-- The hand recomputation matches the CSV.
+- The hand check prints `all rows match`.
 - Claude records as findings: cost per layer and total per scenario and month, the free quota usage, the judged cell and the 1-minute 24/7 case with its optimize sensitivity row, the sensitivity of A's measures (#45), and applies the gate.
 
 ### Step 10 — Conclusion

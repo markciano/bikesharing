@@ -164,5 +164,5 @@ free_storage_gb_month = 10        # free tier shared by every bucket in the acco
 free_class_a = 1_000_000
 free_class_b = 10_000_000
 gb_bytes = 1_000_000_000
-usd_to_eur = 1.0                  # placeholder (pessimistic); set in step 9
-usd_to_eur_date = ""              # date of the rate; set in step 9
+usd_to_eur = 0.8982                  # placeholder set in step 9
+usd_to_eur_date = "2026-10-28"              # date of the rate; set in step 9

@@ -129,3 +129,13 @@ Output:
 - The summary on the console.
 
 The synthetic run writes the same files under `output/local/`. It takes a few seconds.
+
+### `cost_model_handcheck.py` — hand check of the cost model (step 9)
+
+```bash
+uv run python cost_model_handcheck.py   # after a full cost_model.py run
+```
+
+Recomputes, without importing `cost_model.py`, month 1's Class A and Class B operations and their cost after the free quotas for two cells: the judged on-demand cell (`scenarios.judged`) and 24/7 at 10 minutes. Each term follows s010 §2 C and its Hand check bullet (#48), from `params.toml`, A's per-operation table and `output/volumes.json`. A's measures (table load, reads per file, checkpoint, optimize and vacuum) are derived again from that table and printed at the start.
+
+Output: one table per class on the console, with one row per component and its unit (`[Class A ops]`, `[Class B ops]`, `[USD]`), the hand value, the model's value from `output/cost_months.csv` and ✅ or ❌. It ends with `all rows match` or the number of rows that differ, and exits 1 if any differs. It takes about a second.
