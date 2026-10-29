@@ -186,31 +186,37 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 ### 5.1 Answers
 
-- **Q1.** `<answer>` (FN)
+- **Q1. Title** `<answer>` (FN)
 
-### Exit criteria
+### 5.2 Exit criteria
 
-| Criterion | `<Variant A>` | `<Variant B>` |
-|---|---|---|
-| | | |
+| Criterion | Kind | Result | Findings |
+|---|---|---|---|
 
-### 5.2 Verdict
+### 5.3 Verdict
 
 <!-- The answer to the main question in 2–3 sentences. -->
 
-### 5.3 Not verified
+### 5.4 Decisions to record
+
+<!-- Optional: If some arch decisions was taken at the begining of the spike -->
+
+| D | Outcome | Why |
+|---|---|---|
+
+### 5.5 Not verified
 
 <!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
 
 - `<item>` — `<risk>` — `<mitigation>`
 
-### 5.4 Follow-ups
+### 5.6 Follow-ups
 
 <!-- ADRs to write (each in its own commit) and new tasks agreed with the owner. Production inputs are not repeated here. -->
 
 - `<ADR or task>`
 
-## 5.4.1 Sources
+## 6. Sources
 
 <!-- Optional. Earlier spikes, benchmarks and documentation used. -->
 
