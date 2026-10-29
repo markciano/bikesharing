@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: step 9 (Owner): run and hand check done (#48); sensitivity on 24/7 10 min and charts written (#49), synthetic check ok; re-run of `cost_model.py` and the hand check, then findings and gate, pending
+- Current step: step 10 (Conclusion), next; step 9 ✅: D2 gate passed with an operating constraint (F20–F24, P5)
 
 ## 1. Questions — what we need to know
 
@@ -699,7 +699,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 ### Step 9 — Run probe C and verify the model
 
-- **Status:** 🔄 doing
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `docs: step 9 - record cost model results in s010` (Claude writes the findings and Status from the owner's report)
 - **Model:** —
@@ -906,6 +906,49 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 - Race: in 10 of 10 rounds both PUTs were in flight at once; R2 accepted one (200) and rejected the other (412 `PreconditionFailed`), and the winner's body was stored; each writer won 5 rounds.
 - D7 is not reopened.
 
+**F20. The judged cell and 24/7 at 10 minutes or more cost €0.83 at most, all of it storage; 24/7 at 5 and 1 minutes breaks the gate on Class B** (step 9, 2026-10-29, `output/cost_summary.csv`, `output/cost_months.csv`)
+
+| Scenario | Month 1 | Month 2 | Month 4 | Month 6 | Month 12 | Accumulated 1–12 |
+|---|---|---|---|---|---|---|
+| On-demand 10 catch-ups + 2 h live (judged) | €0.14 | €0.19 | €0.33 | €0.47 | €0.83 | €5.97 |
+| 24/7 10 min | €0.15 | €0.19 | €0.33 | €0.47 | €0.83 | €6.01 |
+| 24/7 5 min | €5.34 | €4.31 | €4.98 | €5.12 | €5.74 | €63.40 |
+| 24/7 1 min | €164.85 | €147.90 | €159.11 | €159.25 | €165.15 | €1,939.43 |
+| 24/7 1 min, optimize every 60 min | €16.49 | €13.90 | €15.53 | €15.67 | €16.78 | €192.58 |
+
+- Every on-demand cell and 24/7 at 10, 30, 60 and 360 minutes lie between €0.828 and €0.831 in month 12, their worst month.
+- Two regimes. Storage-bound (on-demand, 24/7 at 10 minutes or more): operations stay within R2's free quotas and cost €0, so the bill is 100% storage, grows with time and barely depends on the mode or the cadence. Quota-bound (24/7 at 5 minutes or less): Class B exceeds the free quota and operations are 86–97% of the cost at 5 minutes and over 99% at 1 minute; it is flat in time and jumps with the cadence.
+- Hourly optimize cuts 1-minute 24/7 by 10× and still costs 8× the gate.
+- What to watch in production: stored GB in the storage-bound regime; in 24/7 at 10 minutes, also monthly Class B against the free 10 million, since crossing it switches regime.
+- D2 gate: the judged cell fits in every month up to 12, so D2 holds; 1-minute 24/7 does not, so it holds with an operating constraint ([P5](#production-inputs)).
+
+**F21. Storage grows from 20.6 to 71 GB in 12 months, 98% of it bronze and silver, and is the same in every scenario but for Delta's overhead** (step 9, 2026-10-29, `output/cost_months.csv`)
+
+- Storage exceeds the free 10 GB from month 1 (20.6 GB, 206% of the quota), so it is billed from the first month.
+- Month 12, judged cell: bronze 40.7 GB (57%, growing about 2.9 GB a month), silver 29.2 GB (41%, flat from month 11 as its 12-month window fills), gold 1.0 GB (1.4%), Delta overhead 0.59 GB (0.8%).
+- Month 1's overhead is 12% of storage (2.39 GB), from the initial load's commits.
+- Within 24/7, only the overhead changes with the cadence: 0.85 GB at 10 minutes, 1.09 at 5, 3.04 at 1. Within on-demand, every cell stores the same (overhead 0.58–0.59 GB).
+
+**F22. Capture dominates Class A; silver and gold reads dominate Class B and grow faster than the commits** (step 9, 2026-10-29, `output/cost_months.csv`)
+
+- Capture's `raw/` and `logs/` writes are about 178k Class A a month: 93% of the judged cell's Class A and 50% of 24/7 at 10 minutes'.
+- Judged cell: Class A at 18–19% of the free quota, Class B at 3.7% (12% in month 1, from the initial load). Other on-demand cells: Class A 17–19%, Class B 2.5–3.7%.
+- 24/7: at 10 minutes, Class A 35% and Class B 81% (89% in month 1, the tightest month); at 5 minutes Class B is 252%; at 1 minute, Class A 172% and Class B 5,090%.
+- From 10 to 1 minute, commits grow 9× and Class B 63× (8.1 to 509 million a month): each MERGE rereads the files accumulated since the daily optimize ([F16](#4-findings)).
+- Month 1 is the peak of operations; month 12 is the peak of storage.
+
+**F23. After month 12 the bill grows about €0.04 a month and would reach D5's €2 around month 41–42** (step 9, 2026-10-29, `output/cost_months.csv`, simple linear extrapolation)
+
+- Months 2–10 grow about €0.07 a month while silver fills its window; from month 11 only bronze and gold grow, about 2.9 GB a month at about €0.0135 per GB.
+- At that rate the judged cell and 24/7 at 10 minutes reach €2 about 30 months after month 12, some 3.5 years after the production start. Bronze's growth drives it, so D5's review is the lever.
+
+**F24. Sensitivity depends on the regime: the judged cell is sensitive only to Parquet bytes per row, 24/7 at 10 minutes also to the operation measures** (step 9, 2026-10-29, `output/cost-model/sensitivity/sensitivity.csv`, `break_even.csv`)
+
+- Judged cell: bytes per row at ×2 gives €1.24 and reaches the gate at ×3.8 (about 84 bytes per row); reads per file (×440), N (×24.6) and bytes rewritten per MERGE (over ×1,000) have no visible effect.
+- 24/7 at 10 minutes: reads per file at ×2 gives €1.81 and reaches the gate at ×2.1, the narrowest margin in the model; N reaches it at ×3.1 and bytes per row at ×3.8.
+- At ×0.5, the operation measures do not lower the cost: below the free quota operations are already free.
+- The first measure to validate is Parquet bytes per row: it is the only one that moves the judged cell, and vehicles' 84% of silver rows use an estimate, not a measure ([#46](#decision-log)). If 24/7 is chosen, reads per file follows.
+
 ### Production inputs
 
 | P | Input | Origin | Destination |
@@ -914,6 +957,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 | P2 | Tables are created before any concurrent writer (version-0 race on R2, delta-rs #3505), and concurrent writers do not use `schema_mode="merge"` (metadata changes are never retried, #3829 on R2) | Step 2 · `web-researcher` (delta-rs issues) | |
 | P3 | The checkpoint interval N is tuned per table: it sets how many JSON commits each table load reads (2 Class B each) against how often a checkpoint is written | Step 8 · owner (#42) | |
 | P4 | The cost model is recalibrated once the pipeline runs: R2's GraphQL Analytics metrics per bucket (#36) give the actual Class A, Class B and storage, which are compared with the model's prediction to adjust `params.toml` and re-run it | Step 8 · owner | |
+| P5 | Running 24/7, the pipeline commits every 10 minutes or more: at 5 and 1 minutes Class B exceeds the free quota and the D2 gate ([F20](#4-findings)). This conflicts with the ≤ 5-minute freshness of Q1, Q2 and Q5 (`architecture.md` §1.1); ways to go below 10 minutes (e.g. more frequent optimize) are not analysed in the spike | Step 9 · owner (D2 gate) | |
 
 ## 5. Conclusion
 
