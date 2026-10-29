@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-10-27 · Finished: —
-- Current step: step 10 (Conclusion), next; step 9 ✅: D2 gate passed with an operating constraint (F20–F24, P5)
+- Current step: step 10 (Conclusion), part A ✅ (Observed window, Answers, Exit criteria, Verdict, Not verified); next, part B: Decisions to record, security requirements to d002, Production input destinations, Follow-ups, How we got here and teardown
 
 ## 1. Questions — what we need to know
 
@@ -961,19 +961,49 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 ## 5. Conclusion
 
-Observed window: `<from–to, UTC; what it does not cover>`
+Observed window (UTC):
+
+- **Capture:** 2026-10-15 00:00 to 2026-10-26 00:00, 11 complete days measured by probe B on the local copy (F7–F11).
+- **Bicing history:** 2025-12 to 2026-09, 20 archives (F12).
+- **Delta on R2:** probe A ran on 2026-10-27 and 2026-10-28 over captured minutes of 2026-10-15 (F2, F14).
+
+Not covered:
+
+- **Seasons:** only October is captured, so changes in demand or in AMBici's vehicle fleet, which drive `free_bike_status` (77% of `raw/`), are not seen.
+- **Station network:** stations added or removed are not seen.
+- **Pipeline operations:** modelled from probe A, not measured in production (P4).
+- **Later history:** Bicing archives after 2026-09.
 
 ### Answers
 
-- **Q1.** `<answer>` (FN)
+Q1's figures are estimates from the [cost model](#c-cost-model) (probe C), built on probe A's measured operations per commit and probe B's measured volumes; Q2's are measured on R2 by probe A. The model covered every scenario in Q1: 24/7 at six cadences and the 16-cell on-demand grid (F20). Two are carried forward as references: the judged on-demand cell (10 catch-ups + 2 h live), and 24/7 at 10 minutes, the fastest 24/7 cadence that fits the gate (#49). T039 chooses the mode and cadence.
+
+- **Q1. Cost calculation.** Both references fit the €2 gate in every month up to 12: €0.14–0.15 in month 1 and €0.83 in month 12, their worst month; about €6 accumulated over months 1–12. Months 1, 2, 4, 6 and 12 are in F20's table (F20).
+  - **Storage:** 20.6 GB in month 1 to 71 GB in month 12, the same in both; at month 12, bronze 40.7 GB, silver 29.2 GB, gold 1.0 GB, Delta overhead 0.59–0.85 GB. It exceeds the free 10 GB from month 1, so it is billed from the start (F21).
+  - **Class A:** capture writes about 183k a month (F10); the on-demand cell uses 18–19% of the free quota, 24/7 at 10 minutes 35% (F22).
+  - **Class B:** the on-demand cell uses 3.7% of the free quota (12% in month 1, from the initial load); 24/7 at 10 minutes 81% (89% in month 1), the tightest margin (F22).
+  - **Bill:** operations stay within the free quotas, so both bills are storage only (F20).
+  - **Other scenarios:** the other on-demand cells and 24/7 at 30 minutes or more cost the same; 24/7 at 5 and 1 minutes exceed the free Class B and break the gate (€5.74 and €165.15 in month 12) (F20).
+  - **Beyond month 12:** about €0.04 more a month, reaching €2 around month 41–42 (F23).
+- **Q2. Delta on R2.** Yes: `deltalake` on R2 writes, MERGEs and keeps concurrent commits safe with R2's conditional put and no external lock (F1, F2).
+  - **Concurrency:** a stale MERGE raises a commit conflict and a stale append is retried, with no duplicate key or lost row (F3, F15); R2 enforces put-if-absent under a race in 10 of 10 rounds (F19).
+  - **Maintenance:** optimize and vacuum work on R2 (F18).
+  - **Readers:** Polars and DuckDB read the table; DuckDB's delta extension cannot be routed through a proxy (F6, F18).
+  - **Latency (observed):** median commit 2.3 s for an append and 5.5 s for a MERGE, direct to R2, well within the 5-minute freshness (F4).
 
 ### Exit criteria
 
-| Criterion | `<Variant A>` | `<Variant B>` |
-|---|---|---|
-| | | |
+| Criterion | Kind | Result | Findings |
+|---|---|---|---|
+| Timebox: one day of effort | Limit | Exceeded: at least two days of effort over four calendar days. Steps 8 and 9 took nine decisions (#41–#49): modelling rules the method had left open (#41–#44), an estimate of vehicles' bytes per row (#46), and a sensitivity analysis, break-even, charts (#45, #47, #49) and a hand-check script (#48) beyond the plan. The extra work gave confidence in the margin but did not change the verdict; the Iceberg half day was not needed | — |
+| Storage cost: ≤ €2 every month up to 12, judged cell | Hard cut | Pass: €0.83 at most, in month 12 | F20 |
+| D2 gate: total R2 cost ≤ €2 every month up to 12 | Hard cut | Pass with an operating constraint: the judged cell and 24/7 at 10 minutes or more fit (€0.83 at most); 24/7 at 5 and 1 minutes do not | F20, P5 |
+| D4 gate: write, MERGE, safe concurrent commits | Hard cut | Pass | F2, F3, F15, F19 |
+| Maintenance and engine reads | Guide | Pass: optimize, vacuum, Polars and DuckDB work on R2; DuckDB's delta extension cannot be routed through a proxy, which limits the probe's counting, not production | F6, F18 |
 
 ### Verdict
+
+Yes: the own lakehouse on R2 with Delta Lake holds within the €2 share of the budget and R2's quotas. D2 holds with an operating constraint: running 24/7, the pipeline commits every 10 minutes or more (P5). No decision D1–D7 is reopened; each one's outcome is in Decisions to record.
 
 ### Decisions to record
 
@@ -983,7 +1013,15 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 ### Not verified
 
-- `<item>` — `<risk>` — `<mitigation>`
+| Item | Risk | Mitigation |
+|---|---|---|
+| Vehicles' Parquet bytes per row are estimated (22.85) from the bronze gzip ratio, not measured (#46) | Vehicles are 84% of silver's rows, and bytes per row is the only measure that moves the judged cell: it reaches €2 at ×3.8, about 84 bytes per row (F24) | The first silver slice with vehicles writes a day of `free_bike_status` to Delta, measures bytes per row and re-runs the cost model with it |
+| Probe A measured operations on a single small `station_status` table at N = 10; reads per file, N and bytes rewritten per MERGE are extrapolated (#45) | The judged cell is insensitive, but 24/7 at 10 minutes reaches €2 at ×2.1 reads per file, the narrowest margin in the model (F24) | P4's recalibration with R2's metrics after the first weeks of production; if T039 chooses 24/7, operations per commit are measured on a production-sized table first |
+| The hand check covers month 1 only (#48) | An error in how months 2–12 accumulate (silver's window, bronze growth, Delta overhead) would go unseen, and month 12 is the worst month | P4's recalibration compares the measured storage per bucket with the model month by month, which checks the accumulation on real data |
+| Growth beyond month 12 is a linear extrapolation (F23) | New stations, a larger fleet or new feeds bend the curve, and D5's €2 review arrives before month 41–42 | An alert on the total monthly R2 bill at €2, D5's trigger (#14); P4's re-run each year |
+| The USD→EUR rate and R2's prices are those of the calculation date | R2 bills in USD: a price rise or a weaker euro raises every month's cost | The judged cell keeps 2.4× headroom (€0.83 against €2); the same €2 alert catches it, and each P4 re-run takes current prices and rate |
+| Capture volume is measured in October only (Observed window) | `free_bike_status` (77% of `raw/`) varies with demand and fleet size by season, which changes bronze and silver growth | P4's recalibration over a full year of production |
+| DuckDB's reads were not counted (F6) | If T036 chooses DuckDB, its Class B per read is unknown, and Class B is what breaks the gate at 24/7 | T036 counts DuckDB's reads with R2's metrics over a run window (#37) before choosing it |
 
 ### Follow-ups
 
