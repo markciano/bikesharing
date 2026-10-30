@@ -21,7 +21,7 @@ paths:
 
 - **Context:** facts, constraints and forces only. No solution vocabulary.
 - **Options:** at least two real alternatives, including "do nothing / keep current" when plausible. Evaluate every option against the same criteria.
-- **Decision Outcome:** rationale must reference the Context. State rules normatively using MUST / SHOULD / MAY (RFC 2119), one rule per sentence, each followed by its reason.
+- **Decision Outcome:** rationale must reference the Context.
 - **Consequences:** include negatives honestly; an ADR with no downsides is incomplete.
 
 ## Style
@@ -40,4 +40,4 @@ paths:
 
 1. Write the decision as a single sentence. If you can't, ask.
 2. Group the input notes into principles; discard narrative and anecdote.
-3. Only then fill in the template.
+3. Only then fill in the template (.claude/skills/design/adr-template.md).

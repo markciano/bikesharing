@@ -1,6 +1,8 @@
 ---
 paths:
-  - "spikes/**"
+  - "spikes/**/*.py"
+  - "spikes/**/*.toml"
+  - "spikes/**/*.sql"
 ---
 
 # Spike code rules
