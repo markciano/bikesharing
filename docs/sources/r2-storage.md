@@ -37,7 +37,12 @@ Facts about the object store used for every medallion layer (s010 D2). Living do
 | The S3 Object Lock API and object versioning (`PutBucketVersioning`) are not implemented | [S3 API](https://developers.cloudflare.com/r2/api/s3/api/) | 2026-10-26 |
 | Buckets are private by default; public only through a custom domain or the r2.dev URL, both enabled explicitly and removable | [Public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/) | 2026-10-26 |
 | Objects and metadata are encrypted at rest by default (AES-256), with keys managed by Cloudflare | [Data security](https://developers.cloudflare.com/r2/reference/data-security/) | 2026-10-26 |
+| Conditional PutObject with `If-None-Match: *` is enforced under a race: one PUT wins, the other gets 412 `PreconditionFailed`. delta-rs relies on it for safe commits with `aws_conditional_put: "etag"` and no external lock | [s010/F1](../spikes/s010-storage-table-format.md#4-findings), [s010/F19](../spikes/s010-storage-table-format.md#4-findings) | 2026-10-28 |
+| A bucket lock lets an Object Read & Write token create new objects, but blocks their overwrite and delete with 409 `ObjectLockedByBucketPolicy` | [s010/F19](../spikes/s010-storage-table-format.md#4-findings) | 2026-10-28 |
+| A token scoped to one bucket gets 403 `AccessDenied` on list, read and write in another bucket | [s010/F19](../spikes/s010-storage-table-format.md#4-findings) | 2026-10-28 |
+| The GraphQL Analytics API (`r2OperationsAdaptiveGroups`) gives operations per bucket, operation and status, filtered by a `datetime` range; failed requests show as `userError` | [s010/#36](../spikes/s010-storage-table-format.md#decision-log), [s010/#37](../spikes/s010-storage-table-format.md#decision-log), [s010/#39](../spikes/s010-storage-table-format.md#decision-log) | 2026-10-28 |
+| Operation metrics are sampled: the total matches an exact count within 0.02%, but per-object counts do not | [s010/F14](../spikes/s010-storage-table-format.md#4-findings) | 2026-10-28 |
+| The dashboard's operation figures are not exact: its summary and charts differ, and neither its day boundary nor an operation breakdown is documented | [s010/#36](../spikes/s010-storage-table-format.md#decision-log) | 2026-10-28 |
 
 TODO: confirm in s010 probe A (bucket metrics) the class of conditional PutObject, ListObjectsV2 and DeleteObjects, which the pricing page does not name.
 TODO: confirm whether the free tier is per account or per bucket; the pricing page does not say.
-TODO: confirm in s010 probe A whether a bucket lock blocks a delete made with an Object Read & Write token; the bucket locks page does not say.
