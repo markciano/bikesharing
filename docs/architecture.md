@@ -35,7 +35,8 @@ Functional requirements:
 |---|---|---|---|---|
 | 1 | Current station status is recent, and stale data is never shown as current | Currentness (ISO/IEC 25012) | Live station status (Q1) is the visualization's main view | [d002 › R3, R7](designs/d002-requirements.md#requirements) |
 | 2 | Silver and gold can be caught up and rebuilt from bronze | Recoverability (ISO/IEC 25010) | Stops and model changes must not lose data | [d002 › R11, R13](designs/d002-requirements.md#requirements) |
-| 3 | Every gap is recorded and attributed to its cause | Completeness (ISO/IEC 25012) | Measures derived from consecutive counts are only trustworthy when their gaps are known | [d002 › R9, R14](designs/d002-requirements.md#requirements) |
+| 3 | Each component and user reaches only the data and access its role needs, and data that cannot be rebuilt cannot be deleted or altered | Confidentiality, Integrity (ISO/IEC 25010) | Data and services run in the cloud, and the visualization is open to the public | [d002 › R1, R15–R18](designs/d002-requirements.md#requirements) |
+| 4 | Every gap is recorded and attributed to its cause | Completeness (ISO/IEC 25012) | Measures derived from consecutive counts are only trustworthy when their gaps are known | [d002 › R9, R14](designs/d002-requirements.md#requirements) |
 
 Each goal is made measurable by the scenarios in §10.
 
@@ -65,21 +66,33 @@ Each goal is made measurable by the scenarios in §10.
 
 ## 4. Solution strategy
 
+### 4.1 Technology
+
+- **Own lakehouse on Cloudflare R2:** every layer is stored as open-format files in R2, with compute separate; R2 charges no egress, so the engine can run anywhere. Silver and gold are Delta Lake tables, whose commits are safe on R2 with no external lock. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0022](decisions/0022-delta-lake-for-silver-and-gold.md).
+
+### 4.2 Structure
+
 - **Landing zone with an output contract:** every collector writes the same key layout, UTC capture time and origin bytes; the pipeline depends only on the files, so collectors can change tool or language. [ADR-0012](decisions/0012-collectors-decoupled-by-output-contract.md).
-- **Raw kept untouched:** source responses are stored as received, so everything downstream can be reprocessed from them, within the retention the storage decision sets. [ADR-0006](decisions/0006-raw-layer-keeps-source-responses-untouched.md).
-- **Medallion layers:** bronze holds the data as captured, silver the cleaned and conformed common model, gold the tables modelled for the guiding questions; silver and gold can be rebuilt from bronze. [d002 › R6, R13](designs/d002-requirements.md#requirements); [ADR-0018](decisions/0018-medallion-architecture.md).
+- **Raw kept untouched:** source responses are stored as received, so everything downstream can be reprocessed from them, since bronze is kept indefinitely. [ADR-0006](decisions/0006-raw-layer-keeps-source-responses-untouched.md); [ADR-0021](decisions/0021-retention-per-layer.md).
+- **Medallion layers:** bronze holds the captured objects and history archives as they arrive, with no table over them, silver the cleaned and conformed common model, gold the tables modelled for the guiding questions; silver and gold can be rebuilt from bronze. [d002 › R6, R13](designs/d002-requirements.md#requirements); [ADR-0018](decisions/0018-medallion-architecture.md); [ADR-0020](decisions/0020-bronze-as-captured-objects.md).
+
+### 4.3 Data model
+
 - **One common model:** both providers are unified on GBFS 3.0 and built together, since the model exists to join them. [ADR-0008](decisions/0008-common-model-on-gbfs-3-0.md).
 - **Inventory model (Kimball):** stations are stores and bikes are stock; every measure derives from two base facts, the stock snapshot (semi-additive) and the movements derived from consecutive snapshots (additive). [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions).
+
+### 4.4 Organisation
+
 - **Decisions in dependency order:** each one is taken when the next step needs it (§9). [tasks.md](tasks.md).
 
 ## 5. Building block view
 
 | Block | Responsibility | State | Source |
 |---|---|---|---|
-| Capture | Fetches the feeds and writes them to the landing zone | Built on Cloudflare Workers + R2; reassessed in T035 | [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md); [tasks.md › T035](tasks.md) |
-| Landing zone | Holds raw responses under the output contract | Contract set; location in T035 | [ADR-0012](decisions/0012-collectors-decoupled-by-output-contract.md); [tasks.md › T035](tasks.md) |
+| Capture | Fetches the feeds and writes them to the landing zone | Built on Cloudflare Workers + R2 | [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md); [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md) |
+| Landing zone (bronze) | Holds raw responses under the output contract, and the history archives as downloaded | Bronze bucket in R2 | [ADR-0012](decisions/0012-collectors-decoupled-by-output-contract.md); [ADR-0020](decisions/0020-bronze-as-captured-objects.md); [ADR-0023](decisions/0023-storage-security-baseline.md) |
 | Processing | Turns raw responses into the common model and its tables | Engine in T036, execution in T037 | [ADR-0008](decisions/0008-common-model-on-gbfs-3-0.md); [tasks.md › T036, T037](tasks.md) |
-| Consumption layer | Tables read by analysis and visualization | Storage and format in T035 | [tasks.md › T035](tasks.md) |
+| Lakehouse | Silver and gold tables, read by analysis and visualization | Delta tables in the lakehouse bucket in R2; built by the pipeline (T040) | [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0022](decisions/0022-delta-lake-for-silver-and-gold.md); [ADR-0023](decisions/0023-storage-security-baseline.md); [tasks.md › T040](tasks.md) |
 | Visualization | Presents the data | T038 | [d002 › R1, R2](designs/d002-requirements.md#requirements); [tasks.md › T038](tasks.md) |
 
 ## 6. Runtime view
@@ -88,7 +101,8 @@ TODO: main flows (capture pass, pipeline run) — T037.
 
 ## 7. Deployment view
 
-- **Capture:** Cloudflare Workers with Cron Triggers, writing to R2, until T035 confirms or replaces it. [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md).
+- **Capture:** Cloudflare Workers with Cron Triggers, writing to the bronze bucket in R2. [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md); [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md).
+- **Storage:** two R2 buckets: bronze, and lakehouse for silver and gold. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0023](decisions/0023-storage-security-baseline.md).
 - TODO: processing and visualization — T037, T038.
 
 ## 8. Cross-cutting concepts
@@ -96,6 +110,8 @@ TODO: main flows (capture pass, pipeline run) — T037.
 - **Time:** every stored timestamp, file name and partition is in UTC; hour and day boundaries are computed and shown in Europe/Madrid local time. [ADR-0005](decisions/0005-utc-for-all-stored-timestamps.md); [d002 › R12](designs/d002-requirements.md#requirements).
 - **Test data:** real source responses trimmed by a committed script, plus hand-written edge cases. [ADR-0009](decisions/0009-trimmed-source-samples-as-test-fixtures.md).
 - **Versions and dependencies:** runtimes pinned in each component's native version file; dependencies locked per component. [ADR-0016](decisions/0016-runtime-versions-pinned-per-component.md); [ADR-0017](decisions/0017-dependencies-locked-per-component.md).
+- **Retention:** bronze and gold kept indefinitely; silver in a rolling window covering the longest gold window (§1.1); Delta tables keep 7 days of history. [ADR-0021](decisions/0021-retention-per-layer.md).
+- **Storage security:** one token per component with least privilege; bronze in its own bucket, read-only for the pipeline; append-only bronze prefixes under a bucket lock; buckets private; the Admin token held by the owner. [ADR-0023](decisions/0023-storage-security-baseline.md); [d002 › R15–R18](designs/d002-requirements.md#requirements).
 
 ## 9. Architecture decisions
 
@@ -117,13 +133,19 @@ Quality scenarios that make the goals in §1.2 measurable:
 | QS6 | Recoverability | Processing resumes after a stop | All data captured since the last run is processed, at each question's grain | [d002 › R11](designs/d002-requirements.md#requirements) |
 | QS7 | Recoverability | Silver or gold must be rebuilt | They are rebuilt from bronze | [d002 › R13](designs/d002-requirements.md#requirements) |
 | QS8 | Cost (§2) | The monthly cost is forecast to exceed €10 | The owner is alerted | [d002 › R10](designs/d002-requirements.md#requirements) |
+| QS9 | Confidentiality | A component's token leaks | It reaches only that component's buckets and access | [d002 › R15](designs/d002-requirements.md#requirements) |
+| QS10 | Integrity | A locked bronze object is deleted or overwritten | The store refuses it | [d002 › R16](designs/d002-requirements.md#requirements) |
+| QS11 | Integrity | The pipeline writes to bronze | The store refuses it | [d002 › R17](designs/d002-requirements.md#requirements) |
+| QS12 | Confidentiality | Data is requested without credentials | It is denied, except what the visualization publishes | [d002 › R18](designs/d002-requirements.md#requirements) |
 
 - TODO: capture completeness target — T037.
 - TODO: data quality checks and targets — T042.
 
 ## 11. Risks and technical debt
 
-- **R2 free tier:** 10 GB of storage against about 33 GB/year; exceeded in about 3.5 months if everything is kept. Addressed in T035. [s006](spikes/s006-cloudflare-capture.md).
+- **Unexpected R2 bill:** R2 bills storage and operations, and the cost model is estimated, not measured; how often the pipeline commits weighs on operations. Mitigated by the cost alert (QS8) and the recalibration with R2's metrics in production (T040). [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [s010 › Not verified](spikes/s010-storage-table-format.md#not-verified).
+- **One vendor:** storage and capture both depend on Cloudflare. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md).
+- **Delta concurrency limits (low):** with no managed service coordinating commits, conflicting MERGEs are not resolved automatically, and concurrent table creation or schema merge can race; unlikely here, since tables are created and schemas changed rarely. The pipeline design handles them. [s010 › D4](spikes/s010-storage-table-format.md#decisions-to-record).
 - **Undocumented Worker behaviour:** capture relies on `encodeResponseBody: 'manual'` and on the Free plan's CPU enforcement, neither documented. [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md).
 
 ## 12. Glossary
@@ -138,3 +160,5 @@ Quality scenarios that make the goals in §1.2 measurable:
 | Empty or full episode | A continuous period in which a station has no bikes, or no free docks | [d002 › Q3](designs/d002-requirements.md#guiding-questions) |
 | Frozen station | A station whose reported status stops changing while its feed keeps updating | [d002 › Q2](designs/d002-requirements.md#guiding-questions) |
 | Estimated trips | Trips inferred from movements; a lower bound, since changes that cancel out between two snapshots are not seen | [d002 › Q4](designs/d002-requirements.md#guiding-questions) |
+| Lakehouse | Silver and gold, stored as Delta tables in their own R2 bucket | [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0022](decisions/0022-delta-lake-for-silver-and-gold.md) |
+| Bucket lock | An R2 rule that blocks delete and overwrite of the objects under a prefix | [ADR-0023](decisions/0023-storage-security-baseline.md) |
