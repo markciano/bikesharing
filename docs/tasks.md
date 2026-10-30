@@ -33,7 +33,6 @@
 | T034 | Requirements: consumers, questions the data answers, freshness, public or not, whether Bicing history enters | 2 | ✅ | T022 | [d002-requirements.md](designs/d002-requirements.md) |
 | T043 | Organize `.claude/rules/` (folders or name prefixes), after checking how Claude Code loads them | 2 | ✅ | — |  |
 | T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | ✅ | T034 | [s010-storage-table-format.md](spikes/s010-storage-table-format.md) |
-| T046 | Documentation wording conventions: how technical docs name who acts instead of "owner" (`docs/` only, `.claude/` keeps it), and the `TODO (<destination>):` format; rule in `.claude/rules/docs/` and CLAUDE.md, existing docs updated | 2 | ⬜ | — |  |
 | T045 | Security requirements: each component's spike adds them to d002 | 1 | ✅ | T034 |  |
 | T036 | Processing engine (single node) and pipeline language; its spike models the component's threats and adds new requirements to d002 | 3 | ⬜ | T035, T045 |  |
 | T037 | Execution target: where the pipeline runs and what schedules it; its spike models the component's threats and adds new requirements to d002 | 3 | ⬜ | T036 |  |
@@ -42,10 +41,9 @@
 | T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
 | T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
 | T042 | Data quality: checks and targets beyond the basics | 3 | ⬜ | T035, T037 |  |
+| T046 | Documentation conventions, as rules in `.claude/rules/docs/` (no design): wording (who acts instead of "owner" in `docs/`; `TODO (<destination>):` format); references to sections, decisions, findings and ADRs, in the same doc and across docs; decision change-links (`extends`/`refines`/`replaces #N`, `→ #M`) loaded when a decision is added, not only at creation; ordered lists edited in one Edit; heading depth capped at h4; spike ignores moved to per-folder `.gitignore` files | 3 | 🔄 | — |  |
 | T024 | Hooks: code conventions for the project's languages | 1 | 🔄 | — |  |
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
+| T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | T040 |  |
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
-| T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | — |  |
-| T047 | Decision log rules apply only at creation: the change-link convention (`extends`/`refines`/`replaces #N`, and `→ #M` on the earlier row) lives only in the spike and design templates, which are read when a doc is created, not when a decision is added later (s010 missed the `→` marks on #22, #24, #29 and #34); decide where it should live | 1 | ⬜ | — |  |
-| T048 | Markdown lint hook renumbers ordered lists after every Edit, so a list change split across Edits misses later edits and breaks `Do N` references (s010 step 5, #38); evaluate whether `.claude/rules/docs/general.md` needs a rule | 1 | ⬜ | — |  |
 | T049 |  |  | ⬜ |  |  |
