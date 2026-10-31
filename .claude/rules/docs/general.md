@@ -15,6 +15,16 @@ paths: # mirrors the lint scope (globs) in .markdownlint-cli2.yaml; keep both in
   - URLs go between `<>` or as a link;
   - a title is a heading (`##`), not a bold line; levels go up one at a time;
   - placeholders such as `<name>` go in backticks.
+- **Heading depth:** at most `####`; deeper detail goes in nested lists.
+
+## References
+
+- **Link, don't copy:** cite a source when the reader needs it to verify or act, or when one item changes another; content lives in one place and other places link to it. A mere mention is not a reason to link.
+- **IDs:** citable items carry an ID with a type prefix (e.g. `Q1` question, `F12` finding, `R3` requirement, `#22` decision, `T036` task); decisions outside a working document are cited by task ID or ADR, never by informal labels.
+- **Citable item:** an item cited from elsewhere is a heading (`###` or `####`) that starts with its ID, e.g. `### F12. Partition pruning on R2`; its text is stable (fix it, do not rename it), since the anchor derives from it. Items in a table are cited by ID, linking to the table's section.
+- **Same document:** the ID in plain text (`#22`, `F12`); link only when naming a section or a citable item, e.g. `[Probe A](#probe-a)`.
+- **Other document:** name the document and, after `›`, the section or the items; the target is the section's anchor when there is one, the file otherwise. E.g. `[s010 › #22, F12](spikes/s010-storage-table-format.md#23-decision-log)`, `[d002 › Guiding questions](designs/d002-requirements.md#guiding-questions)`, `[task T036](tasks.md)`.
+- **ADR:** by number, linking to the file, e.g. `[ADR-0018](decisions/0018-medallion-architecture.md)`.
 
 ## Tone & writing style guidelines
 
