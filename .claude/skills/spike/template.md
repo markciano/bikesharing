@@ -120,7 +120,11 @@ spikes/<name>/
 - Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>.
 The last step is the Conclusion. -->
 
-### 3.1 Step 1 — `<title>`
+### 3.1 Prerequisites
+
+<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
+
+### Step 1 — `<title>`
 
 - **Status:** 💤 todo
 - **Who:** Owner
@@ -129,23 +133,23 @@ The last step is the Conclusion. -->
 - **Model:** `<model · effort>` (or —)
 - **Gate:** `<condition>` → `<consequence>`
 
-#### 3.1.1 Scope
+#### Scope
 
 <!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
 
-#### 3.1.2 Reads
+#### Reads
 
 <!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
 
-#### 3.1.3 Do
+#### Do
 
 <!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
-#### 3.1.4 Check
+#### Check
 
 <!-- command/s or verification with a yes/no result. -->
 
-### 3.N Step N — Conclusion
+### Step N — Conclusion
 
 <!-- 
 Same structure as the example before before but: 

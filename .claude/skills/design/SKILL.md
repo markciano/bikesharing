@@ -51,7 +51,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 5. **Rule documents.** Every file in File layout that states rules or decisions (ADRs, `.claude/rules/`, skills, templates, `CLAUDE.md`) is written and approved now, one per message, on the edit's diff. Implementation builds the remaining files and verifies them against these; a mismatch is fixed in the design, not in the build.
 6. Ask for the Plan approval. Once approved, check Plan in Phase and tell the owner to run `/design dNNN review-plan` in a new session. The session ends here.
 
-## 3. Implementation
+## 3. Steps
 
 Starts only when Phase shows Plan review checked.
 

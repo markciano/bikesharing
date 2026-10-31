@@ -51,13 +51,14 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
 
 ## 3. Steps
 
-1. Propose the step skeleton as a compact table (step · title · who · gate · files); the owner adjusts order and cuts. Shape it so that:
+1. **Prerequisites.** List what the owner prepares outside the repo before Step 1 (installs on the local machine, accounts, access), with exact versions decided now. The spike goes to Ready only when they are done.
+2. Propose the step skeleton as a compact table (step · title · who · gate · files); the owner adjusts order and cuts. Shape it so that:
    - the cheapest test of the riskiest assumption runs first, with a Gate, before a full variant is built on it;
    - code and the Owner action that runs it are separate steps;
    - each analysis script is followed by an Owner step that verifies it;
    - the last step is the Conclusion, as in the template.
-2. Write each step in full. Owner steps give exact commands and what to report back; Claude steps name their files and what they must not touch.
-3. Ask for the Steps approval. Once approved, check Steps in Phase and tell the owner to run `/spike sNNN review-steps` in a new session. The spike goes to Ready 🎬 when that review closes.
+3. Write each step in full. Owner steps give exact commands and what to report back; Claude steps name their files and what they must not touch.
+4. Ask for the Steps approval. Once approved, check Steps in Phase and tell the owner to run `/spike sNNN review-steps` in a new session. The spike goes to Ready 🎬 when that review closes.
 
 ## End of session
 
