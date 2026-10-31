@@ -34,7 +34,7 @@ paths:
 
 - Lead with the principle, then the mechanism, then (optionally) one example.
 - Generalize concrete cases: name the category they belong to and the criterion that unites them; keep at most one or two as "e.g." illustrations. Never start a paragraph with an example.
-- Staleness test: if a sentence would become false by swapping a library, bumping a version or renaming a file, it is implementation detail. Remove it or move it to More information — unless that specific item IS the subject of the decision.
+- Staleness test: if a sentence would become false by swapping a library, bumping a version, renaming a file or closing a later task, it is implementation detail. Remove it or move it to More information — unless that specific item IS the subject of the decision.
 
 ## Before drafting
 
