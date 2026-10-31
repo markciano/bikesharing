@@ -14,7 +14,8 @@ paths: # mirrors the lint scope (globs) in .markdownlint-cli2.yaml; keep both in
   - fenced code blocks state their language (`text` if it is not code);
   - URLs go between `<>` or as a link;
   - a title is a heading (`##`), not a bold line; levels go up one at a time;
-  - placeholders such as `<name>` go in backticks.
+  - placeholders such as `<name>` go in backticks;
+  - an ordered list is changed in one Edit, since the hook renumbers it after each one; then check the references to its items (e.g. `Do 3`) in the same document only, since other documents cite headings or IDs, never list positions.
 - **Heading depth:** at most `####`; deeper detail goes in nested lists.
 
 ## References
