@@ -1,0 +1,6 @@
+# History exploration: downloaded archives and working copies
+historical-data/raw/
+historical-data/work/
+
+# Real-time observation captures
+realtime/

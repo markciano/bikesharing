@@ -6,21 +6,7 @@
 # Claude local settings
 .claude/settings.local.json
 
-# AMBici spike output
-spikes/ambici-spike/raw/
-spikes/ambici-spike/log/
-spikes/ambici-spike/languages/
-
-# Bicing history exploration
-spikes/bicing-spike/historical-data/raw/
-spikes/bicing-spike/historical-data/work/
-
-# Bicing real-time observation spike
-spikes/bicing-spike/realtime/
-
-# Cloudflare capture spike
-spikes/cloudflare-capture-spike/data/
-spikes/cloudflare-capture-spike/analysis/output/
+# Folder-specific data and outputs live in that folder's own .gitignore (e.g. spikes/<name>/.gitignore)
 
 # Local scratch area for ad-hoc files (decompressed copies, quick tests)
 scratch/
@@ -60,7 +46,6 @@ build/
 spark-warehouse/
 metastore_db/
 derby.log
-
 
 # Operating system and editors
 .DS_Store
