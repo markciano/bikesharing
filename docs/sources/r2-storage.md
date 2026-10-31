@@ -25,6 +25,7 @@ Facts about the object store used for every medallion layer (s010 D2). Living do
 | Fact | Evidence | Confirmed |
 |---|---|---|
 | Standard free tier per month: 10 GB-month storage, 1M Class A, 10M Class B operations, free egress | Pricing page | 2026-10-26 |
+| The free tier is taken as per account: the pricing page does not say, but per bucket would make it unbounded (100,000 buckets included per account); per account is also the pessimistic case for the cost model | Inferred from the pricing page | 2026-10-31 |
 | Standard prices above the free tier: $0.015/GB-month, $4.50 per million Class A, $0.36 per million Class B; no retrieval fee | Pricing page | 2026-10-26 |
 | Infrequent Access: $0.010/GB-month, $9.00 per million Class A, $0.90 per million Class B, $0.01/GB retrieved, 30-day minimum, no free tier | Pricing table supplied by the owner | 2026-10-26 |
 | Class A: ListBuckets, PutBucket, ListObjects, PutObject, CopyObject, CreateMultipartUpload, UploadPart, UploadPartCopy, CompleteMultipartUpload, ListMultipartUploads, ListParts, LifecycleStorageTierTransition, PutBucketEncryption, PutBucketCors, PutBucketLifecycleConfiguration | Pricing page | 2026-10-26 |
@@ -44,5 +45,4 @@ Facts about the object store used for every medallion layer (s010 D2). Living do
 | Operation metrics are sampled: the total matches an exact count within 0.02%, but per-object counts do not | [s010/F14](../spikes/s010-storage-table-format.md#4-findings) | 2026-10-28 |
 | The dashboard's operation figures are not exact: its summary and charts differ, and neither its day boundary nor an operation breakdown is documented | [s010/#36](../spikes/s010-storage-table-format.md#decision-log) | 2026-10-28 |
 
-TODO: confirm in s010 probe A (bucket metrics) the class of conditional PutObject, ListObjectsV2 and DeleteObjects, which the pricing page does not name.
-TODO: confirm whether the free tier is per account or per bucket; the pricing page does not say.
+TODO(T040): confirm with R2's per-operation metrics (GraphQL Analytics) the class of conditional PutObject, ListObjectsV2 and DeleteObjects, which the pricing page does not name; s010 confirmed only class totals ([s010 › F14](../spikes/s010-storage-table-format.md#4-findings)).

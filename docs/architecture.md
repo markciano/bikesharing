@@ -97,13 +97,14 @@ Each goal is made measurable by the scenarios in §10.
 
 ## 6. Runtime view
 
-TODO: main flows (capture pass, pipeline run) — T037.
+TODO(T037): main flows (capture pass, pipeline run).
 
 ## 7. Deployment view
 
 - **Capture:** Cloudflare Workers with Cron Triggers, writing to the bronze bucket in R2. [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md); [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md).
 - **Storage:** two R2 buckets: bronze, and lakehouse for silver and gold. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0023](decisions/0023-storage-security-baseline.md).
-- TODO: processing and visualization — T037, T038.
+- TODO(T037): processing.
+- TODO(T038): visualization.
 
 ## 8. Cross-cutting concepts
 
@@ -117,7 +118,7 @@ TODO: main flows (capture pass, pipeline run) — T037.
 
 Decisions in force are the ADRs in [decisions/](decisions/); retired ones are in `decisions/archive/`. Open decisions are tasks in [tasks.md](tasks.md), in dependency order.
 
-TODO: ADR on separating processing logic from the platform it runs on, replacing ADR-0010 — after T037.
+TODO(T037): ADR on separating processing logic from the platform it runs on, replacing ADR-0010.
 
 ## 10. Quality requirements
 
@@ -138,8 +139,8 @@ Quality scenarios that make the goals in §1.2 measurable:
 | QS11 | Integrity | The pipeline writes to bronze | The store refuses it | [d002 › R17](designs/d002-requirements.md#requirements) |
 | QS12 | Confidentiality | Data is requested without credentials | It is denied, except what the visualization publishes | [d002 › R18](designs/d002-requirements.md#requirements) |
 
-- TODO: capture completeness target — T037.
-- TODO: data quality checks and targets — T042.
+- TODO(T037): capture completeness target.
+- TODO(T042): data quality checks and targets.
 
 ## 11. Risks and technical debt
 

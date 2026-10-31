@@ -27,4 +27,4 @@ Reasons and per-component detail: [testing strategy](../../../docs/testing-strat
 - Producer and consumer tests read the same file by relative path. Binary payloads are built in memory by the tests.
 - A contract change makes the valid data stop meeting it; the vectors never relax it.
 
-TODO: add the shared contract folder to `paths:` when a design defines it.
+TODO(T039): add the shared contract folder to `paths:` when a design defines it.
