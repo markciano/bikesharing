@@ -41,7 +41,7 @@
 | T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
 | T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
 | T042 | Data quality: checks and targets beyond the basics | 3 | ⬜ | T035, T037 |  |
-| T046 | Documentation conventions, as rules in `.claude/rules/docs/` (no design): wording (who acts instead of "owner" in `docs/`; `TODO (<destination>):` format); references to sections, decisions, findings and ADRs, in the same doc and across docs; decision change-links (`extends`/`refines`/`replaces #N`, `→ #M`) loaded when a decision is added, not only at creation; ordered lists edited in one Edit; heading depth capped at h4; spike ignores moved to per-folder `.gitignore` files | 3 | 🔄 | — |  |
+| T046 | Documentation conventions, as rules in `.claude/rules/docs/` (no design): wording (who acts instead of "owner" in `docs/`; `TODO(TNNN):` format); references to sections, decisions, findings and ADRs, in the same doc and across docs; decision change-links (`extends`/`refines`/`replaces #N`, `→ #M`) loaded when a decision is added, not only at creation; ordered lists edited in one Edit; heading depth capped at h4; spike ignores moved to per-folder `.gitignore` files | 3 | 🔄 | — |  |
 | T024 | Hooks: code conventions for the project's languages | 1 | 🔄 | — |  |
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | T040 |  |
