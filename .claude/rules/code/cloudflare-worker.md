@@ -17,4 +17,4 @@ General principles are in `testing.md`; reasons and detail in the [testing strat
 - Files `test/unit/<module>.test.js` and `test/integration/<module>.test.js`; test names are plain sentences stating behaviour and condition.
 - Pin Node in `package.json` `engines` to a release inside the range the test tools support, not to the version installed on one machine.
 
-TODO: update the `paths:` and this scope when the collector design fixes the layout (`collector/{bicing/,ambici/}`).
+TODO(T039): update the `paths:` and this scope when the collector design fixes the layout (`collector/{bicing/,ambici/}`).
