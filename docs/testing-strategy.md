@@ -1,6 +1,6 @@
 # Testing strategy
 
-Single source of truth for how this project tests. Evidence: spike [s008](spikes/s008-testing-conventions.md) (F-numbers cite its Findings). The imperative form of each section lives in `.claude/rules/`, which links back here; when they differ, this document leads. The spike is an audit trail for the owner: implementation sessions do not read it.
+Single source of truth for how this project tests. Evidence: spike [s008](spikes/s008-testing-conventions.md) (F-numbers cite its Findings). The imperative form of each section lives in `.claude/rules/`, which links back here; when they differ, this document leads.
 
 ## Testing model
 

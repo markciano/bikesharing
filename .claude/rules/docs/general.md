@@ -34,3 +34,4 @@ paths: # mirrors the lint scope (globs) in .markdownlint-cli2.yaml; keep both in
 - **Direct & Action-Oriented:** Use active voice and concise sentences.
 - **Plain Technical English:** Use precise industry terms (e.g., *idempotency, schema evolution, pipeline latency*) without unnecessary buzzwords or fluff.
 - **Neutral:** neutral wording about vendors and tools (e.g. "not exact", not "incoherent").
+- **System, not workflow:** `docs/` describe the system and its processes, not how Claude and the owner work (sessions, approvals on the diff); tools that are part of the system, such as the Claude Code lint hook, are named like any other tool.
