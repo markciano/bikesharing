@@ -77,11 +77,8 @@ If some block contains `options considered`, include them with pros and cons.
 
 ### 2.2 Decision summary
 
-<!-- It logs decisions about the plan, before and during the run, including changes.
-It only logs the decisions (naming the standard it follows or the ADR for the deviation), the detail is where it belongs to. 
-A decision that changes an earlier one ends its Decision with `extends #N`, `refines #N` or `replaces #N`; the earlier one gets `→ #M` at the end of its Decision and is not otherwise rewritten.
-Oldest first.
-A decision that changes an earlier one ends its Decision with `extends #N`, `refines #N` or `replaces #N`; the earlier one gets `→ #M` at the end of its Decision and is not otherwise rewritten.
+<!-- It logs decisions about the plan, before and during the run, including changes. Oldest first.
+Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 - Applies to: anchor link(s) to the section where the decision is applied, named in one or two words.
 - Decided at: the Status phase where it was decided (Plan, Steps).
 - R: Requirement affected.
