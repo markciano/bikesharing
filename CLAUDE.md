@@ -22,7 +22,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 - **Secrets:** in `.env` (ignored by Git); `.env.example` with empty values is committed. Never hard-code or paste secrets.
 - **Raw data:** never committed to Git, except test fixtures (ADR-0009).
 - **Stack versions and dependencies:** each component pins its runtimes and locks its dependencies in its own files (ADR-0016, ADR-0017); how in `.claude/rules/code/dependencies.md`.
-- **Pending items:** marked `TODO:` followed by a short description, in docs and code alike.
+- **Pending items:** marked `TODO(TNNN):` followed by a short description, in docs and code alike; `TNNN` is the task that resolves it (its parent task, or a new row, if none exists yet), so `grep "TODO(TNNN)"` lists what a task must pick up.
 - **File names:** proposed by Claude, approved by the owner. English, lowercase. Docs in kebab-case; Python code in snake_case (PEP 8). ADRs as `NNNN-short-title.md`; designs as `dNNN-short-title.md`. spikes as `sNNN-short-title.md`.
 
 ## Git
