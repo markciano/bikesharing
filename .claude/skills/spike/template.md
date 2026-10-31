@@ -30,7 +30,7 @@ Current step: the step being executed, or —. -->
 
 ### 1.2 Decided at framing
 
-#### 1.2.N D`<N>` Title of decision `<N>`
+#### D`<N>`. `<Title of decision N>`
 
 <!-- Description of description N -->
 
@@ -84,7 +84,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 -
 
-#### 2.1.2 `<A>`. `<Title of variant, option or probe A>`
+#### `<A>`. `<Title of variant, option or probe A>`
 
 <!-- Detailed description -->
 
@@ -167,7 +167,9 @@ Same structure as the example before before but:
 
 <!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
 
-**F1. `<one-line statement>`** (step N, YYYY-MM-DD, `<source of evidence>`)
+### F1. `<one-line statement>`
+
+Step N · YYYY-MM-DD · `<source of evidence>`
 
 - `<evidence>`
 - Consequence: `<for variants, steps or questions>`

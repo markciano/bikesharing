@@ -105,7 +105,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 <!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
-#### 2.5.N `<ComponentName>`
+#### `<ComponentName>`
 
 - **Responsibility:** `<one sentence>`
 - **Location:** `path/to/file`
