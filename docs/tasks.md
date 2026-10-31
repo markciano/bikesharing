@@ -34,6 +34,7 @@
 | T043 | Organize `.claude/rules/` (folders or name prefixes), after checking how Claude Code loads them | 2 | ✅ | — |  |
 | T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | ✅ | T034 | [s010-storage-table-format.md](spikes/s010-storage-table-format.md) |
 | T045 | Security requirements: each component's spike adds them to d002 | 1 | ✅ | T034 |  |
+| T046 | Documentation conventions, as rules in `.claude/rules/docs/` (no design): wording (no AI-workflow wording in `docs/`; `TODO(TNNN):` format); references to sections, decisions, findings and ADRs, in the same doc and across docs; decision change-links (`extends`/`refines`/`replaces #N`, `→ #M`) loaded when a decision is added, not only at creation; ordered lists edited in one Edit; heading depth capped at h4; spike ignores moved to per-folder `.gitignore` files | 3 | ✅ | — |  |
 | T036 | Processing engine (single node) and pipeline language; its spike models the component's threats and adds new requirements to d002 | 3 | ⬜ | T035, T045 |  |
 | T037 | Execution target: where the pipeline runs and what schedules it; its spike models the component's threats and adds new requirements to d002 | 3 | ⬜ | T036 |  |
 | T038 | Visualization: tool and where it is published; its spike models the component's threats and adds new requirements to d002 | 2 | ⬜ | T034, T035, T037 |  |
@@ -41,7 +42,6 @@
 | T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
 | T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
 | T042 | Data quality: checks and targets beyond the basics | 3 | ⬜ | T035, T037 |  |
-| T046 | Documentation conventions, as rules in `.claude/rules/docs/` (no design): wording (no AI-workflow wording in `docs/`; `TODO(TNNN):` format); references to sections, decisions, findings and ADRs, in the same doc and across docs; decision change-links (`extends`/`refines`/`replaces #N`, `→ #M`) loaded when a decision is added, not only at creation; ordered lists edited in one Edit; heading depth capped at h4; spike ignores moved to per-folder `.gitignore` files | 3 | 🔄 | — |  |
 | T024 | Hooks: code conventions for the project's languages | 1 | 🔄 | — |  |
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | T040 |  |
