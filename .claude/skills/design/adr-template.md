@@ -15,7 +15,12 @@ What situation forces a decision. The problem observed, and what happens if noth
 
 ### 1. abc
 
-How it works in one or two sentences. Pros. Cons.
+How it works in one or two sentences.
+
+- Pros:
+  - `<pro>`
+- Cons:
+  - `<con>`
 
 ### 2. abc
 

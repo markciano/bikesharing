@@ -15,7 +15,7 @@ Applies when the argument is a spike ID (sNNN). The spike doc is in `docs/spikes
 For a step with Who: Owner.
 
 1. Check the precondition as usual.
-2. Give the owner the step's actions as written, with exact commands in code blocks, and what to report back. Do not run them yourself.
+2. Give the owner the step's actions as written, with exact commands in code blocks, and what to report back.
 3. Stop and wait for the owner's result.
 4. With the result:
    - If it is evidence the spike needs (figures, behaviour, errors), write it as the next Finding (F), with step, date and source. The owner approves on the diff.

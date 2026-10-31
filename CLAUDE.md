@@ -12,6 +12,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 - State lives in the working document, not the session: decisions are written when approved (if small, accumulate 2-3); Status is updated at every stop.
 - Operational actions (accounts, consoles, billing, production deployments) are done by the owner.
 - Permissions are set in `.claude/settings.json`. Never work around an action it asks for or denies: report it.
+- A convention learned in a session (e.g. an owner's correction) is proposed as an edit to the rule, skill or template where it applies, not saved to Claude's memory; memory holds only facts about the local machine.
 - Web research goes to the `web-researcher` subagent, never inline: it keeps the main session's context small.
 
 ## Conventions
@@ -43,9 +44,9 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 
 ## Pacing
 
-- One open decision per message. Other decisions are named in one line and parked.
-- 2 options per decision (3 if really good), with the recommendation marked (👉) and a one-line reason.
-- Keep a parking list (🅿️); parked items are picked up in their phase.
+- **Per message:** one open decision; small related changes of one topic (e.g. 2–4 rows of one table) may go together. Never open a new decision inside an unresolved one.
+- **Per decision:** 2 options (3 if really good), with the recommendation marked (👉) and a one-line reason.
+- **Parking:** any other decision is named in one line in a parking list (🅿️) and picked up in its phase.
 
 ## Repo access
 
