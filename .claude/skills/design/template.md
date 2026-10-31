@@ -1,5 +1,5 @@
 <!--
-Design doc template. A design doc is the working document of one task in docs/tasks.md: Spec (what and why), Plan (how), Implementation (steps), Close (what was delivered).
+Design doc template. A design doc is the working document of one task in docs/tasks.md: Spec (what and why), Plan (how), Steps (implementation), Close (what was delivered).
 It is detailed enough that Code can implement it without making design decisions.
 Sections marked Optional are kept only when they apply.
 -->
@@ -136,13 +136,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 -
 
-## 3. Implementation
-
-### 3.1 Prerequisites
-
-<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
-
-### 3.2 Steps
+## 3. Steps
 
 <!-- Each step is one reviewable result and one commit, touching at most 2–3 files.
 - Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
@@ -151,7 +145,11 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 - Commit: the proposed message, following the Git conventions in CLAUDE.md.
 - Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner. -->
 
-#### 3.2.1 Step 1 — `<title>`
+### 3.1 Prerequisites
+
+<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
+
+### Step 1 — `<title>`
 
 - **Status:** 💤 todo
 - **Who:** Owner
@@ -159,19 +157,19 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 - **R:** R1, R3 (or —)
 - **Model:** `<model · effort>` (or —)
 
-##### 3.2.1.1 Scope
+#### Scope
 
 <!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
 
-##### 3.2.1.2 Reads
+#### Reads
 
 <!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
 
-##### 3.2.1.3 Do
+#### Do
 
 <!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
-##### 3.2.1.4 Check
+#### Check
 
 <!-- command/s or verification with a yes/no result. -->
 

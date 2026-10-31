@@ -8,7 +8,7 @@ State is In progress 🔄, every step is ✅ with its commit in `git log`, and t
 
 ## Read
 
-- The design doc `docs/designs/dNNN-*.md`: Status, Spec, File layout, Test plan, 3. Implementation and 4. Close.
+- The design doc `docs/designs/dNNN-*.md`: Status, Spec, File layout, Test plan, 3. Steps and 4. Close.
 - ADRs linked in its header, only when a check needs them.
 - Code and tests only when a finding needs confirming; announce it in one line, within the reading budget in CLAUDE.md.
 
