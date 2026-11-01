@@ -43,7 +43,7 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
    - One that only a run can settle: it becomes a Q that names the decision it unblocks and the Gate that confirms or reopens it. If no result would change the choice, it is not a Q: decide now.
 
    If triage leaves no Q, there is no run: propose closing the spike with its decisions; Method and Steps do not apply.
-4. **Decide at framing.** One decision per turn. On approval, write it in Decided at framing with its full reasoning. A choice with more than one live option uses a weighted decision matrix, in this order:
+4. **Decide at framing.** On approval, write each decision in Decided at framing with its full reasoning. A choice with more than one live option uses a weighted decision matrix, in this order:
    1. **Needs:** what the choice must cover, each need traced to a requirement.
    2. **Hard cuts and criteria:** derived from the needs, with weights.
    3. **Anchors:** scores 1, 3 and 5 of each criterion, fixed before anyone scores.
@@ -51,22 +51,22 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
    5. **Validation:** by the owner.
 
    If the winner rests on an unknown that only a run can settle, only the winner is probed, with a Gate and a named fallback.
-5. **Refine.** Ask about the gaps, one per turn: with 2–3 options and a recommendation when there is a reasonable range, open otherwise. Check for: the decision the spike unblocks; what earlier spikes or docs already answer, so it is not measured again; what is answered and what is only observed; risks that would end the spike early.
+5. **Refine.** Ask about the gaps: with options and a recommendation when there is a reasonable range, open otherwise. Check for: the decision the spike unblocks; what earlier spikes or docs already answer, so it is not measured again; what is answered and what is only observed; risks that would end the spike early.
 6. **Playback.** Write Context and Questions. The main question is answered by a verdict; each Q is answerable with evidence. If the questions serve two independent decisions, propose splitting the spike now.
-7. **Exit criteria.** One per turn: measurable threshold, hard cut or guide. Then the timebox and what ends the run, and whether one variant meeting the criteria is enough. They are fixed here, before anything runs.
+7. **Exit criteria.** Each is a measurable threshold, hard cut or guide. Then the timebox and what ends the run, and whether one variant meeting the criteria is enough. They are fixed here, before anything runs.
 8. **Open questions**, whenever they come up.
 9. **Approval.** With no Open questions left, ask for the Questions approval. Once approved, check Questions in Phase.
 
 ## 2. Method
 
 1. **Approach.** Propose the variants, options or probes to compare; the owner adjusts. Each one must tell something the others do not; propose cutting one that does not. Before measuring anything, make a rough worst-case estimate (Fermi estimate); if it settles the decision, it is not measured.
-2. **Decisions about how,** one per message:
+2. **Decisions about how:**
 
    - what is being decided and why it matters, in 2–3 lines;
-   - 2–3 options, each with its practical consequence;
+   - the options, each with its practical consequence;
    - the recommendation marked, with a one-line reason and the standard or pattern that applies.
 
-   Typical concerns: what runs where, schedule and window, what is captured and logged, how the evidence is analysed (checks instead of tests: known arithmetic, independent counts, fault injection), cost limits and tear-down. The content of each decision goes in the section it belongs to, stated once. The Decision log only records it, pointing to that section. A cross-cutting decision becomes an ADR, linked in the header.
+   Typical concerns: what runs where, schedule and window, what is captured and logged, how the evidence is analysed (checks instead of tests: known arithmetic, independent counts, fault injection), cost limits and tear-down. A cross-cutting decision becomes an ADR, linked in the header.
 3. **Shared behaviour,** when several variants follow the same rules.
 4. **File layout** under `spikes/<short-title>/`, README included, captured data and outputs ignored by Git (ADR-0009).
 5. **Approval.** Ask for the Method approval. Once approved, check Method in Phase. Steps may follow in the same session.

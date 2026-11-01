@@ -37,6 +37,7 @@
 | T045 | Security requirements: each component's spike adds them to d002 | 1 | ✅ | T034 |  |
 | T046 | Documentation conventions, as rules in `.claude/rules/docs/` (no design): wording (no AI-workflow wording in `docs/`; `TODO(TNNN):` format); references to sections, decisions, findings and ADRs, in the same doc and across docs; decision change-links (`extends`/`refines`/`replaces #N`, `→ #M`) loaded when a decision is added, not only at creation; ordered lists edited in one Edit; heading depth capped at h4; spike ignores moved to per-folder `.gitignore` files | 3 | ✅ | — |  |
 | T049 | Spike skill conventions: needs before a decision matrix, the data that decides, decision-first layout, commit points | 1 | ✅ |  | — |
+| T050 | Review `.claude/skills/spike/SKILL.md` § How the session runs, which has grown by additions, so it stays coherent and each rule is stated once, with no change in behaviour; overlaps seen so far: Status with § End of session and `CLAUDE.md`; Out of scope with Questions step 8; Look things up with `CLAUDE.md` Reading budget; One question per turn with `CLAUDE.md` Pacing, and it also carries the decision-log rule | 1 | ✅ | — | — |
 | T037 | Execution target: where the pipeline runs and what schedules it; its spike models the component's threats and adds new requirements to d002 | 3 | ⬜ | T036 |  |
 | T038 | Visualization: tool and where it is published; its spike models the component's threats and adds new requirements to d002 | 2 | ⬜ | T034, T035, T037 |  |
 | T039 | Capture in production (parent; split into TNNN.M in its design) | 5 | ⬜ | T035 |  |
@@ -47,5 +48,4 @@
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | T040 |  |
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
-| T050 | Review `.claude/skills/spike/SKILL.md` § How the session runs, which has grown by additions, so it stays coherent and each rule is stated once, with no change in behaviour; overlaps seen so far: Status with § End of session and `CLAUDE.md`; Out of scope with Questions step 8; Look things up with `CLAUDE.md` Reading budget; One question per turn with `CLAUDE.md` Pacing, and it also carries the decision-log rule | 1 | ⬜ | — | — |
 | T051 |  |  | ⬜ |  |  |
