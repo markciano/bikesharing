@@ -18,7 +18,7 @@ Phase shows Plan checked and Plan review unchecked. Otherwise stop and tell the 
 1. **Coverage.** Every requirement, failure cases (*If… then*) included, is resolved by a decision, a component or the Test plan. Nothing in the Plan covers an item listed in Out of scope.
 2. **Soundness.** Would a senior data engineer approve this Plan for these requirements? Look at least at: what happens on re-runs and partial writes; whether each decision is the simplest that meets the requirements; whether the named standard fits the problem.
 3. **Consistency.** Decisions do not contradict each other or existing ADRs. Cross-cutting decisions have their ADR. Each decision names the standard that applies, or has an ADR for the deviation.
-4. **Verifiability.** Done when and every requirement can be checked by something in the Test plan.
+4. **Verifiability.** Every requirement can be checked by something in the Test plan; every Done when item, by a test, a command or an owner check.
 5. **No gaps.** No decision is left implicit. File layout is complete, the documents the change affects included, and its names follow the conventions in CLAUDE.md. Pending items follow the conventions in CLAUDE.md.
 6. **Rule documents.** Every file in File layout that states rules or decisions (ADRs, `.claude/**`, `CLAUDE.md`) is written; each matches the Decision summary and adds no decision of its own. New ADRs are linked in the header.
 

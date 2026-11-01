@@ -16,7 +16,7 @@ Each component design applies the five answers below. "Paper" marks a statement 
 
 #### Python (`src/bikesharing/`)
 
-1. **When:** unit tests are written before the code (red, green, refactor), one or more for every requirement and "Done when" condition, at the lowest level that can verify it (F20, F22).
+1. **When:** unit tests are written before the code (red, green, refactor), one or more for every requirement, at the lowest level that can verify it (F20, F22).
 2. **Type:** unit for logic; integration when behaviour crosses a file or format boundary (file fixture → records) (F11, F25); contract, consumer side, when the code reads another component's output (F35); e2e on paper (F25).
 3. **Format:** files `test_<module>.py`, functions `test_<behaviour>_<condition>` (F26); Arrange–Act–Assert, one concept per test, no shared state (F23); assertions on outputs, not internals (F21); shared fixtures in `conftest.py`, function-scoped (F27); current time passed as a parameter, fixed UTC in tests (F29); no network, recorded fixtures (ADR-0009) and edge cases by hand (F28); pytest, coverage reported without threshold, source set in `[tool.coverage.run] source` (F24).
 4. **Where:** `tests/unit/` mirroring `src/`, `tests/integration/`, `tests/e2e/`, `tests/fixtures/`; one `conftest.py` in `tests/`, plus one per level when needed (F25, F27).
