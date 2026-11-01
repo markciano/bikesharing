@@ -29,6 +29,8 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
 - **Optional sections.** At the start of each block, say in one line which optional sections apply and which do not. Those that do not apply are removed.
 - **Write as you go.** Write each section as soon as it is clear; the owner approves on the edit's diff.
 - **Out of scope.** Anything out of scope is proposed to the owner as a new row in `docs/tasks.md`.
+- **The data that decides.** A figure behind a decision comes from the data that decides the question, usually its most demanding case, named beforehand.
+- **Commit points.** When a decision or block closes, tell the owner it is a commit point and propose the message.
 - **Status.** Update it before the session ends.
 
 ## 1. Questions
@@ -41,7 +43,14 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
    - One that only a run can settle: it becomes a Q that names the decision it unblocks and the Gate that confirms or reopens it. If no result would change the choice, it is not a Q: decide now.
 
    If triage leaves no Q, there is no run: propose closing the spike with its decisions; Method and Steps do not apply.
-4. **Decide at framing.** One decision per turn. On approval, write it in Decided at framing with its full reasoning. A choice with more than one live option uses a weighted decision matrix, in this order: hard cuts, criteria and weights, anchors for scores 1, 3 and 5 of each criterion, scores citing the fact behind each, owner's validation. The anchors are fixed before anyone scores; the `web-researcher` gathers the facts. If the winner rests on an unknown that only a run can settle, only the winner is probed, with a Gate and a named fallback.
+4. **Decide at framing.** One decision per turn. On approval, write it in Decided at framing with its full reasoning. A choice with more than one live option uses a weighted decision matrix, in this order:
+   1. **Needs:** what the choice must cover, each need traced to a requirement.
+   2. **Hard cuts and criteria:** derived from the needs, with weights.
+   3. **Anchors:** scores 1, 3 and 5 of each criterion, fixed before anyone scores.
+   4. **Scores:** each cites the fact behind it; the `web-researcher` gathers the facts.
+   5. **Validation:** by the owner.
+
+   If the winner rests on an unknown that only a run can settle, only the winner is probed, with a Gate and a named fallback.
 5. **Refine.** Ask about the gaps, one per turn: with 2–3 options and a recommendation when there is a reasonable range, open otherwise. Check for: the decision the spike unblocks; what earlier spikes or docs already answer, so it is not measured again; what is answered and what is only observed; risks that would end the spike early.
 6. **Playback.** Write Context and Questions. The main question is answered by a verdict; each Q is answerable with evidence. If the questions serve two independent decisions, propose splitting the spike now.
 7. **Exit criteria.** One per turn: measurable threshold, hard cut or guide. Then the timebox and what ends the run, and whether one variant meeting the criteria is enough. They are fixed here, before anything runs.
@@ -52,6 +61,7 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
 
 1. **Approach.** Propose the variants, options or probes to compare; the owner adjusts. Each one must tell something the others do not; propose cutting one that does not. Before measuring anything, make a rough worst-case estimate (Fermi estimate); if it settles the decision, it is not measured.
 2. **Decisions about how,** one per message:
+
    - what is being decided and why it matters, in 2–3 lines;
    - 2–3 options, each with its practical consequence;
    - the recommendation marked, with a one-line reason and the standard or pattern that applies.
