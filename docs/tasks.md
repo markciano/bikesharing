@@ -48,4 +48,5 @@
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | T040 |  |
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
-| T051 |  |  | ⬜ |  |  |
+| T051 | Coherence sweep of `.claude/skills` and `.claude/rules`: repeated rules, contradictions, unjustified differences between design and spike, broken references; no change in behaviour without the owner's OK | 1 | 🔄 | — | — |
+| T052 |  |  | ⬜ |  |  |

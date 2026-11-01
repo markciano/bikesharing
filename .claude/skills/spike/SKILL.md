@@ -101,4 +101,4 @@ Present them in two separate sections, writing "None" when empty:
 
 ### Fixes
 
-The owner decides which findings to fix. Apply each accepted fix to the section or step it concerns; the owner approves on the edit's diff. One finding per message when a fix needs a decision. When the review closes, check Steps review in Phase and set State to Ready 🎬.
+The owner decides which findings to fix. Apply each accepted fix to the section or step it concerns; the owner approves on the edit's diff. One finding per message when a fix needs a decision. When the review closes, in the same change: check Steps review in Phase, set State to Ready 🎬 and the task to 🎬.

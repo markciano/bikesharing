@@ -19,7 +19,7 @@ Phase shows Plan checked and Plan review unchecked. Otherwise stop and tell the 
 2. **Soundness.** Would a senior data engineer approve this Plan for these requirements? Look at least at: what happens on re-runs and partial writes; whether each decision is the simplest that meets the requirements; whether the named standard fits the problem.
 3. **Consistency.** Decisions do not contradict each other or existing ADRs. Cross-cutting decisions have their ADR. Each decision names the standard that applies, or has an ADR for the deviation.
 4. **Verifiability.** Done when and every requirement can be checked by something in the Test plan.
-5. **No gaps.** No decision is left implicit. File layout is complete, the documents the change affects included, and its names follow the conventions in CLAUDE.md. Pending items are marked `TODO:`.
+5. **No gaps.** No decision is left implicit. File layout is complete, the documents the change affects included, and its names follow the conventions in CLAUDE.md. Pending items follow the conventions in CLAUDE.md.
 6. **Rule documents.** Every file in File layout that states rules or decisions (ADRs, `.claude/**`, `CLAUDE.md`) is written; each matches the Decision summary and adds no decision of its own. New ADRs are linked in the header.
 
 ## Severity
@@ -27,11 +27,6 @@ Phase shows Plan checked and Plan review unchecked. Otherwise stop and tell the 
 - **Blocking:** the Steps or `/implement` would build the wrong thing or could not proceed.
 - **Important:** it would cause rework or a deviation later.
 - **Minor:** clarity or wording only.
-
-Present them in two separate sections, writing "None" when empty:
-
-1. **Blocking and important.** Per finding: severity, quote, consequence, suggested fix.
-2. **Minor.** Per finding: quote, short reason.
 
 ## Close
 

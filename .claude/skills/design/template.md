@@ -71,16 +71,16 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 ### 2.1 Approach
 
 <!-- Detailed plan organized by #### blocks.
-Block `3. Implementation` is writen using this plan.
+Block `3. Steps` is written using this plan.
 If some block contains `options considered`, include them with pros and cons.
 -->
 
 ### 2.2 Decision summary
 
-<!-- It logs decisions about the plan, before and during the run, including changes. Oldest first.
+<!-- It logs decisions about the plan, including changes. Oldest first.
 Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 - Applies to: anchor link(s) to the section where the decision is applied, named in one or two words.
-- Decided at: the Status phase where it was decided (Plan, Steps).
+- Decided at: the Status phase where it was decided (Plan, Steps), or `<phase> review` when decided while reviewing that phase.
 - R: Requirement affected.
 -->
 

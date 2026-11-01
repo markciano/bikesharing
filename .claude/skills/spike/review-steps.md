@@ -4,6 +4,10 @@ A fresh session. Read the whole spike doc; read a file cited in Reads only when 
 
 The question: can each step be executed, by Claude through `/implement` or by the owner by hand, with nothing left to decide, and will the run answer the Questions against the Exit criteria?
 
+## Precondition
+
+Phase shows Steps checked and Steps review unchecked. Otherwise stop and tell the owner.
+
 ## Severity
 
 - **Blocking:** the run cannot answer a Q or measure an exit criterion, or a step cannot be executed without deciding something.

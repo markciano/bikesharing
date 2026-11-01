@@ -6,8 +6,8 @@ Applies when the argument is a spike ID (sNNN). The spike doc is in `docs/spikes
 
 - **Precondition.** State must be Ready 🎬 or Running 🔄. A ✅ step needs a commit in `git log` only if it has a Commit line.
 - **First step.** State goes to Running 🔄, Started is set (UTC date), and the task to 🔄.
-- **No tests first.** Point 4 does not apply: spike code is throwaway and is validated by the step's Check and by the Owner step that runs it.
-- **Deviations.** Once the owner gives the OK, record them in 2. Method › Decision log (date, decision, reason), not in Close. If one changes an exit criterion, say so in the report.
+- **No tests.** Tests first does not apply, and the point that runs the Check and the tests runs only the Check: spike code is throwaway and is validated by the step's Check and by the Owner step that runs it.
+- **Deviations.** Once the owner gives the OK, record them in 2. Method › Decision log, not in Close. If one changes an exit criterion, say so in the report.
 - **Production inputs.** A point worth taking to production that the step does not need is not fixed in the spike code. Add it as a row in 4. Findings › Production inputs with its origin and no destination, and list it in the report. The owner can also name one at any time; record it the same way.
 
 ## Owner steps

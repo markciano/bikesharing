@@ -1,6 +1,6 @@
 ---
 status: Proposed
-date: 2026-10-22
+date: YYYY-MM-DD
 supersedes: only if needed
 superseded-by: only if needed
 ---
