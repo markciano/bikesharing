@@ -69,6 +69,7 @@ Each goal is made measurable by the scenarios in §10.
 ### 4.1 Technology
 
 - **Own lakehouse on Cloudflare R2:** every layer is stored as open-format files in R2, with compute separate; R2 charges no egress, so the engine can run anywhere. Silver and gold are Delta Lake tables, whose commits are safe on R2 with no external lock. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0022](decisions/0022-delta-lake-for-silver-and-gold.md).
+- **DuckDB as the processing engine:** an in-process, single-node engine that reads bronze and Delta from R2, and hands writes and MERGE to `deltalake` through Arrow; Polars is the fallback. [ADR-0024](decisions/0024-duckdb-as-processing-engine.md).
 
 ### 4.2 Structure
 
@@ -91,7 +92,7 @@ Each goal is made measurable by the scenarios in §10.
 |---|---|---|---|
 | Capture | Fetches the feeds and writes them to the landing zone | Built on Cloudflare Workers + R2 | [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md); [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md) |
 | Landing zone (bronze) | Holds raw responses under the output contract, and the history archives as downloaded | Bronze bucket in R2 | [ADR-0012](decisions/0012-collectors-decoupled-by-output-contract.md); [ADR-0020](decisions/0020-bronze-as-captured-objects.md); [ADR-0023](decisions/0023-storage-security-baseline.md) |
-| Processing | Turns raw responses into the common model and its tables | Engine in T036, execution in T037 | [ADR-0008](decisions/0008-common-model-on-gbfs-3-0.md); [tasks.md › T036, T037](tasks.md) |
+| Processing | Turns raw responses into the common model and its tables | DuckDB as the engine; execution in T037 | [ADR-0008](decisions/0008-common-model-on-gbfs-3-0.md); [ADR-0024](decisions/0024-duckdb-as-processing-engine.md); [tasks.md › T037](tasks.md) |
 | Lakehouse | Silver and gold tables, read by analysis and visualization | Delta tables in the lakehouse bucket in R2; built by the pipeline (T040) | [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0022](decisions/0022-delta-lake-for-silver-and-gold.md); [ADR-0023](decisions/0023-storage-security-baseline.md); [tasks.md › T040](tasks.md) |
 | Visualization | Presents the data | T038 | [d002 › R1, R2](designs/d002-requirements.md#requirements); [tasks.md › T038](tasks.md) |
 
@@ -152,6 +153,7 @@ Quality scenarios that make the goals in §1.2 measurable:
 - **Unexpected R2 bill:** R2 bills storage and operations, and the cost model is estimated, not measured; how often the pipeline commits weighs on operations. Mitigated by the cost alert (QS8) and the recalibration with R2's metrics in production (T040). [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [s010 › Not verified](spikes/s010-storage-table-format.md#not-verified).
 - **One vendor:** storage and capture both depend on Cloudflare. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md).
 - **Delta concurrency limits (low):** with no managed service coordinating commits, conflicting MERGEs are not resolved automatically, and concurrent table creation or schema merge can race; unlikely here, since tables are created and schemas changed rarely. The pipeline design handles them. [s010 › D4](spikes/s010-storage-table-format.md#decisions-to-record).
+- **Engine not exercised on real volumes:** the hand-off from DuckDB to `deltalake` and its memory use rest on documentation; the first slice of T040 checks both, with Polars as the fallback. [ADR-0024](decisions/0024-duckdb-as-processing-engine.md); [s011 › Not verified](spikes/s011-engine-pipeline-language.md#23-not-verified).
 - **Undocumented Worker behaviour:** capture relies on `encodeResponseBody: 'manual'` and on the Free plan's CPU enforcement, neither documented. [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md).
 
 ## 12. Glossary
