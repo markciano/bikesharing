@@ -10,7 +10,7 @@
 - Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
 - Current step: —
-- TODO(T036): decide the pipeline language (D3), then model the component's threats and add requirements to d002 (D4). If neither needs a run, propose closing the spike without Method and Steps.
+- TODO(T036): finish D3 (score how transformations are written), then model the component's threats and add requirements to d002 (D4). If neither needs a run, propose closing the spike without Method and Steps.
 
 ## 1. Questions — what we need to know
 
@@ -171,6 +171,35 @@ Needs the form must cover:
 | N7 | Let T042 add data quality rules at any layer and record their results as measures, without rewriting transformations; T042 decides where the rules live and their format | [d002 › Q2](../designs/d002-requirements.md#guiding-questions), [task T042](../tasks.md) |
 
 Candidates:
+
+| # | Candidate | What it is |
+|---|---|---|
+| A | SQL | Models in `.sql` files that Python runs in order |
+| B | DuckDB's Python API | Chained operations on DuckDB relations |
+| C | Ibis | Python library that writes transformations as DataFrames and translates them for the engine |
+| D | Mixed | SQL by default, Python only where SQL falls short |
+
+dbt is not a candidate: it manages SQL or Python rather than being a form of writing them, and T040 decides where it applies.
+
+Hard cuts:
+
+| # | Cut | Source |
+|---|---|---|
+| C4 | Runs on DuckDB and hands its result to `deltalake` through Arrow | D1 |
+| C5 | Open source, with no per-use cost and with stable, maintained releases | [d002 › R4](../designs/d002-requirements.md#requirements), as in C3 |
+
+Anchors (2 and 4 are in between):
+
+| Criterion (weight) | Need | 1 | 3 | 5 |
+|---|---|---|---|---|
+| Team practice (5) | N5 | Rare in data teams and job ads | Recognised, used by some teams | Common standard in data teams |
+| Workload fit (4) | N1, N2 | Some operation in O1–O7 cannot be expressed without leaving this form | All can be expressed, some with workarounds or fragments of another language | All are expressed directly with the form's own constructs |
+| Testing (3) | N4 | Tested only by running the whole pipeline | Each transformation is tested locally, with substantial custom scaffolding | Each transformation is tested in isolation with sample data in `pytest`, with little scaffolding and the test written first |
+| Reuse (3) | N3 | Changing the data range requires duplicating logic | The range is injected through templates or text, with care | The range is a parameter of the tool itself, with no duplicated logic |
+| Path to dbt (3) | N6 | Full rewrite | Part is rewritten or converted | Existing work becomes dbt models with minor changes |
+| Data quality (3) | N7 | Rules go inside the transformations | Rules are separate, but storing their results needs custom code | Rules are separate pieces over any result, and their results are stored by the same mechanism as the data |
+| Learning curve (2) | — | Requires mastering programming abstractions before being productive | The essentials are learned in weeks from official documentation | Well-documented concepts that map to those of a visual tool |
+| Portability to Polars (1) | D1 | Full rewrite | Part is rewritten | Works unchanged |
 
 ### 1.3 Questions
 
