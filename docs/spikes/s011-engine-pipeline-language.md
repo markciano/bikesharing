@@ -9,7 +9,6 @@
 - Phase: [x] Questions · Method, Steps and Steps review do not apply: triage leaves no run
 - Started: 2026-11-01 · Finished: 2026-11-01
 - Current step: —
-- TODO(T036): propose a line in the `/spike` skill that fixes this order, after reading `spike.md` in `/implement`: what cites only requirements goes with its decision; what cites an ADR goes after the spike closes and the ADR exists. Then take the task to ✅.
 
 ## 1. Questions — what we need to know
 
