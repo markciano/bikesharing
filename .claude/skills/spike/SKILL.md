@@ -23,7 +23,7 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
 
 ## How the session runs
 
-- **One question per turn.** Ask in the owner's domain terms. When a question touches a technology, explain it in 2–3 lines first.
+- **One question per turn.** Ask in the owner's domain terms. When a question touches a technology, explain it in 2–3 lines first. What reaches the owner and what is logged follow `.claude/rules/docs/decision-log.md`.
 - **When the owner lacks the criterion to decide,** do not press for an answer. Give what each option gains and loses and the orders of magnitude involved, and prefer the simpler option when the decision is reversible.
 - **Look things up when a question needs it.** Read the repo, ADRs, earlier spikes or other docs only to answer a specific question, announced in one line, within the reading budget in CLAUDE.md.
 - **Optional sections.** At the start of each block, say in one line which optional sections apply and which do not. Those that do not apply are removed.
@@ -50,7 +50,7 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
 
 ## 2. Method
 
-1. **Approach.** Propose the variants, options or probes to compare; the owner adjusts. Each one must tell something the others do not; propose cutting one that does not.
+1. **Approach.** Propose the variants, options or probes to compare; the owner adjusts. Each one must tell something the others do not; propose cutting one that does not. Before measuring anything, make a rough worst-case estimate (Fermi estimate); if it settles the decision, it is not measured.
 2. **Decisions about how,** one per message:
    - what is being decided and why it matters, in 2–3 lines;
    - 2–3 options, each with its practical consequence;

@@ -40,7 +40,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 
 ## 2. Plan
 
-1. Propose the list of concerns to decide; the owner adjusts it.
+1. Propose the list of concerns to decide; the owner adjusts it. What reaches the owner and what is logged follow `.claude/rules/docs/decision-log.md`.
 2. One concern per message:
    - what is being decided and why it matters, in 2–3 lines;
    - 2–3 options, each with its practical consequence;
