@@ -1,5 +1,5 @@
 <!--
-Spike doc template. A spike is a time-boxed investigation of one task in docs/tasks.md: it answers questions the project cannot decide without evidence. Its output is knowledge (answers, a verdict, inputs for designs and ADRs); its code is throwaway and lives in spikes/<name>/.
+Spike doc template. A spike is a time-boxed investigation of one task in docs/tasks.md: it reaches the decisions a task needs, by analysis where possible and with evidence only where an unknown would change the choice. Its output is knowledge (decisions, answers, a verdict, inputs for designs and ADRs); its code is throwaway and lives in spikes/<name>/.
 Blocks: Questions (what we need to know), Method (how we find out), Steps, Findings (filled during execution), Conclusion (filled in the last step).
 Sections marked Optional are kept only when they apply.
 -->
@@ -26,13 +26,13 @@ Current step: the step being executed, or —. -->
 
 ### 1.1 Context
 
-<!-- 2–4 sentences: the decision this spike unblocks, why it cannot be taken without evidence, and the spikes or designs it builds on. -->
+<!-- 2–4 sentences: the decisions this spike takes, which of them depend on evidence and why, and the spikes or designs it builds on. -->
 
 ### 1.2 Decided at framing
 
 #### D`<N>`. `<Title of decision N>`
 
-<!-- Description of description N -->
+<!-- What was decided and why: the options rejected and the full reasoning, with the table or weighted matrix (anchors and scores) if one was used. If the decision depends on a Q, name it and what happens if its Gate fails. -->
 
 ### 1.3 Questions
 
