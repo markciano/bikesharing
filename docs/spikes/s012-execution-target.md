@@ -23,6 +23,10 @@ Storage (T035), engine and pipeline language (T036) are decided; this spike deci
 
 `TODO(T037)`: decision, once scored.
 
+What would change it: N4's cut rests on runs of 2 minutes, an unmeasured estimate. With runs of 1 minute or less, Google Cloud Run jobs (about €1.37 per month at 10 minutes) and Fly.io Machines (about €2.28) would pass it, and they may also pass under an on-demand mode.
+
+`TODO(T040)`: if the first slice measures runs of 1 minute or less, or T040 chooses the on-demand mode, reopen this decision with Cloud Run and Fly.io as candidates.
+
 Needs and hard cuts:
 
 | # | Need | Source | Hard cut |
@@ -46,6 +50,44 @@ Criteria:
 | Portfolio value | 3 | How standard and demonstrable it is in a data engineering project |
 | Observability and alerts | 3 | Covers N7 and N8 |
 | Portability | 2 | How much changing platform costs |
+
+Anchors (2 and 4 fall between them):
+
+| Criterion | 1 | 3 | 5 |
+|---|---|---|---|
+| Operational load | The owner patches the OS and runtime and restarts the service by hand | The owner maintains an image or a machine with unattended updates | Fully managed: the owner only deploys code |
+| Schedule reliability | Best effort: documented delays as long as the cadence, or skipped runs | Delays of a few minutes at peak, no skipped runs documented | Starts within a minute, and a missed run is detected or retried |
+| Cost margin | Above €3 and up to €4 per month | Above €1 and up to €2 per month | €0 per month |
+| Portfolio value | Runs only on the owner's machine, with nothing to show | A common platform, deployed by hand | A standard platform with deployment as code, and runs that can be shown |
+| Observability and alerts | No retained logs or failure alerts: all to be built | Logs kept for days and a failure signal, with the alert or time limit still to be built | Logs kept 30 days or more, with failure alerts, time limits and retries built in |
+| Portability | The code runs only on the platform's own runtime | A standard container, with platform-specific trigger and configuration | The same artefact runs unchanged locally, in CI and in production |
+
+Cost reference: each candidate's platform cost is computed for every row below, in a 30-day month, with 4 GB of memory (N2's 3 GB plus margin) and runs of 2 minutes, an unmeasured estimate, and again at 4 minutes. N4's cut and the Cost margin score are judged at 10 minutes, the fastest 24/7 cadence that fits R2's gate ([s010 › P5](s010-storage-table-format.md#production-inputs)). A candidate that passes at 10 minutes but not at a faster cadence stays in, with its costs shown. The R2 bill is separate.
+
+| Cadence | Runs per month | Hours per month at 2 min | Hours per month at 4 min |
+|---|---|---|---|
+| 1 min | 43,200 | 720 (runs overlap) | 720 (runs overlap) |
+| 2 min | 21,600 | 720 | 720 (runs overlap) |
+| 5 min | 8,640 | 288 | 576 |
+| 10 min | 4,320 | 144 | 288 |
+| 15 min | 2,880 | 96 | 192 |
+
+Hard cuts applied, with platform cost per month in EUR (runs of 2 / 4 minutes; a single figure when both match). USD at 0.8982, the rate in the storage cost model of 2026-10-28. Prices gathered on 2026-11-02; Cloud Run's rates come from third-party sources.
+
+| Candidate | Basis | 1–2 min | 5 min | 10 min | 15 min | Result |
+|---|---|---|---|---|---|---|
+| Oracle Cloud Always Free | Arm VM, 12 GB | 0 | 0 | 0 | 0 | Passes |
+| Modal | 1 vCPU, 4 GiB, after the $30 monthly credit | 8.98 | 0 / 1.80 | 0 | 0 | Passes |
+| GitHub Actions, public repository | 4 vCPU, 16 GB | Not possible: 5-minute minimum | 0 | 0 | 0 | Passes |
+| Owner's Mac | M4 Pro, 24 GB; electricity not counted | 0 | 0 | 0 | 0 | Passes |
+| Fly.io Machines | Shared 2 vCPU, 4 GB | 22.81 | 9.13 / 18.24 | 4.56 / 9.13 | 3.04 / 6.08 | Out: N4 |
+| Hetzner CX23 | 2 vCPU, 4 GB; fixed price, VAT excluded | 5.49 | 5.49 | 5.49 | 5.49 | Out: N4 |
+| Google Cloud Run jobs | 1 vCPU, 4 GiB, after the free tier | 55.84 | 19.53 / 43.73 | 7.42 / 19.53 | 3.39 / 11.45 | Out: N4 |
+| Cloudflare Containers | `standard-1`, upper bound, with the $5 plan | 51.71 | 22.98 / 42.13 | 13.41 / 22.98 | 10.22 / 16.61 | Out: N4 |
+| AWS Lambda | 4,096 MB, x86, us-east-1 | 149.22 | 56.09 / 118.18 | 25.05 / 56.09 | 14.70 / 35.40 | Out: N4 |
+| Dagster+ Serverless | Compute only, without the $10 fee and credits | 388.02 | 155.21 / 310.42 | 77.60 / 155.21 | 51.74 / 103.47 | Out: N4 |
+| Prefect Managed | Hobby: 500 minutes per month | Above the cap | Above the cap | Above the cap | Above the cap | Out: N1 (installs packages at run time) and N4 |
+| Cloudflare Workers | 128 MB per isolate | — | — | — | — | Out: N1, N2 |
 
 #### D2. Scheduler
 
