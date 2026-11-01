@@ -89,6 +89,18 @@ Hard cuts applied, with platform cost per month in EUR (runs of 2 / 4 minutes; a
 | Prefect Managed | Hobby: 500 minutes per month | Above the cap | Above the cap | Above the cap | Above the cap | Out: N1 (installs packages at run time) and N4 |
 | Cloudflare Workers | 128 MB per isolate | — | — | — | — | Out: N1, N2 |
 
+Scores of the candidates that pass (facts gathered on 2026-11-02, sources in [Sources](#6-sources)):
+
+| Criterion (weight) | Modal | GitHub Actions, public repository | Oracle Cloud Always Free | Owner's Mac |
+|---|---|---|---|---|
+| Operational load (5) | 5: managed; the owner deploys the image and app code | 5: managed runners; the owner keeps the workflow and pins | 3: a VM the owner keeps with unattended updates | 1: the owner keeps the machine on, awake and updated |
+| Schedule reliability (4) | 4: boots in about 1 s, scheduled functions notify on failure; missed runs not documented | 1: documented delays and dropped runs under load; user reports of delays of hours | 4: own timer on an always-on VM; continuity depends on capacity and idle reclamation | 1: runs are lost while the Mac is off or asleep |
+| Cost margin (4) | 5: €0 within the $30 credit | 5: €0 | 5: €0 | 4: €0 on the platform; about €1 of electricity (estimate) |
+| Portfolio value (3) | 3: deployment as code, on a less common platform, with a private dashboard | 4: standard and visible, though not a usual pipeline runner | 3: a common VM, with no view of runs | 1: nothing to show |
+| Observability and alerts (3) | 3: timeouts, retries and failure notice built in; Starter keeps logs for 1 day | 4: logs for 90 days, timeouts and a notice to whoever last edited the schedule; retries are manual | 3: free monitoring, alarms and notifications; timeouts and retries to be built | 1: all to be built |
+| Portability (2) | 3: the logic is plain Python, but a Modal app wrapper and SDK are mandatory | 4: plain code or a container, with a workflow file as trigger | 4: plain Python or a container, Arm only | 4: plain code, with a local scheduler as trigger |
+| **Weighted score (out of 10)** | **8.10** | 7.71 | 7.33 | 3.71 |
+
 #### D2. Scheduler
 
 `TODO(T037)`: depends on D1.
@@ -175,3 +187,15 @@ spikes/execution-target/
 ### 5.6 Follow-ups
 
 ## 6. Sources
+
+Gathered by the `web-researcher` on 2026-11-02 for D1:
+
+- GitHub Actions terms: <https://docs.github.com/en/site-policy/github-terms/github-terms-for-additional-products-and-features>
+- GitHub Actions schedules, delays and dropped jobs: <https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule>
+- GitHub Actions runners, limits and log retention: <https://docs.github.com/en/actions/reference/runners/github-hosted-runners>, <https://docs.github.com/en/actions/reference/limits>, <https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization>
+- User reports of delayed scheduled runs (third-party): <https://github.com/orgs/community/discussions/210625>, <https://github.com/orgs/community/discussions/201472>
+- Modal pricing, billing and limits: <https://modal.com/pricing>, <https://modal.com/docs/guide/billing>, <https://modal.com/docs/guide/resources>
+- Modal schedules, cold start, failure notice and existing images: <https://modal.com/docs/guide/cron>, <https://modal.com/docs/guide/cold-start>, <https://modal.com/docs/guide/managing-deployments>, <https://modal.com/docs/guide/existing-images>
+- Oracle Always Free limits and idle reclamation: <https://docs.oracle.com/en-us/iaas/Content/FreeTier/resourceref.htm>
+- Oracle Monitoring and Notifications: <https://docs.oracle.com/en-us/iaas/Content/Monitoring/Concepts/monitoringoverview.htm>, <https://docs.oracle.com/en-us/iaas/Content/Notification/Concepts/notificationoverview.htm>
+- Candidates cut: <https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/>, <https://docs.fly.io/about/pricing>, <https://cloud.google.com/run/pricing>, <https://developers.cloudflare.com/containers/pricing/>, <https://developers.cloudflare.com/workers/platform/limits/>, <https://aws.amazon.com/lambda/pricing/>, <https://dagster.io/pricing>, <https://www.prefect.io/pricing>, <https://www.prefect.io/docs/v3/how-to-guides/deployment_infra/managed>
