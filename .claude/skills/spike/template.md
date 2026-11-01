@@ -32,7 +32,11 @@ Current step: the step being executed, or —. -->
 
 #### D`<N>`. `<Title of decision N>`
 
-<!-- What was decided and why: the options rejected and the full reasoning, with the table or weighted matrix (anchors and scores) if one was used. If the decision depends on a Q, name it and what happens if its Gate fails. -->
+<!-- In this order, so the reader finds what matters first:
+1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
+2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
+3. The options rejected and how robust the result is.
+4. The evaluation behind it: the table or weighted matrix (needs, cuts, anchors and scores) if one was used. -->
 
 ### 1.3 Questions
 
