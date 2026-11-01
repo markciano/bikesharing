@@ -42,7 +42,7 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
    - One that documents or arithmetic can settle: settle it in this session the same way.
    - One that only a run can settle: it becomes a Q that names the decision it unblocks and the Gate that confirms or reopens it. If no result would change the choice, it is not a Q: decide now.
 
-   If triage leaves no Q, there is no run: propose closing the spike with its decisions; Method and Steps do not apply.
+   If triage leaves no Q, there is no run: propose closing the spike with its decisions; Method and Steps do not apply. Once approved, write the Conclusion and, in the same change, close Status and the task.
 4. **Decide at framing.** On approval, write each decision in Decided at framing with its full reasoning. A choice with more than one live option uses a weighted decision matrix, in this order:
    1. **Needs:** what the choice must cover, each need traced to a requirement.
    2. **Hard cuts and criteria:** derived from the needs, with weights.
