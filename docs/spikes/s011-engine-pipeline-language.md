@@ -2,15 +2,14 @@
 
 - **Task:** T036
 - **ADRs:** [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0019](../decisions/0019-own-lakehouse-on-cloudflare-r2.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0022](../decisions/0022-delta-lake-for-silver-and-gold.md), [ADR-0023](../decisions/0023-storage-security-baseline.md)
-- **Code:** `spikes/engine-pipeline-language/`
 
 ## Status
 
-- State: Draft 📝
-- Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review
-- Started: — · Finished: —
+- State: Concluded ✅
+- Phase: [x] Questions · Method, Steps and Steps review do not apply: triage leaves no run
+- Started: 2026-11-01 · Finished: 2026-11-01
 - Current step: —
-- TODO(T036): triage leaves no run, so propose closing the spike without Method and Steps. Then record the engine, the pipeline language and the budget split in one commit each: the ADR together with its lines in `docs/architecture.md`. Propose a line in the `/spike` skill that fixes this order, after reading `spike.md` in `/implement`: what cites only requirements goes with its decision; what cites an ADR goes after the spike closes and the ADR exists. Then take the task to ✅.
+- TODO(T036): record the engine, the pipeline language and the budget split in one commit each: the ADR together with its lines in `docs/architecture.md`. Propose a line in the `/spike` skill that fixes this order, after reading `spike.md` in `/implement`: what cites only requirements goes with its decision; what cites an ADR goes after the spike closes and the ADR exists. Then take the task to ✅.
 
 ## 1. Questions — what we need to know
 
@@ -183,7 +182,7 @@ Needs the form must cover:
 | N3 | Use the same logic for the incremental batch and for a rebuild from bronze, changing only the data range | [d002 › R11, R13](../designs/d002-requirements.md#requirements) |
 | N4 | Be tested before the code is written, locally and with no infrastructure | [Testing strategy](../testing-strategy.md) |
 | N5 | Follow the practice of a company data team and show data engineering skills | [d002 › Context](../designs/d002-requirements.md#context) |
-| N6 | Leave T040 free to decide where dbt applies | 1.5 Out of scope |
+| N6 | Leave T040 free to decide where dbt applies | 1.3 Out of scope |
 | N7 | Let T042 add data quality rules at any layer and record their results as measures, without rewriting transformations; T042 decides where the rules live and their format | [d002 › Q2](../designs/d002-requirements.md#guiding-questions), [task T042](../tasks.md) |
 
 Candidates:
@@ -285,127 +284,42 @@ Requirements transferred to [d002 › Requirements](../designs/d002-requirements
 | R22 | A5 | [DuckDB secrets manager](https://duckdb.org/docs/2.0/configuration/secrets_manager.html): temporary secrets stay in memory, persistent ones are unencrypted files |
 | R23 | A6 | [DuckDB configuration](https://duckdb.org/docs/2.0/configuration/overview.html): no query timeout among the settings read; the gap in R8, which alerts only on capture |
 
-### 1.3 Questions
-
-Main question: `<one sentence>`
-
-- **Q1.** `<question>`
-- **Observe only:** `<item>`
-
-### 1.4 Exit criteria
-
-- **Standard:** `<standard or pattern applied>`
-- **Timebox:** `<window, and what ends it>`
-- `<criterion>` — `<threshold>` — hard cut | guide
-
-### 1.5 Out of scope
+### 1.3 Out of scope
 
 - Partition overwrite or MERGE, batch size, commit cadence and state between batches (T040).
 - Where dbt applies, if anywhere: T040 decides it, and the owner wants to use it where it can be justified.
 - Where the pipeline runs and what schedules it (T037).
 - Data quality checks beyond the basics (T042).
 
-### 1.6 Open questions
+## 2. Conclusion
 
-| Question | Notes |
-|---|---|
-| | |
+### 2.1 Verdict
 
-## 2. Method — how we find out
+The single-node engine is DuckDB, with Polars as the fallback. The pipeline is SQL models directed by Python, with `deltalake` writing the Delta tables. Documents and arithmetic settled every decision, so nothing was run; this spike has no Method, Steps or Findings.
 
-### 2.1 Approach
-
-| Variant | What it is | What it tells |
-|---|---|---|
-| | | |
-
-#### 2.1.1 Shared behaviour
-
--
-
-#### `<A>`. `<Title of variant, option or probe A>`
-
-### 2.3 Decision log
-
-| # | Applies to | Decision | Reason | Decided at |
-|---|---|---|---|---|
-| `<N>` |  |  |  |  |
-
-### 2.4 File layout
-
-```text
-spikes/engine-pipeline-language/
-├── README.md        Setup, commands, what each script does; How we got here (written at Conclusion)
-└── <file>           <purpose>
-```
-
-## 3. Steps
-
-### 3.1 Prerequisites
-
-### Step 1 — `<title>`
-
-- **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md.
-- **R:** R1, R3 (or —)
-- **Model:** `<model · effort>` (or —)
-- **Gate:** `<condition>` → `<consequence>`
-
-#### Scope
-
-#### Reads
-
-#### Do
-
-#### Check
-
-### Step N — Conclusion
-
-## 4. Findings
-
-### F1. `<one-line statement>`
-
-Step N · YYYY-MM-DD · `<source of evidence>`
-
-- `<evidence>`
-- Consequence: `<for variants, steps or questions>`
-
-### 4.1 Production inputs
-
-| P | Input | Origin | Destination |
-|---|---|---|---|
-| P1 | | Step N · FN | |
-
-## 5. Conclusion
-
-Observed window: `<from–to, UTC; what it does not cover>`
-
-### 5.1 Answers
-
-- **Q1. Title** `<answer>` (FN)
-
-### 5.2 Exit criteria
-
-| Criterion | Kind | Result | Findings |
-|---|---|---|---|
-
-### 5.3 Verdict
-
-### 5.4 Decisions to record
+### 2.2 Decisions to record
 
 | D | Outcome | Why |
 |---|---|---|
+| D1 | DuckDB, with Polars as the fallback | 8.1 against 6.8 in the weighted matrix; it leads on the two criteria that come directly from the workload |
+| D2 | €10 per month: capture €0, storage €2, pipeline €4, visualization €2, reserve €2 | The pipeline may need an always-on machine; the reserve absorbs the exchange rate and deviations |
+| D3 | Python as host, transformations as SQL models | 9.1 against 8.7 for Mixed and 6.0 for DuckDB's Python API; no operation in O1–O7 needs anything else |
+| D4 | R19–R23, with the other threats documented without a requirement | Threats listed with STRIDE; controls follow least privilege |
 
-### 5.5 Not verified
+### 2.3 Not verified
 
-- `<item>` — `<risk>` — `<mitigation>`
+- The hand-off from DuckDB to `deltalake` on real data — a type mismatch, or a failure that a `CAST` does not fix — the first slice of T040 tries it; D1 moves to Polars if it fails.
+- Memory on a reference batch — running out of memory even with smaller batches and spilling — the first slice of T040 or the history load measures it; D1 moves to Polars once confirmed that it copes.
+- `$name` parameters in `con.sql()` and in `read_json` file paths — less reuse across models — T040 checks them; D3 holds either way.
+- Restricting DuckDB's paths on R2 and Delta — unplanned SQL could touch local files if R19 were ever broken — T040 tries it as hardening.
 
-### 5.6 Follow-ups
+### 2.4 Follow-ups
 
-- `<ADR or task>`
+- ADRs to write, each in its own commit with its lines in `docs/architecture.md`: processing engine (D1), pipeline language (D3) and budget shares (D2).
+- T040 picks up the inputs listed in D1, D3 and D4.
+- T037 works within the pipeline share and reviews A9; T038 validates the visualization share.
 
-## 6. Sources
+## 3. Sources
 
 Checked on 2026-11-01. Further facts in D1 come from each project's current documentation and release notes.
 
