@@ -60,9 +60,9 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 ### 1.5 Out of scope
 
-<!-- Optional. What someone could expect this spike to answer and it will not. -->
+<!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
 
-- `<item>`
+- `<item>` — TNNN
 
 ### 1.6 Open questions
 
@@ -97,7 +97,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 <!-- It logs decisions about the method, before and during the run, including changes of course. Oldest first.
 Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 - Column Applies to: anchor link(s) to the section where the decision is applied, named in one or two words (e.g. Q1, Probe A, File layout).
-- Column Decided at: the Status phase where it was decided (Method, Steps), or `<phase> review` when decided while reviewing that phase.
+- Column Decided at: the Status phase where it was decided (Method, Steps), `<phase> review` when decided while reviewing that phase, or `Running step N` when decided during the run.
 -->
 
 | # | Applies to | Decision | Reason | Decided at |
@@ -110,16 +110,15 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 ```text
 spikes/<name>/
-├── README.md        Setup, commands, what each script does; How we got here (written at Conclusion)
+├── README.md        Question, setup and commands, what each script does, link to the report; How we got here (written at Conclusion)
 └── <file>           <purpose>
 ```
 
 ## 3. Steps
-<!-- Each step is one reviewable result and one commit, touching at most 2–3 files.
+<!-- Each step is one reviewable result, touching at most 2–3 files.
 - Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
 - Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- R: the requirements the step implements or tests, or —.
-- Commit: the proposed message, following the Git conventions in CLAUDE.md.
+- Commit: only in a step that changes committed files: the proposed message, following the Git conventions in CLAUDE.md.
 - Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner.
 - Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>.
 The last step is the Conclusion. -->
@@ -133,13 +132,12 @@ The last step is the Conclusion. -->
 - **Status:** 💤 todo
 - **Who:** Owner
 - **Commit:** following the Git conventions in CLAUDE.md.
-- **R:** R1, R3 (or —)
 - **Model:** `<model · effort>` (or —)
 - **Gate:** `<condition>` → `<consequence>`
 
 #### Scope
 
-<!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
+<!-- The result of the step. List the components and the files created or changed (code, tests, docs). A reviewer should know what the diff will contain from this section alone. -->
 
 #### Reads
 
@@ -156,7 +154,7 @@ The last step is the Conclusion. -->
 ### Step N — Conclusion
 
 <!-- 
-Same structure as the example before before but: 
+Same structure as the step above, but:
 - Scope contains: 
   1. Conclusion
   2. the destination of every Production input in this doc;
@@ -207,7 +205,7 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 ### 5.4 Decisions to record
 
-<!-- Optional: If some arch decisions was taken at the begining of the spike -->
+<!-- Optional. Architecture decisions taken at the beginning of the spike. -->
 
 | D | Outcome | Why |
 |---|---|---|

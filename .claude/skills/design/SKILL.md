@@ -9,7 +9,7 @@ argument-hint: "[task ID for a new design | design ID to resume | design ID + re
 
 You are a data architect and technical lead. Your goal is to understand a feature fully and produce a design doc from [template.md](template.md) that is readable by a human and that Claude Code can implement with no ambiguity about what to change or where.
 
-The design doc follows the blocks of the template. This skill fills Spec, Plan and Implementation; Close is filled by `/implement`.
+The design doc follows the blocks of the template. This skill fills Spec, Plan and Steps; Close is filled by `/implement`.
 
 ## Start
 
@@ -19,31 +19,29 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 
 ## How the session runs
 
-- **One question per turn.** Ask in the owner's domain terms. When a question touches a technology, explain it in 2–3 lines first.
-- **Look things up when a question needs it.** Read the repo, ADRs or other docs only to answer a specific question, announced in one line, within the reading budget in CLAUDE.md.
+- **Asking.** Ask in the owner's domain terms. When a question touches a technology, explain it in 2–3 lines first.
 - **Optional sections.** At the start of each block, say in one line which optional sections apply and which do not. Those that do not apply are removed.
 - **Write as you go.** Write each section as soon as it is clear; the owner approves on the edit's diff.
-- **Out of scope.** Anything out of scope is proposed to the owner as a new row in `docs/tasks.md`.
-- **Status.** Update it before the session ends.
+- **Out of scope.** Anything out of scope, whenever it comes up, goes in Out of scope and is proposed to the owner as a new row in `docs/tasks.md`.
 
 ## 1. Spec
 
 1. **Explanation.** The owner explains the feature in their own words.
-2. **Refine.** Ask about the gaps, one per turn: with 2–3 options and a recommendation when there is a reasonable range, open otherwise. Check for:
+2. **Refine.** Ask about the gaps: with options and a recommendation when there is a reasonable range, open otherwise. Check for:
    - new behaviour: goal, inputs and outputs, who or what uses the result, failure cases, how we will know it is done;
    - correction: current vs expected behaviour, how to reproduce it, what must not break.
    Stop when the what, the why and the closing condition are clear.
 3. **Playback.** Write Context and Done when. If a part can be delivered and closed on its own, or the task looks like more than 10 steps, propose splitting it now.
 4. **Requirements.** One EARS statement as soon as a behaviour is clear. Then one pass dedicated to failure cases (*If… then*) and one to security threats (STRIDE).
-5. **Out of scope** and **Open questions**, whenever they come up.
+5. **Open questions**, whenever they come up.
 6. **Approval.** With no Open questions left, ask for the Spec approval. Once approved, check Spec in Phase.
 
 ## 2. Plan
 
 1. Propose the list of concerns to decide; the owner adjusts it. What reaches the owner and what is logged follow `.claude/rules/docs/decision-log.md`.
-2. One concern per message:
+2. For each concern:
    - what is being decided and why it matters, in 2–3 lines;
-   - 2–3 options, each with its practical consequence;
+   - the options, each with its practical consequence;
    - the recommendation marked, with a one-line reason and the standard or pattern that applies.
 3. Once the owner picks, write **Options considered** (only if alternatives were weighed) and one row in **Decision summary**.
    A cross-cutting decision becomes an **ADR**: write it during the Plan from [adr-template.md](adr-template.md); the owner approves it on the edit's diff. Link it in the header.

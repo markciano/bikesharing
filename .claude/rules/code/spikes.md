@@ -11,4 +11,4 @@ paths:
 - A script that runs for more than about 30 seconds prints its progress per unit of work (an archive, a day, a check) and ends with its total elapsed time; its README states the approximate run time.
 - No test suite or test pyramid. Add a quick check or a targeted test where a conclusion depends on logic that could be wrong (parsing, aggregation, time handling).
 - Nothing in `spikes/` is imported from `src/` or `tests/`. Code worth keeping is rewritten in `src/` through a design.
-- Each spike folder has a short `README.md`: the question, how to run it, and a link to its report in `docs/spikes/`.
+- Each spike folder has a short `README.md`: the question, how to run it, what each script does, a link to its report in `docs/spikes/`, and How we got here, written at the Conclusion.
