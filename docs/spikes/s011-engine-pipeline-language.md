@@ -9,7 +9,7 @@
 - Phase: [x] Questions · Method, Steps and Steps review do not apply: triage leaves no run
 - Started: 2026-11-01 · Finished: 2026-11-01
 - Current step: —
-- TODO(T036): record the pipeline language and the budget split in one commit each: the ADR together with its lines in `docs/architecture.md`. Propose a line in the `/spike` skill that fixes this order, after reading `spike.md` in `/implement`: what cites only requirements goes with its decision; what cites an ADR goes after the spike closes and the ADR exists. Then take the task to ✅.
+- TODO(T036): record the budget split in one commit: the ADR together with its lines in `docs/architecture.md`. Propose a line in the `/spike` skill that fixes this order, after reading `spike.md` in `/implement`: what cites only requirements goes with its decision; what cites an ADR goes after the spike closes and the ADR exists. Then take the task to ✅.
 
 ## 1. Questions — what we need to know
 
