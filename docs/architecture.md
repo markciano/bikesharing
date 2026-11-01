@@ -54,6 +54,7 @@ Each goal is made measurable by the scenarios in §10.
 | Constraint | Type | Background | Source |
 |---|---|---|---|
 | Running cost below €10 per month; free tiers preferred when options tie | Organisational | Portfolio project funded by the owner | [d002 › R4](designs/d002-requirements.md#requirements); [d002 › Context](designs/d002-requirements.md#context) |
+| Monthly budget shares: capture €0, storage €2, pipeline €4, visualization €2, reserve €2 | Organisational | Each component is sized against its share; one that exceeds it reopens the split against the reserve | [ADR-0026](decisions/0026-budget-shares-per-component.md) |
 | Licence attribution shown in the visualization | Legal | Required by each source's licence | [d002 › R2](designs/d002-requirements.md#requirements) |
 | Single-node engines only | Technical | Distributed engines such as Spark are oversized for the volume (§3) | [tasks.md › T036](tasks.md) |
 | Station or zone-level aggregates only | Technical | Bike IDs rotate after each trip, so a bike cannot be tracked | [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions); [AMBici › Known characteristics](sources/ambici.md#known-characteristics) |
