@@ -37,10 +37,11 @@ Owner + Claude. Draft each part in this order; the owner approves on the diff:
 2. Answers, one per Q, citing Findings.
 3. Exit criteria, one result per criterion and variant.
 4. Verdict.
-5. Not verified: each item with its risk and mitigation.
-6. Production inputs: a destination for every P: a design (naming its task), or discarded with a reason. No new task rows from Production inputs.
-7. Follow-ups: ADRs to write, each in its own commit; new tasks proposed to the owner as rows in `docs/tasks.md`.
-8. README › How we got here: 5–10 lines of narrative for the portfolio, linking to Findings and Decision log entries instead of repeating their detail.
-9. Tear-down: what is torn down and what is kept; a kept resource gets a Decision log entry. The owner runs the tear-down.
+5. Decisions to record: for each decision in Decided at framing, whether it holds, changes or is reopened.
+6. Not verified: each item with its risk and mitigation.
+7. Production inputs: a destination for every P: a design (naming its task), or discarded with a reason. No new task rows from Production inputs.
+8. Follow-ups: ADRs to write, each in its own commit; new tasks proposed to the owner as rows in `docs/tasks.md`.
+9. README › How we got here: 5–10 lines of narrative for the portfolio, linking to Findings and Decision log entries instead of repeating their detail.
+10. Tear-down: what is torn down and what is kept; a kept resource gets a Decision log entry. The owner runs the tear-down.
 
 Then set State to Concluded ✅ and Finished (UTC date), and the task to ✅, in the commit of this step.
