@@ -10,7 +10,7 @@
 - Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
 - Current step: —
-- TODO(T036): triage leaves no run, so propose closing the spike without Method and Steps. Then record the engine, the pipeline language and the budget split in ADRs and in `docs/architecture.md`, and take the task to ✅.
+- TODO(T036): triage leaves no run, so propose closing the spike without Method and Steps. Then record the engine, the pipeline language and the budget split in one commit each: the ADR together with its lines in `docs/architecture.md`. Propose a line in the `/spike` skill that fixes this order, after reading `spike.md` in `/implement`: what cites only requirements goes with its decision; what cites an ADR goes after the spike closes and the ADR exists. Then take the task to ✅.
 
 ## 1. Questions — what we need to know
 
