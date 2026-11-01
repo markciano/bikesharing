@@ -50,7 +50,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 
 ## Repo access
 
-- Before writing, moving or deleting a file, explain in 2–3 plain brief lines what will change, where, and its effect; no full text. Write only after the owner's OK.
+- Before changing a file, say in one line what changes; the owner approves on the edit's diff. Stop at each commit point before the next change.
 - Reading budget: use Project structure before exploring; list a folder before reading in it; read only the file or section the open decision needs; announce what you read and why in one line; ask before reading more than 3 files; do not re-read unchanged files.
 
 ## Project structure
