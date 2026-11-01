@@ -162,13 +162,14 @@ Quality scenarios that make the goals in §1.2 measurable:
 
 | Term | Meaning | Source |
 |---|---|---|
-| Service | One of the two bike sharing systems: AMBici or Bicing | [ADR-0002](decisions/0002-data-sources-ambici-and-bicing.md) |
-| Guiding question | One of the questions Q1–Q8 the platform is sized to answer (§1.1) | [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions) |
 | Bronze, silver, gold | Medallion layers: data as captured; cleaned and conformed common model; tables modelled for the guiding questions | [ADR-0018](decisions/0018-medallion-architecture.md) |
-| Snapshot | One capture of a station's status (bikes by type, docks available): a periodic stock count | [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions) |
-| Movement | A pick-up or return derived from two consecutive snapshots of a station | [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions) |
-| Empty or full episode | A continuous period in which a station has no bikes, or no free docks | [d002 › Q3](designs/d002-requirements.md#guiding-questions) |
-| Frozen station | A station whose reported status stops changing while its feed keeps updating | [d002 › Q2](designs/d002-requirements.md#guiding-questions) |
-| Estimated trips | Trips inferred from movements; a lower bound, since changes that cancel out between two snapshots are not seen | [d002 › Q4](designs/d002-requirements.md#guiding-questions) |
-| Lakehouse | Silver and gold, stored as Delta tables in their own R2 bucket | [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0022](decisions/0022-delta-lake-for-silver-and-gold.md) |
 | Bucket lock | An R2 rule that blocks delete and overwrite of the objects under a prefix | [ADR-0023](decisions/0023-storage-security-baseline.md) |
+| Empty or full episode | A continuous period in which a station has no bikes, or no free docks | [d002 › Q3](designs/d002-requirements.md#guiding-questions) |
+| Estimated trips | Trips inferred from movements; a lower bound, since changes that cancel out between two snapshots are not seen | [d002 › Q4](designs/d002-requirements.md#guiding-questions) |
+| Frozen station | A station whose reported status stops changing while its feed keeps updating | [d002 › Q2](designs/d002-requirements.md#guiding-questions) |
+| Guiding question | One of the questions Q1–Q8 the platform is sized to answer (§1.1) | [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions) |
+| Lakehouse | Silver and gold, stored as Delta tables in their own R2 bucket | [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0022](decisions/0022-delta-lake-for-silver-and-gold.md) |
+| Movement | A pick-up or return derived from two consecutive snapshots of a station | [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions) |
+| Service | One of the two bike sharing systems: AMBici or Bicing | [ADR-0002](decisions/0002-data-sources-ambici-and-bicing.md) |
+| Snapshot | One capture of a station's status (bikes by type, docks available): a periodic stock count | [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions) |
+| SQL model | A `.sql` file holding one transformation, which the engine executes and Python runs in order | [ADR-0025](decisions/0025-sql-models-directed-by-python.md) |
