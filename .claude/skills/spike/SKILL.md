@@ -31,6 +31,7 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
 - **Out of scope.** Anything out of scope is proposed to the owner as a new row in `docs/tasks.md`.
 - **The data that decides.** A figure behind a decision comes from the data that decides the question, usually its most demanding case, named beforehand.
 - **Commit points.** When a decision or block closes, tell the owner it is a commit point and propose the message.
+- **Documents a decision changes.** What cites only requirements goes in the decision's commit. What cites an ADR goes after the spike closes, in the commit of that ADR.
 - **Status.** Update it before the session ends.
 
 ## 1. Questions
