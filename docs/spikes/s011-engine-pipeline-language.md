@@ -150,6 +150,28 @@ The [d002 › R4](../designs/d002-requirements.md#requirements) limit of €10 p
 - The shares are reversible: if T037 or T038 find real prices above their share, they reopen the split against the reserve.
 - TODO(T036): when the spike closes, record the split in an ADR and in `docs/architecture.md` § Constraints.
 
+#### D3. Pipeline language
+
+The pipeline language covers two things: the host language, which reads from R2, calls DuckDB and hands results to `deltalake`, and the form in which transformations are written, which DuckDB executes.
+
+**Host language: Python.** [d002 › Context](../designs/d002-requirements.md#context) names Python as part of what the portfolio shows, and MERGE depends on `deltalake` (D1), whose bindings are Python and Rust. Rust is not scored, because no result would change the choice.
+
+TODO(T036): decide the form of the transformations with a weighted decision matrix.
+
+Needs the form must cover:
+
+| # | Need | Source |
+|---|---|---|
+| N1 | Express O3–O7: cleaning, comparison with the previous reading, episodes that span batches, gaps against a time grid, aggregates in local time | D1 workload, [d002 › Q2–Q7, R12](../designs/d002-requirements.md#guiding-questions) |
+| N2 | Flatten bronze's nested JSON (O1) and read the Bicing archives (O2) | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md), [d002 › R5, R9](../designs/d002-requirements.md#requirements) |
+| N3 | Use the same logic for the incremental batch and for a rebuild from bronze, changing only the data range | [d002 › R11, R13](../designs/d002-requirements.md#requirements) |
+| N4 | Be tested before the code is written, locally and with no infrastructure | [Testing strategy](../testing-strategy.md) |
+| N5 | Follow the practice of a company data team and show data engineering skills | [d002 › Context](../designs/d002-requirements.md#context) |
+| N6 | Leave T040 free to decide where dbt applies | 1.5 Out of scope |
+| N7 | Let T042 add data quality rules at any layer and record their results as measures, without rewriting transformations; T042 decides where the rules live and their format | [d002 › Q2](../designs/d002-requirements.md#guiding-questions), [task T042](../tasks.md) |
+
+Candidates:
+
 ### 1.3 Questions
 
 Main question: `<one sentence>`
