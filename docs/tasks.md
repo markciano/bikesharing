@@ -35,7 +35,7 @@
 | T035 | Storage and table format: where raw data and tables live, retention, table format; confirms or replaces capture (ADR-0011) | 3 | ✅ | T034 | [s010-storage-table-format.md](spikes/s010-storage-table-format.md) |
 | T045 | Security requirements: each component's spike adds them to d002 | 1 | ✅ | T034 |  |
 | T046 | Documentation conventions, as rules in `.claude/rules/docs/` (no design): wording (no AI-workflow wording in `docs/`; `TODO(TNNN):` format); references to sections, decisions, findings and ADRs, in the same doc and across docs; decision change-links (`extends`/`refines`/`replaces #N`, `→ #M`) loaded when a decision is added, not only at creation; ordered lists edited in one Edit; heading depth capped at h4; spike ignores moved to per-folder `.gitignore` files | 3 | ✅ | — |  |
-| T036 | Processing engine (single node) and pipeline language; its spike models the component's threats and adds new requirements to d002 | 3 | ⬜ | T035, T045 |  |
+| T036 | Processing engine (single node) and pipeline language; its spike models the component's threats and adds new requirements to d002 | 3 | 📝 | T035, T045 | [s011](spikes/s011-engine-pipeline-language.md) |
 | T037 | Execution target: where the pipeline runs and what schedules it; its spike models the component's threats and adds new requirements to d002 | 3 | ⬜ | T036 |  |
 | T038 | Visualization: tool and where it is published; its spike models the component's threats and adds new requirements to d002 | 2 | ⬜ | T034, T035, T037 |  |
 | T039 | Capture in production (parent; split into TNNN.M in its design) | 5 | ⬜ | T035 |  |
