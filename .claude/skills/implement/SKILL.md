@@ -13,7 +13,7 @@ Cycle: Produce → Review. Produce runs over several sessions of about 3 steps e
 
 - **Design step:** the owner asks for a step or a range of a design ("dNNN step 3", "steps 3–5"), in any wording. Follow the Step protocol.
 - **Spike step:** the same for a spike ("sNNN step 3"). Follow the Step protocol as adapted in [spike.md](spike.md).
-- **One-step change** (no design): propose (what, why) → owner approves → write the test, see it fail → apply → Change report.
+- **One-step change** (no design): propose (what, why) → owner approves → if it touches code, write the test, see it fail → apply → Change report.
 - **Review:** `/implement dNNN review`, in a fresh session once every step is ✅. Follow `review.md`.
 
 ## Step protocol
@@ -40,7 +40,7 @@ Commit: Follow Git conventions in CLAUDE.md.
 ```
 
 - **Step line:** ✅ if the Check passes, 🔄 or ⛔ otherwise. For a one-step change, "Change" instead of "Step N".
-- **Check:** the summary line only, literal. If it fails, the full output, literal. For a one-step change, the test run.
+- **Check:** the summary line only, literal. If it fails, the full output, literal. For a one-step change, the test run, if it touches code.
 - **Exceptions:** "none", or one line each for:
   - deviations, and their status (pending OK or approved);
   - files touched outside the step's Scope;
