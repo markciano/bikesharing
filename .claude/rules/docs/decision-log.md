@@ -8,6 +8,8 @@ paths:
 
 Apply to the Decision log of a spike report and the Decision summary of a design, each time an entry is added, not only when the document is created. Columns are described in the template.
 
-- **Log only:** an entry records the decision and the standard it follows (or the ADR for the deviation), in one line. The content goes in the section where it applies, and the entry links to it from Applies to.
+- **What reaches the owner:** ask the owner only what changes the result, the cost, the security, the scope or how something is measured. Anything else is resolved without asking, and the owner sees it on the edit's diff.
+- **What is logged:** only the decisions asked of the owner get an entry; anything else lives in its section and in Git.
+- **Log only:** an entry records the decision and the standard it follows (or the ADR for the deviation), in one line, and a short reason. The content goes in the section where it applies, and the entry links to it from Applies to.
 - **Change links:** a decision that changes an earlier one ends its Decision with `**extends #N**`, `**refines #N**` or `**replaces #N**`; the earlier one gets `**→ #M**` at the end of its Decision and is not otherwise rewritten. Both edits go in the same change.
-- **Current state in sections:** a section changed by a later decision, at any phase (framing, plan, steps, implementation), is rewritten as if written at once, with no trace of the earlier version, and ends with the entry that changed it in bold (`**#M**`); the history lives only in the log.
+- **Current state in sections:** a section states the final state, without the reasons, which live in the log; Decided at framing and Options considered keep their reasoning. A section changed later, at any phase (framing, plan, steps, implementation), is rewritten as if written at once, with no trace of the earlier version; if a logged decision changed it, it ends with that entry in bold (`**#M**`). The history lives only in the log and in Git.
