@@ -15,6 +15,5 @@ General principles are in `testing.md`; reasons and detail in the [testing strat
 - The expected bytes come from the fixture passed as a binding, not from a fetch through the mocked path.
 - No local mock verifies `encodeResponseBody: 'manual'`: do not write a mock-based test for it; a post-deploy smoke test covers it.
 - Files `test/unit/<module>.test.js` and `test/integration/<module>.test.js`; test names are plain sentences stating behaviour and condition.
-- Pin Node in `package.json` `engines` to a release inside the range the test tools support, not to the version installed on one machine.
 
 TODO(T039): update the `paths:` and this scope when the collector design fixes the layout (`collector/{bicing/,ambici/}`).
