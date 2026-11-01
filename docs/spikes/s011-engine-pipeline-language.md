@@ -10,16 +10,55 @@
 - Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
 - Current step: —
+- TODO(T036): decide the pipeline language (D3), then model the component's threats and add requirements to d002 (D4). If neither needs a run, propose closing the spike without Method and Steps.
 
 ## 1. Questions — what we need to know
 
 ### 1.1 Context
 
-T036 decides the single-node processing engine, then the pipeline language, which depends on the engine, and models the component's threats to add requirements to [d002](../designs/d002-requirements.md#requirements). It builds on [s010](s010-storage-table-format.md), which set Delta Lake on Cloudflare R2 and showed that `deltalake` writes and MERGEs there and that Polars and DuckDB read the table. All three decisions are expected to be settled by documents and arithmetic; a run is added only if the winning engine rests on an unknown that they cannot settle.
+T036 decides the single-node processing engine, then the pipeline language, which depends on the engine, and models the component's threats to add requirements to [d002](../designs/d002-requirements.md#requirements). It builds on [s010](s010-storage-table-format.md), which set Delta Lake on Cloudflare R2 and showed that `deltalake` writes and MERGEs there and that Polars and DuckDB read the table. The engine is settled by documents and arithmetic, with no run. The pipeline language and the threat model are expected to be settled the same way.
 
 ### 1.2 Decided at framing
 
 #### D1. Processing engine
+
+**Decision: DuckDB, with Polars as the fallback.** DuckDB scores 8.1 out of 10 in the weighted matrix, against 6.8 for Polars. It leads on the two criteria that come directly from the workload: reading nested `json.gz` from R2 with window functions and as-of joins, and reading Delta natively with pruning. No run is needed, because the only unknown that could change the choice is settled by documents: DuckDB exports Arrow tables and `write_deltalake` accepts them (Sources).
+
+What would change the engine:
+
+| Event | Where it shows | Action |
+|---|---|---|
+| The hand-off from DuckDB to `deltalake` fails on real data and a `CAST` does not fix it | First slice of T040 | Move to Polars |
+| A reference batch runs out of memory, even with smaller batches and spilling | First slice of T040, or the history load | Move to Polars, once confirmed that it copes |
+| DuckDB's reads break R2's quota and a lower cadence no longer meets [d002 › R3](../designs/d002-requirements.md#requirements) | R2 metrics in production | Re-evaluate, measuring Polars too |
+
+What would not change it:
+
+| Event | Why not | Action |
+|---|---|---|
+| Type mismatches | Fixed in the query | `CAST` |
+| Predicate overwrite fails | It belongs to `deltalake`, under any engine | Bounded MERGE |
+| The Delta extension cannot read something in our tables | There is a second read path | Read with `deltalake` and hand over through Arrow |
+| A DuckDB 2.0 bug | It belongs to the version, not the engine | Pin 1.5, supported until March 2027 |
+
+A later change migrates no data, since Delta is an open format; only the transformations are rewritten.
+
+Robustness: without portfolio value DuckDB leads 95 to 77, and without dbt fit 101 to 86. With Polars at 5 and DuckDB at 1 on portfolio value, Polars leads 102 to 100, the only case tested that reverses the result. Portfolio value is a reasoned judgement, since no job-ad data exists per engine, and pandas's scores rest mostly on general knowledge. Rejected: Polars (second; O1 likely needs custom code and it has no solid dbt adapter), `clickhouse-local`, pandas and DataFusion (lower scores).
+
+Decisions taken on the way:
+
+- **MERGE on real volumes needs no run.** All surviving candidates hand it to `deltalake`, so it does not separate them. Silver averages about 80 MB of Parquet per day ([s010 › Q1](s010-storage-table-format.md#answers)), and about 300 MB at the ×3.8 break-even of vehicles' estimated bytes per row ([s010 › F24](s010-storage-table-format.md#4-findings)), so a MERGE bounded to one day stays near 3 GB in memory, assuming ×10 over Parquet.
+- **DuckDB's reads are not counted before choosing.** This replaces the mitigation in [s010 › Not verified](s010-storage-table-format.md#not-verified), because no count would change the choice. On demand, the pipeline uses 3.7% of R2's free Class B quota. The risk appears only at 24/7 every 10 minutes, which reaches €2 at ×2.1 reads per file ([s010 › F24](s010-storage-table-format.md#4-findings)), and a lower commit cadence reverses it. Its reads are measured in production through R2's per-bucket metrics.
+
+Inputs for T040:
+
+- Choose between partition overwrite and a bounded MERGE, and confirm predicate overwrite on R2.
+- Use `to_arrow_table` or `to_arrow_reader`: DuckDB 2.0 removed `fetch_arrow_table` and similar methods after `con.execute()`.
+- Read in batches through `con.sql()`, since after `con.execute()` the whole query runs before the first batch.
+- Check whether the installed `deltalake` expects `aws_conditional_put` or `conditional_put`, since sources differ.
+- Pin DuckDB after the November 2.0 patch ([ADR-0016](../decisions/0016-runtime-versions-pinned-per-component.md)).
+
+Evaluation behind the decision follows.
 
 Workload the engine must cover. It traces criteria to requirements and is not a pipeline design:
 
@@ -73,16 +112,26 @@ Anchors (2 and 4 are in between):
 |---|---|---|---|
 | Portfolio value (5) | Niche, almost absent from data engineering job ads | Recognised and growing, appears in some job ads | Widely requested standard |
 | Workload fit (4) | Lacks window functions, or they must be hand-written | Covers O4–O6, but O1 needs custom Python code | Reads nested `json.gz` from R2, with native window functions and as-of join |
-| Delta integration on R2 (4) | Cannot filter: downloads the whole table | Filters by partition, but only through `deltalake` or custom code | Reads Delta natively, filters by partition and file statistics, and works with S3-compatible endpoints |
+| Delta read on R2 (4) | Cannot filter: downloads the whole table | Filters by partition, but only through `deltalake` or custom code | Reads Delta natively, filters by partition and file statistics, and works with S3-compatible endpoints |
 | Maturity (3) | ≥ 1.0, but something needed is experimental | ≥ 1.0, with what is needed stable but recent (under 6 months) | Over 2 years since 1.0, with what is needed stable and well documented |
 | Operational simplicity (3) | Needs a running service | A separate binary, or needs extra setup | An in-process library, installed with the dependencies and testable locally with no infrastructure |
 | Memory behaviour (3) | In memory only | Spills to disk for some operations, or not by default | Spills to disk across O1–O8, with a configurable limit |
 | dbt fit (3) | No maintained adapter | Maintained adapter, but writing Delta needs custom code | Maintained adapter and incremental Delta writes on S3-compatible storage |
 | Learning value (2) | No new concepts | One new core concept | Several, such as a query optimizer, vectorized execution or out-of-core processing |
 
-- TODO(T036): scores and winner.
-- **MERGE on real volumes needs no run.** All surviving candidates hand it to `deltalake`, so it does not separate them. Silver averages about 80 MB of Parquet per day ([s010 › Q1](s010-storage-table-format.md#answers)), and about 300 MB at the ×3.8 break-even of vehicles' estimated bytes per row ([s010 › F24](s010-storage-table-format.md#4-findings)), so a MERGE bounded to one day stays near 3 GB in memory, assuming ×10 over Parquet. The choice between partition overwrite and a bounded MERGE belongs to T040, which also confirms predicate overwrite on R2.
-- **DuckDB's reads are not counted before choosing.** This replaces the mitigation in [s010 › Not verified](s010-storage-table-format.md#not-verified), because no count would change the choice. On demand, the pipeline uses 3.7% of R2's free Class B quota. The risk appears only at 24/7 every 10 minutes, which reaches €2 at ×2.1 reads per file ([s010 › F24](s010-storage-table-format.md#4-findings)), and a lower commit cadence reverses it. If DuckDB wins, its reads are measured in production through R2's per-bucket metrics.
+Scores (total = Σ score × weight, maximum 135, normalised to 0–10), with facts checked on 2026-11-01:
+
+| Criterion (weight) | DuckDB | Polars | `clickhouse-local` | pandas | DataFusion |
+|---|---|---|---|---|---|
+| Portfolio value (5) | 3: recognised, 3.3% in Stack Overflow 2025 | 3: recognised; no comparable survey figure | 3: recognised, 2.4% in Stack Overflow 2025 | 4: widely known | 1: not in the survey |
+| Workload fit (4) | 5: `read_json` on `json.gz` from R2, `UNNEST`, windows, `ASOF JOIN` | 3: windows and `join_asof`; gzip not documented, so O1 likely needs custom Python | 4: `s3()` detects gzip, `ASOF JOIN`, `lagInFrame`; nested files likely need `JSONExtract` | 3: `shift`, `merge_asof`; JSON handled in Python | 2: windows, no as-of join in a release; nested single objects not confirmed |
+| Delta read on R2 (4) | 5: native, partition and statistics pruning; read the table on R2 ([s010 › F18](s010-storage-table-format.md#4-findings)) | 4: `scan_delta` read the table on R2 (F18); open issue on file skipping | 3: native, but pruning not documented and R2 not officially documented | 3: only through `deltalake` | 3: through `deltalake` providers; not confirmed on R2 |
+| Maturity (3) | 3: 1.0 in 2024, but 2.0 is 11 days old and its notes advise waiting for the November patch for critical workloads | 3: 1.0 in 2024, but 2.0 and out-of-core work are under a month old | 4: long-standing, stable engine; calendar versions | 5: stable for years | 3: no 1.0 line; spill work is recent |
+| Operational simplicity (3) | 5: in-process library | 5: in-process library | 3: separate binary, called as a subprocess | 5: in-process library | 5: in-process library |
+| Memory behaviour (3) | 4: sort, group by, join and windows spill, with exceptions such as `string_agg` | 3: on by default; joins not confirmed | 3: opt-in per operator; windows not confirmed | 1: in memory only | 2: sort and some joins; windows buffer in memory |
+| dbt fit (3) | 3: `dbt-duckdb` is maintained; writing Delta needs custom code | 2: `dbt-polars` is Beta, with one maintainer | 1: `dbt-clickhouse` needs a server and does not mention Delta | 1: no adapter | 1: `dbt-datafusion` is an abandoned scaffold |
+| Learning value (2) | 5: optimizer, vectorized execution, out-of-core | 5: optimizer, lazy evaluation, out-of-core | 4: optimizer, vectorized execution | 1: no new concepts | 5: logical and physical plans, vectorized execution |
+| **Total** | **110 → 8.1** | **92 → 6.8** | **84 → 6.2** | **82 → 6.1** | **68 → 5.0** |
 
 #### D2. Budget shares
 
@@ -223,4 +272,12 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 ## 6. Sources
 
--
+Checked on 2026-11-01. Further facts in D1 come from each project's current documentation and release notes.
+
+- DuckDB: [2.0 announcement](https://duckdb.org/2026/10/21/announcing-duckdb-200), [Delta extension](https://duckdb.org/docs/2.0/core_extensions/delta.html), [export to Arrow](https://duckdb.org/docs/2.0/guides/python/export_arrow.html), [loading JSON](https://duckdb.org/docs/2.0/data/json/loading_json.html), [S3 API](https://duckdb.org/docs/2.0/core_extensions/httpfs/s3api.html), [tuning workloads](https://duckdb.org/docs/2.0/guides/performance/how_to_tune_workloads.html).
+- `deltalake`: [writing](https://delta-io.github.io/delta-rs/latest/usage/writing/), [`DeltaTable`](https://delta-io.github.io/delta-rs/latest/api/delta_table/), [S3-like stores](https://delta-io.github.io/delta-rs/latest/integrations/object-storage/s3-like/), [issue #4614](https://github.com/delta-io/delta-rs/issues/4614).
+- Polars: [2.0.0](https://github.com/pola-rs/polars/releases/tag/py-2.0.0) and [2.1.0](https://github.com/pola-rs/polars/releases/tag/py-2.1.0) release notes.
+- ClickHouse: [`deltaLake` table function](https://clickhouse.com/docs/sql-reference/table-functions/deltalake), [spill settings](https://clickhouse.com/docs/reference/settings/session-settings/max-bytes.md).
+- DataFusion: [configuration](https://datafusion.apache.org/user-guide/configs.html), [window spill discussion](https://github.com/apache/datafusion/discussions/26425).
+- dbt: [`dbt-duckdb`](https://github.com/duckdb/dbt-duckdb), [`dbt-polars`](https://pypi.org/project/dbt-polars/), [`dbt-clickhouse`](https://github.com/ClickHouse/dbt-clickhouse), [`dbt-datafusion`](https://libraries.io/pypi/dbt-datafusion), [licensing](https://docs.getdbt.com/docs/dbt-licensing).
+- Market: [Stack Overflow Developer Survey 2025](https://survey.stackoverflow.co/2025/technology).
