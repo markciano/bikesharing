@@ -10,13 +10,13 @@
 - Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
 - Current step: —
-- TODO(T036): model the component's threats and add requirements to d002 (D4). If it needs no run, propose closing the spike without Method and Steps.
+- TODO(T036): triage leaves no run, so propose closing the spike without Method and Steps. Then record the engine, the pipeline language and the budget split in ADRs and in `docs/architecture.md`, and take the task to ✅.
 
 ## 1. Questions — what we need to know
 
 ### 1.1 Context
 
-T036 decides the single-node processing engine, then the pipeline language, which depends on the engine, and models the component's threats to add requirements to [d002](../designs/d002-requirements.md#requirements). It builds on [s010](s010-storage-table-format.md), which set Delta Lake on Cloudflare R2 and showed that `deltalake` writes and MERGEs there and that Polars and DuckDB read the table. The engine and the pipeline language are settled by documents and arithmetic, with no run. The threat model is expected to be settled the same way.
+T036 decides the single-node processing engine, then the pipeline language, which depends on the engine, and models the component's threats to add requirements to [d002](../designs/d002-requirements.md#requirements). It builds on [s010](s010-storage-table-format.md), which set Delta Lake on Cloudflare R2 and showed that `deltalake` writes and MERGEs there and that Polars and DuckDB read the table. The engine, the pipeline language and the threat model are settled by documents and arithmetic, with no run.
 
 ### 1.2 Decided at framing
 
@@ -240,6 +240,51 @@ Scores (total = Σ score × weight, maximum 120, normalised to 0–10), with fac
 | Portability to Polars (1) | 3: Polars SQL has `LAG` and `UNNEST`; `ASOF` uses another syntax | 3: same as A | 1: no path | 3: own backend, with 9 of 22 queries failing in a 2024 benchmark |
 | **Total** | **109 → 9.1** | **104 → 8.7** | **72 → 6.0** | **86 → 7.2** |
 
+#### D4. Pipeline security
+
+**Decision: five new requirements, [d002 › R19–R23](../designs/d002-requirements.md#requirements), and the other threats documented without a requirement.** Threats are listed with STRIDE and controls follow least privilege, as in [s010 › D7](s010-storage-table-format.md#d7-storage-security-baseline). The scope is the engine and the pipeline code. [ADR-0023](../decisions/0023-storage-security-baseline.md) and R15–R18 cover tokens, buckets and the bronze lock, and T037 covers where the pipeline runs, how it receives secrets and its network.
+
+| # | Threat (STRIDE) | Impact | Control | Requirement |
+|---|---|---|---|---|
+| A1 | A value from a feed or archive ends up inside a query (Tampering) | Unplanned SQL runs with the pipeline's token; `sql()` accepts several statements in one string | Run only SQL versioned in the repository; captured values never enter the query text | R19 |
+| A2 | Unplanned SQL reads or writes beyond what the pipeline needs (Elevation of privilege) | DuckDB can reach local and remote files | Prevented by R19 and bounded by R15 and R17; restricting DuckDB's paths is hardening to try in T040 | None |
+| A3 | An altered extension or dependency, since DuckDB can download extensions at run time (Tampering) | Third-party code runs with the pipeline's credentials | Pinned versions ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)), installed ahead of the run; no downloads at run time | R20 |
+| A4 | A malicious or corrupt `.7z`: decompression bomb or paths outside the folder (Denial of service, Tampering) | Full disk or overwritten files | Size limit and a bounded folder; the archive is rejected and recorded as a gap (R9) | R21 |
+| A5 | Credentials end up in logs, queries or engine files (Information disclosure) | Same as a leaked credential in [ADR-0023](../decisions/0023-storage-security-baseline.md) | Credentials held only in memory, never in logs or query text | R22 |
+| A6 | A failure or loop repeats reads and writes with no end (Denial of service) | R2 cost breaks R4 (denial of wallet) | Limited retries and a time limit, with an alert to the owner | R23 |
+| A7 | A bug or a leak corrupts silver or gold (Tampering) | Wrong data published | Rebuilt from bronze (R13); damage bounded by R15 and R17 | None |
+| A8 | No way to tell which run changed what (Repudiation) | Low: there is one operator | Accepted: Delta's commit log gives a basic trace | None |
+| A9 | Data leaks through DuckDB's temporary files (Information disclosure) | Low: the data comes from public feeds | Accepted; reviewed in T037 once it is known where the pipeline runs | None |
+| A10 | Something impersonates a party the pipeline deals with (Spoofing) | Considered, with no threat specific to this component | The pipeline exposes no entry point; spoofed feeds belong to capture and the pipeline's identity on its machine to T037 | None |
+
+Restricting DuckDB's paths (A2) is not a requirement, because it may not be achievable with R2 and Delta today, and a DuckDB maintainer commented that these settings do not replace real sandboxing against untrusted SQL (issue 24695):
+
+- The allow-lists grant write as well as read (issue 28083, reproduced on 2.0.0).
+- Allowing `s3://` prefixes depends on a fix merged in October 2026 that is not confirmed in the released package; `r2://` and the `delta` extension are not confirmed either.
+- HTTPS under the lock requires allow-listing the CA bundle path, which SQL can then write to.
+
+Risk kept: unplanned SQL could still touch local files if R19 were ever broken.
+
+No run is needed: the open checks go to T040, and none changes what is required.
+
+Inputs for T040:
+
+- Try restricting DuckDB's paths with `enable_external_access` on R2 and Delta, as hardening.
+- Disable `autoinstall_known_extensions` and `allow_community_extensions`, which are on by default. List the extensions the installed package already includes with `duckdb_extensions()`, and install the others ahead of the run.
+- Use `py7zr` 1.1.4 or newer if it extracts the archives, and set `max_extract_size` explicitly, since its default is not confirmed.
+- Use temporary secrets, since persistent ones are stored unencrypted. Check that credentials do not reach logs, since their redaction in logs is not confirmed and `deltalake` logs store details at debug level.
+- Set the time limit with `interrupt()` or in T037's execution target, since DuckDB documents no query timeout.
+
+Requirements transferred to [d002 › Requirements](../designs/d002-requirements.md#requirements):
+
+| R | Threat | Evidence |
+|---|---|---|
+| R19 | A1 | [DuckDB Python DB API](https://duckdb.org/docs/2.0/clients/python/dbapi.html) passes values separately from the SQL text |
+| R20 | A3 | [DuckDB securing guide](https://duckdb.org/docs/2.0/operations_manual/securing_duckdb/overview.html): extensions run with the process's privileges, and automatic installation can be disabled |
+| R21 | A4 | [`py7zr` changelog](https://py7zr.readthedocs.io/en/latest/Changelog.html): recent fixes for path traversal and decompression bombs |
+| R22 | A5 | [DuckDB secrets manager](https://duckdb.org/docs/2.0/configuration/secrets_manager.html): temporary secrets stay in memory, persistent ones are unencrypted files |
+| R23 | A6 | [DuckDB configuration](https://duckdb.org/docs/2.0/configuration/overview.html): no query timeout among the settings read; the gap in R8, which alerts only on capture |
+
 ### 1.3 Questions
 
 Main question: `<one sentence>`
@@ -375,3 +420,4 @@ Checked on 2026-11-01. Further facts in D1 come from each project's current docu
 - Ibis: [release notes](https://ibis-project.org/release_notes), [issue 12196](https://github.com/ibis-project/ibis/issues/12196), [DuckDB backend](https://ibis-project.org/backends/duckdb), [2024 benchmark](https://ibis-project.org/posts/ibis-bench/), [download statistics](https://pypistats.org/packages/ibis-framework), [`dbt-ibis`](https://pypi.org/project/dbt-ibis/0.7.0/).
 - Polars SQL: [functions](https://docs.pola.rs/api/python/stable/reference/sql/functions/index.html), [clauses](https://docs.pola.rs/api/python/stable/reference/sql/clauses.html).
 - Data quality: [dbt data tests](https://docs.getdbt.com/docs/build/data-tests), [Pandera with Ibis](https://pandera.readthedocs.io/en/stable/ibis.html).
+- Security, for D4: [DuckDB issue 28083](https://github.com/duckdb/duckdb/issues/28083), [DuckDB PR 27412](https://github.com/duckdb/duckdb/pull/27412), [DuckDB issue 24695](https://github.com/duckdb/duckdb/issues/24695), [DuckDB extensions](https://duckdb.org/docs/2.0/extensions/installing_extensions.html).

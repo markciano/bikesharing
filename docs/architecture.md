@@ -35,7 +35,7 @@ Functional requirements:
 |---|---|---|---|---|
 | 1 | Current station status is recent, and stale data is never shown as current | Currentness (ISO/IEC 25012) | Live station status (Q1) is the visualization's main view | [d002 › R3, R7](designs/d002-requirements.md#requirements) |
 | 2 | Silver and gold can be caught up and rebuilt from bronze | Recoverability (ISO/IEC 25010) | Stops and model changes must not lose data | [d002 › R11, R13](designs/d002-requirements.md#requirements) |
-| 3 | Each component and user reaches only the data and access its role needs, and data that cannot be rebuilt cannot be deleted or altered | Confidentiality, Integrity (ISO/IEC 25010) | Data and services run in the cloud, and the visualization is open to the public | [d002 › R1, R15–R18](designs/d002-requirements.md#requirements) |
+| 3 | Each component and user reaches only the data and access its role needs, and data that cannot be rebuilt cannot be deleted or altered | Confidentiality, Integrity (ISO/IEC 25010) | Data and services run in the cloud, and the visualization is open to the public | [d002 › R1, R15–R22](designs/d002-requirements.md#requirements) |
 | 4 | Every gap is recorded and attributed to its cause | Completeness (ISO/IEC 25012) | Measures derived from consecutive counts are only trustworthy when their gaps are known | [d002 › R9, R14](designs/d002-requirements.md#requirements) |
 
 Each goal is made measurable by the scenarios in §10.
@@ -44,7 +44,7 @@ Each goal is made measurable by the scenarios in §10.
 
 | Role | Expectations | Source |
 |---|---|---|
-| Owner | Builds and operates the platform; is alerted when capture stops or cost is forecast over budget | [d002 › R8, R10](designs/d002-requirements.md#requirements) |
+| Owner | Builds and operates the platform; is alerted when capture stops, a pipeline run fails or cost is forecast over budget | [d002 › R8, R10, R23](designs/d002-requirements.md#requirements) |
 | Portfolio reviewers | Data engineering skills shown in practice: near-real-time capture, batch archive loading, medallion layers, industry standards | [d002 › Context](designs/d002-requirements.md#context) |
 | Public visitors | Current and historical station data, without login | [d002 › R1](designs/d002-requirements.md#requirements) |
 | Data publishers ([AMBici](sources/ambici.md), [Bicing](sources/bicing.md)) | Attribution as each licence requires | [d002 › R2](designs/d002-requirements.md#requirements) |
@@ -138,6 +138,11 @@ Quality scenarios that make the goals in §1.2 measurable:
 | QS10 | Integrity | A locked bronze object is deleted or overwritten | The store refuses it | [d002 › R16](designs/d002-requirements.md#requirements) |
 | QS11 | Integrity | The pipeline writes to bronze | The store refuses it | [d002 › R17](designs/d002-requirements.md#requirements) |
 | QS12 | Confidentiality | Data is requested without credentials | It is denied, except what the visualization publishes | [d002 › R18](designs/d002-requirements.md#requirements) |
+| QS13 | Integrity | Captured data holds text that looks like SQL | It is handled as a value and never executed | [d002 › R19](designs/d002-requirements.md#requirements) |
+| QS14 | Integrity | The pipeline starts a run | It uses only pinned code installed ahead of the run, with no downloads | [d002 › R20](designs/d002-requirements.md#requirements) |
+| QS15 | Integrity | A history archive exceeds the size limit or holds a path outside its folder | It is rejected, the gap is recorded and the other months keep loading | [d002 › R21](designs/d002-requirements.md#requirements) |
+| QS16 | Confidentiality | A pipeline run writes logs and engine files | They hold no storage credentials | [d002 › R22](designs/d002-requirements.md#requirements) |
+| QS17 | Cost (§2) | A pipeline run fails or exceeds its time limit | It stops after a limited number of retries and the owner is alerted | [d002 › R23](designs/d002-requirements.md#requirements) |
 
 - TODO(T037): capture completeness target.
 - TODO(T042): data quality checks and targets.

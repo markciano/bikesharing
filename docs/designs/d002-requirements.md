@@ -62,6 +62,11 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 - **R16** The solution shall prevent deleting or overwriting bronze data that cannot be rebuilt: captured objects, capture logs and history archives.
 - **R17** The solution shall give write access to bronze only to capture and to the one-off history load.
 - **R18** The solution shall keep stored data private, except what the visualization publishes.
+- **R19** The pipeline shall run only SQL versioned in the repository, and shall never place values taken from captured data in the query text.
+- **R20** The pipeline shall run only pinned code installed ahead of the run, and shall not download extensions or dependencies at run time.
+- **R21** If a history archive exceeds the extraction size limit or holds a path outside its working folder, then the solution shall reject it, record the gap and keep loading the other months.
+- **R22** The pipeline shall not write storage credentials to logs, query text or engine files.
+- **R23** If a pipeline run fails or exceeds its time limit, then the solution shall stop after a limited number of retries and alert the owner.
 
 ### Out of scope
 
