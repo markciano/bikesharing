@@ -23,16 +23,15 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
 
 ## How the session runs
 
-- **One question per turn.** Ask in the owner's domain terms. When a question touches a technology, explain it in 2–3 lines first. What reaches the owner and what is logged follow `.claude/rules/docs/decision-log.md`.
+- **Asking.** Ask in the owner's domain terms. When a question touches a technology, explain it in 2–3 lines first.
+- **What reaches the owner.** What reaches the owner and what is logged follow `.claude/rules/docs/decision-log.md`.
 - **When the owner lacks the criterion to decide,** do not press for an answer. Give what each option gains and loses and the orders of magnitude involved, and prefer the simpler option when the decision is reversible.
-- **Look things up when a question needs it.** Read the repo, ADRs, earlier spikes or other docs only to answer a specific question, announced in one line, within the reading budget in CLAUDE.md.
 - **Optional sections.** At the start of each block, say in one line which optional sections apply and which do not. Those that do not apply are removed.
-- **Write as you go.** Write each section as soon as it is clear; the owner approves on the edit's diff.
-- **Out of scope.** Anything out of scope is proposed to the owner as a new row in `docs/tasks.md`.
 - **The data that decides.** A figure behind a decision comes from the data that decides the question, usually its most demanding case, named beforehand.
+- **Write as you go.** Write each section as soon as it is clear; the owner approves on the edit's diff.
+- **Out of scope.** Anything out of scope, whenever it comes up, goes in Out of scope and is proposed to the owner as a new row in `docs/tasks.md`.
 - **Commit points.** When a decision or block closes, tell the owner it is a commit point and propose the message.
 - **Documents a decision changes.** What cites only requirements goes in the decision's commit. What cites an ADR goes after the spike closes, in the commit of that ADR.
-- **Status.** Update it before the session ends.
 
 ## 1. Questions
 
@@ -55,7 +54,7 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
 5. **Refine.** Ask about the gaps, one per turn: with 2–3 options and a recommendation when there is a reasonable range, open otherwise. Check for: the decision the spike unblocks; what earlier spikes or docs already answer, so it is not measured again; what is answered and what is only observed; risks that would end the spike early.
 6. **Playback.** Write Context and Questions. The main question is answered by a verdict; each Q is answerable with evidence. If the questions serve two independent decisions, propose splitting the spike now.
 7. **Exit criteria.** One per turn: measurable threshold, hard cut or guide. Then the timebox and what ends the run, and whether one variant meeting the criteria is enough. They are fixed here, before anything runs.
-8. **Out of scope** and **Open questions**, whenever they come up.
+8. **Open questions**, whenever they come up.
 9. **Approval.** With no Open questions left, ask for the Questions approval. Once approved, check Questions in Phase.
 
 ## 2. Method
