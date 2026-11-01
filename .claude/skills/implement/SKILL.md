@@ -20,7 +20,7 @@ Cycle: Produce → Review. Produce runs over several sessions of about 3 steps e
 
 A step with Who: Owner is run by the owner: give its commands in code blocks and what to report back; never run them yourself, even local or read-only ones.
 
-1. **Precondition.** Read only the design's Status, the current step and the Reads listed in the step. Stop and report if State is not Ready 🎬 or In progress 🔄, if a previous step is not ✅, or if a ✅ step has no commit in `git log`.
+1. **Precondition.** Read only the design's Status, the current step and the Reads listed in the step. Stop and report if State is not Ready 🎬 or In progress 🔄, if a previous step is not ✅, or if a ✅ step has no commit in `git log`. On the first step, also read 3.1 Prerequisites and ask the owner to confirm they are done.
 2. Work only within the step's Scope and the File layout. Anything else is a deviation (like a change to Spec, File layout, a component contract, Test plan): set the step to ⛔, stop and report it, do not decide it. A deviation is valid only with the owner's OK. Once given, write it at once in the design's 4. Close › Decisions taken during implementation. Record only what changes.
 3. **Tests first.** Write the step's tests from the Test plan and run them: they must fail (red). Then write the code until they pass (green). Tests may be added, never dropped.
 4. Run the Check and, if the step touches code, all unit and integration tests of the touched component, not only the step's (local layer, for reference see [testing strategy](../../../docs/testing-strategy.md)).

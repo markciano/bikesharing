@@ -73,7 +73,7 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
 
 ## 3. Steps
 
-1. **Prerequisites.** List what the owner prepares outside the repo before Step 1 (installs on the local machine, accounts, access), with exact versions decided now. The spike goes to Ready only when they are done.
+1. **Prerequisites.** List what the owner prepares outside the repo before Step 1 (installs on the local machine, accounts, access), with exact versions decided now.
 2. Propose the step skeleton as a compact table (step · title · who · gate · files); the owner adjusts order and cuts. Shape it so that:
    - the cheapest test of the riskiest assumption runs first, with a Gate, before a full variant is built on it;
    - code and the Owner action that runs it are separate steps;

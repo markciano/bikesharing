@@ -53,7 +53,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 
 Starts only when Phase shows Plan review checked.
 
-1. **Prerequisites.** List what the owner prepares outside the repo before Step 1 (installs on the local machine, accounts, access), with exact versions decided now. The design goes to Ready only when they are done.
+1. **Prerequisites.** List what the owner prepares outside the repo before Step 1 (installs on the local machine, accounts, access), with exact versions decided now.
 2. Propose the step skeleton as a compact table (step · title · R · files); the owner adjusts order and cuts.
 3. Write each step in full.
 4. Ask for the Steps approval. Once approved, check Steps in Phase and tell the owner to run `/design dNNN review-steps` in a new session. The design goes to Ready when that review closes.
