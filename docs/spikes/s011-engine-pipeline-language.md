@@ -9,7 +9,7 @@
 - Phase: [x] Questions · Method, Steps and Steps review do not apply: triage leaves no run
 - Started: 2026-11-01 · Finished: 2026-11-01
 - Current step: —
-- TODO(T036): record the budget split in one commit: the ADR together with its lines in `docs/architecture.md`. Propose a line in the `/spike` skill that fixes this order, after reading `spike.md` in `/implement`: what cites only requirements goes with its decision; what cites an ADR goes after the spike closes and the ADR exists. Then take the task to ✅.
+- TODO(T036): propose a line in the `/spike` skill that fixes this order, after reading `spike.md` in `/implement`: what cites only requirements goes with its decision; what cites an ADR goes after the spike closes and the ADR exists. Then take the task to ✅.
 
 ## 1. Questions — what we need to know
 
@@ -147,7 +147,6 @@ The [d002 › R4](../designs/d002-requirements.md#requirements) limit of €10 p
 - The pipeline gets the largest share because it is the only component that may need an always-on machine.
 - Rejected: 6 / 2 / 0 (pipeline, visualization, reserve), because with no reserve any deviation breaks R4.
 - The shares are reversible: if T037 or T038 find real prices above their share, they reopen the split against the reserve.
-- TODO(T036): when the spike closes, record the split in an ADR and in `docs/architecture.md` § Constraints.
 
 #### D3. Pipeline language
 
