@@ -10,13 +10,13 @@
 - Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
 - Current step: —
-- TODO(T036): finish D3 (score how transformations are written), then model the component's threats and add requirements to d002 (D4). If neither needs a run, propose closing the spike without Method and Steps.
+- TODO(T036): model the component's threats and add requirements to d002 (D4). If it needs no run, propose closing the spike without Method and Steps.
 
 ## 1. Questions — what we need to know
 
 ### 1.1 Context
 
-T036 decides the single-node processing engine, then the pipeline language, which depends on the engine, and models the component's threats to add requirements to [d002](../designs/d002-requirements.md#requirements). It builds on [s010](s010-storage-table-format.md), which set Delta Lake on Cloudflare R2 and showed that `deltalake` writes and MERGEs there and that Polars and DuckDB read the table. The engine is settled by documents and arithmetic, with no run. The pipeline language and the threat model are expected to be settled the same way.
+T036 decides the single-node processing engine, then the pipeline language, which depends on the engine, and models the component's threats to add requirements to [d002](../designs/d002-requirements.md#requirements). It builds on [s010](s010-storage-table-format.md), which set Delta Lake on Cloudflare R2 and showed that `deltalake` writes and MERGEs there and that Polars and DuckDB read the table. The engine and the pipeline language are settled by documents and arithmetic, with no run. The threat model is expected to be settled the same way.
 
 ### 1.2 Decided at framing
 
@@ -156,7 +156,23 @@ The pipeline language covers two things: the host language, which reads from R2,
 
 **Host language: Python.** [d002 › Context](../designs/d002-requirements.md#context) names Python as part of what the portfolio shows, and MERGE depends on `deltalake` (D1), whose bindings are Python and Rust. Rust is not scored, because no result would change the choice.
 
-TODO(T036): decide the form of the transformations with a weighted decision matrix.
+**Transformations: SQL.** Models in `.sql` files, which DuckDB executes. Python only directs: it runs the models in order, extracts the `.7z` archives if DuckDB cannot read them directly, and hands results to `deltalake`. SQL scores 9.1 out of 10 in the weighted matrix, against 8.7 for Mixed and 6.0 for DuckDB's Python API. No operation in O1–O7 was found that SQL does not cover, and without one Mixed is the same as SQL. No run is needed, because no result would change the choice: if parameters do not work in file paths, SQL and Mixed drop equally on Reuse and SQL still leads.
+
+What would change the form:
+
+| Event | Where it shows | Action |
+|---|---|---|
+| A transformation cannot be written in SQL | T040 | Only that step goes to Python, with the reason documented |
+
+Robustness: without Team practice, SQL leads Mixed and the Python API 84 to 79 and 62, and without Learning curve 99 to 96 and 68. With Team practice inverted (SQL at 1, Python API at 5), SQL still leads the Python API 89 to 87. Team practice is a reasoned judgement, since no job-ad data exists per form and the survey figure measures SQL use in general, not in data teams. Learning curve reflects the owner's skills: very strong SQL, basic Python. Ibis, even if fixed, would score 86 against SQL's 109, so it is not worth waiting for. Rejected: Mixed (second; same as SQL unless an operation falls short), DuckDB's Python API (lower score; windows and joins still need SQL strings) and Ibis (fails C4).
+
+Inputs for T040:
+
+- Check whether `con.sql()` accepts parameters: D1 reads batches through `con.sql()`, but the documentation read confirms parameters only for `execute()`.
+- Check whether parameters work in `read_json` file paths; the documentation read shows them only as values.
+- Check that `dbt-duckdb` is compatible with DuckDB 2.0, which requires Python 3.11 or newer.
+
+Evaluation behind the decision follows.
 
 Needs the form must cover:
 
@@ -200,6 +216,29 @@ Anchors (2 and 4 are in between):
 | Data quality (3) | N7 | Rules go inside the transformations | Rules are separate, but storing their results needs custom code | Rules are separate pieces over any result, and their results are stored by the same mechanism as the data |
 | Learning curve (2) | — | Requires mastering programming abstractions before being productive | The essentials are learned in weeks from official documentation | Well-documented concepts that map to those of a visual tool |
 | Portability to Polars (1) | D1 | Full rewrite | Part is rewritten | Works unchanged |
+
+Cut results (checked on 2026-11-01):
+
+| Candidate | Result | Fact |
+|---|---|---|
+| A. SQL | Passes | DuckDB's native interface; `to_arrow_reader` hands the result to `deltalake` |
+| B. DuckDB's Python API | Passes | Documented with no stability warning in 2.0, though with breaking changes |
+| D. Mixed | Passes | Same as A and B |
+| C. Ibis | Fails C4 | No release supports DuckDB 2.0: `to_pyarrow_batches` fails (issue 12196, open), with 35 of 51 export tests failing as reported there; the latest release is from February 2026 |
+
+Scores (total = Σ score × weight, maximum 120, normalised to 0–10), with facts checked on 2026-11-01. Ibis is scored only to test whether a fix would be worth waiting for:
+
+| Criterion (weight) | A. SQL | D. Mixed | B. Python API | C. Ibis (hypothetical) |
+|---|---|---|---|---|
+| Team practice (5) | 5: SQL at 58.6% in Stack Overflow 2025, and the basis of dbt | 5: same as A | 2: no usage data | 3: 3.3M downloads a month, users named by the project itself |
+| Workload fit (4) | 5: `read_json`, `UNNEST`, windows, `ASOF JOIN`, `AT TIME ZONE` | 5: same as A | 3: windows and join conditions need SQL strings | 4: native `lag` and `asof_join`; time zones not confirmed |
+| Testing (3) | 4: in-memory database and `pytest`, with no official guide | 4: same as A | 4: same as A | 5: native `ibis.memtable` |
+| Reuse (3) | 4: `$name` parameters work for values; file paths not confirmed | 4: same as A | 5: function parameters | 5: function parameters |
+| Path to dbt (3) | 5: a `SELECT` is a model; `ref()` replaces table names | 4: Python parts become Python models | 3: Python models, or a manual rewrite | 3: community `dbt-ibis`, status not confirmed |
+| Data quality (3) | 4: a rule is a `SELECT`; storing results needs a small runner | 4: same as A | 3: tools consume mostly SQL | 3: Pandera, described as less mature |
+| Learning curve (2) | 5: very strong SQL | 4: Python parts rely on basic Python | 2: Python, with only a method reference | 2: a tutorial for SQL users, but still Python |
+| Portability to Polars (1) | 3: Polars SQL has `LAG` and `UNNEST`; `ASOF` uses another syntax | 3: same as A | 1: no path | 3: own backend, with 9 of 22 queries failing in a 2024 benchmark |
+| **Total** | **109 → 9.1** | **104 → 8.7** | **72 → 6.0** | **86 → 7.2** |
 
 ### 1.3 Questions
 
@@ -332,3 +371,7 @@ Checked on 2026-11-01. Further facts in D1 come from each project's current docu
 - DataFusion: [configuration](https://datafusion.apache.org/user-guide/configs.html), [window spill discussion](https://github.com/apache/datafusion/discussions/26425).
 - dbt: [`dbt-duckdb`](https://github.com/duckdb/dbt-duckdb), [`dbt-polars`](https://pypi.org/project/dbt-polars/), [`dbt-clickhouse`](https://github.com/ClickHouse/dbt-clickhouse), [`dbt-datafusion`](https://libraries.io/pypi/dbt-datafusion), [licensing](https://docs.getdbt.com/docs/dbt-licensing).
 - Market: [Stack Overflow Developer Survey 2025](https://survey.stackoverflow.co/2025/technology).
+- DuckDB, for D3: [Python migration to 2.0](https://duckdb.org/docs/2.0/clients/python/migration.html), [relational API](https://duckdb.org/docs/2.0/clients/python/relational_api.html), [prepared statements](https://duckdb.org/docs/2.0/sql/query_syntax/prepared_statements.html), [Python DB API](https://duckdb.org/docs/2.0/clients/python/dbapi.html), [`ASOF JOIN`](https://duckdb.org/docs/2.0/guides/sql_features/asof_join.html), [time zones](https://duckdb.org/docs/2.0/sql/functions/timestamptz.html).
+- Ibis: [release notes](https://ibis-project.org/release_notes), [issue 12196](https://github.com/ibis-project/ibis/issues/12196), [DuckDB backend](https://ibis-project.org/backends/duckdb), [2024 benchmark](https://ibis-project.org/posts/ibis-bench/), [download statistics](https://pypistats.org/packages/ibis-framework), [`dbt-ibis`](https://pypi.org/project/dbt-ibis/0.7.0/).
+- Polars SQL: [functions](https://docs.pola.rs/api/python/stable/reference/sql/functions/index.html), [clauses](https://docs.pola.rs/api/python/stable/reference/sql/clauses.html).
+- Data quality: [dbt data tests](https://docs.getdbt.com/docs/build/data-tests), [Pandera with Ibis](https://pandera.readthedocs.io/en/stable/ibis.html).
