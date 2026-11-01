@@ -44,7 +44,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 
 ## Pacing
 
-- **Per message:** one open decision; small related changes of one topic (e.g. 2–4 rows of one table) may go together. Never open a new decision inside an unresolved one.
+- **Per message:** one open question or decision; small related changes of one topic (e.g. 2–4 rows of one table) may go together. Never open a new decision inside an unresolved one.
 - **Per decision:** 2 options (3 if really good), with the recommendation marked (👉) and a one-line reason.
 - **Parking:** any other decision is named in one line in a parking list (🅿️) and picked up in its phase.
 
