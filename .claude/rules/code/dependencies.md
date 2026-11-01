@@ -29,6 +29,7 @@ A component design lists these files in its File layout and chooses the concrete
 ## Runtime versions
 
 - Pin the exact version in the full format of the runtime's tooling (e.g. `3.12.7`, `24.11.0`), never a major alone or a range.
+- Choose a release inside the range the component's test tools support, not the version installed on one machine.
 - `requires-python` in `pyproject.toml` stays a compatibility range; `.python-version` is what runs.
 - Upgrade a runtime by changing its pin file only; nothing else repeats the version.
 
