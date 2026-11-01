@@ -10,7 +10,7 @@ date: 2026-10-30
 ADR-0018 sets three medallion layers. Bronze already exists: capture writes the source responses to Cloudflare R2 (ADR-0011). Silver and gold have no storage yet, and where they live constrains which engines can process them (T036) and what the project pays.
 
 - The project runs within a small monthly budget ([d002/R4](../designs/d002-requirements.md#requirements)).
-- TODO(T036): The processing engine is not chosen yet.
+- The processing engine is decided separately ([ADR-0024](0024-duckdb-as-processing-engine.md)), so the store must not tie the project to one.
 - Silver deduplication and rebuilds from bronze ([d002/R13](../designs/d002-requirements.md#requirements)) need atomic table updates, which depend on what the store guarantees under concurrent writes.
 - Bronze cannot be rebuilt, so it needs protection against delete and overwrite.
 - Object stores bill storage and operations, and many also bill egress.
