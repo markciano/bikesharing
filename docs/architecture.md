@@ -147,7 +147,7 @@ Quality scenarios that make the goals in §1.2 measurable:
 | QS16 | Confidentiality | A pipeline run writes logs and engine files | They hold no storage credentials | [d002 › R22](designs/d002-requirements.md#requirements) |
 | QS17 | Cost (§2) | A pipeline run fails or exceeds its time limit | It stops after a limited number of retries and the owner is alerted | [d002 › R23](designs/d002-requirements.md#requirements) |
 
-- TODO(T037): capture completeness target.
+- TODO(T039): capture completeness target.
 - TODO(T042): data quality checks and targets.
 
 ## 11. Risks and technical debt

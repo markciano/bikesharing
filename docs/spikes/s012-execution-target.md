@@ -132,6 +132,9 @@ Five new requirements, R24–R28, and the other threats documented without a req
 | E9 | No way to tell who deployed what (Repudiation) | Low: there is one operator | Accepted: Modal keeps a deployment history, and `main` the code | None |
 | E10 | Modal has an outage or withdraws the credit (Denial of service) | The pipeline stops, or its cost rises | Covered by R7 and R11; cost by [D1](#d1-execution-platform); moving to the fallback is bounded by [D4](#d4-processing-logic-separated-from-the-platform) | None |
 | E11 | The heartbeat URL of [D5](#d5-pipeline-logs) leaks (Spoofing) | Low: false signals could hide a failure, and the visualization still shows the age of the data (R7) | Accepted: kept as a secret, as in E2, and it gives access to nothing else | None |
+| E12 | A memory kill is retried without limit: Modal's [retries guide](https://modal.com/docs/guide/retries) states this for deployed apps and does not cover scheduled functions (Denial of service) | Credit spent with no progress, against the limited retries of R23 | Accepted, bounded by three controls: DuckDB's memory limit below the container's, so memory errors are raised rather than killed, though it does not cover all of the process's memory; the heartbeat alert of [D5](#d5-pipeline-logs), after which the owner stops the app; and the usage limit of R28 | None |
+
+`TODO(T040)`: set DuckDB's memory limit, cap what one run processes and leave the rest to the next, do not retry memory errors since they are permanent, and check in the first slice how Modal treats a memory kill of a scheduled function ([d002 › R23](../designs/d002-requirements.md#requirements)).
 
 Requirements transferred to [d002 › Requirements](../designs/d002-requirements.md#requirements):
 
@@ -219,7 +222,9 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 
 - The pipeline's mode and refresh cadence, and how the ≤ 5-minute freshness of R3 is reconciled with them ([s010 › P5](s010-storage-table-format.md#production-inputs)) — T040
 - Which events the pipeline logs — T040
-- Preventing two runs from overlapping — T040
+- Preventing two runs from overlapping: `max_containers` exists, and what happens to a scheduled tick while a run is active is not documented — T040
+- The region containers run in: the default is not documented and the EU looks like ×1.15, not confirmed for Starter; it affects run time against R2 — T040
+- Modal's limits: usage $30 and spend $1, set by the owner on 2026-11-02. If the usage limit counts usage before credits, as documented, runs stop when the credit ends and nothing is charged; not tried. They may be raised, up to R28's limit — T040
 - The size of catch-up batches, and where the one-off history load runs — T040
 - The pipeline's end-to-end and post-deploy smoke tests, on paper in [testing-strategy](../testing-strategy.md) — T040
 - Aligning capture's logs with the convention this spike sets for the pipeline: format and field names only; log objects from before the production start are deleted before the bucket lock is enabled ([ADR-0023](../decisions/0023-storage-security-baseline.md)), so only the new format remains — T039
@@ -231,12 +236,7 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 
 | Question | Notes |
 |---|---|
-| Remaining for Questions approval | Close the questions below. Then playback of Context and Questions, then the Questions approval. Method and Steps follow: one Owner step for Q1 with exact commands |
-| Does the capture completeness target belong to T037? | `TODO(T037)` at `docs/architecture.md` line 150: keep it here or re-point it to T039 or T042. The other three (main flows, processing, the ADR replacing ADR-0010) are resolved at this spike's close |
-| In which region do containers run? | The default is not documented and the EU looks like ×1.15, not confirmed for Starter. It affects run time against R2, so it probably goes to T040 |
-| How to keep runs from overlapping | Out of scope (T040); `max_containers` exists, and what happens to a scheduled tick while a run is active is not documented |
-| Do Modal's unlimited retries reach scheduled functions? | Its [retries guide](https://modal.com/docs/guide/retries) says a deployed app retries a memory kill indefinitely, with crash-loop backoff, while [d002 › R23](../designs/d002-requirements.md#requirements) requires limited retries. It does not cover scheduled functions |
-| Modal limits set by the owner | Usage limit $30 and spend limit $1 (2026-11-02). If the usage limit counts usage before credits, as documented, runs stop when the credit ends and nothing is charged; not tried. T040 may raise them, up to R28's limit |
+| Remaining for Questions approval | Playback of Context and Questions, then the Questions approval. Method and Steps follow: one Owner step for Q1 with exact commands |
 
 ## 2. Method — how we find out
 
