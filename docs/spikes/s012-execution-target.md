@@ -6,8 +6,8 @@
 
 ## Status
 
-- State: Draft 📝
-- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review
+- State: Ready 🎬
+- Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: — · Finished: —
 - Current step: —
 
@@ -248,7 +248,7 @@ None.
 - **What runs where:** the owner launches it from the local machine with `modal run`, which creates a temporary app: nothing is deployed and nothing is scheduled. It uses the default region and a plain image, with no DuckDB, R2 access or secrets, since Q1 asks about the platform and not the pipeline.
 - **Why 3.5 GiB:** it clears the 3 GB cut with margin and stays under the 4 GiB requested. The function writes to every page, so the memory is really occupied and not only reserved.
 - **Evidence:** the peak from the kernel (`VmHWM` in `/proc/self/status`), checked against the known allocation and, as an independent count, against the memory graph on Modal's dashboard.
-- **Reading the result:** `InvalidError` on creation, or a kill during the run, fails the Gate. A finished run with a peak of at least 3 GB passes it.
+- **Reading the result:** `InvalidError` for the memory request on creation, a memory kill during the run, or a peak under 3 GB fails the Gate. A finished run with a peak of at least 3 GB passes it. Any other error says nothing about Q1 and does not decide the Gate: the cause is fixed and the probe runs again.
 - **Cost and tear-down:** about 2 minutes at about $0.0555 per hour, under $0.01 of the credit. The app stops when the run ends.
 
 ### 2.3 Decision log
@@ -302,7 +302,7 @@ The probe of [2.1 Approach](#21-approach), in `spikes/execution-target/`: `memor
    - a `modal.App` named `memory-probe`;
    - an image `modal.Image.debian_slim(python_version="3.13")`, with no extra packages;
    - one function `probe`, declared with `memory=4096` and `timeout=300`, with no retries, secrets, schedule or `region`;
-   - in its body: allocate a `bytearray` of 3.5 GiB (3,758,096,384 bytes), write to every 4,096th byte so each page is occupied, wait 60 s, read `VmHWM` from `/proc/self/status`, and print one JSON line with `allocated_bytes`, `peak_gb` (decimal) and `duration_s`.
+   - in its body: allocate a `bytearray` of 3.5 GiB (3,758,096,384 bytes), write to every 4,096th byte so each page is occupied, wait 60 s, read `VmHWM` from `/proc/self/status`, and print one JSON line with `allocated_bytes`, `peak_gb` (decimal: `VmHWM` is in KiB, though labelled `kB`, so its value × 1,024 / 10^9) and `duration_s`.
 5. Write `README.md`: the question, setup and commands, what the script does and a link to this report. How we got here is written at the Conclusion.
 
 #### Check
@@ -313,13 +313,13 @@ The probe of [2.1 Approach](#21-approach), in `spikes/execution-target/`: `memor
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** none
+- **Commit:** `docs: add memory probe result to s012`
 - **Model:** —
-- **Gate:** the function is accepted, finishes, and its peak is at least 3 GB → if not, Oracle Cloud Always Free replaces Modal and D2–D5 are reviewed at the Conclusion.
+- **Gate:** the function is accepted, finishes, and its peak is at least 3 GB → on `InvalidError` for the memory request, a memory kill or a peak under 3 GB, Oracle Cloud Always Free replaces Modal and D2–D5 are reviewed as a Follow-up of the Conclusion. Any other error does not decide the Gate ([2.1 Approach](#21-approach)).
 
 #### Scope
 
-The result of [Q1](#13-questions). No files change.
+The result of [Q1](#13-questions), written as F1 in [Findings](#4-findings). No other file changes.
 
 #### Reads
 
@@ -347,38 +347,38 @@ None.
    ```
 
 4. While it holds the memory, or right after it ends, open the run on Modal's dashboard and note the peak in its memory graph.
-5. Revoke the token in Modal's API token settings. T040 creates its own.
+5. Once the run has decided the Gate, revoke the token in Modal's API token settings. T040 creates its own. After any other error, keep the token for the repeat run.
 6. Report: the full output of step 3, including any error; the peak on the dashboard; and the credit spent, if the billing page shows it.
 
 #### Check
 
-- The output holds the JSON line with `peak_gb` of at least 3, or an error that fails the Gate.
-- `peak_gb` is close to 3.76, the allocation in decimal GB, and the dashboard shows a similar peak. A large gap is reported, not corrected.
+- The output holds the JSON line with `peak_gb`, or an error that fails the Gate. Any other error fails this Check, and the step runs again once the cause is fixed.
+- In a finished run with a peak of at least 3 GB, `peak_gb` is between 3.76 (the allocation) and 4.3 (the 4 GiB requested), and the dashboard's peak is within 10% of `peak_gb`. If either fails, Q1 stays unanswered until the gap is explained.
 
 ### Step 3 — Conclusion
 
 - **Status:** 💤 todo
-- **Who:** Claude
+- **Who:** Owner + Claude
 - **Commit:** `docs: conclude spike s012`
 - **Model:** sonnet · medium
 
 #### Scope
 
-In this document: Findings, Production inputs with their destinations, Conclusion and Status. `docs/sources/modal.md`: the result of Q1, replacing its `TODO(T037)`. `spikes/execution-target/README.md`: How we got here. There is nothing to tear down: the app ends with the run and Step 2 revokes the token.
+In this document: Production inputs with their destinations, Conclusion and Status. `docs/sources/modal.md`: the result of Q1, replacing its `TODO(T037)`. `spikes/execution-target/README.md`: How we got here. There is nothing to tear down: the app ends with the run and Step 2 revokes the token.
 
 #### Reads
 
-1. [1.3 Questions](#13-questions) and [1.4 Exit criteria](#14-exit-criteria).
+1. [1. Questions](#1-questions--what-we-need-to-know), including D1–D5 in Decided at framing.
 2. [2.3 Decision log](#23-decision-log).
-3. The owner's report from Step 2.
+3. [4. Findings](#4-findings).
 
 #### Do
 
-1. Write Findings with the result of Step 2, and Production inputs with a destination for each.
+1. Write Production inputs with a destination for each.
 2. Write the Conclusion: answers, exit criteria, verdict, and D1–D5 in Decisions to record, with D4's ADR as `TODO(T037)` describes it.
 3. If the Gate failed, record in Follow-ups that Oracle Cloud Always Free replaces Modal and that D2–D5 are reviewed.
 4. Update `docs/sources/modal.md` and the README.
-5. Run `grep -rn "TODO(T037)" docs` and, for each result, state in Follow-ups how it is resolved.
+5. Run `grep -rn "TODO(T037)" docs` and, for each result other than this step's own text, state in Follow-ups how it is resolved.
 
 #### Check
 
