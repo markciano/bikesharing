@@ -1,7 +1,7 @@
 # Spike: Execution target
 
 - **Task:** T037
-- **ADRs:** [ADR-0010](../decisions/0010-ingestion-logic-separated-from-platform.md) (to be replaced), [ADR-0016](../decisions/0016-runtime-versions-pinned-per-component.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0024](../decisions/0024-duckdb-as-processing-engine.md), [ADR-0025](../decisions/0025-sql-models-directed-by-python.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md)
+- **ADRs:** [ADR-0010](../decisions/archive/0010-ingestion-logic-separated-from-platform.md) (replaced by [ADR-0029](../decisions/0029-pipeline-code-architecture.md)), [ADR-0016](../decisions/0016-runtime-versions-pinned-per-component.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0024](../decisions/0024-duckdb-as-processing-engine.md), [ADR-0025](../decisions/0025-sql-models-directed-by-python.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0027](../decisions/0027-modal-as-execution-platform.md), [ADR-0028](../decisions/0028-modal-cron-as-pipeline-scheduler.md)
 - **Code:** `spikes/execution-target/`
 
 ## Status
@@ -176,7 +176,7 @@ Rejected: **full hexagonal architecture** (ports and adapters on both sides), wi
 
 What would change it: a second real implementation behind the same interface, such as a second engine or a destination DuckDB cannot write to, or business rules in Python that grow beyond orchestration. Moving from the wrapper to ports then is a bounded refactor.
 
-`TODO(T037)`: the ADR replacing ADR-0010 states this design and its rules for a reader who does not know these patterns. It explains the hexagonal alternative in full, with a short code skeleton of both options and their costs, and why it was not chosen. It also states how it relates to ADR-0010: that ADR already describes a thin layer per platform under the label "ports and adapters", so the new one corrects the label, widens the scope from ingestion to the pipeline and takes storage out of the platform layer. ADR-0010 moves to `docs/decisions/archive/` as Superseded.
+Recorded in [ADR-0029](../decisions/0029-pipeline-code-architecture.md), which explains the hexagonal alternative in full.
 
 #### D5. Pipeline logs
 
