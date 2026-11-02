@@ -21,11 +21,19 @@ Storage (T035), engine and pipeline language (T036) are decided; this spike deci
 
 #### D1. Execution platform
 
-`TODO(T037)`: decision, once scored.
+Modal, on its Starter plan, runs the pipeline. It leads the matrix (8.10) and needs almost no maintenance, which weighs most because the owner has no spare time to keep a machine. Its cost stays at €0 while the $30 monthly credit covers it: at 1 vCPU and 4 GiB the credit pays for 540 hours a month, so runs of up to 7.5 minutes at a 10-minute cadence, or 3.75 minutes at 5 minutes. Above the credit, usage is billed. This depends on [Q1](#13-questions): if its Gate fails, Oracle Cloud Always Free replaces Modal and D2–D5 are reviewed.
 
-What would change it: N4's cut rests on runs of 2 minutes, an unmeasured estimate. With runs of 1 minute or less, Google Cloud Run jobs (about €1.37 per month at 10 minutes) and Fly.io Machines (about €2.28) would pass it, and they may also pass under an on-demand mode.
+What would change it: without the credit, Modal costs about €7.20 per month at 10 minutes, above N4's cut, so this decision is reviewed with the pipeline share of [ADR-0026](../decisions/0026-budget-shares-per-component.md). The cost itself is not a loss of service. N4's cut rests on runs of 2 minutes, an unmeasured estimate. With runs of 1 minute or less, Google Cloud Run jobs (about €1.37 per month at 10 minutes) and Fly.io Machines (about €2.28) would pass it, and they may also pass under an on-demand mode.
 
-`TODO(T040)`: if the first slice measures runs of 1 minute or less, or T040 chooses the on-demand mode, reopen this decision with Cloud Run and Fly.io as candidates.
+The cut also assumes 4 GB in every run, which is the worst case. With 2 GB, Fly.io Machines would pass at about €2.41 per month at 10 minutes.
+
+`TODO(T040)`: if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, or T040 chooses the on-demand mode, reopen this decision with Cloud Run and Fly.io as candidates.
+
+Options rejected:
+
+- **Oracle Cloud Always Free** (7.33) is the fallback: €0 and 12 GB, but the owner keeps the machine, and creating it can fail for lack of capacity.
+- **GitHub Actions** (7.71) scores close to Modal, and one more point on reliability would tie them. It is not the fallback for two facts outside the matrix: its terms allow use "to develop and test your application(s)", with account suspension among the sanctions, and its documented delays and dropped runs do not support [d002 › R3](../designs/d002-requirements.md#requirements).
+- **The owner's Mac** (3.71) loses runs while it is off or asleep.
 
 Needs and hard cuts:
 
@@ -119,7 +127,15 @@ Scores of the candidates that pass (facts gathered on 2026-11-02, sources in [So
 
 ### 1.3 Questions
 
+Main question: can Modal's Starter plan give the pipeline the memory it needs?
+
+- **Q1.** Does Modal's Starter plan accept a function that requests 4 GiB, and let it occupy that memory? Its documentation enforces a maximum without stating the figure. Unblocks D1. Gate: if not, Oracle Cloud Always Free replaces Modal.
+
 ### 1.4 Exit criteria
+
+- **Standard:** weighted decision matrix, with a Gate on the winner only.
+- **Timebox:** one owner session of up to one hour, ended by Q1's result.
+- A function that requests 4 GiB is accepted and occupies at least 3 GB without failing — hard cut.
 
 ### 1.5 Out of scope
 
