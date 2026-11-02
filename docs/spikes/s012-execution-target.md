@@ -144,7 +144,35 @@ Requirements transferred to [d002 › Requirements](../designs/d002-requirements
 
 #### D4. Processing logic separated from the platform
 
-`TODO(T037)`: decide it; its outcome replaces [ADR-0010](../decisions/0010-ingestion-logic-separated-from-platform.md) (ports and adapters). Input: Modal requires an app wrapper and its SDK around the logic, kept as a thin layer, and moving to the fallback in D1 must touch only that layer.
+A thin platform wrapper separates the logic from Modal. The `bikesharing` package holds the pipeline and exposes one entry point; a single module outside the package declares the image, secrets, schedule and resources with Modal's SDK, and calls that entry point. Moving to the fallback in [D1](#d1-execution-platform) replaces only that module.
+
+No single name covers this design. It combines three established patterns:
+
+- **Dependency Rule** (Clean Architecture): source dependencies point inward, so the platform module knows the package and never the reverse.
+- **Humble Object** (xUnit Test Patterns): the part that is hard to test, here the platform declaration, holds no logic, so the logic can be tested without it.
+- **Config and Backing Services** (Twelve-Factor App): configuration and credentials arrive as environment variables, and storage is an attached resource named by that configuration.
+
+It is a subset of hexagonal architecture: the platform module is a driving adapter, and the package has no driven ports. Those rules define the design, and each has a check, so a deviation can be detected:
+
+| # | Rule | Check |
+|---|---|---|
+| 1 | The package never imports `modal` | CI fails on the import |
+| 2 | The platform module holds no SQL or data logic: only declarations and the call to the entry point | CI fails if the module imports `duckdb`; review for the rest |
+| 3 | The package reads configuration and credentials only from environment variables | Review |
+| 4 | The entry point runs without Modal, on a local path | A CI test runs the pipeline with Modal not installed |
+
+`TODO(T040)`: add the checks of rules 1, 2 and 4 to CI, and place the platform module in the repository.
+
+Rejected: **full hexagonal architecture** (ports and adapters on both sides), with an interface for storage and one adapter per technology.
+
+- The processing logic is SQL ([ADR-0025](../decisions/0025-sql-models-directed-by-python.md)), so it would move into the adapter and leave the core almost empty.
+- DuckDB already isolates storage: the same SQL reads from R2 or from a local path.
+- The port would have one real implementation, and each new operation would touch the port, the real adapter and a fake one.
+- A fake adapter does not run the SQL, where the main failures are expected, so the tests against DuckDB are still needed.
+
+What would change it: a second real implementation behind the same interface, such as a second engine or a destination DuckDB cannot write to, or business rules in Python that grow beyond orchestration. Moving from the wrapper to ports then is a bounded refactor.
+
+`TODO(T037)`: the ADR replacing ADR-0010 states this design and its rules for a reader who does not know these patterns. It explains the hexagonal alternative in full, with a short code skeleton of both options and their costs, and why it was not chosen. It also states how it relates to ADR-0010: that ADR already describes a thin layer per platform under the label "ports and adapters", so the new one corrects the label, widens the scope from ingestion to the pipeline and takes storage out of the platform layer. ADR-0010 moves to `docs/decisions/archive/` as Superseded.
 
 #### D5. Pipeline logs
 
@@ -181,7 +209,7 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 
 | Question | Notes |
 |---|---|
-| Remaining for Questions approval | Decide D4, then D5. Then playback of Context and Questions, then the Questions approval. Method and Steps follow: one Owner step for Q1 with exact commands |
+| Remaining for Questions approval | Decide D5. Then playback of Context and Questions, then the Questions approval. Method and Steps follow: one Owner step for Q1 with exact commands |
 | Does the capture completeness target belong to T037? | `TODO(T037)` at `docs/architecture.md` line 150: keep it here or re-point it to T039 or T042. The other three (main flows, processing, the ADR replacing ADR-0010) are resolved at this spike's close |
 | In which region do containers run? | The default is not documented and the EU looks like ×1.15, not confirmed for Starter. It affects run time against R2, so it probably goes to T040 |
 | How to keep runs from overlapping | Out of scope (T040); `max_containers` exists, and what happens to a scheduled tick while a run is active is not documented |
