@@ -7,7 +7,7 @@
 ## Status
 
 - State: Draft 📝
-- Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review
+- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review
 - Started: — · Finished: —
 - Current step: —
 
@@ -27,7 +27,7 @@ What would change it: without the credit, Modal costs about €7.20 per month at
 
 The cut also assumes 4 GB in every run, which is the worst case. With 2 GB, Fly.io Machines would pass at about €2.41 per month at 10 minutes.
 
-`TODO(T040)`: if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, or T040 chooses the on-demand mode, reopen this decision with Cloud Run and Fly.io as candidates.
+`TODO(T040)`: if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, or T040 chooses the on-demand mode, reopen this decision with Cloud Run and Fly.io as candidates. To measure it, the final log event of every run ([D5](#d5-pipeline-logs)) carries `duration_s` and `peak_memory_mb`, the latter from the kernel's `VmHWM`.
 
 Options rejected:
 
@@ -231,7 +231,7 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 - Aligning capture's logs with the convention this spike sets for the pipeline: format and field names only; log objects from before the production start are deleted before the bucket lock is enabled ([ADR-0023](../decisions/0023-storage-security-baseline.md)), so only the new format remains — T039
 - The fragmentation of capture's logs, one object per pass, and whether a compacted daily copy is worth it; the bucket lock keeps the originals — T039
 - Whether capture's alert ([d002 › R8](../designs/d002-requirements.md#requirements)) uses the same heartbeat service as [D5](#d5-pipeline-logs) — T039
-- How the pipeline's health is viewed beyond ad hoc SQL: a separate operations panel or a public status page with aggregated metrics; an admin role would add authentication where [d002 › R1](../designs/d002-requirements.md#requirements) asks for none — T038
+- How the pipeline's health is viewed beyond ad hoc SQL: a separate operations panel, for which Modal's OpenTelemetry integration and SDK metrics are to be evaluated (their plans and cost not checked), or a public status page with aggregated metrics; an admin role would add authentication where [d002 › R1](../designs/d002-requirements.md#requirements) asks for none — T038
 
 ### 1.6 Open questions
 
@@ -262,13 +262,127 @@ None.
 spikes/execution-target/
 ├── README.md        Question, setup and commands, what each script does, link to the report; How we got here (written at Conclusion)
 ├── memory_probe.py  The Modal function of the memory probe
-├── pyproject.toml   Pinned Python and the Modal SDK (ADR-0016, ADR-0017)
+├── .python-version  Pinned Python (ADR-0016)
+├── pyproject.toml   The Modal SDK, pinned (ADR-0017)
 └── uv.lock          Locked dependencies
 ```
 
 ## 3. Steps
 
 ### 3.1 Prerequisites
+
+Nothing to install beyond `uv`, which brings Python and the Modal SDK into the spike's own environment.
+
+- `uv` 0.13.5, installed with Homebrew: `uv --version`.
+- A Modal account on the Starter plan, with its usage limit of $30 and spend limit of $1: see the billing page.
+- Two-factor authentication on the GitHub account used to log in to Modal (R24): see GitHub's password and authentication settings.
+
+### Step 1 — Write the memory probe
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: add Modal memory probe for s012`
+- **Model:** sonnet · medium
+
+#### Scope
+
+The probe of [2.1 Approach](#21-approach), in `spikes/execution-target/`: `memory_probe.py`, `.python-version`, `pyproject.toml`, `uv.lock` and `README.md`. Nothing outside that folder changes.
+
+#### Reads
+
+- [2.1 Approach](#21-approach) of this document: what the probe does and how its result is read.
+- `spikes/storage-table-format/pyproject.toml`: the form of an earlier spike's pins.
+
+#### Do
+
+1. Write `.python-version` with `3.13.17`.
+2. Write `pyproject.toml` with `requires-python = ">=3.13,<3.14"` and the single dependency `modal==1.6.3`.
+3. Run `uv lock` to create `uv.lock`.
+4. Write `memory_probe.py`, with:
+   - a `modal.App` named `memory-probe`;
+   - an image `modal.Image.debian_slim(python_version="3.13")`, with no extra packages;
+   - one function `probe`, declared with `memory=4096` and `timeout=300`, with no retries, secrets, schedule or `region`;
+   - in its body: allocate a `bytearray` of 3.5 GiB (3,758,096,384 bytes), write to every 4,096th byte so each page is occupied, wait 60 s, read `VmHWM` from `/proc/self/status`, and print one JSON line with `allocated_bytes`, `peak_gb` (decimal) and `duration_s`.
+5. Write `README.md`: the question, setup and commands, what the script does and a link to this report. How we got here is written at the Conclusion.
+
+#### Check
+
+`uv run python -m py_compile memory_probe.py` from `spikes/execution-target/` ends without error. The probe is not run: that is Step 2.
+
+### Step 2 — Run the memory probe
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** none
+- **Model:** —
+- **Gate:** the function is accepted, finishes, and its peak is at least 3 GB → if not, Oracle Cloud Always Free replaces Modal and D2–D5 are reviewed at the Conclusion.
+
+#### Scope
+
+The result of [Q1](#13-questions). No files change.
+
+#### Reads
+
+None.
+
+#### Do
+
+1. Install the environment, from the repository root:
+
+   ```bash
+   cd spikes/execution-target
+   uv sync
+   ```
+
+2. Create the Modal token. A browser opens to log in, and the token is stored in `~/.modal.toml`, outside the repository:
+
+   ```bash
+   uv run modal setup
+   ```
+
+3. Run the probe:
+
+   ```bash
+   uv run modal run memory_probe.py::probe
+   ```
+
+4. While it holds the memory, or right after it ends, open the run on Modal's dashboard and note the peak in its memory graph.
+5. Revoke the token in Modal's API token settings. T040 creates its own.
+6. Report: the full output of step 3, including any error; the peak on the dashboard; and the credit spent, if the billing page shows it.
+
+#### Check
+
+- The output holds the JSON line with `peak_gb` of at least 3, or an error that fails the Gate.
+- `peak_gb` is close to 3.76, the allocation in decimal GB, and the dashboard shows a similar peak. A large gap is reported, not corrected.
+
+### Step 3 — Conclusion
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: conclude spike s012`
+- **Model:** sonnet · medium
+
+#### Scope
+
+In this document: Findings, Production inputs with their destinations, Conclusion and Status. `docs/sources/modal.md`: the result of Q1, replacing its `TODO(T037)`. `spikes/execution-target/README.md`: How we got here. There is nothing to tear down: the app ends with the run and Step 2 revokes the token.
+
+#### Reads
+
+1. [1.3 Questions](#13-questions) and [1.4 Exit criteria](#14-exit-criteria).
+2. [2.3 Decision log](#23-decision-log).
+3. The owner's report from Step 2.
+
+#### Do
+
+1. Write Findings with the result of Step 2, and Production inputs with a destination for each.
+2. Write the Conclusion: answers, exit criteria, verdict, and D1–D5 in Decisions to record, with D4's ADR as `TODO(T037)` describes it.
+3. If the Gate failed, record in Follow-ups that Oracle Cloud Always Free replaces Modal and that D2–D5 are reviewed.
+4. Update `docs/sources/modal.md` and the README.
+5. Run `grep -rn "TODO(T037)" docs` and, for each result, state in Follow-ups how it is resolved.
+
+#### Check
+
+Q1 is answered, the exit criterion has a result, every P has a destination, and every `TODO(T037)` has a resolution.
 
 ## 4. Findings
 
