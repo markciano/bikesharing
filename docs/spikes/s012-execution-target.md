@@ -15,7 +15,7 @@
 
 ### 1.1 Context
 
-Storage (T035), engine and pipeline language (T036) are decided; this spike decides where the pipeline runs (D1, the central decision), what schedules it (D2), its threats and new requirements (D3), how processing logic is separated from the platform (D4) and how the pipeline logs (D5). The refresh cadence is not chosen here: [s010 › P5](s010-storage-table-format.md#production-inputs) leaves it to T040, and R2's Class B operations limit it, not the machine. D2–D5 depend on D1.
+Storage (T035), engine and pipeline language (T036) are decided; this spike decides where the pipeline runs (D1, the central decision), what schedules it (D2), its threats and new requirements (D3), how processing logic is separated from the platform (D4) and how the pipeline logs and alerts the owner (D5). The refresh cadence is not chosen here: [s010 › P5](s010-storage-table-format.md#production-inputs) leaves it to T040, and R2's Class B operations limit it, not the machine. D2–D5 depend on D1.
 
 ### 1.2 Decided at framing
 
@@ -134,7 +134,7 @@ Five new requirements, R24–R28, and the other threats documented without a req
 | E11 | The heartbeat URL of [D5](#d5-pipeline-logs) leaks (Spoofing) | Low: false signals could hide a failure, and the visualization still shows the age of the data (R7) | Accepted: kept as a secret, as in E2, and it gives access to nothing else | None |
 | E12 | A memory kill is retried without limit: Modal's [retries guide](https://modal.com/docs/guide/retries) states this for deployed apps and does not cover scheduled functions (Denial of service) | Credit spent with no progress, against the limited retries of R23 | Accepted, bounded by three controls: DuckDB's memory limit below the container's, so memory errors are raised rather than killed, though it does not cover all of the process's memory; the heartbeat alert of [D5](#d5-pipeline-logs), after which the owner stops the app; and the usage limit of R28 | None |
 
-`TODO(T040)`: set DuckDB's memory limit, cap what one run processes and leave the rest to the next, do not retry memory errors since they are permanent, and check in the first slice how Modal treats a memory kill of a scheduled function ([d002 › R23](../designs/d002-requirements.md#requirements)).
+`TODO(T040)`: set DuckDB's memory limit, decide on a hard container limit (`memory=(request, limit)`; without one, usage above the request is billed, as Modal charges the higher of the two), cap what one run processes and leave the rest to the next, do not retry memory errors since they are permanent, and check in the first slice how Modal treats a memory kill of a scheduled function ([d002 › R23](../designs/d002-requirements.md#requirements)).
 
 Requirements transferred to [d002 › Requirements](../designs/d002-requirements.md#requirements):
 
@@ -210,7 +210,7 @@ Rejected:
 
 Main question: can Modal's Starter plan give the pipeline the memory it needs?
 
-- **Q1.** Does Modal's Starter plan accept a function that requests 4 GiB, and let it occupy that memory? Its documentation enforces a maximum without stating the figure. Unblocks D1. Gate: if not, Oracle Cloud Always Free replaces Modal.
+- **Q1.** Does Modal's Starter plan accept a function that requests 4 GiB, and let it occupy that memory? Its [resources guide](https://modal.com/docs/guide/resources) enforces a maximum when the function is created, rejecting larger requests with `InvalidError`, without stating the figure or whether it depends on the plan. Unblocks D1. Gate: if not, Oracle Cloud Always Free replaces Modal.
 
 ### 1.4 Exit criteria
 
@@ -223,7 +223,8 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 - The pipeline's mode and refresh cadence, and how the ≤ 5-minute freshness of R3 is reconciled with them ([s010 › P5](s010-storage-table-format.md#production-inputs)) — T040
 - Which events the pipeline logs — T040
 - Preventing two runs from overlapping: `max_containers` exists, and what happens to a scheduled tick while a run is active is not documented — T040
-- The region containers run in: the default is not documented and the EU looks like ×1.15, not confirmed for Starter; it affects run time against R2 — T040
+- The region containers run in: by default on global capacity, with `eu` at 1.15x, which lowers the 540 hours of [D1](#d1-execution-platform) to about 470; it affects run time against R2 and does not move logs ([Modal card](../sources/modal.md)) — T040
+- Interruption: base prices are not the non-preemptible rate, which costs 3x, so a run may be interrupted and must be safe to run again — T040
 - Modal's limits: usage $30 and spend $1, set by the owner on 2026-11-02. If the usage limit counts usage before credits, as documented, runs stop when the credit ends and nothing is charged; not tried. They may be raised, up to R28's limit — T040
 - The size of catch-up batches, and where the one-off history load runs — T040
 - The pipeline's end-to-end and post-deploy smoke tests, on paper in [testing-strategy](../testing-strategy.md) — T040
