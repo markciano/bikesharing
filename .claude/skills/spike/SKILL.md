@@ -1,6 +1,6 @@
 ---
 name: spike
-description: Build the spike doc of one task through a conversation with the owner, block by block from Questions to Steps, and review its Steps in a fresh session. Use at the start or resumption of a spike, or to review its Steps.
+description: Build the spike doc of one task through a conversation with the owner, block by block from Questions to Conclusion, and review its Steps in a fresh session. Use at the start or resumption of a spike, to conclude it after its last step, or to review its Steps.
 disable-model-invocation: true
 argument-hint: "[task ID for a new spike | spike ID to resume | spike ID + review-steps]"
 ---
@@ -13,7 +13,7 @@ Decide by analysis whatever analysis can decide, while framing the spike. Seek e
 
 Your goal is a spike doc from [template.md](template.md) that records what was decided and why, fixes what we still need to know and how we will know it before anything runs, and that `/implement` can execute step by step with no ambiguity.
 
-This skill fills Questions, Method and Steps. Findings and Conclusion are filled during the run by `/implement` (its `spike.md`).
+This skill fills Questions, Method, Steps and Conclusion. Findings are filled during the run by `/implement` (its `spike.md`).
 
 ## Start
 
@@ -78,9 +78,27 @@ This skill fills Questions, Method and Steps. Findings and Conclusion are filled
    - the cheapest test of the riskiest assumption runs first, with a Gate, before a full variant is built on it;
    - code and the Owner action that runs it are separate steps;
    - each analysis script is followed by an Owner step that verifies it;
-   - the last step is the Conclusion, as in the template.
+   - no step writes the Conclusion, which follows the last step (§ 4).
 3. Write each step in full. Owner steps give exact commands and what to report back; Claude steps name their files and what they must not touch.
 4. Ask for the Steps approval. Once approved, check Steps in Phase and tell the owner to run `/spike sNNN review-steps` in a new session. The spike goes to Ready 🎬 when that review closes.
+
+## 4. Conclusion
+
+Applies when Conclusion is the first unchecked item in Phase. Stop and report if a step is not ✅, unless it is ⛔ with its Gate's consequence recorded in the Decision log.
+
+1. Read the doc in full, through 4. Findings.
+2. Write each part as its own edit, in this order; the owner approves on the diff:
+   1. Observed window.
+   2. Answers, one per Q, citing Findings.
+   3. Exit criteria, one result per criterion and variant.
+   4. Verdict.
+   5. Decisions to record: for each decision in Decided at framing, whether it holds, changes or is reopened.
+   6. Not verified: each item with its risk and mitigation.
+   7. Production inputs: what is worth taking to production, from any part of the spike, each with a destination: a design (naming its task), or discarded with a reason. No new task rows from Production inputs.
+   8. Follow-ups: ADRs to write, each in its own commit; new tasks proposed to the owner as rows in `docs/tasks.md`.
+   9. README › How we got here: 5–10 lines of narrative for the portfolio, linking to Findings and Decision log entries instead of repeating their detail.
+   10. Tear-down: what is torn down and what is kept; a kept resource gets a Decision log entry. The owner runs the tear-down.
+3. In the same change as the last part: check Conclusion in Phase, set State to Concluded ✅, Finished (UTC date) and Current step to —, and the task to ✅. Tell the owner it is a commit point and propose `docs: conclude spike sNNN`.
 
 ## End of session
 
