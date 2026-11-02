@@ -1,6 +1,6 @@
 <!--
 Spike doc template. A spike is a time-boxed investigation of one task in docs/tasks.md: it reaches the decisions a task needs, by analysis where possible and with evidence only where an unknown would change the choice. Its output is knowledge (decisions, answers, a verdict, inputs for designs and ADRs); its code is throwaway and lives in spikes/<name>/.
-Blocks: Questions (what we need to know), Method (how we find out), Steps, Findings (filled during execution), Conclusion (filled in the last step).
+Blocks: Questions (what we need to know), Method (how we find out), Steps, Findings (filled during execution), Conclusion (filled after the last step).
 Sections marked Optional are kept only when they apply.
 -->
 
@@ -14,11 +14,11 @@ Sections marked Optional are kept only when they apply.
 
 <!-- State: Draft 📝 · Ready 🎬 · Running 🔄 · Concluded ✅.
 Phase: the blocks and the review completed.
-Started / Finished: UTC dates of the first and the last step executed.
+Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current step: the step being executed, or —. -->
 
 - State: Draft 📝
-- Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review
+- Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
 - Current step: —
 
@@ -120,8 +120,7 @@ spikes/<name>/
 - Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
 - Commit: only in a step that changes committed files: the proposed message, following the Git conventions in CLAUDE.md.
 - Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner.
-- Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>.
-The last step is the Conclusion. -->
+- Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>. -->
 
 ### 3.1 Prerequisites
 
@@ -151,20 +150,6 @@ The last step is the Conclusion. -->
 
 <!-- command/s or verification with a yes/no result. -->
 
-### Step N — Conclusion
-
-<!-- 
-Same structure as the step above, but:
-- Scope contains: 
-  1. Conclusion
-  2. the destination of every Production input in this doc;
-  3. How we got here in the README
-  4. tear-down of what does not outlive the spike.
-- Reads: 1. Questions, 2. Method › Decision log, 4. Findings
-- Check: every Q answered; every exit criterion has a result; every P has a destination
-- Commit: `conclude spike sNNN` following the Git conventions in CLAUDE.md.
--->
-
 ## 4. Findings
 
 <!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
@@ -176,17 +161,9 @@ Step N · YYYY-MM-DD · `<source of evidence>`
 - `<evidence>`
 - Consequence: `<for variants, steps or questions>`
 
-### 4.1 Production inputs
-
-<!-- Points worth taking to production that are not fixed in the spike code. Added in the step where they are detected, by Claude or the owner. The Destination is set in the Conclusion: a design (with its task) or discarded with a reason. -->
-
-| P | Input | Origin | Destination |
-|---|---|---|---|
-| P1 | | Step N · FN | |
-
 ## 5. Conclusion
 
-<!-- Filled in the last step. Covers only the observed window. -->
+<!-- Filled after the last step. Covers only the observed window. -->
 
 Observed window: `<from–to, UTC; what it does not cover>`
 
@@ -216,7 +193,15 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 - `<item>` — `<risk>` — `<mitigation>`
 
-### 5.6 Follow-ups
+### 5.6 Production inputs
+
+<!-- Optional. Points worth taking to production, from any part of the spike. Each one has a Destination: a design (with its task) or discarded with a reason. -->
+
+| P | Input | Origin | Destination |
+|---|---|---|---|
+| P1 | | `<e.g. D1, #2, F3>` | |
+
+### 5.7 Follow-ups
 
 <!-- ADRs to write (each in its own commit) and new tasks agreed with the owner. Production inputs are not repeated here. -->
 

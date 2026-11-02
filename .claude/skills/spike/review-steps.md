@@ -20,7 +20,7 @@ Phase shows Steps checked and Steps review unchecked. Otherwise stop and tell th
 
 - Every Q and every exit criterion is answered or measured by at least one step; every "Observe only" item says where it is noted.
 - Every item in File layout is produced by a step, and no step produces a file outside it.
-- The last step is the Conclusion.
+- No step writes the Conclusion.
 
 ### Order and gates
 
