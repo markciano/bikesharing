@@ -144,11 +144,17 @@ Requirements transferred to [d002 › Requirements](../designs/d002-requirements
 
 #### D4. Processing logic separated from the platform
 
-`TODO(T037)`: replaces ADR-0010.
+`TODO(T037)`: decide it; its outcome replaces [ADR-0010](../decisions/0010-ingestion-logic-separated-from-platform.md) (ports and adapters). Input: Modal requires an app wrapper and its SDK around the logic, kept as a thin layer, and moving to the fallback in D1 must touch only that layer.
 
 #### D5. Pipeline logs
 
-`TODO(T037)`: depends on D1.
+`TODO(T037)`: decide where the pipeline's logs live, their format, retention, cost and storage impact, and how alerts reach the owner. Proposed standard: structured logs as an event stream (Twelve-Factor). Inputs:
+
+- Modal stores stdout and stderr in the US for 1 day on Starter, so anything kept longer must leave it: the logs can be read with `modal app logs` or the SDK, and nothing documented stops a run writing them to R2.
+- One log object per run at 10 minutes is 4,320 Class A writes a month, 0.4% of R2's free 1M; the size and its storage are still to be calculated.
+- Modal's scheduled functions "will notify you on failure", but the channel, the plan and runs that never start are not documented ([managing deployments](https://modal.com/docs/guide/managing-deployments)).
+- A missed run ([D2](#d2-scheduler)) can be detected by an alert on the age of the data, which also covers any other cause.
+- Which of these alerts satisfies [d002 › R23](../designs/d002-requirements.md#requirements), with [R7 and R8](../designs/d002-requirements.md#requirements) as related requirements, and no credentials in logs (R22).
 
 ### 1.3 Questions
 
@@ -175,7 +181,11 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 
 | Question | Notes |
 |---|---|
-| | |
+| Remaining for Questions approval | Decide D4, then D5. Then playback of Context and Questions, then the Questions approval. Method and Steps follow: one Owner step for Q1 with exact commands |
+| Does the capture completeness target belong to T037? | `TODO(T037)` at `docs/architecture.md` line 150: keep it here or re-point it to T039 or T042. The other three (main flows, processing, the ADR replacing ADR-0010) are resolved at this spike's close |
+| In which region do containers run? | The default is not documented and the EU looks like ×1.15, not confirmed for Starter. It affects run time against R2, so it probably goes to T040 |
+| How to keep runs from overlapping | Out of scope (T040); `max_containers` exists, and what happens to a scheduled tick while a run is active is not documented |
+| Modal limits set by the owner | Usage limit $30 and spend limit $1 (2026-11-02). If the usage limit counts usage before credits, as documented, runs stop when the credit ends and nothing is charged; not tried. T040 may raise them, up to R28's limit |
 
 ## 2. Method — how we find out
 
