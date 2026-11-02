@@ -111,7 +111,9 @@ Scores of the candidates that pass (facts gathered on 2026-11-02, sources in [So
 
 #### D2. Scheduler
 
-`TODO(T037)`: depends on D1.
+Modal's built-in `Cron` schedules the pipeline, following the pattern of using the platform's native scheduler. It adds no component, its fixed clock times do not move on redeploy, as `Period` intervals do, and the cadence T040 chooses is one line of code. Modal does not document what happens to a missed run, so [D5](#d5-pipeline-logs) covers detecting it.
+
+Rejected: a Cloudflare Worker as an external trigger. It could detect a run that does not start, but it adds a component to maintain and a point of failure.
 
 #### D3. Pipeline security
 
@@ -141,6 +143,7 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 
 - The pipeline's mode and refresh cadence, and how the ≤ 5-minute freshness of R3 is reconciled with them ([s010 › P5](s010-storage-table-format.md#production-inputs)) — T040
 - Which events the pipeline logs — T040
+- Preventing two runs from overlapping — T040
 - The size of catch-up batches, and where the one-off history load runs — T040
 - The pipeline's end-to-end and post-deploy smoke tests, on paper in [testing-strategy](../testing-strategy.md) — T040
 - Aligning capture's logs with the convention this spike sets for the pipeline: format and field names only; log objects from before the production start are deleted before the bucket lock is enabled ([ADR-0023](../decisions/0023-storage-security-baseline.md)), so only the new format remains — T039
