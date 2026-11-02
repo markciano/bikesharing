@@ -117,7 +117,30 @@ Rejected: a Cloudflare Worker as an external trigger. It could detect a run that
 
 #### D3. Pipeline security
 
-`TODO(T037)`: depends on D1.
+Five new requirements, R24–R28, and the other threats documented without a requirement. Threats are listed with STRIDE and controls follow least privilege, as in [s011 › D4](s011-engine-pipeline-language.md#d4-pipeline-security). The scope is where the pipeline runs: its account, secrets, deployment, network and spend. Facts on Modal gathered on 2026-11-02.
+
+| # | Threat (STRIDE) | Impact | Control | Requirement |
+|---|---|---|---|---|
+| E1 | Someone takes over the Modal account, or the GitHub account it logs in with (Spoofing) | Code runs with the pipeline's token, and spends on the owner's card | Two-factor authentication on the login; tokens with an expiry, kept outside the repository; no other workspace members | R24 |
+| E2 | The R2 token leaks from where the pipeline receives it (Information disclosure) | Same as a leaked credential in [ADR-0023](../decisions/0023-storage-security-baseline.md) | Injected from `modal.Secret`, encrypted at rest and stored in the US; never in the image or the repository; bounded by R15 and R17 | R25 |
+| E3 | Unreviewed code reaches production (Tampering) | Wrong or harmful code runs with the pipeline's token | Deploy only commits on `main`, which passed the PR's checks. The owner deploys, since Modal's CI service users are stated for Team and Enterprise | R26 |
+| E4 | Something calls the pipeline from outside (Spoofing, Denial of service) | Unplanned runs and cost | No web decorators: runs start only from the schedule or the owner's Modal client. This closes [s011 › A10](s011-engine-pipeline-language.md#d4-pipeline-security) | R27 |
+| E5 | A loop or a bug spends beyond the budget (Denial of service) | The card is charged above R4 (denial of wallet); R23 bounds a single run, not the month | A spend limit on the platform; Modal stops workloads that would incur out-of-pocket charges. The pipeline catches up later (R11), and the visualization shows the age of the data (R7) | R28 |
+| E6 | A compromised dependency sends data or the token out (Information disclosure) | Same as E2 | Accepted: outbound restrictions are documented for Modal's Sandboxes, not Functions; prevented by R20 and bounded by R15 and R17 | None |
+| E7 | Logs and payloads stay on Modal, in the US (Information disclosure) | Low: public feed data, and no credentials (R22) | Accepted | None |
+| E8 | Data leaks through DuckDB's temporary files ([s011 › A9](s011-engine-pipeline-language.md#d4-pipeline-security)) (Information disclosure) | Low: public feed data, and no credentials (R22) | Accepted, closing A9: each container runs in its own sandbox; encryption and wiping of its disk are not documented | None |
+| E9 | No way to tell who deployed what (Repudiation) | Low: there is one operator | Accepted: Modal keeps a deployment history, and `main` the code | None |
+| E10 | Modal has an outage or withdraws the credit (Denial of service) | The pipeline stops, or its cost rises | Covered by R7 and R11; cost by [D1](#d1-execution-platform); moving to the fallback is bounded by [D4](#d4-processing-logic-separated-from-the-platform) | None |
+
+Requirements transferred to [d002 › Requirements](../designs/d002-requirements.md#requirements):
+
+| R | Threat | Evidence |
+|---|---|---|
+| R24 | E1 | [Modal workspaces](https://modal.com/docs/guide/workspaces): GitHub login; two-factor authentication on Modal itself is not documented |
+| R25 | E2 | [Modal Secrets](https://modal.com/docs/guide/secrets), [data residency](https://modal.com/docs/guide/data-residency) |
+| R26 | E3 | [Modal service users](https://modal.com/docs/guide/service-users) |
+| R27 | E4 | [Modal web endpoints](https://modal.com/docs/guide/webhooks): serving over HTTP uses web decorators |
+| R28 | E5 | [Modal budgets](https://modal.com/docs/guide/budgets); the owner found the usage and spend limits on the Starter plan's billing page on 2026-11-02 |
 
 #### D4. Processing logic separated from the platform
 
