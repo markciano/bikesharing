@@ -7,7 +7,7 @@
 ## Status
 
 - State: Draft 📝
-- Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review
+- Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review
 - Started: — · Finished: —
 - Current step: —
 
@@ -235,9 +235,7 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 
 ### 1.6 Open questions
 
-| Question | Notes |
-|---|---|
-| Remaining for Questions approval | Playback of Context and Questions, then the Questions approval. Method and Steps follow: one Owner step for Q1 with exact commands |
+None.
 
 ## 2. Method — how we find out
 
@@ -245,7 +243,13 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 
 | Variant | What it is | What it tells |
 |---|---|---|
-| | | |
+| Memory probe | One Modal function with `memory=4096` that allocates and writes 3.5 GiB, holds it for 60 seconds and prints its peak memory | Whether Starter accepts the request and lets the function occupy at least 3 GB (Q1) |
+
+- **What runs where:** the owner launches it from the local machine with `modal run`, which creates a temporary app: nothing is deployed and nothing is scheduled. It uses the default region and a plain image, with no DuckDB, R2 access or secrets, since Q1 asks about the platform and not the pipeline.
+- **Why 3.5 GiB:** it clears the 3 GB cut with margin and stays under the 4 GiB requested. The function writes to every page, so the memory is really occupied and not only reserved.
+- **Evidence:** the peak from the kernel (`VmHWM` in `/proc/self/status`), checked against the known allocation and, as an independent count, against the memory graph on Modal's dashboard.
+- **Reading the result:** `InvalidError` on creation, or a kill during the run, fails the Gate. A finished run with a peak of at least 3 GB passes it.
+- **Cost and tear-down:** about 2 minutes at about $0.0555 per hour, under $0.01 of the credit. The app stops when the run ends.
 
 ### 2.3 Decision log
 
@@ -256,7 +260,10 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 
 ```text
 spikes/execution-target/
-└── README.md        Question, setup and commands, what each script does, link to the report; How we got here (written at Conclusion)
+├── README.md        Question, setup and commands, what each script does, link to the report; How we got here (written at Conclusion)
+├── memory_probe.py  The Modal function of the memory probe
+├── pyproject.toml   Pinned Python and the Modal SDK (ADR-0016, ADR-0017)
+└── uv.lock          Locked dependencies
 ```
 
 ## 3. Steps
