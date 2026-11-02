@@ -9,7 +9,7 @@
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
 - Started: 2026-11-02 · Finished: —
-- Current step: 2
+- Current step: 3
 
 ## 1. Questions — what we need to know
 
@@ -312,7 +312,7 @@ The probe of [2.1 Approach](#21-approach), in `spikes/execution-target/`: `memor
 
 ### Step 2 — Run the memory probe
 
-- **Status:** 🔄 in progress
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `docs: add memory probe result to s012`
 - **Model:** —
@@ -386,6 +386,28 @@ In this document: Production inputs with their destinations, Conclusion and Stat
 Q1 is answered, the exit criterion has a result, every P has a destination, and every `TODO(T037)` has a resolution.
 
 ## 4. Findings
+
+### F1. Modal's Starter plan accepts a 4 GiB function and lets it occupy 3.822 GB
+
+Step 2, 2026-11-02, output of `memory_probe.py`.
+
+- The function with `memory=4096` was created without `InvalidError`, allocated 3,758,096,384 bytes, held them for 60 s and finished, with no memory kill: `duration_s` 60.6.
+- `peak_gb` is 3.822, from `ru_maxrss`: above the 3 GB cut and inside the expected range of 3.76 to 4.3.
+- `VmRSS` at the end of the hold is 3,732,536 KiB, which is also 3.822 GB.
+
+### F2. `/proc/self/status` in Modal's container has no `VmHWM` line
+
+Step 2, 2026-11-02, output of `memory_probe.py` in two runs.
+
+- The first run failed with `AttributeError` when looking for `VmHWM`, after the allocation and the hold. It says nothing about Q1.
+- The `Vm*` lines the second run printed are only `VmSize`, `VmRSS` and `VmData`. `ru_maxrss` returned a value.
+
+### F3. Modal's dashboard shows 3.54 GiB used, in line with `peak_gb`
+
+Step 2, 2026-11-02, memory graph of the run on Modal's dashboard.
+
+- The graph shows 4 GiB requested and 3.54 GiB used, flat through the hold.
+- 3.54 GiB is 3.80 GB, about 0.5% below the `peak_gb` of F1 and inside the 10% tolerance.
 
 ### 4.1 Production inputs
 
