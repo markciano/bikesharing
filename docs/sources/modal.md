@@ -41,5 +41,4 @@ Facts about the platform that runs the pipeline ([s012 › D1](../spikes/s012-ex
 | Images and Secrets are stored in object storage in the US | [Data residency](https://modal.com/docs/guide/data-residency) | 2026-11-02 |
 | Failed scheduled runs are notified through Slack, with no plan requirement stated. Email is offered for personal notifications, without stating which events it covers. Timeouts, memory kills and runs that never start are not documented as triggers | [Slack notifications](https://modal.com/docs/guide/slack-notifications), [changelog](https://modal.com/changelog/per-app-and-per-environment-notification-preferences) | 2026-11-02 |
 | A memory kill counts as a container crash, and a deployed app retries it indefinitely with crash-loop backoff; scheduled functions are not covered | [Retries](https://modal.com/docs/guide/retries) | 2026-11-02 |
-
-TODO(T037): add the result of [s012 › Q1](../spikes/s012-execution-target.md#13-questions), whether Starter accepts and lets a function occupy 4 GiB.
+| Starter accepts a Function that requests 4 GiB, and one run occupied 3.54 GiB of it and finished. The plan's maximum was not tested | [s012 › F1, F3](../spikes/s012-execution-target.md#4-findings) | 2026-11-02 |

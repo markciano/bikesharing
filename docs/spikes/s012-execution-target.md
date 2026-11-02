@@ -6,10 +6,10 @@
 
 ## Status
 
-- State: Running 🔄
+- State: Concluded ✅
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
-- Started: 2026-11-02 · Finished: —
-- Current step: 3
+- Started: 2026-11-02 · Finished: 2026-11-02
+- Current step: —
 
 ## 1. Questions — what we need to know
 
@@ -27,7 +27,7 @@ What would change it: without the credit, Modal costs about €7.20 per month at
 
 The cut also assumes 4 GB in every run, which is the worst case. With 2 GB, Fly.io Machines would pass at about €2.41 per month at 10 minutes.
 
-`TODO(T040)`: if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, or T040 chooses the on-demand mode, reopen this decision with Cloud Run and Fly.io as candidates. To measure it, the final log event of every run ([D5](#d5-pipeline-logs)) carries `duration_s` and `peak_memory_mb`, the latter from the kernel's `VmHWM`.
+`TODO(T040)`: if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, or T040 chooses the on-demand mode, reopen this decision with Cloud Run and Fly.io as candidates. To measure it, the final log event of every run ([D5](#d5-pipeline-logs)) carries `duration_s` and `peak_memory_mb`, the latter from `ru_maxrss` (**#1**).
 
 Options rejected:
 
@@ -255,7 +255,7 @@ None.
 
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
-| 1 | [2.1 Approach](#21-approach), [Step 1](#step-1--write-the-memory-probe) | The peak is read from `ru_maxrss` (POSIX `getrusage`), not `VmHWM` | The first run failed with `AttributeError`: `/proc/self/status` in Modal's container has no `VmHWM` line | Step 2 |
+| 1 | [D1](#d1-execution-platform), [2.1 Approach](#21-approach), [Step 1](#step-1--write-the-memory-probe) | The peak is read from `ru_maxrss` (POSIX `getrusage`), not `VmHWM` | The first run failed with `AttributeError`: `/proc/self/status` in Modal's container has no `VmHWM` line | Step 2 |
 
 ### 2.4 File layout
 
@@ -358,7 +358,7 @@ None.
 
 ### Step 3 — Conclusion
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner + Claude
 - **Commit:** `docs: conclude spike s012`
 - **Model:** sonnet · medium
@@ -394,6 +394,7 @@ Step 2, 2026-11-02, output of `memory_probe.py`.
 - The function with `memory=4096` was created without `InvalidError`, allocated 3,758,096,384 bytes, held them for 60 s and finished, with no memory kill: `duration_s` 60.6.
 - `peak_gb` is 3.822, from `ru_maxrss`: above the 3 GB cut and inside the expected range of 3.76 to 4.3.
 - `VmRSS` at the end of the hold is 3,732,536 KiB, which is also 3.822 GB.
+- Consequence: Q1's Gate passes.
 
 ### F2. `/proc/self/status` in Modal's container has no `VmHWM` line
 
@@ -401,6 +402,7 @@ Step 2, 2026-11-02, output of `memory_probe.py` in two runs.
 
 - The first run failed with `AttributeError` when looking for `VmHWM`, after the allocation and the hold. It says nothing about Q1.
 - The `Vm*` lines the second run printed are only `VmSize`, `VmRSS` and `VmData`. `ru_maxrss` returned a value.
+- Consequence: the peak is read from `ru_maxrss` (#1), here and in the pipeline (P1).
 
 ### F3. Modal's dashboard shows 3.54 GiB used, in line with `peak_gb`
 
@@ -408,32 +410,67 @@ Step 2, 2026-11-02, memory graph of the run on Modal's dashboard.
 
 - The graph shows 4 GiB requested and 3.54 GiB used, flat through the hold.
 - 3.54 GiB is 3.80 GB, about 0.5% below the `peak_gb` of F1 and inside the 10% tolerance.
+- Consequence: an independent count confirms F1, and `ru_maxrss` is a valid source for P1.
 
 ### 4.1 Production inputs
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | `peak_memory_mb` in the run's final log event (D1) cannot be read from `VmHWM` in Modal's container: use the source that the memory probe validates | Step 2, #1 | |
+| P1 | `peak_memory_mb` in the run's final log event (D1) cannot be read from `VmHWM` in Modal's container: use the source that the memory probe validates | Step 2, #1 | T040's design: `peak_memory_mb` from `ru_maxrss` (F2, F3) |
 
 ## 5. Conclusion
 
+Observed window: two runs of the memory probe on 2026-11-02, launched with `modal run` in the default region. The first ended on the `VmHWM` error of F2 and says nothing about Q1; the second gives the result.
+
 ### 5.1 Answers
+
+- **Q1.** Yes. Starter accepts a function that requests 4 GiB, and the function occupied 3.822 GB for 60 s and finished (F1), which Modal's dashboard shows as 3.54 GiB (F3). The probe stopped at its planned 3.5 GiB allocation, so the last part of the 4 GiB was not occupied; it clears the 3 GB that [N2](#d1-execution-platform) needs.
 
 ### 5.2 Exit criteria
 
 | Criterion | Kind | Result | Findings |
 |---|---|---|---|
+| A function that requests 4 GiB is accepted and occupies at least 3 GB without failing | Hard cut | Pass: accepted, 3.822 GB, finished | F1, F3 |
 
 ### 5.3 Verdict
+
+Modal's Starter plan can give the pipeline the memory it is estimated to need, 3 GB at worst ([N2](#d1-execution-platform)). The Gate passed, so Modal stays as the execution platform and Oracle Cloud Always Free stays as the fallback.
 
 ### 5.4 Decisions to record
 
 | D | Outcome | Why |
 |---|---|---|
+| D1 | Holds: Modal on the Starter plan, with Oracle Cloud Always Free as the fallback | It leads the matrix with 8.10, and the Gate on the winner passed (F1, F3) |
+| D2 | Holds: Modal's `Cron` | It adds no component, and its fixed clock times do not move on redeploy |
+| D3 | Holds: R24–R28, with the other threats documented without a requirement | STRIDE and least privilege: R24–R28 cover what needs a control, and the other threats are accepted with their reason |
+| D4 | Holds: a thin platform wrapper, with its four rules | The logic is SQL and DuckDB already isolates storage, so ports would leave the core almost empty; a change of platform touches one module |
+| D5 | Holds: JSON Lines on stdout, one object per run in R2 for 30 days, and heartbeat alerts with Healthchecks.io | Modal keeps logs for 1 day, and R2 keeps them for almost no cost; a heartbeat outside Modal detects runs that never start, which Modal does not document |
 
 ### 5.5 Not verified
 
+- A deployed, scheduled function: the probe was a temporary app started by hand, so a limit that applies only to deployed apps would not show — the first deployment of T040 runs at the same memory request; the Gate's fallback applies if it is rejected.
+- DuckDB's real memory use on Modal, and spilling to disk under [N2](#d1-execution-platform): the probe holds a plain allocation — a run could need more memory than the 3 GB estimated — the first slice of T040 measures it with `peak_memory_mb`.
+- Occupying the full 4 GiB, and the plan's maximum memory: a request above 4 GiB could be rejected — T040 tries it again before raising the request.
+- The reliability of `Cron` and what happens to a missed run: runs could be skipped with no notice from Modal — the heartbeat of [D5](#d5-pipeline-logs) detects them.
+- How Modal retries a memory kill of a scheduled function (E12): credit spent with no progress — the `TODO(T040)` in [D3](#d3-pipeline-security).
+- Whether the usage limit stops runs before any charge: an unexpected charge — the $1 spend limit bounds it, and T040 checks it with Modal's limits in [1.5 Out of scope](#15-out-of-scope).
+- Real run time, and the region: the credit may not cover it, and `eu` costs 1.15x — `duration_s` measures it, with D1's reopening condition.
+- The minimum period of Healthchecks.io: it may not fit the chosen cadence — checked when the monitor is created.
+
 ### 5.6 Follow-ups
+
+- ADRs to write, each in its own commit with its lines in `docs/architecture.md`: execution platform (D1), scheduler (D2), processing logic separated from the platform (D4, replacing ADR-0010, as its `TODO(T037)` describes), pipeline logs (D5) and pipeline alerts (D5). D3 takes no ADR: it is recorded as R24–R28 in [d002 › Requirements](../designs/d002-requirements.md#requirements), as s011 did with R19–R23.
+- `TODO(T037)` resolutions:
+  - [D4](#d4-processing-logic-separated-from-the-platform): resolved by D4's ADR.
+  - `docs/architecture.md` › Architecture decisions: resolved by D4's ADR.
+  - `docs/architecture.md` › Deployment view, processing: written in D1's ADR commit.
+  - `docs/architecture.md` › Runtime view, main flows: written in the commit of the alerts ADR, once the schedule, logs and alerts are recorded.
+  - `docs/sources/modal.md`: resolved in this step.
+- No new tasks. Existing tasks pick up what this spike leaves them:
+  - `TODO(T038)`: the item marked T038 in [1.5 Out of scope](#15-out-of-scope).
+  - `TODO(T039)`: the items marked T039 in [1.5 Out of scope](#15-out-of-scope).
+  - `TODO(T040)`: the items marked T040 in [1.5 Out of scope](#15-out-of-scope), and [4.1 Production inputs](#41-production-inputs).
+- Tear-down: nothing is kept. The apps ended with their runs, and the owner revoked the token in Step 2.
 
 ## 6. Sources
 
