@@ -4,7 +4,7 @@
 # the run's logs. Run with: uv run modal run memory_probe.py::probe
 
 import json
-import re
+import resource
 import time
 from pathlib import Path
 
@@ -32,13 +32,18 @@ def probe() -> None:
     print(f"Holding the memory for {HOLD_S} s", flush=True)
     time.sleep(HOLD_S)
 
-    status = Path("/proc/self/status").read_text()
-    # VmHWM is in KiB, though the kernel labels it kB.
-    peak_kib = int(re.search(r"^VmHWM:\s+(\d+) kB$", status, re.MULTILINE).group(1))
+    # Printed as they are, since the container's /proc may not expose every field.
+    for line in Path("/proc/self/status").read_text().splitlines():
+        if line.startswith("Vm"):
+            print(line, flush=True)
+
+    # ru_maxrss is in KiB on Linux. A sandbox that does not track it returns 0, which
+    # means "not measured": it must not read as a peak under the Gate's 3 GB.
+    peak_kib = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
     result = {
         "allocated_bytes": len(buffer),
-        "peak_gb": round(peak_kib * 1_024 / 10**9, 3),
+        "peak_gb": round(peak_kib * 1_024 / 10**9, 3) if peak_kib else None,
         "duration_s": round(time.monotonic() - start, 1),
     }
     print(json.dumps(result), flush=True)
