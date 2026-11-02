@@ -131,6 +131,7 @@ Five new requirements, R24–R28, and the other threats documented without a req
 | E8 | Data leaks through DuckDB's temporary files ([s011 › A9](s011-engine-pipeline-language.md#d4-pipeline-security)) (Information disclosure) | Low: public feed data, and no credentials (R22) | Accepted, closing A9: each container runs in its own sandbox; encryption and wiping of its disk are not documented | None |
 | E9 | No way to tell who deployed what (Repudiation) | Low: there is one operator | Accepted: Modal keeps a deployment history, and `main` the code | None |
 | E10 | Modal has an outage or withdraws the credit (Denial of service) | The pipeline stops, or its cost rises | Covered by R7 and R11; cost by [D1](#d1-execution-platform); moving to the fallback is bounded by [D4](#d4-processing-logic-separated-from-the-platform) | None |
+| E11 | The heartbeat URL of [D5](#d5-pipeline-logs) leaks (Spoofing) | Low: false signals could hide a failure, and the visualization still shows the age of the data (R7) | Accepted: kept as a secret, as in E2, and it gives access to nothing else | None |
 
 Requirements transferred to [d002 › Requirements](../designs/d002-requirements.md#requirements):
 
@@ -189,11 +190,18 @@ Rejected:
 - **Modal's logs only:** nothing to build, but after a day there is no trace of why a run failed, nor any history of run duration, which T040 needs to check D1's reopening condition.
 - **An external log service:** it adds an account, a secret and a component to maintain.
 
-`TODO(T037)`: decide how alerts reach the owner. Inputs:
+Alerts follow the heartbeat pattern (dead man's switch), with Healthchecks.io on its free plan: each run signals its start and its result, and the service emails the owner on a failure signal or when the expected signal does not arrive. This satisfies [d002 › R23](../designs/d002-requirements.md#requirements) and detects the missed runs of [D2](#d2-scheduler), whatever their cause. The monitor runs outside Modal, because a failed platform cannot report its own failure.
 
-- Modal's scheduled functions "will notify you on failure", but the channel, the plan and runs that never start are not documented ([managing deployments](https://modal.com/docs/guide/managing-deployments)).
-- A missed run ([D2](#d2-scheduler)) can be detected by an alert on the age of the data, which also covers any other cause.
-- Which of these alerts satisfies [d002 › R23](../designs/d002-requirements.md#requirements), with [R7 and R8](../designs/d002-requirements.md#requirements) as related requirements, and no credentials in logs (R22).
+- **Detection time:** a failure signal alerts at once. A run that dies abruptly or never starts alerts after the period plus its grace time, about 20 minutes at a 10-minute cadence with 10 minutes of grace.
+- **Signals:** they carry no body, so logs stay in R2. The signal URL is a secret, and the package signals only when that environment variable is set, as D4's rules 3 and 4 require.
+- **Limit:** a run that ends well with no new data sends a success signal; [R7 and R8](../designs/d002-requirements.md#requirements) cover that case.
+- **Not confirmed:** the service's minimum period. A secondary source states 60 seconds, enough for any cadence T040 can choose; it is checked when the monitor is created.
+
+Rejected:
+
+- **Modal's notifications alone:** only failed scheduled runs are documented, through Slack. Timeouts, memory kills and runs that never start are not documented as triggers. They can stay on as an extra, with nothing relying on them.
+- **A Cloudflare Worker checking the age of the data:** it also covers every cause, but adds code to maintain and test.
+- **Cronitor and Better Stack:** free plans of 5 and 10 monitors against Healthchecks.io's 20. Healthchecks.io is also open source and can be self-hosted, which leaves a way out.
 
 ### 1.3 Questions
 
@@ -216,16 +224,18 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 - The pipeline's end-to-end and post-deploy smoke tests, on paper in [testing-strategy](../testing-strategy.md) — T040
 - Aligning capture's logs with the convention this spike sets for the pipeline: format and field names only; log objects from before the production start are deleted before the bucket lock is enabled ([ADR-0023](../decisions/0023-storage-security-baseline.md)), so only the new format remains — T039
 - The fragmentation of capture's logs, one object per pass, and whether a compacted daily copy is worth it; the bucket lock keeps the originals — T039
+- Whether capture's alert ([d002 › R8](../designs/d002-requirements.md#requirements)) uses the same heartbeat service as [D5](#d5-pipeline-logs) — T039
 - How the pipeline's health is viewed beyond ad hoc SQL: a separate operations panel or a public status page with aggregated metrics; an admin role would add authentication where [d002 › R1](../designs/d002-requirements.md#requirements) asks for none — T038
 
 ### 1.6 Open questions
 
 | Question | Notes |
 |---|---|
-| Remaining for Questions approval | Decide D5's alerts. Then playback of Context and Questions, then the Questions approval. Method and Steps follow: one Owner step for Q1 with exact commands |
+| Remaining for Questions approval | Close the questions below. Then playback of Context and Questions, then the Questions approval. Method and Steps follow: one Owner step for Q1 with exact commands |
 | Does the capture completeness target belong to T037? | `TODO(T037)` at `docs/architecture.md` line 150: keep it here or re-point it to T039 or T042. The other three (main flows, processing, the ADR replacing ADR-0010) are resolved at this spike's close |
 | In which region do containers run? | The default is not documented and the EU looks like ×1.15, not confirmed for Starter. It affects run time against R2, so it probably goes to T040 |
 | How to keep runs from overlapping | Out of scope (T040); `max_containers` exists, and what happens to a scheduled tick while a run is active is not documented |
+| Do Modal's unlimited retries reach scheduled functions? | Its [retries guide](https://modal.com/docs/guide/retries) says a deployed app retries a memory kill indefinitely, with crash-loop backoff, while [d002 › R23](../designs/d002-requirements.md#requirements) requires limited retries. It does not cover scheduled functions |
 | Modal limits set by the owner | Usage limit $30 and spend limit $1 (2026-11-02). If the usage limit counts usage before credits, as documented, runs stop when the credit ends and nothing is charged; not tried. T040 may raise them, up to R28's limit |
 
 ## 2. Method — how we find out
@@ -292,3 +302,9 @@ Gathered by the `web-researcher` on 2026-11-02 for D1:
 - Oracle Always Free limits and idle reclamation: <https://docs.oracle.com/en-us/iaas/Content/FreeTier/resourceref.htm>
 - Oracle Monitoring and Notifications: <https://docs.oracle.com/en-us/iaas/Content/Monitoring/Concepts/monitoringoverview.htm>, <https://docs.oracle.com/en-us/iaas/Content/Notification/Concepts/notificationoverview.htm>
 - Candidates cut: <https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/>, <https://docs.fly.io/about/pricing>, <https://cloud.google.com/run/pricing>, <https://developers.cloudflare.com/containers/pricing/>, <https://developers.cloudflare.com/workers/platform/limits/>, <https://aws.amazon.com/lambda/pricing/>, <https://dagster.io/pricing>, <https://www.prefect.io/pricing>, <https://www.prefect.io/docs/v3/how-to-guides/deployment_infra/managed>
+
+Gathered by the `web-researcher` on 2026-11-02 for D5:
+
+- Modal notifications and retries: <https://modal.com/docs/guide/slack-notifications>, <https://modal.com/changelog/per-app-and-per-environment-notification-preferences>, <https://modal.com/docs/guide/retries>
+- Healthchecks.io plans, signals and self-hosting: <https://healthchecks.io/pricing/>, <https://healthchecks.io/docs/http_api/>, <https://healthchecks.io/docs/self_hosted/>
+- Other heartbeat services: <https://cronitor.io/pricing>, <https://betterstack.com/pricing>, <https://betterstack.com/docs/uptime/cron-and-heartbeat-monitor/>
