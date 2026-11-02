@@ -72,6 +72,7 @@ Each goal is made measurable by the scenarios in §10.
 - **Own lakehouse on Cloudflare R2:** every layer is stored as open-format files in R2, with compute separate; R2 charges no egress, so the engine can run anywhere. Silver and gold are Delta Lake tables, whose commits are safe on R2 with no external lock. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0022](decisions/0022-delta-lake-for-silver-and-gold.md).
 - **DuckDB as the processing engine:** an in-process, single-node engine that reads bronze and Delta from R2, and hands writes and MERGE to `deltalake` through Arrow; Polars is the fallback. [ADR-0024](decisions/0024-duckdb-as-processing-engine.md).
 - **SQL models directed by Python:** transformations are `.sql` models that the engine executes; Python runs them in order and hands results to `deltalake`. [ADR-0025](decisions/0025-sql-models-directed-by-python.md).
+- **Modal as the execution platform:** the pipeline runs on Modal's Starter plan, fully managed and at no cost within its monthly credit, so one operator keeps no machine; Oracle Cloud Always Free is the fallback. [ADR-0027](decisions/0027-modal-as-execution-platform.md).
 
 ### 4.2 Structure
 
@@ -94,7 +95,7 @@ Each goal is made measurable by the scenarios in §10.
 |---|---|---|---|
 | Capture | Fetches the feeds and writes them to the landing zone | Built on Cloudflare Workers + R2 | [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md); [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md) |
 | Landing zone (bronze) | Holds raw responses under the output contract, and the history archives as downloaded | Bronze bucket in R2 | [ADR-0012](decisions/0012-collectors-decoupled-by-output-contract.md); [ADR-0020](decisions/0020-bronze-as-captured-objects.md); [ADR-0023](decisions/0023-storage-security-baseline.md) |
-| Processing | Turns raw responses into the common model and its tables | DuckDB as the engine, with SQL models directed by Python; execution in T037 | [ADR-0008](decisions/0008-common-model-on-gbfs-3-0.md); [ADR-0024](decisions/0024-duckdb-as-processing-engine.md); [ADR-0025](decisions/0025-sql-models-directed-by-python.md); [tasks.md › T037](tasks.md) |
+| Processing | Turns raw responses into the common model and its tables | DuckDB as the engine, with SQL models directed by Python, running on Modal; built in T040 | [ADR-0008](decisions/0008-common-model-on-gbfs-3-0.md); [ADR-0024](decisions/0024-duckdb-as-processing-engine.md); [ADR-0025](decisions/0025-sql-models-directed-by-python.md); [ADR-0027](decisions/0027-modal-as-execution-platform.md) |
 | Lakehouse | Silver and gold tables, read by analysis and visualization | Delta tables in the lakehouse bucket in R2; built by the pipeline (T040) | [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0022](decisions/0022-delta-lake-for-silver-and-gold.md); [ADR-0023](decisions/0023-storage-security-baseline.md); [tasks.md › T040](tasks.md) |
 | Visualization | Presents the data | T038 | [d002 › R1, R2](designs/d002-requirements.md#requirements); [tasks.md › T038](tasks.md) |
 
@@ -106,7 +107,7 @@ TODO(T037): main flows (capture pass, pipeline run).
 
 - **Capture:** Cloudflare Workers with Cron Triggers, writing to the bronze bucket in R2. [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md); [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md).
 - **Storage:** two R2 buckets: bronze, and lakehouse for silver and gold. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0023](decisions/0023-storage-security-baseline.md).
-- TODO(T037): processing.
+- **Processing:** Modal Functions on the Starter plan, in containers from a pinned image, reading bronze and writing the lakehouse bucket in R2. [ADR-0027](decisions/0027-modal-as-execution-platform.md).
 - TODO(T038): visualization.
 
 ## 8. Cross-cutting concepts
@@ -156,6 +157,7 @@ Quality scenarios that make the goals in §1.2 measurable:
 - **One vendor:** storage and capture both depend on Cloudflare. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md).
 - **Delta concurrency limits (low):** with no managed service coordinating commits, conflicting MERGEs are not resolved automatically, and concurrent table creation or schema merge can race; unlikely here, since tables are created and schemas changed rarely. The pipeline design handles them. [s010 › D4](spikes/s010-storage-table-format.md#decisions-to-record).
 - **Engine not exercised on real volumes:** the hand-off from DuckDB to `deltalake` and its memory use rest on documentation; the first slice of T040 checks both, with Polars as the fallback. [ADR-0024](decisions/0024-duckdb-as-processing-engine.md); [s011 › Not verified](spikes/s011-engine-pipeline-language.md#23-not-verified).
+- **Dependence on Modal's credit:** without the monthly credit, or with runs longer than estimated, the pipeline's platform cost exceeds its share; run time is not measured until the first slice of T040, and Oracle Cloud Always Free is the fallback. [ADR-0027](decisions/0027-modal-as-execution-platform.md).
 - **Undocumented Worker behaviour:** capture relies on `encodeResponseBody: 'manual'` and on the Free plan's CPU enforcement, neither documented. [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md).
 
 ## 12. Glossary
