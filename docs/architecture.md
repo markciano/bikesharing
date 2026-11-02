@@ -73,6 +73,7 @@ Each goal is made measurable by the scenarios in §10.
 - **DuckDB as the processing engine:** an in-process, single-node engine that reads bronze and Delta from R2, and hands writes and MERGE to `deltalake` through Arrow; Polars is the fallback. [ADR-0024](decisions/0024-duckdb-as-processing-engine.md).
 - **SQL models directed by Python:** transformations are `.sql` models that the engine executes; Python runs them in order and hands results to `deltalake`. [ADR-0025](decisions/0025-sql-models-directed-by-python.md).
 - **Modal as the execution platform:** the pipeline runs on Modal's Starter plan, fully managed and at no cost within its monthly credit, so one operator keeps no machine; Oracle Cloud Always Free is the fallback. [ADR-0027](decisions/0027-modal-as-execution-platform.md).
+- **Modal's Cron as the scheduler:** the platform's native schedule triggers each run, with no added component and fixed clock times. [ADR-0028](decisions/0028-modal-cron-as-pipeline-scheduler.md).
 
 ### 4.2 Structure
 
@@ -107,7 +108,7 @@ TODO(T037): main flows (capture pass, pipeline run).
 
 - **Capture:** Cloudflare Workers with Cron Triggers, writing to the bronze bucket in R2. [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md); [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md).
 - **Storage:** two R2 buckets: bronze, and lakehouse for silver and gold. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0023](decisions/0023-storage-security-baseline.md).
-- **Processing:** Modal Functions on the Starter plan, in containers from a pinned image, reading bronze and writing the lakehouse bucket in R2. [ADR-0027](decisions/0027-modal-as-execution-platform.md).
+- **Processing:** Modal Functions on the Starter plan, in containers from a pinned image, started by Modal's `Cron`, reading bronze and writing the lakehouse bucket in R2. [ADR-0027](decisions/0027-modal-as-execution-platform.md); [ADR-0028](decisions/0028-modal-cron-as-pipeline-scheduler.md).
 - TODO(T038): visualization.
 
 ## 8. Cross-cutting concepts
