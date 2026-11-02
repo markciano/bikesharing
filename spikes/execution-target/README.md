@@ -23,4 +23,4 @@ It takes about 2 minutes and creates a temporary app that stops when the run end
 
 ## Scripts
 
-- `memory_probe.py`: one Modal function that requests 4 GiB, allocates and writes 3.5 GiB, holds it for 60 s and prints one JSON line with `allocated_bytes`, `peak_gb` and `duration_s`.
+- `memory_probe.py`: one Modal function that requests 4 GiB, allocates and writes 3.5 GiB, holds it for 60 s, prints the `Vm*` lines of `/proc/self/status` and one JSON line with `allocated_bytes`, `peak_gb` and `duration_s`. `peak_gb` comes from `ru_maxrss`, and is `null` if the container does not track it.

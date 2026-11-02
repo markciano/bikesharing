@@ -247,14 +247,15 @@ None.
 
 - **What runs where:** the owner launches it from the local machine with `modal run`, which creates a temporary app: nothing is deployed and nothing is scheduled. It uses the default region and a plain image, with no DuckDB, R2 access or secrets, since Q1 asks about the platform and not the pipeline.
 - **Why 3.5 GiB:** it clears the 3 GB cut with margin and stays under the 4 GiB requested. The function writes to every page, so the memory is really occupied and not only reserved.
-- **Evidence:** the peak from the kernel (`VmHWM` in `/proc/self/status`), checked against the known allocation and, as an independent count, against the memory graph on Modal's dashboard.
-- **Reading the result:** `InvalidError` for the memory request on creation, a memory kill during the run, or a peak under 3 GB fails the Gate. A finished run with a peak of at least 3 GB passes it. Any other error says nothing about Q1 and does not decide the Gate: the cause is fixed and the probe runs again.
+- **Evidence:** the peak from the kernel (`ru_maxrss` from `getrusage`), checked against the known allocation and, as an independent count, against the memory graph on Modal's dashboard. The `Vm*` lines of `/proc/self/status` are printed as they are, as support. **#1**
+- **Reading the result:** `InvalidError` for the memory request on creation, a memory kill during the run, or a peak under 3 GB fails the Gate. A finished run with a peak of at least 3 GB passes it. Any other error, or a `peak_gb` of `null`, says nothing about Q1 and does not decide the Gate: the cause is fixed and the probe runs again.
 - **Cost and tear-down:** about 2 minutes at about $0.0555 per hour, under $0.01 of the credit. The app stops when the run ends.
 
 ### 2.3 Decision log
 
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
+| 1 | [2.1 Approach](#21-approach), [Step 1](#step-1--write-the-memory-probe) | The peak is read from `ru_maxrss` (POSIX `getrusage`), not `VmHWM` | The first run failed with `AttributeError`: `/proc/self/status` in Modal's container has no `VmHWM` line | Step 2 |
 
 ### 2.4 File layout
 
@@ -302,7 +303,7 @@ The probe of [2.1 Approach](#21-approach), in `spikes/execution-target/`: `memor
    - a `modal.App` named `memory-probe`;
    - an image `modal.Image.debian_slim(python_version="3.13")`, with no extra packages;
    - one function `probe`, declared with `memory=4096` and `timeout=300`, with no retries, secrets, schedule or `region`;
-   - in its body: allocate a `bytearray` of 3.5 GiB (3,758,096,384 bytes), write to every 4,096th byte so each page is occupied, wait 60 s, read `VmHWM` from `/proc/self/status`, and print one JSON line with `allocated_bytes`, `peak_gb` (decimal: `VmHWM` is in KiB, though labelled `kB`, so its value × 1,024 / 10^9) and `duration_s`.
+   - in its body: allocate a `bytearray` of 3.5 GiB (3,758,096,384 bytes), write to every 4,096th byte so each page is occupied, wait 60 s, print the `Vm*` lines of `/proc/self/status` as they are, read `ru_maxrss` from `getrusage`, and print one JSON line with `allocated_bytes`, `peak_gb` (decimal: `ru_maxrss` is in KiB on Linux, so its value × 1,024 / 10^9; `null` if it is 0, which means not tracked) and `duration_s`. **#1**
 5. Write `README.md`: the question, setup and commands, what the script does and a link to this report. How we got here is written at the Conclusion.
 
 #### Check
@@ -311,7 +312,7 @@ The probe of [2.1 Approach](#21-approach), in `spikes/execution-target/`: `memor
 
 ### Step 2 — Run the memory probe
 
-- **Status:** 💤 todo
+- **Status:** 🔄 in progress
 - **Who:** Owner
 - **Commit:** `docs: add memory probe result to s012`
 - **Model:** —
@@ -352,7 +353,7 @@ None.
 
 #### Check
 
-- The output holds the JSON line with `peak_gb`, or an error that fails the Gate. Any other error fails this Check, and the step runs again once the cause is fixed.
+- The output holds the JSON line with a numeric `peak_gb`, or an error that fails the Gate. Any other error, or a `peak_gb` of `null`, fails this Check, and the step runs again once the cause is fixed.
 - In a finished run with a peak of at least 3 GB, `peak_gb` is between 3.76 (the allocation) and 4.3 (the 4 GiB requested), and the dashboard's peak is within 10% of `peak_gb`. If either fails, Q1 stays unanswered until the gap is explained.
 
 ### Step 3 — Conclusion
@@ -390,6 +391,7 @@ Q1 is answered, the exit criterion has a result, every P has a destination, and 
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
+| P1 | `peak_memory_mb` in the run's final log event (D1) cannot be read from `VmHWM` in Modal's container: use the source that the memory probe validates | Step 2, #1 | |
 
 ## 5. Conclusion
 
