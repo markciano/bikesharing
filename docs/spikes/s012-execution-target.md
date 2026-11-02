@@ -6,10 +6,10 @@
 
 ## Status
 
-- State: Ready 🎬
+- State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review
-- Started: — · Finished: —
-- Current step: —
+- Started: 2026-11-02 · Finished: —
+- Current step: 2
 
 ## 1. Questions — what we need to know
 
@@ -279,7 +279,7 @@ Nothing to install beyond `uv`, which brings Python and the Modal SDK into the s
 
 ### Step 1 — Write the memory probe
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: add Modal memory probe for s012`
 - **Model:** sonnet · medium
