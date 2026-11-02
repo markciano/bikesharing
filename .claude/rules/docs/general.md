@@ -17,6 +17,10 @@ paths: # mirrors the lint scope (globs) in .markdownlint-cli2.yaml; keep both in
   - placeholders such as `<name>` go in backticks;
   - an ordered list is changed in one Edit, since the hook renumbers it after each one; then check the references to its items (e.g. `Do 3`) in the same document only, since other documents cite headings or IDs, never list positions.
 - **Heading depth:** at most `####`; deeper detail goes in nested lists.
+- **Numbers and units:** SI symbols, with a space before the symbol (`4 GB`, `60 s`, `2 min`, `3 h`), not `sec` or `mins`. Running text may spell the unit out (`a 10-minute cadence`).
+  - Sizes are in decimal units (MB, GB). Binary units (MiB, GiB) only where the provider measures in them, such as Modal's memory; never mix both for one quantity.
+  - Point as the decimal separator and comma for thousands (`4,320`, `0.4%`), as usual in English and in code.
+  - Currency symbol before the figure, with no space (`$30`, `€4`).
 
 ## References
 
