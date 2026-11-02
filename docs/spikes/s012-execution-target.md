@@ -176,10 +176,21 @@ What would change it: a second real implementation behind the same interface, su
 
 #### D5. Pipeline logs
 
-`TODO(T037)`: decide where the pipeline's logs live, their format, retention, cost and storage impact, and how alerts reach the owner. Proposed standard: structured logs as an event stream (Twelve-Factor). Inputs:
+The pipeline writes structured logs as an event stream (Twelve-Factor): JSON Lines on stdout, which Modal keeps for 1 day on Starter, in the US. Each run also uploads its events to R2 as one object, so the logs outlive Modal's retention and can be queried with SQL. An R2 lifecycle rule deletes these objects after 30 days.
 
-- Modal stores stdout and stderr in the US for 1 day on Starter, so anything kept longer must leave it: the logs can be read with `modal app logs` or the SDK, and nothing documented stops a run writing them to R2.
-- One log object per run at 10 minutes is 4,320 Class A writes a month, 0.4% of R2's free 1M; the size and its storage are still to be calculated.
+- **Format:** every event carries `ts` (UTC), `level`, `run_id` and `event`. T040 sets the events and their own fields, and [T039](../tasks.md) applies this format to capture.
+- **Place:** a prefix of the pipeline's own, with the UTC day in the key (`date=YYYY-MM-DD/<run_id>.jsonl`), so reading one day takes one read per run of that day. T040 sets the prefix. They stay apart from capture's `logs/`, which is permanent evidence under a bucket lock that would block the lifecycle rule, and which the pipeline must not be able to write to.
+- **Cost:** with 10 KB per run, a deliberately high assumption, 30 days hold about 43 MB at 10 minutes and 86 MB at 5 minutes, under $0.002 per month. Writes are 0.4% and 0.9% of R2's free 1M Class A. With at most 8,640 objects and a read per run of the day queried, no compaction is needed.
+- **Limit:** a run killed abruptly, by memory or by its time limit, uploads no object. Only Modal's 1-day copy remains.
+- **Access:** SQL with DuckDB from the owner's machine, with a read-only token.
+
+Rejected:
+
+- **Modal's logs only:** nothing to build, but after a day there is no trace of why a run failed, nor any history of run duration, which T040 needs to check D1's reopening condition.
+- **An external log service:** it adds an account, a secret and a component to maintain.
+
+`TODO(T037)`: decide how alerts reach the owner. Inputs:
+
 - Modal's scheduled functions "will notify you on failure", but the channel, the plan and runs that never start are not documented ([managing deployments](https://modal.com/docs/guide/managing-deployments)).
 - A missed run ([D2](#d2-scheduler)) can be detected by an alert on the age of the data, which also covers any other cause.
 - Which of these alerts satisfies [d002 › R23](../designs/d002-requirements.md#requirements), with [R7 and R8](../designs/d002-requirements.md#requirements) as related requirements, and no credentials in logs (R22).
@@ -204,12 +215,14 @@ Main question: can Modal's Starter plan give the pipeline the memory it needs?
 - The size of catch-up batches, and where the one-off history load runs — T040
 - The pipeline's end-to-end and post-deploy smoke tests, on paper in [testing-strategy](../testing-strategy.md) — T040
 - Aligning capture's logs with the convention this spike sets for the pipeline: format and field names only; log objects from before the production start are deleted before the bucket lock is enabled ([ADR-0023](../decisions/0023-storage-security-baseline.md)), so only the new format remains — T039
+- The fragmentation of capture's logs, one object per pass, and whether a compacted daily copy is worth it; the bucket lock keeps the originals — T039
+- How the pipeline's health is viewed beyond ad hoc SQL: a separate operations panel or a public status page with aggregated metrics; an admin role would add authentication where [d002 › R1](../designs/d002-requirements.md#requirements) asks for none — T038
 
 ### 1.6 Open questions
 
 | Question | Notes |
 |---|---|
-| Remaining for Questions approval | Decide D5. Then playback of Context and Questions, then the Questions approval. Method and Steps follow: one Owner step for Q1 with exact commands |
+| Remaining for Questions approval | Decide D5's alerts. Then playback of Context and Questions, then the Questions approval. Method and Steps follow: one Owner step for Q1 with exact commands |
 | Does the capture completeness target belong to T037? | `TODO(T037)` at `docs/architecture.md` line 150: keep it here or re-point it to T039 or T042. The other three (main flows, processing, the ADR replacing ADR-0010) are resolved at this spike's close |
 | In which region do containers run? | The default is not documented and the EU looks like ×1.15, not confirmed for Starter. It affects run time against R2, so it probably goes to T040 |
 | How to keep runs from overlapping | Out of scope (T040); `max_containers` exists, and what happens to a scheduled tick while a run is active is not documented |
