@@ -67,6 +67,11 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 - **R21** If a history archive exceeds the extraction size limit or holds a path outside its working folder, then the solution shall reject it, record the gap and keep loading the other months.
 - **R22** The pipeline shall not write storage credentials to logs, query text or engine files.
 - **R23** If a pipeline run fails or exceeds its time limit, then the solution shall stop after a limited number of retries and alert the owner.
+- **R24** The solution shall require two-factor authentication on the accounts that can deploy or run the pipeline.
+- **R25** The pipeline shall receive its credentials only from the execution platform's secret store, never from its image or the repository.
+- **R26** The solution shall deploy the pipeline only from a commit on `main`.
+- **R27** The pipeline shall expose no inbound endpoint.
+- **R28** If the execution platform's spend reaches its limit, set no higher than the pipeline's share of the budget, then the solution shall stop pipeline runs.
 
 ### Out of scope
 
