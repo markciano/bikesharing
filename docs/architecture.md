@@ -77,6 +77,7 @@ Each goal is made measurable by the scenarios in §10.
 
 ### 4.2 Structure
 
+- **Thin platform wrapper:** the pipeline's package knows nothing about the platform; one module outside it declares what the platform needs and calls a single entry point, and configuration arrives as environment variables. [ADR-0029](decisions/0029-pipeline-code-architecture.md).
 - **Landing zone with an output contract:** every collector writes the same key layout, UTC capture time and origin bytes; the pipeline depends only on the files, so collectors can change tool or language. [ADR-0012](decisions/0012-collectors-decoupled-by-output-contract.md).
 - **Raw kept untouched:** source responses are stored as received, so everything downstream can be reprocessed from them, since bronze is kept indefinitely. [ADR-0006](decisions/0006-raw-layer-keeps-source-responses-untouched.md); [ADR-0021](decisions/0021-retention-per-layer.md).
 - **Medallion layers:** bronze holds the captured objects and history archives as they arrive, with no table over them, silver the cleaned and conformed common model, gold the tables modelled for the guiding questions; silver and gold can be rebuilt from bronze. [d002 › R6, R13](designs/d002-requirements.md#requirements); [ADR-0018](decisions/0018-medallion-architecture.md); [ADR-0020](decisions/0020-bronze-as-captured-objects.md).
@@ -115,6 +116,7 @@ TODO(T037): main flows (capture pass, pipeline run).
 
 - **Time:** every stored timestamp, file name and partition is in UTC; hour and day boundaries are computed and shown in Europe/Madrid local time. [ADR-0005](decisions/0005-utc-for-all-stored-timestamps.md); [d002 › R12](designs/d002-requirements.md#requirements).
 - **Test data:** real source responses trimmed by a committed script, plus hand-written edge cases. [ADR-0009](decisions/0009-trimmed-source-samples-as-test-fixtures.md).
+- **Pipeline code architecture:** Dependency Rule, Humble Object and Twelve-Factor configuration, with four rules whose checks detect a deviation; a subset of hexagonal architecture, with no driven ports. [ADR-0029](decisions/0029-pipeline-code-architecture.md).
 - **Versions and dependencies:** runtimes pinned in each component's native version file; dependencies locked per component. [ADR-0016](decisions/0016-runtime-versions-pinned-per-component.md); [ADR-0017](decisions/0017-dependencies-locked-per-component.md).
 - **Retention:** bronze and gold kept indefinitely; silver in a rolling window covering the longest gold window (§1.1); Delta tables keep 7 days of history. [ADR-0021](decisions/0021-retention-per-layer.md).
 - **Storage security:** one token per component with least privilege; bronze in its own bucket, read-only for the pipeline; append-only bronze prefixes under a bucket lock; buckets private; the Admin token held by the owner. [ADR-0023](decisions/0023-storage-security-baseline.md); [d002 › R15–R18](designs/d002-requirements.md#requirements).
@@ -122,8 +124,6 @@ TODO(T037): main flows (capture pass, pipeline run).
 ## 9. Architecture decisions
 
 Decisions in force are the ADRs in [decisions/](decisions/); retired ones are in `decisions/archive/`. Open decisions are tasks in [tasks.md](tasks.md), in dependency order.
-
-TODO(T037): ADR on separating processing logic from the platform it runs on, replacing ADR-0010.
 
 ## 10. Quality requirements
 

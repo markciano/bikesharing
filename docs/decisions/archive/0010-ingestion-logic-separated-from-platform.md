@@ -1,9 +1,12 @@
 ---
-status: accepted
+status: superseded
 date: 2026-10-08
+superseded-by: ADR-0029
 ---
 
 # Ingestion logic is separated from the platform that runs it
+
+Superseded on 2026-11-02 (T037) by [ADR-0029](../0029-pipeline-code-architecture.md): it was written for ingestion in Python while the platform was open, and capture was then built outside Python, so it no longer described any code.
 
 ## Context and Problem Statement
 
