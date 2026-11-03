@@ -117,7 +117,7 @@ Security is treated explicitly, not left implicit: R2 holds the only copy of bro
 | A pipeline bug writes to bronze | Bronze cannot be rebuilt (D5), so the damage is permanent | The pipeline has read-only access to the bronze bucket; only capture writes it, plus the one-off history upload |
 | A bucket is made public by mistake | Anyone can list and read all data, and every read costs | Buckets stay private, which is R2's default; public access to gold only as T038 decides |
 
-Two buckets, because R2 API tokens scope to whole buckets, not key prefixes ([R2 source card](../sources/r2-storage.md)), so a read-only bronze needs its own bucket:
+Two buckets, because R2 API tokens scope to whole buckets, not key prefixes ([R2 source card](../sources/cloudflare.md)), so a read-only bronze needs its own bucket:
 
 - **bronze**: capture's existing bucket, with an indefinite bucket lock on the `raw/`, `logs/` and history archive prefixes that blocks deletes and overwrites. All three only receive new objects and none can be rebuilt; the logs attribute gaps to capture or provider (QS5). `state/` holds capture's working index, rewritten on every pass and rebuildable from `raw/`, so it stays unlocked;
 - **lakehouse**: silver and gold together, since both have the same access pattern.
@@ -209,7 +209,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
 - **Measures:** the R2 operations per commit, by class (A, B); the latency of each commit; Parquet bytes per row in the written table, so C can size silver and gold; `_delta_log` bytes per commit and bytes rewritten by MERGE and optimize, so C can size Delta's overhead. Each commit opens a fresh table handle, as a separate pipeline run would, so its operations include loading the table. The test table sets `delta.checkpointInterval = 10`, so checkpoints occur within the run. Per commit, the probe logs the JSON commits read since the last checkpoint, whether it wrote a checkpoint and, for MERGE, the files in the target partition ([#27](#decision-log)).
 - **Security ([D7](#d7-storage-security-baseline)):** uses a token scoped to the test bucket and checks that it cannot read or write `bikesharing-capture-spike`, the only production bucket that exists yet; tries to delete and overwrite an object under a locked prefix of the test bucket with the Object Read & Write token.
 - **Where it runs:** on the owner's Mac, against a test bucket in the production Cloudflare account, with an Object Read & Write token scoped to it. The owner creates the test bucket, the token and the lock rule in the console before the probe; the script only runs the checks.
-- **Counting:** a local HTTPS-inspecting proxy (mitmproxy) between `deltalake` and R2 logs every request and classifies it by the [R2 source card](../sources/r2-storage.md); the test bucket's R2 metrics give a second, independent count. `deltalake` gets the proxy address and its certificate through `storage_options`, so requests reach R2 unchanged and their signatures stay valid; only the probe process trusts that certificate. The proxy covers the whole counted run, reads and token and lock checks included; C takes only the commit and maintenance checks from the logs, and requests to other buckets are filtered out ([#22](#decision-log)).
+- **Counting:** a local HTTPS-inspecting proxy (mitmproxy) between `deltalake` and R2 logs every request and classifies it by the [R2 source card](../sources/cloudflare.md); the test bucket's R2 metrics give a second, independent count. `deltalake` gets the proxy address and its certificate through `storage_options`, so requests reach R2 unchanged and their signatures stay valid; only the probe process trusts that certificate. The proxy covers the whole counted run, reads and token and lock checks included; C takes only the commit and maintenance checks from the logs, and requests to other buckets are filtered out ([#22](#decision-log)).
 - **Evidence:**
   - the proxy logs one JSON line per request: UTC time, method, path, status, bytes, duration;
   - the probe logs each check's start, end, result (ok or error message) and commit latency;
@@ -266,7 +266,7 @@ Three probes run in order A, B, C. A goes first because it tests the riskiest as
   - catch-ups: each one redoes the previous session's day, so a month has days + catch-ups day partitions per table; each commit finds the day's compacted file, and the catch-up's optimize compacts two files per day;
   - live sessions: `live_hours` are per month, split evenly over the sessions; static silver and daily gold commit only in catch-ups, and an hourly table commits once per started hour of a session;
   - LIST pages: each run lists the day prefix as it stands at that run, at least one page, so pages grow through the day.
-- **Prices, quotas and operation classes** come from the [R2 source card](../sources/r2-storage.md). Assumptions where the pricing page is silent:
+- **Prices, quotas and operation classes** come from the [R2 source card](../sources/cloudflare.md). Assumptions where the pricing page is silent:
   - the free tier is shared by every bucket in the account (pessimistic);
   - a conditional PutObject is Class A, ListObjectsV2 is Class A as ListObjects, and DeleteObjects is free as DeleteObject; A confirms them on the test bucket's metrics;
   - deletes (silver retention, vacuum) are free, so they add no cost.
@@ -476,7 +476,7 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 
 #### Scope
 
-- `r2_proxy.py`: mitmproxy addon (decision log #19). Logs every request to `output/proxy-<UTC start>.jsonl`, one JSON line each: UTC time, bucket, method, path, query, status, request and response bytes, duration, and the operation and its class (A, B or free) as classified by the [R2 source card](../sources/r2-storage.md).
+- `r2_proxy.py`: mitmproxy addon (decision log #19). Logs every request to `output/proxy-<UTC start>.jsonl`, one JSON line each: UTC time, bucket, method, path, query, status, request and response bytes, duration, and the operation and its class (A, B or free) as classified by the [R2 source card](../sources/cloudflare.md).
 - `delta_probe.py`:
   - subcommand `full`, through the proxy, on a table created with `delta.checkpointInterval = 10` and with a fresh `DeltaTable` opened before each commit (#27): `write` (60 commits, one hour), `merge` (10 commits), on a data window of 74 captured minutes of a full day set by parameters (#32), `concurrent`, `optimize` (compaction), `vacuum` (a dry run with the 7-day default, then a run with zero retention and the retention check disabled, so the probe sees files deleted). Every client (`deltalake`, Polars, DuckDB, `boto3`) reaches the proxy through its own settings (proxy URL and the mitmproxy CA certificate), so only the probe process trusts it; `full` prints its `run_id`;
   - per check it also logs Parquet bytes per row, `_delta_log` bytes per commit, and bytes rewritten by MERGE and optimize; per commit, the JSON commits read since the last checkpoint, whether it wrote a checkpoint and, for MERGE, the files in the target partition;
@@ -494,7 +494,7 @@ The summary shows `ok` for `write`, `merge` and `concurrent` → the D4 gate hol
 #### Reads
 
 - This document, §2 A (Measures, Security, Counting, Evidence, Analysis checks).
-- [R2 source card](../sources/r2-storage.md): operation classes, for the classifier.
+- [R2 source card](../sources/cloudflare.md): operation classes, for the classifier.
 - delta-rs documentation, through the `web-researcher`: the default checkpoint interval, which C takes as N.
 - mitmproxy addon API, and the proxy and CA certificate settings of each client (`object_store` for `deltalake` and Polars, DuckDB's delta extension, `boto3`), through the `web-researcher`. A client with no such setting is reported before step 5; its check then runs on another day, uncounted.
 
@@ -660,7 +660,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
   - maintenance: optimize once per table at the end of each catch-up and each live session, and daily in the 24/7 scenarios; vacuum right after each optimize, with D6's 7-day retention (#30); one live session per catch-up (#41);
   - the checkpoint interval N, delta-rs's default as confirmed in step 4;
   - an optional override of capture's monthly Class A and B with step 7's R2 metrics figures (#24, #36);
-  - prices and free quotas from the [R2 source card](../sources/r2-storage.md), and the USD→EUR rate with its date, since prices are in USD and the threshold in EUR;
+  - prices and free quotas from the [R2 source card](../sources/cloudflare.md), and the USD→EUR rate with its date, since prices are in USD and the threshold in EUR;
   - paths to A's operation tables and B's `volumes.json`.
 - `cost_model.py`: for each scenario and month, storage per layer (bronze, silver, gold, Delta overhead) and Class A and B operations, split into capture `raw/`, capture `logs/` and `state/`, and pipeline. It computes monthly and accumulated cost against the shared free quotas, with month 1 including the initial load (#17). It writes `output/cost_*.csv` and a summary, and marks per scenario whether it fits the D2 gate (at most €2 in every month up to 12).
 - The pipeline's LISTs on bronze are derived from ADR-0012's key layout, at 1,000 keys per LIST page (#23): each run lists in full the current day prefix of the 3 dynamic feeds, static feeds once a day, and a catch-up every pending day of the 17 feeds (#43). Each new bronze object costs one GET (Class B).
@@ -677,7 +677,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 #### Reads
 
 - This document, Q1, Exit criteria and §2 C: scenarios, commit model, sizing and assumptions.
-- [R2 source card](../sources/r2-storage.md): prices, free quotas and operation classes.
+- [R2 source card](../sources/cloudflare.md): prices, free quotas and operation classes.
 - `architecture.md` §1.1: each guiding question's freshness and the static feeds' daily capture.
 - ADR-0012 (`docs/decisions/`), the key layout: the prefixes a pipeline run lists.
 
@@ -739,7 +739,7 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 #### Scope
 
 - This document: Conclusion (Answers, Exit criteria, Verdict, Decisions to record, Not verified, Follow-ups), the destination of every Production input, and Status.
-- Decisions to record: for each of D1–D7, whether it holds, changes or is reopened; the findings that support it; its grouping into ADRs; and the sections of `architecture.md` and of the [R2 source card](../sources/r2-storage.md) it affects. It is enough to write the ADRs from the closed spike (#26).
+- Decisions to record: for each of D1–D7, whether it holds, changes or is reopened; the findings that support it; its grouping into ADRs; and the sections of `architecture.md` and of the [R2 source card](../sources/cloudflare.md) it affects. It is enough to write the ADRs from the closed spike (#26).
 - Security requirements: from D7 and the security checks of probe A, the requirements the system needs, transferred to d002 Requirements after R14.
 - Follow-ups: the post-spike documentation work of T035 (ADRs, `architecture.md`, R2 source card), in a fresh session from the closed spike (#26).
 - `README.md`: How we got here.
@@ -1034,7 +1034,7 @@ Transferred to [d002 Requirements](../designs/d002-requirements.md#requirements)
 |---|---|---|
 | R15 | Leaked credentials | [F19](#4-findings): the scoped test token is denied on the production bucket |
 | R16 | Leaked credentials; a pipeline bug writes to bronze | [F19](#4-findings): the bucket lock blocks overwrite and delete by an Object Read & Write token |
-| R17 | A pipeline bug writes to bronze | R2 scopes tokens to whole buckets ([R2 source card](../sources/r2-storage.md)), hence [D7](#d7-storage-security-baseline)'s two buckets |
+| R17 | A pipeline bug writes to bronze | R2 scopes tokens to whole buckets ([R2 source card](../sources/cloudflare.md)), hence [D7](#d7-storage-security-baseline)'s two buckets |
 | R18 | A bucket is made public by mistake | R2's buckets are private by default ([D7](#d7-storage-security-baseline)); not tested |
 
 ### Not verified
@@ -1055,7 +1055,7 @@ Post-spike documentation work of T035, in a fresh session from the closed spike 
 
 - **ADRs:** the four in [Proposed ADRs](#proposed-adrs).
 - **`architecture.md`:** what to bring there is decided by an analysis in that session. Points worth checking: the outcomes of [D1–D7](#decided-at-framing) in [Decisions to record](#decisions-to-record), and the security requirements R15–R18 added to [d002](../designs/d002-requirements.md#requirements).
-- **[R2 source card](../sources/r2-storage.md):** facts the run established about R2:
+- **[R2 source card](../sources/cloudflare.md):** facts the run established about R2:
   - R2 enforces put-if-absent (`If-None-Match: *`) under a race: one PUT wins, the other gets 412 `PreconditionFailed`; delta-rs relies on it for safe commits with `aws_conditional_put: "etag"` and no external lock ([F1, F19](#4-findings)).
   - A bucket lock lets an Object Read & Write token create new objects but blocks their overwrite and delete with 409 `ObjectLockedByBucketPolicy`, which the docs did not state ([F19](#4-findings)).
   - A token scoped to one bucket gets 403 `AccessDenied` on list, read and write in another ([F19](#4-findings)).
@@ -1067,7 +1067,7 @@ No new tasks: every Production input has a destination in task T040.
 
 ## Sources
 
-R2 prices, quotas and operation classes: [R2 source card](../sources/r2-storage.md) (`web-researcher`, 2026-10-26).
+R2 prices, quotas and operation classes: [R2 source card](../sources/cloudflare.md) (`web-researcher`, 2026-10-26).
 
 Gathered by the `web-researcher` on 2026-10-25 for D4:
 

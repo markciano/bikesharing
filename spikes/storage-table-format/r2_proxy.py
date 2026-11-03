@@ -1,7 +1,7 @@
 # Request counter of s010 probe A: a mitmproxy addon that logs every request the probe sends to R2.
 #
 # Each request is classified as an S3 operation and its R2 class (A, B, free) as listed in the
-# R2 source card (docs/sources/r2-storage.md). Operations the card does not name are `unknown`;
+# R2 source card (docs/sources/cloudflare.md). Operations the card does not name are `unknown`;
 # the independent count against R2's metrics (analyse_ops.py) settles them.
 # Input:  the probe's HTTPS traffic, inspected by mitmproxy (decision log #19).
 # Output: output/proxy-<UTC start>.jsonl, one JSON line per request.
