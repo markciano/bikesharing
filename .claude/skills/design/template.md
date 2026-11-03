@@ -1,5 +1,5 @@
 <!--
-Design doc template. A design doc is the working document of one task in docs/tasks.md: Spec (what and why), Plan (how), Steps (implementation), Close (what was delivered).
+Design doc template. A design doc is the working document of one task: Spec (what and why), Plan (how), Steps (implementation), Close (what was delivered).
 It is detailed enough that Code can implement it without making design decisions.
 Sections marked Optional are kept only when they apply.
 -->
