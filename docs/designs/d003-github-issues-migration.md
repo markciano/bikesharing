@@ -6,9 +6,9 @@
 
 ## Status
 
-- State: Ready for implementation 🎬
+- State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: —
+- Current step: Step 2
 
 ## 1. Spec — what and why
 
@@ -204,7 +204,7 @@ docs/
 
 ### Step 1 — Verify the `gh` permission rules
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: verify gh permissions for design d003`
 - **R:** —
