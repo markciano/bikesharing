@@ -15,7 +15,7 @@ Tasks live in GitHub Issues (ADR-0034). Closed tasks up to T052 are in `docs/tas
 - **Effort:** 1, 2 (half day), 3 (1 day), 5 (2 days), 8 (3 days).
 - **Body:** free text with the detail: what is wanted, why, and what is needed to start.
 - **Working document:** a task of 2+ steps also has one, a design (to build or decide) or a spike report (to investigate), which is the source of truth from then on. A one-step task has only its issue.
-- **Group:** a parent issue with sub-issues, whose IDs are `TNNN.M`.
+- **Group:** a parent issue with sub-issues, whose IDs are `TNNN.M`. A parent's title ends in `[parent]`, e.g. `T900 (ef8): Add station maps [parent]`.
 - **Order:** `blocked-by` shows it, between tasks and between groups. It informs and does not block.
 
 ## Create a task
