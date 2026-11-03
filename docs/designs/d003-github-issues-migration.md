@@ -8,7 +8,7 @@
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 5
+- Current step: Step 6
 
 ## 1. Spec — what and why
 
@@ -354,7 +354,7 @@ Report the PR number, the output of `gh issue view`, and the result of the check
 
 ### Step 5 — Delete the throwaway repository
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `docs: record the probe repository removal in design d003`
 - **R:** —
