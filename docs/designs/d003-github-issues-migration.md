@@ -6,8 +6,8 @@
 
 ## Status
 
-- State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
+- State: Ready for implementation 🎬
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: —
 
 ## 1. Spec — what and why
@@ -25,7 +25,7 @@ This task changes no code, so it has no requirements or tests: this list is the 
 - Issues are enabled on `markciano/bikesharing`, and every open task from `docs/tasks.md` exists there as an issue.
 - A real PR into `main`, under its ruleset and with a rebase merge, closes its linked issue.
 - The throwaway repository `markciano/bikesharing-issues-probe` is deleted.
-- Claude Code reads, creates and groups issues with `gh`, and dependencies between issues are visible.
+- Claude Code reads and creates issues with `gh`, dependencies between issues are visible, and grouping was verified in the [throwaway repository](#verified-github-behaviour). **#23**
 - No rule or skill treats `docs/tasks.md` as the live task table.
 
 ### 1.3 Out of scope
@@ -160,6 +160,7 @@ A decision that names no standard is a project choice to which none applies.
 | 20 | [Task flow](#task-flow) | A parent's own document merges with `Refs #P`, and a child's branch is `tNNN.M-short-title`, following GitHub Flow **extends #11** | `Closes #P` would close the parent before its children exist, and the branch name had no form for a child | — | Plan review |
 | 21 | [`gh` permissions](#gh-permissions) | Only collaborators can create issues, with the author filter of #19 kept as a second layer, following defense in depth | Strangers cannot add noise or instructions, and `/task` does not depend on a setting outside the repository | — | Steps |
 | 22 | [Task model](#task-model) | A parent's title ends in `[parent]` | A parent reads as one in the list of issues, with no need to open it | — | Steps |
+| 23 | [Done when](#12-done-when) | Grouping is verified by the test in the throwaway repository, not in `markciano/bikesharing` | A test child would stay forever in a public repository and take a `T039.M` ID; T039's design will create real children | — | Steps review |
 
 ### 2.3 File layout
 
@@ -247,7 +248,7 @@ Creates the 11 issues below on `markciano/bikesharing`, and the two `blocked-by`
 | `T042 (ef3): Data quality` | Checks and targets beyond the basics. | — |
 | `T044 (ef2): Cross-file link and anchor check` | Add a cross-file link and anchor check to the `docs` CI job, because MD051 checks only same-file anchors. Trial lychee and remark-validate-links on a broken anchor first. | T040 |
 | `T010 (ef3): Write README` | Write the repository README. | — |
-| `T024 (ef1): Code convention hooks` | Hooks for the code conventions of the project's languages. | — |
+| `T024 (ef1): Code convention hooks` | Hooks for the code conventions of each language in the project. | — |
 | `T027 (ef2): Automated dependency updates` | Automated dependency and runtime updates, choosing between Dependabot and Renovate. It covers the security-patch risk of exact pins in ADR-0016, and picks up the upstream fixes deferred in T029. | — |
 | `T053 (ef1): Keep template comments in new spike docs` | In the `/spike` skill, keep the template comments of future blocks when creating a spike doc, since later sessions need them. | — |
 | `T054 (ef1): Unify threat IDs under TH` | Unify the threat IDs of the STRIDE analyses under the `TH` prefix (`A` in s011, `E` in s012), and add the prefix to the ID rule in `.claude/rules/docs/general.md`. | — |
@@ -310,7 +311,7 @@ The mention at `docs/architecture.md` that cites `tasks.md › T036` stays, beca
 
 #### Scope
 
-Pushes the branch, opens the draft PR of T055 with `Closes #N`, and confirms that the issue shows the PR. It changes only this step's status in this design. The PR stays in draft until the review of this design closes. The merge belongs to the close of the task, not to this step: right after it, the owner confirms that the issue closed, and if it did not, closes it by hand and proposes a task to correct the rule in `CLAUDE.md`.
+Pushes the branch, opens the draft PR of T055 with `Closes #N`, and confirms that the issue shows the PR. It changes only this step's status in this design. The PR stays in draft until the final review of `/implement` closes. The merge belongs to the close of the task, not to this step: right after it, the owner confirms that the issue closed, and if it did not, closes it by hand and proposes a task to correct the rule in `CLAUDE.md`.
 
 #### Reads
 
@@ -342,7 +343,7 @@ Pushes the branch, opens the draft PR of T055 with `Closes #N`, and confirms tha
 
    ```bash
    gh issue view N --json closedByPullRequestsReferences
-   gh pr checks
+   gh pr checks --watch
    ```
 
 Report the PR number, the output of `gh issue view`, and the result of the checks.
@@ -375,6 +376,35 @@ None.
 #### Check
 
 The command reports that the repository cannot be found: yes/no.
+
+### Step 6 — Verify the deliverable
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: verify the deliverable of design d003`
+- **R:** —
+- **Model:** sonnet · low
+
+#### Scope
+
+Verifies the items of [Done when](#12-done-when) that no earlier Check covers, and reads the final state of the issues. It changes only this step's status in this design. The merge that closes the T055 issue belongs to the close of the task, as Step 4 sets.
+
+#### Reads
+
+- [Done when](#12-done-when): the items to verify.
+- [File layout](#23-file-layout): the expected files.
+
+#### Do
+
+1. Run `git diff --name-status main...HEAD` and compare it with File layout.
+2. Run `grep -rn --exclude-dir=.git --exclude-dir=.venv --exclude-dir=node_modules --exclude=d003-github-issues-migration.md 'TODO(T055)' .`, which excludes this design because this action names the marker.
+3. Run `grep -rn 'tasks\.md' .claude CLAUDE.md`.
+4. Run `gh issue list --author @me --state all --limit 500 --json number,title,state,blockedBy,closedByPullRequestsReferences`.
+5. If an action does not give the result in Check, set this step to ⛔ and report it.
+
+#### Check
+
+Every file in File layout appears in the diff with its status, action 2 returns nothing, action 3 returns only the two lines that describe `docs/tasks.md` as frozen, and action 4 returns the 11 titles of Step 2, with T041 and T044 listing T040 in `blockedBy` and T055 listing the PR of Step 4: yes/no.
 
 ## 4. Close
 
