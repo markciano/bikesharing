@@ -269,6 +269,113 @@ Creates the 11 issues below on `markciano/bikesharing`, and the two `blocked-by`
 
 The read of action 1, run again, returns exactly the 11 titles above, all open and with no duplicates, and T041 and T044 list T040 in `blockedBy`: yes/no.
 
+### Step 3 — Freeze the task table
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: freeze the task table`
+- **R:** —
+- **Model:** sonnet · low
+
+#### Scope
+
+- `docs/tasks.md`: a note under the title, and the open and empty rows removed, leaving the 40 closed tasks.
+- `docs/architecture.md`: the two mentions of the table as the place for open work.
+- This step's status in this design.
+
+The mention at `docs/architecture.md` that cites `tasks.md › T036` stays, because T036 is closed.
+
+#### Reads
+
+- [Open tasks in GitHub Issues](#open-tasks-in-github-issues): rows leave the table only once all their issues exist, which Step 2 verified.
+
+#### Do
+
+1. In `docs/tasks.md`, add under the title: `Frozen: this table holds closed tasks only. Open and new tasks are in [GitHub Issues](https://github.com/markciano/bikesharing/issues).`
+2. In `docs/tasks.md`, remove the rows T010, T024, T027, T039, T040, T041, T042, T044, T053, T054, T055 and T056.
+3. In `docs/architecture.md`, in the line starting `- **Decisions in dependency order:**`, replace `[tasks.md](tasks.md).` with `[GitHub Issues](https://github.com/markciano/bikesharing/issues).`
+4. In `docs/architecture.md`, replace `Open decisions are tasks in [tasks.md](tasks.md), in dependency order.` with ``Open decisions are tasks in [GitHub Issues](https://github.com/markciano/bikesharing/issues), with `blocked-by` showing their order.``
+
+#### Check
+
+`grep -c '^| T' docs/tasks.md` returns `40`, `grep '^| T' docs/tasks.md | grep -vc '✅'` returns `0`, and `grep -c 'tasks.md' docs/architecture.md` returns `1`: yes/no.
+
+### Step 4 — Open the draft PR
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** `docs: record the draft PR of design d003`
+- **R:** —
+- **Model:** —
+
+#### Scope
+
+Pushes the branch, opens the draft PR of T055 with `Closes #N`, and confirms that the issue shows the PR. It changes only this step's status in this design. The PR stays in draft until the review of this design closes. The merge belongs to the close of the task, not to this step: right after it, the owner confirms that the issue closed, and if it did not, closes it by hand and proposes a task to correct the rule in `CLAUDE.md`.
+
+#### Reads
+
+- [Task flow](#task-flow): how an issue and its PR relate.
+
+#### Do
+
+1. Find the issue number of T055:
+
+   ```bash
+   gh issue list --author @me --state all --search "T055 in:title" --json number,title
+   ```
+
+2. Push the branch:
+
+   ```bash
+   git push -u origin t055-gh-issues-migration
+   ```
+
+3. Open the draft PR, replacing `N` with the number from action 1:
+
+   ```bash
+   gh pr create --draft --title 'T055: Move task tracking to GitHub Issues' --body 'Move task tracking from `docs/tasks.md` to GitHub Issues: open tasks become issues, closed tasks stay in a frozen table, and the task rules move to a `/task` skill. It also adds `gh` permission rules. Design: d003. Decision: ADR-0034.
+
+   Closes #N'
+   ```
+
+4. Confirm the link and the CI run, replacing `N` as above:
+
+   ```bash
+   gh issue view N --json closedByPullRequestsReferences
+   gh pr checks
+   ```
+
+Report the PR number, the output of `gh issue view`, and the result of the checks.
+
+#### Check
+
+`closedByPullRequestsReferences` lists the PR, and every required check passes: yes/no.
+
+### Step 5 — Delete the throwaway repository
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** `docs: record the probe repository removal in design d003`
+- **R:** —
+- **Model:** —
+
+#### Scope
+
+Deletes `markciano/bikesharing-issues-probe`, which holds only test issues and PRs. It changes only this step's status in this design.
+
+#### Reads
+
+None.
+
+#### Do
+
+1. Delete `markciano/bikesharing-issues-probe` in its Settings › General › Danger Zone, checking the repository name in the confirmation.
+2. Run `gh repo view markciano/bikesharing-issues-probe` and report the result.
+
+#### Check
+
+The command reports that the repository cannot be found: yes/no.
+
 ## 4. Close
 
 ### 4.1 Implemented
