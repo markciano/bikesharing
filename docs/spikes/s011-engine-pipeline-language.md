@@ -243,18 +243,18 @@ Scores (total = Σ score × weight, maximum 120, normalised to 0–10), with fac
 
 | # | Threat (STRIDE) | Impact | Control | Requirement |
 |---|---|---|---|---|
-| A1 | A value from a feed or archive ends up inside a query (Tampering) | Unplanned SQL runs with the pipeline's token; `sql()` accepts several statements in one string | Run only SQL versioned in the repository; captured values never enter the query text | R19 |
-| A2 | Unplanned SQL reads or writes beyond what the pipeline needs (Elevation of privilege) | DuckDB can reach local and remote files | Prevented by R19 and bounded by R15 and R17; restricting DuckDB's paths is hardening to try in T040 | None |
-| A3 | An altered extension or dependency, since DuckDB can download extensions at run time (Tampering) | Third-party code runs with the pipeline's credentials | Pinned versions ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)), installed ahead of the run; no downloads at run time | R20 |
-| A4 | A malicious or corrupt `.7z`: decompression bomb or paths outside the folder (Denial of service, Tampering) | Full disk or overwritten files | Size limit and a bounded folder; the archive is rejected and recorded as a gap (R9) | R21 |
-| A5 | Credentials end up in logs, queries or engine files (Information disclosure) | Same as a leaked credential in [ADR-0023](../decisions/0023-storage-security-baseline.md) | Credentials held only in memory, never in logs or query text | R22 |
-| A6 | A failure or loop repeats reads and writes with no end (Denial of service) | R2 cost breaks R4 (denial of wallet) | Limited retries and a time limit, with an alert to the owner | R23 |
-| A7 | A bug or a leak corrupts silver or gold (Tampering) | Wrong data published | Rebuilt from bronze (R13); damage bounded by R15 and R17 | None |
-| A8 | No way to tell which run changed what (Repudiation) | Low: there is one operator | Accepted: Delta's commit log gives a basic trace | None |
-| A9 | Data leaks through DuckDB's temporary files (Information disclosure) | Low: the data comes from public feeds | Accepted; reviewed in T037 once it is known where the pipeline runs | None |
-| A10 | Something impersonates a party the pipeline deals with (Spoofing) | Considered, with no threat specific to this component | The pipeline exposes no entry point; spoofed feeds belong to capture and the pipeline's identity on its machine to T037 | None |
+| TH1 | A value from a feed or archive ends up inside a query (Tampering) | Unplanned SQL runs with the pipeline's token; `sql()` accepts several statements in one string | Run only SQL versioned in the repository; captured values never enter the query text | R19 |
+| TH2 | Unplanned SQL reads or writes beyond what the pipeline needs (Elevation of privilege) | DuckDB can reach local and remote files | Prevented by R19 and bounded by R15 and R17; restricting DuckDB's paths is hardening to try in T040 | None |
+| TH3 | An altered extension or dependency, since DuckDB can download extensions at run time (Tampering) | Third-party code runs with the pipeline's credentials | Pinned versions ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)), installed ahead of the run; no downloads at run time | R20 |
+| TH4 | A malicious or corrupt `.7z`: decompression bomb or paths outside the folder (Denial of service, Tampering) | Full disk or overwritten files | Size limit and a bounded folder; the archive is rejected and recorded as a gap (R9) | R21 |
+| TH5 | Credentials end up in logs, queries or engine files (Information disclosure) | Same as a leaked credential in [ADR-0023](../decisions/0023-storage-security-baseline.md) | Credentials held only in memory, never in logs or query text | R22 |
+| TH6 | A failure or loop repeats reads and writes with no end (Denial of service) | R2 cost breaks R4 (denial of wallet) | Limited retries and a time limit, with an alert to the owner | R23 |
+| TH7 | A bug or a leak corrupts silver or gold (Tampering) | Wrong data published | Rebuilt from bronze (R13); damage bounded by R15 and R17 | None |
+| TH8 | No way to tell which run changed what (Repudiation) | Low: there is one operator | Accepted: Delta's commit log gives a basic trace | None |
+| TH9 | Data leaks through DuckDB's temporary files (Information disclosure) | Low: the data comes from public feeds | Accepted; reviewed in T037 once it is known where the pipeline runs | None |
+| TH10 | Something impersonates a party the pipeline deals with (Spoofing) | Considered, with no threat specific to this component | The pipeline exposes no entry point; spoofed feeds belong to capture and the pipeline's identity on its machine to T037 | None |
 
-Restricting DuckDB's paths (A2) is not a requirement, because it may not be achievable with R2 and Delta today, and a DuckDB maintainer commented that these settings do not replace real sandboxing against untrusted SQL (issue 24695):
+Restricting DuckDB's paths (TH2) is not a requirement, because it may not be achievable with R2 and Delta today, and a DuckDB maintainer commented that these settings do not replace real sandboxing against untrusted SQL (issue 24695):
 
 - The allow-lists grant write as well as read (issue 28083, reproduced on 2.0.0).
 - Allowing `s3://` prefixes depends on a fix merged in October 2026 that is not confirmed in the released package; `r2://` and the `delta` extension are not confirmed either.
@@ -276,11 +276,11 @@ Requirements transferred to [d002 › Requirements](../designs/d002-requirements
 
 | R | Threat | Evidence |
 |---|---|---|
-| R19 | A1 | [DuckDB Python DB API](https://duckdb.org/docs/2.0/clients/python/dbapi.html) passes values separately from the SQL text |
-| R20 | A3 | [DuckDB securing guide](https://duckdb.org/docs/2.0/operations_manual/securing_duckdb/overview.html): extensions run with the process's privileges, and automatic installation can be disabled |
-| R21 | A4 | [`py7zr` changelog](https://py7zr.readthedocs.io/en/latest/Changelog.html): recent fixes for path traversal and decompression bombs |
-| R22 | A5 | [DuckDB secrets manager](https://duckdb.org/docs/2.0/configuration/secrets_manager.html): temporary secrets stay in memory, persistent ones are unencrypted files |
-| R23 | A6 | [DuckDB configuration](https://duckdb.org/docs/2.0/configuration/overview.html): no query timeout among the settings read; the gap in R8, which alerts only on capture |
+| R19 | TH1 | [DuckDB Python DB API](https://duckdb.org/docs/2.0/clients/python/dbapi.html) passes values separately from the SQL text |
+| R20 | TH3 | [DuckDB securing guide](https://duckdb.org/docs/2.0/operations_manual/securing_duckdb/overview.html): extensions run with the process's privileges, and automatic installation can be disabled |
+| R21 | TH4 | [`py7zr` changelog](https://py7zr.readthedocs.io/en/latest/Changelog.html): recent fixes for path traversal and decompression bombs |
+| R22 | TH5 | [DuckDB secrets manager](https://duckdb.org/docs/2.0/configuration/secrets_manager.html): temporary secrets stay in memory, persistent ones are unencrypted files |
+| R23 | TH6 | [DuckDB configuration](https://duckdb.org/docs/2.0/configuration/overview.html): no query timeout among the settings read; the gap in R8, which alerts only on capture |
 
 ### 1.3 Out of scope
 
@@ -315,7 +315,7 @@ The single-node engine is DuckDB, with Polars as the fallback. The pipeline is S
 
 - ADRs to write, each in its own commit with its lines in `docs/architecture.md`: processing engine (D1), pipeline language (D3) and budget shares (D2).
 - T040 picks up the inputs listed in D1, D3 and D4.
-- T037 works within the pipeline share and reviews A9; T038 validates the visualization share.
+- T037 works within the pipeline share and reviews TH9; T038 validates the visualization share.
 
 ## 3. Sources
 

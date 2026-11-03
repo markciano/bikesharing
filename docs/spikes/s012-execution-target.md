@@ -121,18 +121,18 @@ Five new requirements, R24–R28, and the other threats documented without a req
 
 | # | Threat (STRIDE) | Impact | Control | Requirement |
 |---|---|---|---|---|
-| E1 | Someone takes over the Modal account, or the GitHub account it logs in with (Spoofing) | Code runs with the pipeline's token, and spends on the owner's card | Two-factor authentication on the login; tokens with an expiry, kept outside the repository; no other workspace members | R24 |
-| E2 | The R2 token leaks from where the pipeline receives it (Information disclosure) | Same as a leaked credential in [ADR-0023](../decisions/0023-storage-security-baseline.md) | Injected from `modal.Secret`, encrypted at rest and stored in the US; never in the image or the repository; bounded by R15 and R17 | R25 |
-| E3 | Unreviewed code reaches production (Tampering) | Wrong or harmful code runs with the pipeline's token | Deploy only commits on `main`, which passed the PR's checks. The owner deploys, since Modal's CI service users are stated for Team and Enterprise | R26 |
-| E4 | Something calls the pipeline from outside (Spoofing, Denial of service) | Unplanned runs and cost | No web decorators: runs start only from the schedule or the owner's Modal client. This closes [s011 › A10](s011-engine-pipeline-language.md#d4-pipeline-security) | R27 |
-| E5 | A loop or a bug spends beyond the budget (Denial of service) | The card is charged above R4 (denial of wallet); R23 bounds a single run, not the month | A spend limit on the platform; Modal stops workloads that would incur out-of-pocket charges. The pipeline catches up later (R11), and the visualization shows the age of the data (R7) | R28 |
-| E6 | A compromised dependency sends data or the token out (Information disclosure) | Same as E2 | Accepted: outbound restrictions are documented for Modal's Sandboxes, not Functions; prevented by R20 and bounded by R15 and R17 | None |
-| E7 | Logs and payloads stay on Modal, in the US (Information disclosure) | Low: public feed data, and no credentials (R22) | Accepted | None |
-| E8 | Data leaks through DuckDB's temporary files ([s011 › A9](s011-engine-pipeline-language.md#d4-pipeline-security)) (Information disclosure) | Low: public feed data, and no credentials (R22) | Accepted, closing A9: each container runs in its own sandbox; encryption and wiping of its disk are not documented | None |
-| E9 | No way to tell who deployed what (Repudiation) | Low: there is one operator | Accepted: Modal keeps a deployment history, and `main` the code | None |
-| E10 | Modal has an outage or withdraws the credit (Denial of service) | The pipeline stops, or its cost rises | Covered by R7 and R11; cost by [D1](#d1-execution-platform); moving to the fallback is bounded by [D4](#d4-processing-logic-separated-from-the-platform) | None |
-| E11 | The heartbeat URL of [D5](#d5-pipeline-logs) leaks (Spoofing) | Low: false signals could hide a failure, and the visualization still shows the age of the data (R7) | Accepted: kept as a secret, as in E2, and it gives access to nothing else | None |
-| E12 | A memory kill is retried without limit: Modal's [retries guide](https://modal.com/docs/guide/retries) states this for deployed apps and does not cover scheduled functions (Denial of service) | Credit spent with no progress, against the limited retries of R23 | Accepted, bounded by three controls: DuckDB's memory limit below the container's, so memory errors are raised rather than killed, though it does not cover all of the process's memory; the heartbeat alert of [D5](#d5-pipeline-logs), after which the owner stops the app; and the usage limit of R28 | None |
+| TH1 | Someone takes over the Modal account, or the GitHub account it logs in with (Spoofing) | Code runs with the pipeline's token, and spends on the owner's card | Two-factor authentication on the login; tokens with an expiry, kept outside the repository; no other workspace members | R24 |
+| TH2 | The R2 token leaks from where the pipeline receives it (Information disclosure) | Same as a leaked credential in [ADR-0023](../decisions/0023-storage-security-baseline.md) | Injected from `modal.Secret`, encrypted at rest and stored in the US; never in the image or the repository; bounded by R15 and R17 | R25 |
+| TH3 | Unreviewed code reaches production (Tampering) | Wrong or harmful code runs with the pipeline's token | Deploy only commits on `main`, which passed the PR's checks. The owner deploys, since Modal's CI service users are stated for Team and Enterprise | R26 |
+| TH4 | Something calls the pipeline from outside (Spoofing, Denial of service) | Unplanned runs and cost | No web decorators: runs start only from the schedule or the owner's Modal client. This closes [s011 › TH10](s011-engine-pipeline-language.md#d4-pipeline-security) | R27 |
+| TH5 | A loop or a bug spends beyond the budget (Denial of service) | The card is charged above R4 (denial of wallet); R23 bounds a single run, not the month | A spend limit on the platform; Modal stops workloads that would incur out-of-pocket charges. The pipeline catches up later (R11), and the visualization shows the age of the data (R7) | R28 |
+| TH6 | A compromised dependency sends data or the token out (Information disclosure) | Same as TH2 | Accepted: outbound restrictions are documented for Modal's Sandboxes, not Functions; prevented by R20 and bounded by R15 and R17 | None |
+| TH7 | Logs and payloads stay on Modal, in the US (Information disclosure) | Low: public feed data, and no credentials (R22) | Accepted | None |
+| TH8 | Data leaks through DuckDB's temporary files ([s011 › TH9](s011-engine-pipeline-language.md#d4-pipeline-security)) (Information disclosure) | Low: public feed data, and no credentials (R22) | Accepted, closing s011 › TH9: each container runs in its own sandbox; encryption and wiping of its disk are not documented | None |
+| TH9 | No way to tell who deployed what (Repudiation) | Low: there is one operator | Accepted: Modal keeps a deployment history, and `main` the code | None |
+| TH10 | Modal has an outage or withdraws the credit (Denial of service) | The pipeline stops, or its cost rises | Covered by R7 and R11; cost by [D1](#d1-execution-platform); moving to the fallback is bounded by [D4](#d4-processing-logic-separated-from-the-platform) | None |
+| TH11 | The heartbeat URL of [D5](#d5-pipeline-logs) leaks (Spoofing) | Low: false signals could hide a failure, and the visualization still shows the age of the data (R7) | Accepted: kept as a secret, as in TH2, and it gives access to nothing else | None |
+| TH12 | A memory kill is retried without limit: Modal's [retries guide](https://modal.com/docs/guide/retries) states this for deployed apps and does not cover scheduled functions (Denial of service) | Credit spent with no progress, against the limited retries of R23 | Accepted, bounded by three controls: DuckDB's memory limit below the container's, so memory errors are raised rather than killed, though it does not cover all of the process's memory; the heartbeat alert of [D5](#d5-pipeline-logs), after which the owner stops the app; and the usage limit of R28 | None |
 
 `TODO(T040)`: set DuckDB's memory limit, decide on a hard container limit (`memory=(request, limit)`; without one, usage above the request is billed, as Modal charges the higher of the two), cap what one run processes and leave the rest to the next, do not retry memory errors since they are permanent, and check in the first slice how Modal treats a memory kill of a scheduled function ([d002 › R23](../designs/d002-requirements.md#requirements)).
 
@@ -140,11 +140,11 @@ Requirements transferred to [d002 › Requirements](../designs/d002-requirements
 
 | R | Threat | Evidence |
 |---|---|---|
-| R24 | E1 | [Modal workspaces](https://modal.com/docs/guide/workspaces): GitHub login; two-factor authentication on Modal itself is not documented |
-| R25 | E2 | [Modal Secrets](https://modal.com/docs/guide/secrets), [data residency](https://modal.com/docs/guide/data-residency) |
-| R26 | E3 | [Modal service users](https://modal.com/docs/guide/service-users) |
-| R27 | E4 | [Modal web endpoints](https://modal.com/docs/guide/webhooks): serving over HTTP uses web decorators |
-| R28 | E5 | [Modal budgets](https://modal.com/docs/guide/budgets); the owner found the usage and spend limits on the Starter plan's billing page on 2026-11-02 |
+| R24 | TH1 | [Modal workspaces](https://modal.com/docs/guide/workspaces): GitHub login; two-factor authentication on Modal itself is not documented |
+| R25 | TH2 | [Modal Secrets](https://modal.com/docs/guide/secrets), [data residency](https://modal.com/docs/guide/data-residency) |
+| R26 | TH3 | [Modal service users](https://modal.com/docs/guide/service-users) |
+| R27 | TH4 | [Modal web endpoints](https://modal.com/docs/guide/webhooks): serving over HTTP uses web decorators |
+| R28 | TH5 | [Modal budgets](https://modal.com/docs/guide/budgets); the owner found the usage and spend limits on the Starter plan's billing page on 2026-11-02 |
 
 #### D4. Processing logic separated from the platform
 
@@ -452,7 +452,7 @@ Modal's Starter plan can give the pipeline the memory it is estimated to need, 3
 - DuckDB's real memory use on Modal, and spilling to disk under [N2](#d1-execution-platform): the probe holds a plain allocation — a run could need more memory than the 3 GB estimated — the first slice of T040 measures it with `peak_memory_mb`.
 - Occupying the full 4 GiB, and the plan's maximum memory: a request above 4 GiB could be rejected — T040 tries it again before raising the request.
 - The reliability of `Cron` and what happens to a missed run: runs could be skipped with no notice from Modal — the heartbeat of [D5](#d5-pipeline-logs) detects them.
-- How Modal retries a memory kill of a scheduled function (E12): credit spent with no progress — the `TODO(T040)` in [D3](#d3-pipeline-security).
+- How Modal retries a memory kill of a scheduled function (TH12): credit spent with no progress — the `TODO(T040)` in [D3](#d3-pipeline-security).
 - Whether the usage limit stops runs before any charge: an unexpected charge — the $1 spend limit bounds it, and T040 checks it with Modal's limits in [1.5 Out of scope](#15-out-of-scope).
 - Real run time, and the region: the credit may not cover it, and `eu` costs 1.15x — `duration_s` measures it, with D1's reopening condition.
 - The minimum period of Healthchecks.io: it may not fit the chosen cadence — checked when the monitor is created.

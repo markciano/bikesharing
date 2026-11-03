@@ -36,7 +36,7 @@ Current step: the step being executed, or —. -->
 1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
 2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
 3. The options rejected and how robust the result is.
-4. The evaluation behind it: the table or weighted matrix (needs, cuts, anchors and scores) if one was used. -->
+4. The evaluation behind it: the table or weighted matrix (needs, cuts, anchors and scores) if one was used. A security decision lists its threats in a table: `| # | Threat (STRIDE) | Impact | Control | Requirement |`, with IDs `TH1`, `TH2`… per document. -->
 
 ### 1.3 Questions
 

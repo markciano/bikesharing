@@ -76,7 +76,7 @@ Why not the others:
 
 - **Slower on silence:** a run that dies abruptly or never starts alerts after the period plus its grace time, about 20 minutes at a 10-minute cadence with 10 minutes of grace.
 - **One more dependency:** if the monitor is down, a failure may go unnoticed, or a false alert may arrive. The visualization still shows the age of the data ([d002/R7](../designs/d002-requirements.md#requirements)).
-- **One more secret:** whoever gets the signal URL could send false signals and hide a failure. It gives access to nothing else, and the risk is accepted ([s012/E11](../spikes/s012-execution-target.md#d3-pipeline-security)).
+- **One more secret:** whoever gets the signal URL could send false signals and hide a failure. It gives access to nothing else, and the risk is accepted ([s012/TH11](../spikes/s012-execution-target.md#d3-pipeline-security)).
 - **Blind to empty success:** a run that ends well with no new data sends a success signal. [d002/R7, R8](../designs/d002-requirements.md#requirements) cover that case.
 - **Minimum period not confirmed:** a secondary source states 60 seconds, enough for any cadence T040 can choose. It is checked when the monitor is created.
 
