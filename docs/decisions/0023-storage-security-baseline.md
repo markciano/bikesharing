@@ -15,7 +15,7 @@ R2 holds every layer ([ADR-0019](0019-own-lakehouse-on-cloudflare-r2.md)), inclu
 | A pipeline bug writes to bronze | Bronze cannot be rebuilt, so the damage is permanent |
 | A bucket is made public by mistake | Anyone can list and read all data, and every read costs |
 
-- R2 API tokens scope to whole buckets, not key prefixes ([R2 source card](../sources/r2-storage.md)).
+- R2 API tokens scope to whole buckets, not key prefixes ([R2 source card](../sources/cloudflare.md)).
 - R2 has no object versioning.
 - R2 has no write-only token.
 - Bronze holds prefixes that only receive new objects and cannot be rebuilt, and one working index that capture rewrites on every pass and can rebuild from them.
