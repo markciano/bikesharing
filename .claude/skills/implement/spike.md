@@ -5,7 +5,7 @@ Applies when the argument is a spike ID (sNNN). The spike doc is in `docs/spikes
 ## Changes to the Step protocol
 
 - **Precondition.** State must be Ready 🎬 or Running 🔄. A ✅ step needs a commit in `git log` only if it has a Commit line.
-- **First step.** State goes to Running 🔄, Started is set (UTC date), and the task to 🔄.
+- **First step.** State goes to Running 🔄 and Started is set (UTC date).
 - **No tests.** Tests first does not apply, and the point that runs the Check and the tests runs only the Check: spike code is throwaway and is validated by the step's Check and by the Owner step that runs it.
 - **Deviations.** Once the owner gives the OK, record them in 2. Method › Decision log, not in Close. If one changes an exit criterion, say so in the report.
 - **Observations.** A point the step does not need is not fixed in the spike code. Write it as a Finding.
@@ -31,4 +31,4 @@ For a step with Who: Owner.
 
 ## After the last step
 
-This skill ends with the last step: it writes neither the Conclusion nor Production inputs. State stays Running 🔄 and the task 🔄. Tell the owner to continue with `/spike sNNN` in a new session.
+This skill ends with the last step: it writes neither the Conclusion nor Production inputs. State stays Running 🔄. Tell the owner to continue with `/spike sNNN` in a new session.

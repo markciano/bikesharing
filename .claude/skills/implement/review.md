@@ -41,6 +41,6 @@ The owner decides which findings to fix. A fix within the design's Scope is appl
 ## Close
 
 1. Draft *Implemented* from the ✅ steps and the test results: component — what was delivered; tests passing.
-2. Draft *Known gaps at close*: Done when items not met, File layout items not delivered, TODOs re-pointed, each with the task that covers it. Propose a task row for any gap without one. "None" is written, not left empty.
+2. Draft *Known gaps at close*: Done when items not met, File layout items not delivered, TODOs re-pointed, each with the task that covers it. Propose a task with `/task` for any gap without one. "None" is written, not left empty.
 3. *Decisions taken during implementation* is already written: review it with the owner; write "None" if empty.
-4. The owner checks Done when. When accepted, State goes to Complete ✅, Current step to —, and the task to ✅ in the task table, in the same commit; propose its message.
+4. The owner checks Done when. When accepted, State goes to Complete ✅ and Current step to —, in the same commit; propose its message.
