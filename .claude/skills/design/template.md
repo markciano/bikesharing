@@ -22,13 +22,23 @@ Current step: the step being implemented, or —. -->
 
 ## 1. Spec — what and why
 
-<!-- The problem and the expected behaviour, not the solution. External systems and their data (feeds, fields) may be named; our own choices (formats, libraries, files, schemas) belong to the Plan. -->
+<!-- What the result does seen from outside, not how it is built. The test: if whoever uses the result would notice a change, it belongs here; if not, it belongs to the Plan. External systems and their data (feeds, fields) may be named. -->
 
 ### 1.1 Context
 
-<!-- 2–4 sentences: why this exists, what the owner wants, and which design it extends, if any. For a correction: current vs expected behaviour and how to reproduce it. -->
+<!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
 
-### 1.2 Done when
+### 1.2 Decided at framing
+
+<!-- Optional. One heading per decision about what the result does. In this order, so the reader finds what matters first:
+1. The decision and why, in one short paragraph.
+2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
+3. The options rejected.
+4. The artefact that fixes it, in whatever form the decision needs (e.g. a mapping table, a page map, a weighted matrix). A security decision lists its threats in a table: `| # | Threat (STRIDE) | Impact | Control | Requirement |`, with IDs `TH1`, `TH2`… per document. -->
+
+#### D`<N>`. `<Title of decision N>`
+
+### 1.3 Done when
 
 <!-- The first three lines are the general closing rule; the first one goes if there are no Requirements. Below them, only what they do not cover: operational actions, checks on real data, understanding. -->
 
@@ -37,7 +47,7 @@ Current step: the step being implemented, or —. -->
 - Every TODO citing this task is resolved or re-pointed.
 - `<extra condition>`
 
-### 1.3 Requirements
+### 1.4 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps.
 One behaviour per requirement, verifiable, with a measurable threshold where one applies. Written in EARS:
@@ -50,13 +60,13 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 - **R1** `<EARS statement>`
 
-### 1.4 Out of scope
+### 1.5 Out of scope
 
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
 - `<item>` — TNNN
 
-### 1.5 Open questions
+### 1.6 Open questions
 
 <!-- Optional. Unresolved questions about the what. Questions about the how are Plan decisions. -->
 
