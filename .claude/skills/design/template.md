@@ -149,11 +149,11 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
-### Step 1 — `<title>`
+### Step 1 — `<Title>`
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:**
+- **Commit:** following the Git conventions in CLAUDE.md, including `<dNNN.sN - >` at the begining of the message, for the design and the step number.
 - **R:** R1, R3 (or —)
 - **Model:** `<model · effort>` (or —)
 
