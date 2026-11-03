@@ -5,10 +5,16 @@
     "defaultMode": "acceptEdits",
     "disableBypassPermissionsMode": "disable",
     "blockReadsOutsideWorkingDirectories": true,
+    "allow": [
+      "Bash(gh issue list *)", "Bash(gh issue view *)",
+      "Bash(gh pr list *)", "Bash(gh pr view *)", "Bash(gh pr checks *)"
+    ],
     "ask": [
       "Edit(/.claude/**)",
       "Edit(/CLAUDE.md)",
-      "Edit(/docs/decisions/**)"
+      "Edit(/docs/decisions/**)",
+
+      "Bash(gh issue create *)", "Bash(gh issue edit *)", "Bash(gh issue close *)"
     ],
     "deny": [
       "Read(.env)",
@@ -21,7 +27,9 @@
       "Bash(git checkout *)", "Bash(git switch *)", "Bash(git restore *)", "Bash(git reset *)",
       "Bash(git stash *)", "Bash(git clean *)", "Bash(git rm *)", "Bash(git mv *)", "Bash(git branch *)",
 
-      "Bash(git push *)", "Bash(git pull *)", "Bash(git fetch *)"
+      "Bash(git push *)", "Bash(git pull *)", "Bash(git fetch *)",
+
+      "Bash(gh api *)", "Bash(gh pr merge *)", "Bash(gh repo delete *)"
     ]
   },
   "hooks": {
