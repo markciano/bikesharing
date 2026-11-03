@@ -198,11 +198,11 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 ### 5.6 Records
 
-<!-- Documents this spike updates when it closes: ADRs from Decided at framing (each in its own commit), architecture, requirements, source cards and new tasks agreed with the owner. A decision that updates no document has no row. Commit: "Done", or "Its own, after closing" while pending. Production inputs are not repeated here. -->
+<!-- Documents this spike updates before it closes: ADRs from Decided at framing (each in its own commit), architecture, requirements, source cards and new tasks agreed with the owner. A decision that updates no document has no row. Commit: "Done", or "Pending" until delivered; the spike closes when every row is Done. Production inputs are not repeated here. -->
 
 | Output | From | Destination | Commit |
 |---|---|---|---|
-| `<ADR, requirement, source card or task>` | `<e.g. D1, F3>` | `<document and section>` | `<Done, or Its own, after closing>` |
+| `<ADR, requirement, source card or task>` | `<e.g. D1, F3>` | `<document and section>` | `<Done, or Pending>` |
 
 ## 6. Sources
 
