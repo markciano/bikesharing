@@ -60,7 +60,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 ├── .claude/                Claude Code configuration (standard layout)
 ├── docs/                   Project documentation
 │   ├── architecture.md     Solution architecture (arc42)
-│   ├── tasks.md            Closed tasks up to T054, frozen
+│   ├── tasks.md            Closed tasks up to T052, frozen
 │   ├── testing-strategy.md Testing model per component and CI flow
 │   ├── decisions/          ADRs in force; archive/ holds retired ones
 │   ├── designs/            Design documents

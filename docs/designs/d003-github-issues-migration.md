@@ -44,7 +44,7 @@ Open tasks move to GitHub Issues, keeping their `TNNN` IDs, while closed tasks s
 
 #### Task model
 
-- A task is one issue. Its title is one short phrase, `TNNN (efM): task name`, with the effort in the parentheses, e.g. `T056 (ef3): Write README`. PR titles stay `TNNN: Task name`.
+- A task is one issue. Its title is one short phrase, `TNNN (efM): task name`, with the effort in the parentheses, e.g. `T900 (ef3): Add a station map`. PR titles stay `TNNN: Task name`.
 - The body is free text with no template, and it holds the detail: what is wanted, why, and what is needed to start. Once a task has a working document, that document is the source of truth.
 - An issue does not link its design or spike. The working document names its task in its header, and an issue shows the PR that closes it, which lists the files changed.
 - A group of tasks is a parent issue with sub-issues. A child's ID is `TNNN.M`.
@@ -83,7 +83,9 @@ The detailed state of a task with a working document stays in that document's St
 
 #### Open tasks in GitHub Issues
 
-Each open task in `docs/tasks.md` becomes one issue. Its current effort goes in the title, a long row is cut to a short title, and the rest of its text goes in the body. Dependencies on closed tasks are dropped; those on open tasks stay. The empty `T056` row does not become an issue.
+Each open task in `docs/tasks.md` becomes one issue. Its current effort goes in the title, a long row is cut to a short title, and the rest of its text goes in the body. Dependencies on closed tasks are dropped; those on open tasks stay. The empty `T056` row does not become an issue. T024 has no PR, so it reads as Waiting once migrated.
+
+`gh issue create` is not idempotent, so each task is looked up by ID before its issue is created, which makes a re-run after a partial failure safe. Open rows leave `docs/tasks.md` only once all their issues exist.
 
 | Task | Effort | Group | `blocked-by` |
 |---|---|---|---|
@@ -128,11 +130,13 @@ Tested on 2026-11-03 with `gh` 2.103.3 in a public repository of a personal acco
 
 ### 2.2 Decision summary
 
+A decision that names no standard is a project choice to which none applies.
+
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | 1 | [Task model](#task-model) | Move open tasks only | Recreating 40 closed tasks adds no value | — | Plan |
 | 2 | [Task model](#task-model) | Group with sub-issues, following the parent-issue (epic) pattern; `blocked-by` is informative | Parents map to current parent tasks, can depend on each other, and worked in the test | — | Plan |
-| 3 | [Task model](#task-model) | Keep `TNNN` in the title instead of the issue number | Adopting issue numbers means changing 171 references in 25 files and leaves two ID series | — | Plan |
+| 3 | [Task model](#task-model) | Keep `TNNN` in the title instead of the issue number | Adopting issue numbers means changing over 400 references in 55 files and leaves two ID series | — | Plan |
 | 4 | [Task model](#task-model) | Put effort in the title as `(efM)` | Visible at a glance, and effort is not filtered | — | Plan |
 | 5 | [Task model](#task-model) | Free-text body, no issue template | Nothing needs a template yet | — | Plan |
 | 6 | [Task model](#task-model) | No link from an issue to its working document | An issue already leads to its files through its PR, and the document names its task | — | Plan |
