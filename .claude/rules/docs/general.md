@@ -28,7 +28,7 @@ paths: # mirrors the lint scope (globs) in .markdownlint-cli2.yaml; keep both in
 - **IDs:** citable items carry an ID with a type prefix (e.g. `Q1` question, `F12` finding, `R3` requirement, `#22` decision, `T036` task); decisions outside a working document are cited by task ID or ADR, never by informal labels.
 - **Citable item:** an item of more than one line (e.g. a finding, a probe, a step) is a heading (`###` or `####`) that starts with its ID, e.g. `### F12. Partition pruning on R2`; its text is not renamed once cited: the anchor is generated from it, so a rename silently breaks the links to it. One-line items (questions, requirements, decisions) stay in their list or table and are cited by ID; from another document, the link targets their section.
 - **Same document:** the ID in plain text (`#22`, `F12`); link only when naming a section or a citable item, e.g. `[Probe A](#probe-a)`.
-- **Other document:** name the document and, after `›`, the section or the items; the target is the section's anchor when there is one, the file otherwise. E.g. `[s010 › #22, F12](spikes/s010-storage-table-format.md#23-decision-log)`, `[d002 › Guiding questions](designs/d002-requirements.md#guiding-questions)`, `[task T036](tasks.md)`.
+- **Other document:** name the document and, after `›`, the section or the items; the target is the section's anchor when there is one, the file otherwise. E.g. `[s010 › #22, F12](spikes/s010-storage-table-format.md#23-decision-log)`, `[d002 › Guiding questions](designs/d002-requirements.md#guiding-questions)`. A task is cited by its ID alone, e.g. `T036`, with no link.
 - **ADR:** by number, linking to the file, e.g. `[ADR-0018](decisions/0018-medallion-architecture.md)`.
 
 ## Tone & writing style guidelines
