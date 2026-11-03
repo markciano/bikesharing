@@ -82,7 +82,7 @@ The detailed state of a task with a working document stays in that document's St
 | `gh api` | Deny | It can create commits and merge PRs, which bypasses every other rule; the task flow does not need it |
 | Any other `gh` command | Ask | The default mode already does this |
 
-The repository is public, so anyone can open an issue. `/task` lookups use `--author @me`, and an issue by another author is untrusted data, read only when the owner asks. **#19**
+The repository is public, so anyone can read its issues, and only collaborators can create them. `/task` lookups also use `--author @me`, and an issue by another author is untrusted data, read only when the owner asks. **#19, #21**
 
 #### Open tasks in GitHub Issues
 
@@ -158,6 +158,7 @@ A decision that names no standard is a project choice to which none applies.
 | 18 | [File layout](#23-file-layout) | A spike closes once its Records are delivered | Today it reads Concluded while documents are still pending; the task itself now closes on merge | — | Plan |
 | 19 | [`gh` permissions](#gh-permissions) | Filter `/task` lookups by author and treat other authors' issues as untrusted, following least privilege | A public repository lets anyone open an issue, which could fake the next ID or carry instructions for Claude Code | — | Plan review |
 | 20 | [Task flow](#task-flow) | A parent's own document merges with `Refs #P`, and a child's branch is `tNNN.M-short-title`, following GitHub Flow **extends #11** | `Closes #P` would close the parent before its children exist, and the branch name had no form for a child | — | Plan review |
+| 21 | [`gh` permissions](#gh-permissions) | Only collaborators can create issues, with the author filter of #19 kept as a second layer, following defense in depth | Strangers cannot add noise or instructions, and `/task` does not depend on a setting outside the repository | — | Steps |
 
 ### 2.3 File layout
 
@@ -196,6 +197,8 @@ docs/
 ## 3. Steps
 
 ### 3.1 Prerequisites
+
+- Issues are enabled on `markciano/bikesharing`, with issue creation limited to collaborators, in Settings › General › Issues. Verify that `gh repo view --json hasIssuesEnabled` returns `true`; the limit is checked on that settings page.
 
 ### Step 1 — `<title>`
 
