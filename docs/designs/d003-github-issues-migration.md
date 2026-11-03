@@ -1,8 +1,8 @@
 # Design: GitHub Issues migration
 
 - **Task:** T055
-- **ADRs:** `<ADRs this design must respect, or "none">`
-- **New ADRs from this doc:** `<ADRs created during this design, or "none">`
+- **ADRs:** [ADR-0013](../decisions/0013-github-flow-with-rebase-merge.md)
+- **New ADRs from this doc:** [ADR-0034](../decisions/0034-task-tracking-in-github-issues.md)
 
 ## Status
 
