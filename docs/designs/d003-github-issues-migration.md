@@ -44,8 +44,8 @@ Open tasks move to GitHub Issues, keeping their `TNNN` IDs, while closed tasks s
 
 #### Task model
 
-- A task is one issue. Its title is `TNNN(efM): task name`, with the effort in the parentheses, e.g. `T056(ef3): Write README`. PR titles stay `TNNN: task name`.
-- The body is free text with no template, and it holds any detail that does not fit in the title.
+- A task is one issue. Its title is one short phrase, `TNNN(efM): task name`, with the effort in the parentheses, e.g. `T056(ef3): Write README`. PR titles stay `TNNN: task name`.
+- The body is free text with no template, and it holds the detail: what is wanted, why, and what is needed to start. Once a task has a working document, that document is the source of truth.
 - An issue does not link its design or spike. The working document names its task in its header, and an issue shows the PR that closes it, which lists the files changed.
 - A group of tasks is a parent issue with sub-issues. A child's ID is `TNNN.M`.
 - `blocked-by` shows the order between tasks and between groups. It informs and does not block.
@@ -83,7 +83,7 @@ The detailed state of a task with a working document stays in that document's St
 
 #### Open tasks in GitHub Issues
 
-Each open task in `docs/tasks.md` becomes one issue. Its current effort goes in the title, and any detail that does not fit in the title goes in the body. Dependencies on closed tasks are dropped; those on open tasks stay. The empty `T056` row does not become an issue.
+Each open task in `docs/tasks.md` becomes one issue. Its current effort goes in the title, a long row is cut to a short title, and the rest of its text goes in the body. Dependencies on closed tasks are dropped; those on open tasks stay. The empty `T056` row does not become an issue.
 
 | Task | Effort | Group | `blocked-by` |
 |---|---|---|---|
@@ -98,6 +98,16 @@ Each open task in `docs/tasks.md` becomes one issue. Its current effort goes in 
 | T053 | 1 | None | — |
 | T054 | 1 | None | — |
 | T055 | 3 | None | — |
+
+#### Where the task rules live
+
+| Place | Content |
+|---|---|
+| `/task` skill | Task definition, title and body format, effort scale, groups, `blocked-by` and how to create an issue. Claude Code can invoke it, and so can the owner |
+| `CLAUDE.md` | The PR description carries `Closes #N`, and the last child's also closes its parent; `/task` in the list of skills |
+| Design and spike skills | Anything out of scope is proposed as a task with `/task` |
+
+`.claude/rules/docs/tasks.md` is removed, because its `paths` scope would stop loading it once `docs/tasks.md` is frozen.
 
 #### Verified GitHub behaviour
 
@@ -135,23 +145,42 @@ Tested on 2026-11-03 with `gh` 2.103.3 in a public repository of a personal acco
 | 13 | [`gh` permissions](#gh-permissions) | Deny `gh api` | It bypasses every other rule, and the task flow does not need it | — | Plan |
 | 14 | [Open tasks](#open-tasks-in-github-issues) | T039, T040 and T041 are three parents, with no level above them | It keeps the current structure, and `blocked-by` shows the order between them | — | Plan |
 | 15 | [File layout](#23-file-layout) | Write rules and skills during the Plan, as the design process sets, with no staged cutover | Simplest option, and the long-term configuration is what matters; the remaining sessions of this task can absorb the friction | — | Plan |
+| 16 | [Task rules](#where-the-task-rules-live) | Task rules in a `/task` skill that Claude Code can invoke, with only the PR rule in `CLAUDE.md` | Little stays always loaded, and creating an issue still asks for confirmation | — | Plan |
+| 17 | [Task rules](#where-the-task-rules-live) | No hook for the task rules | A hook fires when the command runs, after the task has been proposed | — | Plan |
 
 ### 2.3 File layout
 
 ```text
-<path>/
-└── <file>      (new)        <purpose>
+CLAUDE.md                                (modified)  /task in the skills list, Closes #N in the PR flow, task status rule removed, Pending items, structure
+docs/
+├── tasks.md                             (modified)  Frozen: 40 closed tasks and a note; open rows removed
+├── architecture.md                      (modified)  Two mentions of the table as the place for open work
+├── designs/d003-github-issues-migration.md  (new)   This design
+└── decisions/0034-task-tracking-in-github-issues.md  (new)  The decision
+.claude/
+├── settings.json                        (modified)  gh permission rules
+├── rules/docs/
+│   ├── tasks.md                         (removed)   Replaced by the /task skill
+│   └── general.md                       (modified)  Example of how to cite a task
+└── skills/
+    ├── task/SKILL.md                    (new)       Task rules, invocable by Claude Code and the owner
+    ├── design/SKILL.md                  (modified)  Read the issue, propose tasks with /task, no status change
+    ├── design/template.md               (modified)  Comment naming the table
+    ├── design/review-steps.md           (modified)  No task row at Ready
+    ├── spike/SKILL.md                   (modified)  Same as the design skill, plus its Conclusion
+    ├── spike/template.md                (modified)  Comment naming the table
+    ├── implement/SKILL.md               (modified)  No task status on the first step
+    ├── implement/spike.md               (modified)  No task status on the first step
+    └── implement/review.md              (modified)  No task status at close, gaps proposed with /task
 ```
 
-### 2.4 Breaking changes
+### 2.4 What does not change
 
-| File | Why it breaks | Strategy |
-|---|---|---|
-| | | |
-
-### 2.5 What does not change
-
--
+- [ADR-0013](../decisions/0013-github-flow-with-rebase-merge.md): branches, PRs, checks and rebase merge stay as they are.
+- `.github/workflows/`: no job depends on `docs/tasks.md`.
+- Closed spikes, designs and ADRs that cite `docs/tasks.md` or a `TNNN`: their links stay valid.
+- `docs/architecture.md` where it cites a closed task.
+- The State field of designs and spikes, which keeps its detailed values.
 
 ## 3. Steps
 
