@@ -52,4 +52,5 @@
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
 | T053 | `/spike` skill: keep the template comments of future blocks when creating a spike doc, since later sessions need them | 1 | ⬜ | — | — |
 | T054 | Unify the threat IDs of the STRIDE analyses under the `TH` prefix (`A` in s011, `E` in s012) and add the prefix to the ID rule in `.claude/rules/docs/general.md` | 1 | ⬜ | — | — |
-| T055 |  |  | ⬜ |  |  |
+| T055 | Move task tracking from `docs/tasks.md` to GitHub Issues: open tasks only, grouped with sub-issues and informative `blocked-by` dependencies | 3 | 📝 | — | [d003-github-issues-migration](designs/d003-github-issues-migration.md) |
+| T056 |  |  | ⬜ |  |  |
