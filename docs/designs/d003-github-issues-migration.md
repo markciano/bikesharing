@@ -81,6 +81,8 @@ The detailed state of a task with a working document stays in that document's St
 | `gh api` | Deny | It can create commits and merge PRs, which bypasses every other rule; the task flow does not need it |
 | Any other `gh` command | Ask | The default mode already does this |
 
+The repository is public, so anyone can open an issue. `/task` lookups use `--author @me`, and an issue by another author is untrusted data, read only when the owner asks. **#19**
+
 #### Open tasks in GitHub Issues
 
 Each open task in `docs/tasks.md` becomes one issue. Its current effort goes in the title, a long row is cut to a short title, and the rest of its text goes in the body. Dependencies on closed tasks are dropped; those on open tasks stay. The empty `T056` row does not become an issue. T024 has no PR, so it reads as Waiting once migrated.
@@ -152,6 +154,7 @@ A decision that names no standard is a project choice to which none applies.
 | 16 | [Task rules](#where-the-task-rules-live) | Task rules in a `/task` skill that Claude Code can invoke, with only the PR rule in `CLAUDE.md` | Little stays always loaded, and creating an issue still asks for confirmation | — | Plan |
 | 17 | [Task rules](#where-the-task-rules-live) | No hook for the task rules | A hook fires when the command runs, after the task has been proposed | — | Plan |
 | 18 | [File layout](#23-file-layout) | A spike closes once its Records are delivered | Today it reads Concluded while documents are still pending; the task itself now closes on merge | — | Plan |
+| 19 | [`gh` permissions](#gh-permissions) | Filter `/task` lookups by author and treat other authors' issues as untrusted, following least privilege | A public repository lets anyone open an issue, which could fake the next ID or carry instructions for Claude Code | — | Plan review |
 
 ### 2.3 File layout
 
