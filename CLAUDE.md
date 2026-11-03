@@ -2,7 +2,7 @@
 
 Data engineering portfolio project on public bike sharing in the Barcelona area (AMBici + Bicing).
 
-Work happens in three session types, each started with its skill: `/spike` (investigate and decide), `/design` (frame and plan a task), `/implement` (build and review). Path-specific rules live in `.claude/rules/`.
+Work happens in three session types, each started with its skill: `/spike` (investigate and decide), `/design` (frame and plan a task), `/implement` (build and review). Tasks are GitHub Issues, proposed and looked up with `/task`. Path-specific rules live in `.claude/rules/`.
 
 ## Working rules
 
@@ -11,7 +11,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 - Source of truth: the approved working document (design or spike report). Code derives from it, never the other way round (spec-driven development).
 - State lives in the working document, not the session: decisions are written when approved (if small, accumulate 2-3); Status is updated at every stop.
 - Operational actions (accounts, consoles, billing, production deployments) are done by the owner.
-- Permissions are set in `.claude/settings.json`. Never work around an action it asks for or denies: report it.
+- Permissions are set in `.claude/settings.json`. Never work around an action it asks for or denies, including by reaching it through another tool (e.g. `gh` for a denied `git` command): report it.
 - A convention learned in a session (e.g. an owner's correction) is proposed as an edit to the rule, skill or template where it applies, not saved to Claude's memory; memory holds only facts about the local machine.
 - Web research goes to the `web-researcher` subagent, never inline: it keeps the main session's context small.
 
@@ -22,7 +22,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 - **Secrets:** in `.env` (ignored by Git); `.env.example` with empty values is committed. Never hard-code or paste secrets.
 - **Raw data:** never committed to Git, except test fixtures (ADR-0009).
 - **Stack versions and dependencies:** each component pins its runtimes and locks its dependencies in its own files (ADR-0016, ADR-0017); how in `.claude/rules/code/dependencies.md`.
-- **Pending items:** marked `TODO(TNNN):` followed by a short description, in docs and code alike; `TNNN` is the task that resolves it (its parent task, or a new row, if none exists yet), so `grep "TODO(TNNN)"` lists what a task must pick up; run it when the task starts.
+- **Pending items:** marked `TODO(TNNN):` followed by a short description, in docs and code alike; `TNNN` is the task that resolves it (its parent task, or a new task, if none exists yet), so `grep "TODO(TNNN)"` lists what a task must pick up; run it when the task starts.
 - **File names:** proposed by Claude, approved by the owner. English, lowercase. Docs in kebab-case; Python code in snake_case (PEP 8). ADRs as `NNNN-short-title.md`; designs as `dNNN-short-title.md`. spikes as `sNNN-short-title.md`.
 
 ## Git
@@ -30,14 +30,13 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 - Claude runs only `git status`, `diff`, `log` and `show`. The owner reviews the diff, makes every commit and runs every other git command, including removing a leftover `.git/index.lock`.
 - Commits follow Conventional Commits without scope (type: description); the branch names the task. Claude proposes the message.
 - One logical change per commit: related edits go together; unrelated ones never do.
-- A task's status change goes in the commit of the work that causes it.
 
 ### Branches, PRs and CI (GitHub Flow, ADR-0013)
 
 - `main` is protected by a GitHub ruleset (no bypass): changes reach it only through a PR with every required check green, by rebase merge.
-- One branch per task, `tNNN-short-title`, created from an up-to-date `main` before the task's first commit. PR title: `TNNN: task name` and 2-3 lines of PR description.
+- One branch per task, `tNNN-short-title`, created from an up-to-date `main` before the task's first commit. PR title: `TNNN: Task name` and 2-3 lines of PR description, with `Closes #N` to close the task's issue on merge; the last child's PR also closes its parent.
 - The first push opens a draft PR. There is no CI on `push` to feature branches: the PR run fires on every push (`docs/testing-strategy.md`).
-- When a task starts, Claude checks with `git status` that the owner is on its branch. When the task reaches ✅: push, PR, checks, rebase merge, clean up (local branch deleted with `-D`, since rebase rewrites SHAs).
+- When a task starts, Claude checks with `git status` that the owner is on its branch. When the task is finished: push, PR, checks, rebase merge, clean up (local branch deleted with `-D`, since rebase rewrites SHAs).
 - A failing check is fixed in the PR, never by disabling or skipping it.
 - CI: one job per component in `.github/workflows/ci.yml`, as set in ADR-0013.
 - Urgent fix: the owner disables the ruleset, pushes, and enables it again.
@@ -61,7 +60,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 ├── .claude/                Claude Code configuration (standard layout)
 ├── docs/                   Project documentation
 │   ├── architecture.md     Solution architecture (arc42)
-│   ├── tasks.md            Task table
+│   ├── tasks.md            Closed tasks up to T054, frozen
 │   ├── testing-strategy.md Testing model per component and CI flow
 │   ├── decisions/          ADRs in force; archive/ holds retired ones
 │   ├── designs/            Design documents
