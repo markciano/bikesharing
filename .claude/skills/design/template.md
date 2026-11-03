@@ -40,7 +40,7 @@ Current step: the step being implemented, or —. -->
 
 ### 1.3 Requirements
 
-<!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps.
+<!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
 One behaviour per requirement, verifiable, with a measurable threshold where one applies. Written in EARS:
 - Ubiquitous: The <system> shall <response>.
 - Event: When <trigger>, the <system> shall <response>.
@@ -49,7 +49,7 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 - Optional: Where <feature is included>, the <system> shall <response>.
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
-- **R1** `<EARS statement>`
+- **R1** `<EARS statement>` (D`<N>`)
 
 ### 1.4 Done when
 
