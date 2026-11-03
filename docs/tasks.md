@@ -1,5 +1,7 @@
 # Tasks
 
+Frozen: this table holds closed tasks only. Open and new tasks are in [GitHub Issues](https://github.com/markciano/bikesharing/issues).
+
 | ID | Task | Effort | Status | Depends on | Doc |
 |---|---|---|---|---|---|
 | T001 | Define workflow | 2 | ✅ | — | — |
@@ -42,15 +44,3 @@
 | T052 | Spike conclusion: move it from `/implement` to `/spike`, and Production inputs into the Conclusion; analyse the closes of designs | 2 | ✅ | — | — |
 | T037 | Execution target: where the pipeline runs and what schedules it; its spike models the component's threats and adds new requirements to d002 | 3 | ✅ | T036 | [s012-execution-target.md](spikes/s012-execution-target.md) |
 | T038 | Visualization: tool and where it is published; its spike models the component's threats and adds new requirements to d002 | 2 | ✅ | T034, T035, T037 | [s013-visualization-tool.md](spikes/s013-visualization-tool.md) |
-| T039 | Capture in production (parent; split into TNNN.M in its design) | 5 | ⬜ | T035 |  |
-| T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
-| T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
-| T042 | Data quality: checks and targets beyond the basics | 3 | ⬜ | T035, T037 |  |
-| T024 | Hooks: code conventions for the project's languages | 1 | 🔄 | — |  |
-| T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
-| T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | T040 |  |
-| T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
-| T053 | `/spike` skill: keep the template comments of future blocks when creating a spike doc, since later sessions need them | 1 | ⬜ | — | — |
-| T054 | Unify the threat IDs of the STRIDE analyses under the `TH` prefix (`A` in s011, `E` in s012) and add the prefix to the ID rule in `.claude/rules/docs/general.md` | 1 | ⬜ | — | — |
-| T055 | Move task tracking from `docs/tasks.md` to GitHub Issues: open tasks only, grouped with sub-issues and informative `blocked-by` dependencies | 3 | 📝 | — | [d003-github-issues-migration](designs/d003-github-issues-migration.md) |
-| T056 |  |  | ⬜ |  |  |
