@@ -44,7 +44,7 @@ Open tasks move to GitHub Issues, keeping their `TNNN` IDs, while closed tasks s
 
 #### Task model
 
-- A task is one issue. Its title is one short phrase, `TNNN(efM): task name`, with the effort in the parentheses, e.g. `T056(ef3): Write README`. PR titles stay `TNNN: task name`.
+- A task is one issue. Its title is one short phrase, `TNNN (efM): task name`, with the effort in the parentheses, e.g. `T056 (ef3): Write README`. PR titles stay `TNNN: task name`.
 - The body is free text with no template, and it holds the detail: what is wanted, why, and what is needed to start. Once a task has a working document, that document is the source of truth.
 - An issue does not link its design or spike. The working document names its task in its header, and an issue shows the PR that closes it, which lists the files changed.
 - A group of tasks is a parent issue with sub-issues. A child's ID is `TNNN.M`.
