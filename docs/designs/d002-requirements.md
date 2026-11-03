@@ -73,6 +73,11 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 - **R27** The pipeline shall expose no inbound endpoint.
 - **R28** If the execution platform's spend reaches its limit, set no higher than the pipeline's share of the budget, then the solution shall stop pipeline runs.
 - **R29** The visualization shall adapt to any screen size, from phone to desktop.
+- **R30** The solution shall give the visualization's deployment its own credential, limited to what publishing needs.
+- **R31** The solution shall require two-factor authentication on the accounts that can publish the visualization.
+- **R32** The visualization shall publish only the files on an explicit list, never the contents of a bucket.
+- **R33** The visualization shall load its code only from its own address, with pinned dependencies and no third-party scripts.
+- **R34** The visualization shall display data from the feeds as text, never as HTML.
 
 ### Out of scope
 

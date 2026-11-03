@@ -123,6 +123,24 @@ TODO(T040): write a script with the common health queries for the owner to run, 
 
 - **Rejected:** a private panel with login, for the reasons above.
 
+#### D6. Visualization security
+
+Five new requirements, R30–R34, and the other threats documented without a requirement. Threats are listed with STRIDE and controls follow least privilege, as in [s012 › D3](s012-execution-target.md#d3-pipeline-security). The scope is the page, the files it publishes, the credential that deploys it and what runs in the visitor's browser.
+
+| # | Threat (STRIDE) | Impact | Control | Requirement |
+|---|---|---|---|---|
+| TH1 | The credential the pipeline deploys the page with leaks (Tampering) | Someone publishes other content at the page's address and, depending on the credential's scope, could change capture | Its own credential, limited to publishing, kept in the secret store (R25) | R30 |
+| TH2 | Someone takes over the Cloudflare account (Spoofing) | Reaches the page, capture and R2; R24 covers only the pipeline's accounts | Two-factor authentication also on the accounts that publish the page | R31 |
+| TH3 | More than intended is published (Information disclosure) | Low for open data, but logs or internal state could go out | Only files on an explicit list are published, never the contents of a bucket | R32 |
+| TH4 | A compromised JavaScript library runs in the visitor's browser (Tampering) | Third-party code on the page of whoever visits it | Pinned libraries served from the page's own address, with no third-party scripts | R33 |
+| TH5 | Text in a feed, such as a station name, contains code (Tampering) | It would run in the visitor's browser; unlikely, since the feeds come from the operators | Data is always shown as text, never as HTML | R34 |
+| TH6 | A flood of visits or bots (Denial of service) | Slow or unavailable page while it lasts, with no bill | Accepted: D1, D4 and the N5 cut in D3 | None |
+| TH7 | The base map provider stops the service (Denial of service) | Map with no background; free providers give no guarantees | Accepted: T041 chooses a provider and an alternative | None |
+| TH8 | The base map provider sees visitors' IP addresses (Information disclosure) | Low | Accepted, with no cookies or analytics; reviewed if T041 wants analytics | None |
+| TH9 | No record of who published each version (Repudiation) | Low: there is one operator | Accepted | None |
+
+Requirements transferred to [d002 › Requirements](../designs/d002-requirements.md#requirements): R30 (TH1), R31 (TH2), R32 (TH3), R33 (TH4), R34 (TH5).
+
 ### 1.3 Questions
 
 Main question: `<one sentence>`
