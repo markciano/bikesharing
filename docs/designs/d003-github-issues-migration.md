@@ -47,7 +47,7 @@ Open tasks move to GitHub Issues, keeping their `TNNN` IDs, while closed tasks s
 - A task is one issue. Its title is one short phrase, `TNNN (efM): task name`, with the effort in the parentheses, e.g. `T900 (ef3): Add a station map`. PR titles stay `TNNN: Task name`.
 - The body is free text with no template, and it holds the detail: what is wanted, why, and what is needed to start. Once a task has a working document, that document is the source of truth.
 - An issue does not link its design or spike. The working document names its task in its header, and an issue shows the PR that closes it, which lists the files changed.
-- A group of tasks is a parent issue with sub-issues. A child's ID is `TNNN.M`.
+- A group of tasks is a parent issue with sub-issues. A parent's title ends in `[parent]`, and a child's ID is `TNNN.M`. **#22**
 - `blocked-by` shows the order between tasks and between groups. It informs and does not block.
 - The next ID is the highest `TNNN` in use, looked up when a task is created.
 - `docs/tasks.md` stays where it is, frozen, with the 40 closed tasks and a note pointing to GitHub Issues.
@@ -159,6 +159,7 @@ A decision that names no standard is a project choice to which none applies.
 | 19 | [`gh` permissions](#gh-permissions) | Filter `/task` lookups by author and treat other authors' issues as untrusted, following least privilege | A public repository lets anyone open an issue, which could fake the next ID or carry instructions for Claude Code | — | Plan review |
 | 20 | [Task flow](#task-flow) | A parent's own document merges with `Refs #P`, and a child's branch is `tNNN.M-short-title`, following GitHub Flow **extends #11** | `Closes #P` would close the parent before its children exist, and the branch name had no form for a child | — | Plan review |
 | 21 | [`gh` permissions](#gh-permissions) | Only collaborators can create issues, with the author filter of #19 kept as a second layer, following defense in depth | Strangers cannot add noise or instructions, and `/task` does not depend on a setting outside the repository | — | Steps |
+| 22 | [Task model](#task-model) | A parent's title ends in `[parent]` | A parent reads as one in the list of issues, with no need to open it | — | Steps |
 
 ### 2.3 File layout
 
@@ -200,21 +201,73 @@ docs/
 
 - Issues are enabled on `markciano/bikesharing`, with issue creation limited to collaborators, in Settings › General › Issues. Verify that `gh repo view --json hasIssuesEnabled` returns `true`; the limit is checked on that settings page.
 
-### Step 1 — `<title>`
+### Step 1 — Verify the `gh` permission rules
 
 - **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:**
+- **Who:** Claude
+- **Commit:** `docs: verify gh permissions for design d003`
 - **R:** —
-- **Model:** `<model · effort>` (or —)
+- **Model:** sonnet · low
 
 #### Scope
 
+Confirms that the rules already in `.claude/settings.json` behave as planned. It changes only this step's status in this design. It tries one denied command on purpose, read-only, and does not change the rules.
+
 #### Reads
+
+- [`gh` permissions](#gh-permissions): the rules and why `gh api` is denied.
 
 #### Do
 
+1. Run `gh issue list --limit 1 --json number`, which must run with no confirmation.
+2. Run `gh api user --jq .login` once, which must be rejected. Do not retry it or reach the same data another way.
+3. If a command behaves differently, set this step to ⛔ and report it; do not change `.claude/settings.json`.
+
 #### Check
+
+The first command returned JSON with no confirmation, and the second was rejected by the permission rules: yes/no.
+
+### Step 2 — Create the open tasks as issues
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: record issue creation for design d003`
+- **R:** —
+- **Model:** sonnet · low
+
+#### Scope
+
+Creates the 11 issues below on `markciano/bikesharing`, and the two `blocked-by` relationships. Each `gh issue create` and `gh issue edit` asks the owner for confirmation. It changes only this step's status in this design. It creates no children: each parent's design adds them. `docs/tasks.md` is not touched here.
+
+| Title | Body | `blocked-by` |
+|---|---|---|
+| `T039 (ef5): Capture in production [parent]` | Parent task. Its design splits it into `T039.M` tasks. | — |
+| `T040 (ef8): Processing pipeline [parent]` | Parent task. Its design splits it into `T040.M` tasks. | — |
+| `T041 (ef5): Visualization [parent]` | Parent task. Its design splits it into `T041.M` tasks. | T040 |
+| `T042 (ef3): Data quality` | Checks and targets beyond the basics. | — |
+| `T044 (ef2): Cross-file link and anchor check` | Add a cross-file link and anchor check to the `docs` CI job, because MD051 checks only same-file anchors. Trial lychee and remark-validate-links on a broken anchor first. | T040 |
+| `T010 (ef3): Write README` | Write the repository README. | — |
+| `T024 (ef1): Code convention hooks` | Hooks for the code conventions of the project's languages. | — |
+| `T027 (ef2): Automated dependency updates` | Automated dependency and runtime updates, choosing between Dependabot and Renovate. It covers the security-patch risk of exact pins in ADR-0016, and picks up the upstream fixes deferred in T029. | — |
+| `T053 (ef1): Keep template comments in new spike docs` | In the `/spike` skill, keep the template comments of future blocks when creating a spike doc, since later sessions need them. | — |
+| `T054 (ef1): Unify threat IDs under TH` | Unify the threat IDs of the STRIDE analyses under the `TH` prefix (`A` in s011, `E` in s012), and add the prefix to the ID rule in `.claude/rules/docs/general.md`. | — |
+| `T055 (ef3): Move task tracking to GitHub Issues` | Move task tracking from `docs/tasks.md` to GitHub Issues: open tasks only, grouped with sub-issues and informative `blocked-by` dependencies. | — |
+
+#### Reads
+
+- [Open tasks in GitHub Issues](#open-tasks-in-github-issues): the mapping, and why each creation is checked first.
+- `.claude/skills/task/SKILL.md` § Create a task: the commands.
+
+#### Do
+
+1. Read the whole table with `gh issue list --author @me --state all --limit 500 --json number,title,state,blockedBy`.
+2. In the order of the table above, for each task not yet in that read, run `gh issue create --title '<title>' --body '<body>'`, in single quotes so that backticks stay literal. If a run is interrupted, go back to action 1.
+3. Run `gh issue edit <T041's number> --add-blocked-by <T040's number>`.
+4. Run `gh issue edit <T044's number> --add-blocked-by <T040's number>`.
+
+#### Check
+
+The read of action 1, run again, returns exactly the 11 titles above, all open and with no duplicates, and T041 and T044 list T040 in `blockedBy`: yes/no.
 
 ## 4. Close
 
