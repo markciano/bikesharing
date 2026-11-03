@@ -32,9 +32,10 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
    - correction: current vs expected behaviour, how to reproduce it, what must not break.
    Stop when the what, the why and the closing condition are clear.
 3. **Playback.** Write Context and Done when. If a part can be delivered and closed on its own, or the task looks like more than 10 steps, propose splitting it now.
-4. **Requirements.** One EARS statement as soon as a behaviour is clear. Then one pass dedicated to failure cases (*If… then*) and one to security threats (STRIDE).
-5. **Open questions**, whenever they come up.
-6. **Approval.** With no Open questions left, ask for the Spec approval. Once approved, check Spec in Phase.
+4. **Decisions.** Write each decision about what the result does in Decided at framing as soon as the owner approves it.
+5. **Requirements.** One EARS statement as soon as a behaviour is clear. Then one pass dedicated to failure cases (*If… then*) and one to security threats (STRIDE).
+6. **Open questions**, whenever they come up.
+7. **Approval.** With no Open questions left, ask for the Spec approval. Once approved, check Spec in Phase.
 
 ## 2. Plan
 
