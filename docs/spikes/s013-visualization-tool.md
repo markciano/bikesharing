@@ -211,7 +211,11 @@ The visualization is a public static web page with JavaScript, without login, wh
 
 TODO(T040): P8 and P9.
 
+TODO(T040): proposal to evaluate in the design: before building the publishing step, try a few deployments with the token limited to one Worker and read Cloudflare's terms, both open in [Not verified](#54-not-verified).
+
 TODO(T041): P1–P7.
+
+TODO(T041): proposal to evaluate in the design: build the riskiest slice first, the map with about 780 stations on a phone, so that a problem shows before much work goes into the page.
 
 ### 5.6 Records
 
