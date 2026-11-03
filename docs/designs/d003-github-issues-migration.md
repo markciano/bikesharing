@@ -26,8 +26,7 @@ This task changes no code, so it has no requirements or tests: this list is the 
 - A real PR into `main`, under its ruleset and with a rebase merge, closes its linked issue.
 - The throwaway repository `markciano/bikesharing-issues-probe` is deleted.
 - Claude Code reads, creates and groups issues with `gh`, and dependencies between issues are visible.
-- After the cutover, no rule or skill treats `docs/tasks.md` as the live task table.
-- At no point does a rule or skill describe a process that does not exist yet.
+- No rule or skill treats `docs/tasks.md` as the live task table.
 
 ### 1.3 Out of scope
 
@@ -135,6 +134,7 @@ Tested on 2026-11-03 with `gh` 2.103.3 in a public repository of a personal acco
 | 12 | [`gh` permissions](#gh-permissions) | Allow `gh` reads, ask for issue writes, deny `gh pr merge` and `gh repo delete` | Least privilege, in line with the existing `git` rules | — | Plan |
 | 13 | [`gh` permissions](#gh-permissions) | Deny `gh api` | It bypasses every other rule, and the task flow does not need it | — | Plan |
 | 14 | [Open tasks](#open-tasks-in-github-issues) | T039, T040 and T041 are three parents, with no level above them | It keeps the current structure, and `blocked-by` shows the order between them | — | Plan |
+| 15 | [File layout](#23-file-layout) | Write rules and skills during the Plan, as the design process sets, with no staged cutover | Simplest option, and the long-term configuration is what matters; the remaining sessions of this task can absorb the friction | — | Plan |
 
 ### 2.3 File layout
 
