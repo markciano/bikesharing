@@ -41,7 +41,7 @@
 | T051 | Coherence sweep of `.claude/skills` and `.claude/rules`: repeated rules, contradictions, unjustified differences between design and spike, broken references; no change in behaviour without the owner's OK | 1 | ✅ | — | — |
 | T052 | Spike conclusion: move it from `/implement` to `/spike`, and Production inputs into the Conclusion; analyse the closes of designs | 2 | ✅ | — | — |
 | T037 | Execution target: where the pipeline runs and what schedules it; its spike models the component's threats and adds new requirements to d002 | 3 | ✅ | T036 | [s012-execution-target.md](spikes/s012-execution-target.md) |
-| T038 | Visualization: tool and where it is published; its spike models the component's threats and adds new requirements to d002 | 2 | 📝 | T034, T035, T037 | [s013](spikes/s013-visualization-tool.md) |
+| T038 | Visualization: tool and where it is published; its spike models the component's threats and adds new requirements to d002 | 2 | 📝 | T034, T035, T037 | [s013-visualization-tool.md](spikes/s013-visualization-tool.md) |
 | T039 | Capture in production (parent; split into TNNN.M in its design) | 5 | ⬜ | T035 |  |
 | T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
 | T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
@@ -50,4 +50,5 @@
 | T027 | Automated dependency and runtime updates (Dependabot vs Renovate); covers the security-patch risk of exact pins in ADR-0016 | 2 | ⬜ | T021 |  |
 | T044 | Cross-file link and anchor check in the `docs` CI job (MD051 checks only same-file anchors); trial lychee vs remark-validate-links on a broken anchor first | 2 | ⬜ | T040 |  |
 | T010 | Write README | 3 | ⬜ | T034, T035, T036, T037, T038 | — |
-| T053 |  |  | ⬜ |  |  |
+| T053 | `/spike` skill: keep the template comments of future blocks when creating a spike doc, since later sessions need them | 1 | ⬜ | — | — |
+| T054 |  |  | ⬜ |  |  |

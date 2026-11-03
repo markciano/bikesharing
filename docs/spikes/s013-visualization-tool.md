@@ -22,6 +22,13 @@ Current step: the step being executed, or —. -->
 
 ### 1.2 Decided at framing
 
+#### D1. Public access without login
+
+The visualization stays publicly accessible and read-only, without login, as [d002 › R1](../designs/d002-requirements.md#requirements) asks. This is a portfolio project, so the link must open with no friction. The page publishes open station data, so a login would protect nothing confidential. The main risk of public access is therefore cost, not a data leak: bots or heavy traffic drive up cost if each visit triggers work or reads.
+
+- **What would change it:** no publishing option keeps abuse-driven cost under control within the visualization's €2 share ([s011](s011-engine-pipeline-language.md)). Action: reopen this decision and consider a login.
+- **Rejected:** login. It removes most abuse, but part of the people who receive the link would not reach the project, and it adds users to manage and one more access to protect. A login can in principle be added in front of the page later without rebuilding it.
+
 #### D`<N>`. `<Title of decision N>`
 
 ### 1.3 Questions
