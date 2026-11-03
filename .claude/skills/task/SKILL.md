@@ -6,12 +6,12 @@ argument-hint: "[what the task is about | TNNN]"
 
 # Tasks
 
-Tasks live in GitHub Issues (ADR-0034). Closed tasks up to T054 are in `docs/tasks.md`, frozen.
+Tasks live in GitHub Issues (ADR-0034). Closed tasks up to T052 are in `docs/tasks.md`, frozen.
 
 ## What a task is
 
 - A task is the change the owner wants, in plain words.
-- **Title:** one short phrase, `TNNN (efM): task name`, e.g. `T056 (ef3): Write README`.
+- **Title:** one short phrase, `TNNN (efM): task name`, e.g. `T900 (ef3): Add a station map`.
 - **Effort:** 1, 2 (half day), 3 (1 day), 5 (2 days), 8 (3 days).
 - **Body:** free text with the detail: what is wanted, why, and what is needed to start.
 - **Working document:** a task of 2+ steps also has one, a design (to build or decide) or a spike report (to investigate), which is the source of truth from then on. A one-step task has only its issue.
