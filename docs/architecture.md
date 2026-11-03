@@ -87,7 +87,11 @@ Each goal is made measurable by the scenarios in §10.
 - **One common model:** both providers are unified on GBFS 3.0 and built together, since the model exists to join them. [ADR-0008](decisions/0008-common-model-on-gbfs-3-0.md).
 - **Inventory model (Kimball):** stations are stores and bikes are stock; every measure derives from two base facts, the stock snapshot (semi-additive) and the movements derived from consecutive snapshots (additive). [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions).
 
-### 4.4 Organisation
+### 4.4 Visualization
+
+- **Static web page with prepared files:** visitors download files prepared for the page, so no server runs and no visit reads gold, which stays private; Streamlit on Community Cloud is the fallback. [ADR-0032](decisions/0032-static-web-page-for-visualization.md).
+
+### 4.5 Organisation
 
 - **Decisions in dependency order:** each one is taken when the next step needs it (§9). [tasks.md](tasks.md).
 
@@ -99,7 +103,7 @@ Each goal is made measurable by the scenarios in §10.
 | Landing zone (bronze) | Holds raw responses under the output contract, and the history archives as downloaded | Bronze bucket in R2 | [ADR-0012](decisions/0012-collectors-decoupled-by-output-contract.md); [ADR-0020](decisions/0020-bronze-as-captured-objects.md); [ADR-0023](decisions/0023-storage-security-baseline.md) |
 | Processing | Turns raw responses into the common model and its tables | DuckDB as the engine, with SQL models directed by Python, running on Modal; built in T040 | [ADR-0008](decisions/0008-common-model-on-gbfs-3-0.md); [ADR-0024](decisions/0024-duckdb-as-processing-engine.md); [ADR-0025](decisions/0025-sql-models-directed-by-python.md); [ADR-0027](decisions/0027-modal-as-execution-platform.md) |
 | Lakehouse | Silver and gold tables, read by analysis and visualization | Delta tables in the lakehouse bucket in R2; built by the pipeline (T040) | [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0022](decisions/0022-delta-lake-for-silver-and-gold.md); [ADR-0023](decisions/0023-storage-security-baseline.md); [tasks.md › T040](tasks.md) |
-| Visualization | Presents the data | T038 | [d002 › R1, R2](designs/d002-requirements.md#requirements); [tasks.md › T038](tasks.md) |
+| Visualization | Presents the data | Static web page with JavaScript that downloads prepared files | [d002 › R1, R2](designs/d002-requirements.md#requirements); [ADR-0032](decisions/0032-static-web-page-for-visualization.md) |
 
 ## 6. Runtime view
 
