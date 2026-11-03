@@ -110,7 +110,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 ```text
 spikes/<name>/
-├── README.md        Question, setup and commands, what each script does, link to the report; How we got here (written at Conclusion)
+├── README.md        Question, setup and commands, what each script does, link to the report
 └── <file>           <purpose>
 ```
 
@@ -173,6 +173,8 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 ### 5.2 Exit criteria
 
+<!-- One result per criterion and variant. -->
+
 | Criterion | Kind | Result | Findings |
 |---|---|---|---|
 
@@ -180,20 +182,13 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 <!-- The answer to the main question in 2–3 sentences. -->
 
-### 5.4 Decisions to record
-
-<!-- Optional. Architecture decisions taken at the beginning of the spike. -->
-
-| D | Outcome | Why |
-|---|---|---|
-
-### 5.5 Not verified
+### 5.4 Not verified
 
 <!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
 
 - `<item>` — `<risk>` — `<mitigation>`
 
-### 5.6 Production inputs
+### 5.5 Production inputs
 
 <!-- Optional. Points worth taking to production, from any part of the spike. Each one has a Destination: a design (with its task) or discarded with a reason. -->
 
@@ -201,9 +196,9 @@ Observed window: `<from–to, UTC; what it does not cover>`
 |---|---|---|---|
 | P1 | | `<e.g. D1, #2, F3>` | |
 
-### 5.7 Follow-ups
+### 5.6 Follow-ups
 
-<!-- ADRs to write (each in its own commit) and new tasks agreed with the owner. Production inputs are not repeated here. -->
+<!-- ADRs to write, from Decided at framing (each in its own commit), and new tasks agreed with the owner. Production inputs are not repeated here. -->
 
 - `<ADR or task>`
 

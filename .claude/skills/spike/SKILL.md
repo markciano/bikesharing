@@ -87,18 +87,9 @@ This skill fills Questions, Method, Steps and Conclusion. Findings are filled du
 Applies when Conclusion is the first unchecked item in Phase. Stop and report if a step is not ✅, unless it is ⛔ with its Gate's consequence recorded in the Decision log.
 
 1. Read the doc in full, through 4. Findings.
-2. Write each part as its own edit, in this order; the owner approves on the diff:
-   1. Observed window.
-   2. Answers, one per Q, citing Findings.
-   3. Exit criteria, one result per criterion and variant.
-   4. Verdict.
-   5. Decisions to record: for each decision in Decided at framing, whether it holds, changes or is reopened.
-   6. Not verified: each item with its risk and mitigation.
-   7. Production inputs: what is worth taking to production, from any part of the spike, each with a destination: a design (naming its task), or discarded with a reason. No new task rows from Production inputs.
-   8. Follow-ups: ADRs to write, each in its own commit; new tasks proposed to the owner as rows in `docs/tasks.md`.
-   9. README › How we got here: 5–10 lines of narrative for the portfolio, linking to Findings and Decision log entries instead of repeating their detail.
-   10. Tear-down: what is torn down and what is kept; a kept resource gets a Decision log entry. The owner runs the tear-down.
-3. In the same change as the last part: check Conclusion in Phase, set State to Concluded ✅, Finished (UTC date) and Current step to —, and the task to ✅. Tell the owner it is a commit point and propose `docs: conclude spike sNNN`.
+2. Go through 5. Conclusion of the template with the owner, part by part: discuss each part, and write it as its own edit once agreed.
+3. Tear-down: what is torn down and what is kept; a kept resource gets a Decision log entry. The owner runs the tear-down.
+4. In the same change as the last part: check Conclusion in Phase, set State to Concluded ✅, Finished (UTC date) and Current step to —, and the task to ✅. Tell the owner it is a commit point and propose `docs: conclude spike sNNN`.
 
 ## End of session
 
