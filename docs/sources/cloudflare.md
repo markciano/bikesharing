@@ -33,9 +33,7 @@ Facts confirmed on 2026-11-03 come from a tool that summarizes pages, so their w
 | Worker roles can be scoped to individual Workers: a token uses the scope "Specified Workers". Editor can update and deploy a Worker but not delete it | [Changelog](https://developers.cloudflare.com/changelog/post/2026-09-15-granular-worker-permissions/) | 2026-11-03 |
 | Deploying an existing Worker needs Editor scoped to it; creating a Worker needs Admin at the Workers product scope; changing routes needs Workers Routes Write on each zone | [Workers authorization](https://developers.cloudflare.com/workers/authorization/) | 2026-11-03 |
 | Not stated: that a token scoped to one Worker can upload static assets | [Workers authorization](https://developers.cloudflare.com/workers/authorization/); [direct upload](https://developers.cloudflare.com/workers/static-assets/direct-upload/) | 2026-11-03 |
-| Token conditions are IP lists and validity dates; they do not restrict by resource | [Create tokens via API](https://developers.cloudflare.com/fundamentals/api/how-to/create-via-api/) | 2026-11-03 |
 | The global API limit is 1,200 requests per 5 minutes per user; going over blocks all calls for 5 minutes | [API limits](https://developers.cloudflare.com/fundamentals/api/reference/limits/) | 2026-11-03 |
-| Secrets are managed per Worker, and `wrangler secret put` creates and deploys a new version. This limits the secret, not what a deployment token can do | [Worker secrets](https://developers.cloudflare.com/workers/configuration/secrets/) | 2026-11-03 |
 
 ### R2: pricing and operations
 
@@ -62,20 +60,9 @@ TODO(T040): confirm with R2's per-operation metrics (GraphQL Analytics) the clas
 | Bucket locks block deletes and overwrites, per bucket or prefix, for an age, until a date, or indefinitely; they override lifecycle rules; removing a rule needs an Admin-level token | [Bucket locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/) | 2026-10-26 |
 | A bucket lock lets an Object Read & Write token create new objects, but blocks their overwrite and delete with 409 `ObjectLockedByBucketPolicy` | [s010/F19](../spikes/s010-storage-table-format.md#4-findings) | 2026-10-28 |
 | The S3 Object Lock API and object versioning (`PutBucketVersioning`) are not implemented | [S3 API](https://developers.cloudflare.com/r2/api/s3/api/) | 2026-10-26 |
+| Buckets are private by default; public only through a custom domain or the r2.dev URL, both enabled explicitly and removable | [Public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/) | 2026-10-26 |
 | Objects and metadata are encrypted at rest by default (AES-256), with keys managed by Cloudflare | [Data security](https://developers.cloudflare.com/r2/reference/data-security/) | 2026-10-26 |
 | Conditional PutObject with `If-None-Match: *` is enforced under a race: one PUT wins, the other gets 412 `PreconditionFailed`. delta-rs relies on it for safe commits with `aws_conditional_put: "etag"` and no external lock | [s010/F1](../spikes/s010-storage-table-format.md#4-findings), [s010/F19](../spikes/s010-storage-table-format.md#4-findings) | 2026-10-28 |
-
-### R2: public access and cache
-
-| Fact | Evidence | Confirmed |
-|---|---|---|
-| Buckets are private by default; public only through a custom domain or the r2.dev URL, both enabled explicitly and removable | [Public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/) | 2026-10-26 |
-| The r2.dev URL is rate-limited and meant for development; it has no caching, WAF or access controls | [Public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/) | 2026-11-03 |
-| A custom domain must be a zone in the same account as the bucket. Only certain file types are cached by default, so JSON or Parquet may need a Cache Rule | [Public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/) | 2026-11-03 |
-| A cache hit avoids R2 operations, as the billing page says. R2's own pricing page does not address caching | [How charges accrue](https://developers.cloudflare.com/billing/understand/how-charges-accrue/) | 2026-11-03 |
-| Cache misses and 404s are billed as operations, per community replies about 3 years old, not official | [Community post](https://community.cloudflare.com/t/questions-about-the-calculation-of-b-class-requests-for-cloudflare-r2/609909) | 2026-11-03 |
-| The default cache key includes the query string, so varying it misses the cache. "Ignore query string" is available on the Free plan | [Cache keys](https://developers.cloudflare.com/cache/how-to/cache-keys/) | 2026-11-03 |
-| The Free plan has 10 Cache Rules and 1 rate-limiting rule, which counts by IP over 10 s, with a 10 s mitigation. Whether cached hits count is not stated | [Cache rules](https://developers.cloudflare.com/cache/how-to/cache-rules/); [rate limiting](https://developers.cloudflare.com/waf/rate-limiting-rules/) | 2026-11-03 |
 
 ### R2: metrics
 
@@ -91,18 +78,16 @@ TODO(T040): confirm with R2's per-operation metrics (GraphQL Analytics) the clas
 |---|---|---|
 | Requests for static assets are free and unlimited, and storing them has no extra cost | [Billing and limitations](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/) | 2026-11-03 |
 | Free plan: 20,000 files per version, 25 MiB per file | [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) | 2026-11-03 |
-| A request that invokes the Worker, such as one matched by `run_worker_first`, counts against Worker limits and gets a 429 past the free limit | [Billing and limitations](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/) | 2026-11-03 |
 | Not stated: any limit on the number of deployments or versions. Wrangler lists only the 100 most recent, which limits the view, not creation. Nothing found discourages redeploying to refresh data; the terms were not read | [Workers limits](https://developers.cloudflare.com/workers/platform/limits/); [versions and deployments](https://developers.cloudflare.com/workers/configuration/versions-and-deployments/) | 2026-11-03 |
 | A deployment sends code and assets in one operation, and reaches 100% of traffic in a single step. Not stated: that no request gets a 5xx during it | [Static Assets](https://developers.cloudflare.com/workers/static-assets/); [versions and deployments](https://developers.cloudflare.com/workers/configuration/versions-and-deployments/) | 2026-11-03 |
 | A deployment makes one upload-session POST, one or more upload POSTs and one script PUT. Wrangler's exact call count is not stated | [Direct upload](https://developers.cloudflare.com/workers/static-assets/direct-upload/) | 2026-11-03 |
 | A missing asset gets a 404, or the nearest `404.html` with a 404 status under `404-page`. Not stated: whether old assets are kept for a time after a deployment | [Static Assets](https://developers.cloudflare.com/workers/static-assets/); [static site generation](https://developers.cloudflare.com/workers/static-assets/routing/static-site-generation/) | 2026-11-03 |
 | The default header is `public, max-age=0, must-revalidate`, with an ETag that hashes the file, so browsers should revalidate on every use (inferred). Assets are cached with tiered caching. Not stated: how soon a same-named file refreshes after a deployment | [Headers](https://developers.cloudflare.com/workers/static-assets/headers/); [Static Assets](https://developers.cloudflare.com/workers/static-assets/) | 2026-11-03 |
 
-### Workers: limits and builds
+### Workers with the Cache API (fallback of the visualization)
 
 | Fact | Evidence | Confirmed |
 |---|---|---|
 | Free plan: 100,000 Worker requests a day, resetting at 00:00 UTC. Past it the route gets Error 1027, or bypasses the Worker if set to fail open | [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) | 2026-11-03 |
 | The Cache API allows 50 calls per request, shared with the subrequest quota, and objects up to 512 MB | [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) | 2026-11-03 |
-| Deploy Hooks are limited to 10 builds per minute per Worker and 100 per account, and Workers Builds to 3,000 build minutes a month on Free. Both belong to Workers Builds: that `wrangler deploy` from one's own pipeline is outside them is inferred | [Deploy hooks](https://developers.cloudflare.com/workers/ci-cd/builds/deploy-hooks/); [limits and pricing](https://developers.cloudflare.com/workers/ci-cd/builds/limits-and-pricing/) | 2026-11-03 |
-| Cloudflare Pages, for comparison: 500 builds a month on Free, 20,000 files, 25 MiB per asset. Whether direct uploads count as builds is not stated | [Pages limits](https://developers.cloudflare.com/pages/platform/limits/) | 2026-11-03 |
+| A cache hit avoids R2 operations, as the billing page says. R2's own pricing page does not address caching | [How charges accrue](https://developers.cloudflare.com/billing/understand/how-charges-accrue/) | 2026-11-03 |
