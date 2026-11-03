@@ -64,10 +64,11 @@ Open tasks move to GitHub Issues, keeping their `TNNN` IDs, while closed tasks s
 The detailed state of a task with a working document stays in that document's Status.
 
 1. **Create.** Claude Code proposes the title, body, parent and dependencies. Once the owner approves, it runs `gh issue create`. The owner can also create issues on the web.
-2. **Start.** The owner creates the branch `tNNN-short-title`, as today.
+2. **Start.** The owner creates the branch from `main`: `tNNN-short-title`, or `tNNN.M-short-title` for a child.
 3. **First push.** The owner opens the draft PR. Claude Code provides the PR description, with `Closes #N` looked up from the task's `TNNN`.
 4. **Merge.** A rebase merge closes the issue.
-5. **Close a parent.** The PR of the last child also carries `Closes #P` for its parent, each issue with its own keyword. If that does not work or complicates the PR, the owner closes the parent by hand.
+5. **Parent's own document.** The PR that delivers a parent's working document carries `Refs #P` instead of `Closes #P`, so the parent stays open once that branch is merged.
+6. **Close a parent.** The PR of the last child also carries `Closes #P` for its parent, each issue with its own keyword. If that does not work or complicates the PR, the owner closes the parent by hand. **#20**
 
 #### `gh` permissions
 
@@ -146,7 +147,7 @@ A decision that names no standard is a project choice to which none applies.
 | 8 | [Task flow](#task-flow) | Reduce statuses to waiting, in progress, done and optional blocked | One person on one task at a time needs no more; the detail stays in the working document | — | Plan |
 | 9 | [Task flow](#task-flow) | No label for in progress; a linked draft PR shows it | Simplest option, and nothing is needed before the first push | — | Plan |
 | 10 | [Task flow](#task-flow) | Claude Code creates issues after the owner's OK | Closest to proposing a table row today, and an issue is easy to edit or close | — | Plan |
-| 11 | [Task flow](#task-flow) | The last child's PR closes the parent; by hand if it complicates things | No extra step, and GitHub does not close parents on its own | — | Plan |
+| 11 | [Task flow](#task-flow) | The last child's PR closes the parent; by hand if it complicates things **→ #20** | No extra step, and GitHub does not close parents on its own | — | Plan |
 | 12 | [`gh` permissions](#gh-permissions) | Allow `gh` reads, ask for issue writes, deny `gh pr merge` and `gh repo delete` | Least privilege, in line with the existing `git` rules | — | Plan |
 | 13 | [`gh` permissions](#gh-permissions) | Deny `gh api` | It bypasses every other rule, and the task flow does not need it | — | Plan |
 | 14 | [Open tasks](#open-tasks-in-github-issues) | T039, T040 and T041 are three parents, with no level above them | It keeps the current structure, and `blocked-by` shows the order between them | — | Plan |
@@ -155,6 +156,7 @@ A decision that names no standard is a project choice to which none applies.
 | 17 | [Task rules](#where-the-task-rules-live) | No hook for the task rules | A hook fires when the command runs, after the task has been proposed | — | Plan |
 | 18 | [File layout](#23-file-layout) | A spike closes once its Records are delivered | Today it reads Concluded while documents are still pending; the task itself now closes on merge | — | Plan |
 | 19 | [`gh` permissions](#gh-permissions) | Filter `/task` lookups by author and treat other authors' issues as untrusted, following least privilege | A public repository lets anyone open an issue, which could fake the next ID or carry instructions for Claude Code | — | Plan review |
+| 20 | [Task flow](#task-flow) | A parent's own document merges with `Refs #P`, and a child's branch is `tNNN.M-short-title`, following GitHub Flow **extends #11** | `Closes #P` would close the parent before its children exist, and the branch name had no form for a child | — | Plan review |
 
 ### 2.3 File layout
 
