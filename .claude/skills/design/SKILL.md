@@ -13,7 +13,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 
 ## Start
 
-- **Task ID (TNNN): new design.** Read only the task row in `docs/tasks.md`; it is a hint, the requirement comes from the owner. Propose `docs/designs/dNNN-short-title.md` (next free number). Once approved, create it from the template without its comments, and set the task to 📝 in the same change.
+- **Task ID (TNNN): new design.** Read only the task's issue, looked up with `/task`; it is a hint, the requirement comes from the owner. Propose `docs/designs/dNNN-short-title.md` (next free number). Once approved, create it from the template without its comments.
 - **Design ID (dNNN): resume.** Read its Status and continue from the first unchecked item in Phase.
 - **Design ID + `review-plan` or `review-steps`: review.** Follow [review-plan.md](review-plan.md) or [review-steps.md](review-steps.md), and § Reviews. The rest of this file does not apply.
 
@@ -22,7 +22,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 - **Asking.** Ask in the owner's domain terms. When a question touches a technology, explain it in 2–3 lines first.
 - **Optional sections.** At the start of each block, say in one line which optional sections apply and which do not. Those that do not apply are removed.
 - **Write as you go.** Write each section as soon as it is clear; the owner approves on the edit's diff.
-- **Out of scope.** Anything out of scope, whenever it comes up, goes in Out of scope and is proposed to the owner as a new row in `docs/tasks.md`.
+- **Out of scope.** Anything out of scope, whenever it comes up, goes in Out of scope and is proposed to the owner as a new task with `/task`.
 
 ## 1. Spec
 

@@ -26,4 +26,4 @@ Phase shows Steps checked and Steps review unchecked. Otherwise stop and tell th
 
 ## Close
 
-In the same change: check Steps review in Phase, set the design's State to Ready for implementation 🎬 and the task row in `docs/tasks.md` to 🎬. Tell the owner the design is ready for `/implement dNNN`.
+In the same change: check Steps review in Phase, set the design's State to Ready for implementation 🎬. Tell the owner the design is ready for `/implement dNNN`.
