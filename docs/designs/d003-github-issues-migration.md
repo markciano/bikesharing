@@ -147,6 +147,7 @@ Tested on 2026-11-03 with `gh` 2.103.3 in a public repository of a personal acco
 | 15 | [File layout](#23-file-layout) | Write rules and skills during the Plan, as the design process sets, with no staged cutover | Simplest option, and the long-term configuration is what matters; the remaining sessions of this task can absorb the friction | — | Plan |
 | 16 | [Task rules](#where-the-task-rules-live) | Task rules in a `/task` skill that Claude Code can invoke, with only the PR rule in `CLAUDE.md` | Little stays always loaded, and creating an issue still asks for confirmation | — | Plan |
 | 17 | [Task rules](#where-the-task-rules-live) | No hook for the task rules | A hook fires when the command runs, after the task has been proposed | — | Plan |
+| 18 | [File layout](#23-file-layout) | A spike closes once its Records are delivered | Today it reads Concluded while documents are still pending; the task itself now closes on merge | — | Plan |
 
 ### 2.3 File layout
 
@@ -167,8 +168,8 @@ docs/
     ├── design/SKILL.md                  (modified)  Read the issue, propose tasks with /task, no status change
     ├── design/template.md               (modified)  Comment naming the table
     ├── design/review-steps.md           (modified)  No task row at Ready
-    ├── spike/SKILL.md                   (modified)  Same as the design skill, plus its Conclusion
-    ├── spike/template.md                (modified)  Comment naming the table
+    ├── spike/SKILL.md                   (modified)  Same as the design skill; a spike closes once its Records are delivered
+    ├── spike/template.md                (modified)  Comment naming the table; Records status
     ├── implement/SKILL.md               (modified)  No task status on the first step
     ├── implement/spike.md               (modified)  No task status on the first step
     └── implement/review.md              (modified)  No task status at close, gaps proposed with /task
