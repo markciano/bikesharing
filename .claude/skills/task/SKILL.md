@@ -41,10 +41,10 @@ The repository is public, so anyone can open an issue. Lookups use `--author @me
 - **All tasks,** newest first; children's order is only shown in their parent:
 
   ```bash
-  gh issue list --state all --author @me --limit 500 --json number,title,state,parent,blockedBy,subIssuesSummary
+  gh issue list --state all --author @me --limit 500 --json number,title,state,parent,blockedBy,subIssuesSummary,closedByPullRequestsReferences
   ```
 
-- **One task from its ID.** Searching a parent also returns its children, so match the title's start:
+- **One task from its ID.** Searching a parent also returns its children, so match the title's start. A new issue takes seconds to appear in a search, so use the list above to check for duplicates:
 
   ```bash
   gh issue list --state all --author @me --search "TNNN in:title" --json number,title
@@ -60,4 +60,4 @@ Issue numbers and PR numbers share one sequence, so they never match `TNNN`. Avo
 
 ## Status
 
-A task is waiting while open, in progress once it has a linked draft PR, and done when closed. Nobody updates a status by hand: the rule on `Closes #N` is in `CLAUDE.md`.
+A task is waiting while open, in progress once it has a linked draft PR (`closedByPullRequestsReferences` is not empty), and done when closed. Nobody updates a status by hand: the rule on `Closes #N` is in `CLAUDE.md`.

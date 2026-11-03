@@ -7,7 +7,7 @@
 ## Status
 
 - State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
 
 ## 1. Spec — what and why
@@ -88,7 +88,7 @@ The repository is public, so anyone can open an issue. `/task` lookups use `--au
 
 Each open task in `docs/tasks.md` becomes one issue. Its current effort goes in the title, a long row is cut to a short title, and the rest of its text goes in the body. Dependencies on closed tasks are dropped; those on open tasks stay. The empty `T056` row does not become an issue. T024 has no PR, so it reads as Waiting once migrated.
 
-`gh issue create` is not idempotent, so each task is looked up by ID before its issue is created, which makes a re-run after a partial failure safe. Open rows leave `docs/tasks.md` only once all their issues exist.
+`gh issue create` is not idempotent, so each task is checked against the whole-table read before its issue is created, which makes a re-run after a partial failure safe. Open rows leave `docs/tasks.md` only once all their issues exist.
 
 | Task | Effort | Group | `blocked-by` |
 |---|---|---|---|
@@ -127,7 +127,8 @@ Tested on 2026-11-03 with `gh` 2.103.3 in a public repository of a personal acco
 | `Closes #N` in a PR body, rebase merge | Closes the issue and links the PR; `closingIssuesReferences` was empty just after the PR was created and correct after the merge |
 | Closing all children | The parent stays open at 100%; it is closed by hand |
 | Numbering | Issues and PRs share one sequence, so issue numbers never match `TNNN` |
-| Lookup by ID | `T900 in:title` also returns the children `T900.M`; `T900.2 in:title` returns only that task. Titles with parentheses are untested |
+| Lookup by ID | `T900 in:title` also returns the children `T900.M`; `T900.2 in:title` returns only that task. Titles with parentheses work. A new issue takes seconds to appear in a search, while the whole-table read shows it at once |
+| Draft PR with `Closes #N` | The open issue shows the PR in `closedByPullRequestsReferences`, in `gh issue view` and `gh issue list` |
 | Search filters that work | `is:blocked`, `is:blocking`, `has:parent-issue`, `no:parent-issue`, `parent-issue:owner/repo#N`, `blocked-by:owner/repo#N` |
 | Search filters to avoid | `blocked-by:N` and `blocking:N` return nothing; `has:sub-issues` and `no:sub-issues` return every issue |
 
