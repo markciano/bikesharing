@@ -17,7 +17,7 @@ This skill fills Questions, Method, Steps and Conclusion. Findings are filled du
 
 ## Start
 
-- **Task ID (TNNN): new spike.** Read only the task row in `docs/tasks.md`; it is a hint, the question comes from the owner. Propose `docs/spikes/sNNN-short-title.md` (next free number) and the code folder `spikes/<short-title>/`. Once approved, create the doc from the template without its comments, and set the task to 📝 in the same change.
+- **Task ID (TNNN): new spike.** Read only the task's issue, looked up with `/task`; it is a hint, the question comes from the owner. Propose `docs/spikes/sNNN-short-title.md` (next free number) and the code folder `spikes/<short-title>/`. Once approved, create the doc from the template without its comments.
 - **Spike ID (sNNN): resume.** Read its Status and continue from the first unchecked item in Phase.
 - **Spike ID + `review-steps`: review.** Follow [review-steps.md](review-steps.md) and § Review. The rest of this file does not apply.
 
@@ -29,7 +29,7 @@ This skill fills Questions, Method, Steps and Conclusion. Findings are filled du
 - **Optional sections.** At the start of each block, say in one line which optional sections apply and which do not. Those that do not apply are removed.
 - **The data that decides.** A figure behind a decision comes from the data that decides the question, usually its most demanding case, named beforehand.
 - **Write as you go.** Write each section as soon as it is clear; the owner approves on the edit's diff.
-- **Out of scope.** Anything out of scope, whenever it comes up, goes in Out of scope and is proposed to the owner as a new row in `docs/tasks.md`.
+- **Out of scope.** Anything out of scope, whenever it comes up, goes in Out of scope and is proposed to the owner as a new task with `/task`.
 - **Commit points.** When a decision or block closes, tell the owner it is a commit point and propose the message.
 - **Documents a decision changes.** What cites only requirements goes in the decision's commit. What cites an ADR goes after the spike closes, in the commit of that ADR.
 
@@ -110,4 +110,4 @@ Present them in two separate sections, writing "None" when empty:
 
 ### Fixes
 
-The owner decides which findings to fix. Apply each accepted fix to the section or step it concerns; the owner approves on the edit's diff. One finding per message when a fix needs a decision. When the review closes, in the same change: check Steps review in Phase, set State to Ready 🎬 and the task to 🎬.
+The owner decides which findings to fix. Apply each accepted fix to the section or step it concerns; the owner approves on the edit's diff. One finding per message when a fix needs a decision. When the review closes, in the same change: check Steps review in Phase and set State to Ready 🎬.
