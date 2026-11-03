@@ -8,7 +8,7 @@
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 2
+- Current step: Step 3
 
 ## 1. Spec — what and why
 
@@ -230,7 +230,7 @@ The first command returned JSON with no confirmation, and the second was rejecte
 
 ### Step 2 — Create the open tasks as issues
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: record issue creation for design d003`
 - **R:** —
@@ -242,9 +242,9 @@ Creates the 11 issues below on `markciano/bikesharing`, and the two `blocked-by`
 
 | Title | Body | `blocked-by` |
 |---|---|---|
-| `T039 (ef5): Capture in production [parent]` | Parent task. Its design splits it into `T039.M` tasks. | — |
-| `T040 (ef8): Processing pipeline [parent]` | Parent task. Its design splits it into `T040.M` tasks. | — |
-| `T041 (ef5): Visualization [parent]` | Parent task. Its design splits it into `T041.M` tasks. | T040 |
+| `T039 (ef5): Capture in production [parent]` | Its design splits it into `T039.M` tasks. | — |
+| `T040 (ef8): Processing pipeline [parent]` | Its design splits it into `T040.M` tasks. | — |
+| `T041 (ef5): Visualization [parent]` | Its design splits it into `T041.M` tasks. | T040 |
 | `T042 (ef3): Data quality` | Checks and targets beyond the basics. | — |
 | `T044 (ef2): Cross-file link and anchor check` | Add a cross-file link and anchor check to the `docs` CI job, because MD051 checks only same-file anchors. Trial lychee and remark-validate-links on a broken anchor first. | T040 |
 | `T010 (ef3): Write README` | Write the repository README. | — |
@@ -415,3 +415,5 @@ Every file in File layout appears in the diff with its status, action 2 returns 
 - `<gap>` — TNNN
 
 ### 4.3 Decisions taken during implementation
+
+- Step 2: the bodies of the parent issues T039, T040 and T041 drop the words "Parent task.", since the `[parent]` title already says it. The owner edited T039's body on the web; the step's table shows the final text.
