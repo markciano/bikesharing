@@ -8,7 +8,7 @@
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 6
+- Current step: —
 
 ## 1. Spec — what and why
 
@@ -379,7 +379,7 @@ The command reports that the repository cannot be found: yes/no.
 
 ### Step 6 — Verify the deliverable
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: verify the deliverable of design d003`
 - **R:** —
