@@ -33,10 +33,12 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
    Stop when the what, the why and the closing condition are clear.
 3. **Playback.** Write Context. If a part can be delivered and closed on its own, or the task looks like more than 10 steps, propose splitting it now.
 4. **Decisions.** Write each decision about what the result does in Decided at framing as soon as the owner approves it.
-5. **Requirements.** One EARS statement as soon as a behaviour is clear. Then one pass dedicated to failure cases (*If… then*) and one to security threats (STRIDE).
-6. **Done when**, if the task has closing conditions that Requirements cannot express.
-7. **Open questions**, whenever they come up.
-8. **Approval.** With no Open questions left, ask for the Spec approval. Once approved, check Spec in Phase.
+5. **Failure cases.** With the behaviour decided, go through the decisions asking what can go wrong. Each answer is a new decision or extends an existing one.
+6. **Security threats.** Only then, one STRIDE pass over the decisions. Its outcome is a security decision with its threat table.
+7. **Requirements.** Translate the decisions into EARS, each requirement citing its decision. Anything undecided that comes up goes back to Decided at framing first.
+8. **Done when**, if the task has closing conditions that Requirements cannot express.
+9. **Open questions**, whenever they come up.
+10. **Approval.** With no Open questions left, ask for the Spec approval. Once approved, check Spec in Phase.
 
 ## 2. Plan
 
