@@ -8,7 +8,7 @@
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 3
+- Current step: Step 4
 
 ## 1. Spec — what and why
 
@@ -272,7 +272,7 @@ The read of action 1, run again, returns exactly the 11 titles above, all open a
 
 ### Step 3 — Freeze the task table
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: freeze the task table`
 - **R:** —

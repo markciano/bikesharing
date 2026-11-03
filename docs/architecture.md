@@ -93,7 +93,7 @@ Each goal is made measurable by the scenarios in §10.
 
 ### 4.5 Organisation
 
-- **Decisions in dependency order:** each one is taken when the next step needs it (§9). [tasks.md](tasks.md).
+- **Decisions in dependency order:** each one is taken when the next step needs it (§9). [GitHub Issues](https://github.com/markciano/bikesharing/issues).
 
 ## 5. Building block view
 
@@ -150,7 +150,7 @@ Each goal is made measurable by the scenarios in §10.
 
 ## 9. Architecture decisions
 
-Decisions in force are the ADRs in [decisions/](decisions/); retired ones are in `decisions/archive/`. Open decisions are tasks in [tasks.md](tasks.md), in dependency order.
+Decisions in force are the ADRs in [decisions/](decisions/); retired ones are in `decisions/archive/`. Open decisions are tasks in [GitHub Issues](https://github.com/markciano/bikesharing/issues), with `blocked-by` showing their order.
 
 ## 10. Quality requirements
 
