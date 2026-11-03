@@ -38,16 +38,7 @@ Current step: the step being implemented, or —. -->
 
 #### D`<N>`. `<Title of decision N>`
 
-### 1.3 Done when
-
-<!-- The first three lines are the general closing rule; the first one goes if there are no Requirements. Below them, only what they do not cover: operational actions, checks on real data, understanding. -->
-
-- Every requirement passes its test.
-- Every item in File layout is delivered.
-- Every TODO citing this task is resolved or re-pointed.
-- `<extra condition>`
-
-### 1.4 Requirements
+### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps.
 One behaviour per requirement, verifiable, with a measurable threshold where one applies. Written in EARS:
@@ -59,6 +50,12 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
 - **R1** `<EARS statement>`
+
+### 1.4 Done when
+
+<!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
+
+- `<extra condition>`
 
 ### 1.5 Out of scope
 
