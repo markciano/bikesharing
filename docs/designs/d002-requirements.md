@@ -72,6 +72,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 - **R26** The solution shall deploy the pipeline only from a commit on `main`.
 - **R27** The pipeline shall expose no inbound endpoint.
 - **R28** If the execution platform's spend reaches its limit, set no higher than the pipeline's share of the budget, then the solution shall stop pipeline runs.
+- **R29** The visualization shall adapt to any screen size, from phone to desktop.
 
 ### Out of scope
 
