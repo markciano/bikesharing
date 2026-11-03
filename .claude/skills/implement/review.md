@@ -19,7 +19,7 @@ State is In progress 🔄, every step is ✅ with its commit in `git log`, and t
 3. **File layout.** Every item is delivered, and nothing outside it was created or modified (`git diff --stat` from the commit before the first step).
 4. **TODOs.** Every TODO in docs and code citing the task is resolved or re-pointed to another task.
 5. **Decisions.** Every entry in Decisions taken during implementation had the owner's OK; those affecting other tasks or the project have an ADR. Documents whose behaviour changed were updated.
-6. **Done when.** Each item is met, with its evidence.
+6. **Done when.** If the design has this section, each item is met, with its evidence.
 
 ## Findings
 
@@ -43,4 +43,4 @@ The owner decides which findings to fix. A fix within the design's Scope is appl
 1. Draft *Implemented* from the ✅ steps and the test results: component — what was delivered; tests passing.
 2. Draft *Known gaps at close*: Done when items not met, File layout items not delivered, TODOs re-pointed, each with the task that covers it. Propose a task with `/task` for any gap without one. "None" is written, not left empty.
 3. *Decisions taken during implementation* is already written: review it with the owner; write "None" if empty.
-4. The owner checks Done when. When accepted, State goes to Complete ✅ and Current step to —, in the same commit; propose its message.
+4. The owner checks Done when, if the design has it, and accepts the close. When accepted, State goes to Complete ✅ and Current step to —, in the same commit; propose its message.
