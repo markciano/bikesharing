@@ -84,7 +84,7 @@ This skill fills Questions, Method, Steps and Conclusion. Findings are filled du
 
 ## 4. Conclusion
 
-Applies when Conclusion is the first unchecked item in Phase. Stop and report if a step is not ✅, unless it is ⛔ with its Gate's consequence recorded in the Decision log.
+Applies to a spike with steps, when Conclusion is the first unchecked item in Phase. Stop and report if a step is not ✅, unless it is ⛔ with its Gate's consequence recorded in the Decision log.
 
 1. Read the doc in full, through 4. Findings.
 2. Go through 5. Conclusion of the template with the owner, part by part: discuss each part, and write it as its own edit once agreed.
