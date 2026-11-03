@@ -39,13 +39,102 @@ No task covers these items, because none of them is planned:
 
 ## 2. Plan — how
 
+Open tasks move to GitHub Issues, keeping their `TNNN` IDs, while closed tasks stay in a frozen `docs/tasks.md`. A throwaway repository verified how GitHub behaves before this plan was written.
+
 ### 2.1 Approach
+
+#### Task model
+
+- A task is one issue. Its title is `TNNN(efM): task name`, with the effort in the parentheses, e.g. `T056(ef3): Write README`. PR titles stay `TNNN: task name`.
+- The body is free text with no template, and it holds any detail that does not fit in the title.
+- An issue does not link its design or spike. The working document names its task in its header, and an issue shows the PR that closes it, which lists the files changed.
+- A group of tasks is a parent issue with sub-issues. A child's ID is `TNNN.M`.
+- `blocked-by` shows the order between tasks and between groups. It informs and does not block.
+- The next ID is the highest `TNNN` in use, looked up when a task is created.
+- `docs/tasks.md` stays where it is, frozen, with the 40 closed tasks and a note pointing to GitHub Issues.
+
+#### Task flow
+
+| Status | In GitHub | How it changes |
+|---|---|---|
+| Waiting | Open issue, no linked PR | On creation |
+| In progress | Open issue with a linked draft PR | On the first push; before it, work happens only on the local branch |
+| Done | Closed issue | On merging the PR that closes it |
+| Blocked (optional) | Open issue with `blocked-by` | When it applies |
+
+The detailed state of a task with a working document stays in that document's Status.
+
+1. **Create.** Claude Code proposes the title, body, parent and dependencies. Once the owner approves, it runs `gh issue create`. The owner can also create issues on the web.
+2. **Start.** The owner creates the branch `tNNN-short-title`, as today.
+3. **First push.** The owner opens the draft PR. Claude Code provides the PR description, with `Closes #N` looked up from the task's `TNNN`.
+4. **Merge.** A rebase merge closes the issue.
+5. **Close a parent.** The PR of the last child also carries `Closes #P` for its parent, each issue with its own keyword. If that does not work or complicates the PR, the owner closes the parent by hand.
+
+#### `gh` permissions
+
+`.claude/settings.json` has rules for `git` but none for `gh`, which reaches the same actions through the GitHub API. It gets these rules:
+
+| Commands | Rule | Reason |
+|---|---|---|
+| `gh issue list`, `gh issue view`, `gh pr list`, `gh pr view`, `gh pr checks` | Allow | Read only |
+| `gh issue create`, `gh issue edit`, `gh issue close` | Ask | They publish to a public repository |
+| `gh pr merge`, `gh repo delete` | Deny | Merging belongs to the owner, and deleting a repository cannot be undone |
+| `gh api` | Deny | It can create commits and merge PRs, which bypasses every other rule; the task flow does not need it |
+| Any other `gh` command | Ask | The default mode already does this |
+
+#### Open tasks in GitHub Issues
+
+Each open task in `docs/tasks.md` becomes one issue. Its current effort goes in the title, and any detail that does not fit in the title goes in the body. Dependencies on closed tasks are dropped; those on open tasks stay. The empty `T056` row does not become an issue.
+
+| Task | Effort | Group | `blocked-by` |
+|---|---|---|---|
+| T039 | 5 | Parent; its design adds the children | — |
+| T040 | 8 | Parent; its design adds the children | — |
+| T041 | 5 | Parent; its design adds the children | T040 |
+| T042 | 3 | None | — |
+| T044 | 2 | None | T040 |
+| T010 | 3 | None | — |
+| T024 | 1 | None | — |
+| T027 | 2 | None | — |
+| T053 | 1 | None | — |
+| T054 | 1 | None | — |
+| T055 | 3 | None | — |
+
+#### Verified GitHub behaviour
+
+Tested on 2026-11-03 with `gh` 2.103.3 in a public repository of a personal account, with no ruleset.
+
+| Behaviour | Result |
+|---|---|
+| Sub-issues and `blocked-by` | Work on a personal account, created and read with `gh` |
+| Whole-table read | `gh issue list --state all --json number,title,state,parent,blockedBy,subIssuesSummary` returns all fields in one call, newest first |
+| Order of children | Reorderable on the web and through the API, and kept when read with `gh issue view` |
+| Closing a blocked issue | Allowed; the `blocked-by` relationship stays |
+| `Closes #N` in a PR body, rebase merge | Closes the issue and links the PR; `closingIssuesReferences` was empty just after the PR was created and correct after the merge |
+| Closing all children | The parent stays open at 100%; it is closed by hand |
+| Numbering | Issues and PRs share one sequence, so issue numbers never match `TNNN` |
+| Lookup by ID | `T900 in:title` also returns the children `T900.M`; `T900.2 in:title` returns only that task. Titles with parentheses are untested |
+| Search filters that work | `is:blocked`, `is:blocking`, `has:parent-issue`, `no:parent-issue`, `parent-issue:owner/repo#N`, `blocked-by:owner/repo#N` |
+| Search filters to avoid | `blocked-by:N` and `blocking:N` return nothing; `has:sub-issues` and `no:sub-issues` return every issue |
 
 ### 2.2 Decision summary
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| | | | | | |
+| 1 | [Task model](#task-model) | Move open tasks only | Recreating 40 closed tasks adds no value | — | Plan |
+| 2 | [Task model](#task-model) | Group with sub-issues, following the parent-issue (epic) pattern; `blocked-by` is informative | Parents map to current parent tasks, can depend on each other, and worked in the test | — | Plan |
+| 3 | [Task model](#task-model) | Keep `TNNN` in the title instead of the issue number | Adopting issue numbers means changing 171 references in 25 files and leaves two ID series | — | Plan |
+| 4 | [Task model](#task-model) | Put effort in the title as `(efM)` | Visible at a glance, and effort is not filtered | — | Plan |
+| 5 | [Task model](#task-model) | Free-text body, no issue template | Nothing needs a template yet | — | Plan |
+| 6 | [Task model](#task-model) | No link from an issue to its working document | An issue already leads to its files through its PR, and the document names its task | — | Plan |
+| 7 | [Task model](#task-model) | Freeze `docs/tasks.md` where it is | Links from 12 documents keep working, and closed tasks stay visible | — | Plan |
+| 8 | [Task flow](#task-flow) | Reduce statuses to waiting, in progress, done and optional blocked | One person on one task at a time needs no more; the detail stays in the working document | — | Plan |
+| 9 | [Task flow](#task-flow) | No label for in progress; a linked draft PR shows it | Simplest option, and nothing is needed before the first push | — | Plan |
+| 10 | [Task flow](#task-flow) | Claude Code creates issues after the owner's OK | Closest to proposing a table row today, and an issue is easy to edit or close | — | Plan |
+| 11 | [Task flow](#task-flow) | The last child's PR closes the parent; by hand if it complicates things | No extra step, and GitHub does not close parents on its own | — | Plan |
+| 12 | [`gh` permissions](#gh-permissions) | Allow `gh` reads, ask for issue writes, deny `gh pr merge` and `gh repo delete` | Least privilege, in line with the existing `git` rules | — | Plan |
+| 13 | [`gh` permissions](#gh-permissions) | Deny `gh api` | It bypasses every other rule, and the task flow does not need it | — | Plan |
+| 14 | [Open tasks](#open-tasks-in-github-issues) | T039, T040 and T041 are three parents, with no level above them | It keeps the current structure, and `blocked-by` shows the order between them | — | Plan |
 
 ### 2.3 File layout
 
