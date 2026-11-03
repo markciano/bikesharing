@@ -123,8 +123,9 @@ Each goal is made measurable by the scenarios in §10.
 | 1 | Modal's `Cron` starts a container from the pinned image, with credentials as environment variables | [ADR-0027](decisions/0027-modal-as-execution-platform.md); [ADR-0028](decisions/0028-modal-cron-as-pipeline-scheduler.md); [ADR-0029](decisions/0029-pipeline-code-architecture.md) |
 | 2 | The platform module calls the package's entry point, which signals the start to the monitor | [ADR-0029](decisions/0029-pipeline-code-architecture.md); [ADR-0031](decisions/0031-heartbeat-alerts-for-the-pipeline.md) |
 | 3 | DuckDB runs the SQL models over bronze, and Python hands the results to `deltalake`, which writes the lakehouse tables | [ADR-0024](decisions/0024-duckdb-as-processing-engine.md); [ADR-0025](decisions/0025-sql-models-directed-by-python.md) |
-| 4 | The run writes its events to stdout and uploads them to R2 as one object | [ADR-0030](decisions/0030-pipeline-logs.md) |
-| 5 | The run signals its result; on a failure signal, or if no signal arrives in time, the monitor emails the owner | [ADR-0031](decisions/0031-heartbeat-alerts-for-the-pipeline.md); [d002 › R23](designs/d002-requirements.md#requirements) |
+| 4 | The run generates the page's prepared files from an explicit list and deploys a new version on Workers Static Assets; a failed deployment does not fail the run's data | [ADR-0033](decisions/0033-data-published-by-redeploying-static-assets.md); [s013 › P8](spikes/s013-visualization-tool.md#55-production-inputs) |
+| 5 | The run writes its events to stdout and uploads them to R2 as one object | [ADR-0030](decisions/0030-pipeline-logs.md) |
+| 6 | The run signals its result; on a failure signal, or if no signal arrives in time, the monitor emails the owner | [ADR-0031](decisions/0031-heartbeat-alerts-for-the-pipeline.md); [d002 › R23](designs/d002-requirements.md#requirements) |
 
 ## 7. Deployment view
 
@@ -132,7 +133,7 @@ Each goal is made measurable by the scenarios in §10.
 - **Storage:** two R2 buckets: bronze, and lakehouse for silver and gold. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0023](decisions/0023-storage-security-baseline.md).
 - **Processing:** Modal Functions on the Starter plan, in containers from a pinned image, started by Modal's `Cron`, reading bronze and writing the lakehouse bucket in R2. [ADR-0027](decisions/0027-modal-as-execution-platform.md); [ADR-0028](decisions/0028-modal-cron-as-pipeline-scheduler.md).
 - **Monitoring:** Healthchecks.io on its free plan, outside the execution platform, receives the pipeline's signals and emails the owner. [ADR-0031](decisions/0031-heartbeat-alerts-for-the-pipeline.md).
-- TODO(T038): visualization.
+- **Visualization:** Cloudflare Workers Static Assets serves the page and its prepared files; at each refresh the pipeline deploys a new version. [ADR-0033](decisions/0033-data-published-by-redeploying-static-assets.md).
 
 ## 8. Cross-cutting concepts
 
@@ -144,6 +145,7 @@ Each goal is made measurable by the scenarios in §10.
 - **Versions and dependencies:** runtimes pinned in each component's native version file; dependencies locked per component. [ADR-0016](decisions/0016-runtime-versions-pinned-per-component.md); [ADR-0017](decisions/0017-dependencies-locked-per-component.md).
 - **Retention:** bronze and gold kept indefinitely; silver in a rolling window covering the longest gold window (§1.1); Delta tables keep 7 days of history. [ADR-0021](decisions/0021-retention-per-layer.md).
 - **Storage security:** one token per component with least privilege; bronze in its own bucket, read-only for the pipeline; append-only bronze prefixes under a bucket lock; buckets private; the Admin token held by the owner. [ADR-0023](decisions/0023-storage-security-baseline.md); [d002 › R15–R18](designs/d002-requirements.md#requirements).
+- **Visualization security:** its own deployment token, limited to what publishing needs; two-factor authentication on the accounts that can publish; only the files on an explicit list are published; code loaded only from the page's own address, with pinned dependencies; feed data displayed as text, never as HTML. [d002 › R30–R34](designs/d002-requirements.md#requirements).
 
 ## 9. Architecture decisions
 
@@ -179,10 +181,12 @@ Quality scenarios that make the goals in §1.2 measurable:
 ## 11. Risks and technical debt
 
 - **Unexpected R2 bill:** R2 bills storage and operations, and the cost model is estimated, not measured; how often the pipeline commits weighs on operations. Mitigated by the cost alert (QS8) and the recalibration with R2's metrics in production (T040). [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [s010 › Not verified](spikes/s010-storage-table-format.md#not-verified).
-- **One vendor:** storage and capture both depend on Cloudflare. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md).
+- **One vendor:** storage, capture and visualization all depend on Cloudflare. [ADR-0019](decisions/0019-own-lakehouse-on-cloudflare-r2.md); [ADR-0033](decisions/0033-data-published-by-redeploying-static-assets.md).
 - **Delta concurrency limits (low):** with no managed service coordinating commits, conflicting MERGEs are not resolved automatically, and concurrent table creation or schema merge can race; unlikely here, since tables are created and schemas changed rarely. The pipeline design handles them. [s010 › D4](spikes/s010-storage-table-format.md#decisions-to-record).
 - **Engine not exercised on real volumes:** the hand-off from DuckDB to `deltalake` and its memory use rest on documentation; the first slice of T040 checks both, with Polars as the fallback. [ADR-0024](decisions/0024-duckdb-as-processing-engine.md); [s011 › Not verified](spikes/s011-engine-pipeline-language.md#23-not-verified).
 - **Dependence on Modal's credit:** without the monthly credit, or with runs longer than estimated, the pipeline's platform cost exceeds its share; run time is not measured until the first slice of T040, and Oracle Cloud Always Free is the fallback. [ADR-0027](decisions/0027-modal-as-execution-platform.md).
+- **Deployments not confirmed by Cloudflare:** publishing relies on 4,300–8,600 deployments a month being accepted and on a token limited to one Worker being able to upload assets, and no page confirms either. If they fail, the page stays up with its last data and shows its age; the fallbacks are a Worker with the Cache API in front of private R2, and a separate Cloudflare account for the page. [ADR-0033](decisions/0033-data-published-by-redeploying-static-assets.md); [s013 › Not verified](spikes/s013-visualization-tool.md#54-not-verified).
+- **Freshness target not settled:** the 5 minutes of R3 is the intended target, and current estimates point to about 12 minutes. T040 sets the cadence with measured run times and reviews the target. [d002 › R3](designs/d002-requirements.md#requirements); [s010 › P5](spikes/s010-storage-table-format.md#production-inputs).
 - **Undocumented Worker behaviour:** capture relies on `encodeResponseBody: 'manual'` and on the Free plan's CPU enforcement, neither documented. [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md).
 
 ## 12. Glossary

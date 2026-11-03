@@ -218,7 +218,7 @@ TODO(T041): P1–P7.
 | Output | From | Destination | Commit |
 |---|---|---|---|
 | ADR: static web page with JavaScript | D2, D3 | `docs/decisions/`; [architecture](../architecture.md) › Solution strategy, Building blocks | Done |
-| ADR: data published by redeploying on Workers Static Assets | D4 | `docs/decisions/`; [architecture](../architecture.md) › Deployment view (resolves `TODO(T038)`), Runtime view | Its own, after closing |
+| ADR: data published by redeploying on Workers Static Assets | D4 | `docs/decisions/`; [architecture](../architecture.md) › Deployment view (resolves `TODO(T038)`), Runtime view | Done |
 | R29–R34 | D3, D6 | [d002 › Requirements](../designs/d002-requirements.md#requirements) | Done |
 | Cloudflare facts | D3, D4, D6 | [Cloudflare source card](../sources/cloudflare.md) | Done |
 | T053, T054 | Comments in the template; threat IDs | [tasks.md](../tasks.md) | Done |
