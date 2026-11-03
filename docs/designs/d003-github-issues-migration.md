@@ -6,7 +6,7 @@
 
 ## Status
 
-- State: In progress 🔄
+- State: Complete ✅
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: —
 
@@ -410,9 +410,14 @@ Every file in File layout appears in the diff with its status, action 2 returns 
 
 ### 4.1 Implemented
 
+- GitHub Issues: 11 open tasks created, with T041 and T044 blocked by T040; no children, since each parent's design adds them.
+- `docs/tasks.md`: frozen with the 40 closed tasks; `docs/architecture.md` points to GitHub Issues.
+- Claude Code configuration: `/task` skill, `gh` permission rules, and rules and skills moved off the table.
+- Tests: none, as this task changes no code; the `docs` CI check passes.
+
 ### 4.2 Known gaps at close
 
-- `<gap>` — TNNN
+- A real PR closing its issue under the ruleset is confirmed only at the merge of this task's PR, after this document reads Complete. If the issue stays open, the owner closes it by hand and proposes a task to correct the rule in `CLAUDE.md` — T055
 
 ### 4.3 Decisions taken during implementation
 
