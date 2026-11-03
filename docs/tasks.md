@@ -41,7 +41,7 @@
 | T051 | Coherence sweep of `.claude/skills` and `.claude/rules`: repeated rules, contradictions, unjustified differences between design and spike, broken references; no change in behaviour without the owner's OK | 1 | ✅ | — | — |
 | T052 | Spike conclusion: move it from `/implement` to `/spike`, and Production inputs into the Conclusion; analyse the closes of designs | 2 | ✅ | — | — |
 | T037 | Execution target: where the pipeline runs and what schedules it; its spike models the component's threats and adds new requirements to d002 | 3 | ✅ | T036 | [s012-execution-target.md](spikes/s012-execution-target.md) |
-| T038 | Visualization: tool and where it is published; its spike models the component's threats and adds new requirements to d002 | 2 | ⬜ | T034, T035, T037 |  |
+| T038 | Visualization: tool and where it is published; its spike models the component's threats and adds new requirements to d002 | 2 | 📝 | T034, T035, T037 | [s013](spikes/s013-visualization-tool.md) |
 | T039 | Capture in production (parent; split into TNNN.M in its design) | 5 | ⬜ | T035 |  |
 | T040 | Processing pipeline (parent; split into TNNN.M in its design) | 8 | ⬜ | T036, T037 |  |
 | T041 | Visualization (parent; split into TNNN.M in its design) | 5 | ⬜ | T038, T040 |  |
