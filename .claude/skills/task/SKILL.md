@@ -25,7 +25,7 @@ Tasks live in GitHub Issues (ADR-0034). Closed tasks up to T052 are in `docs/tas
 3. Create it, adding `--parent` only for a child:
 
    ```bash
-   gh issue create --title "TNNN (efM): task name" --body "detail" --parent P
+   gh issue create --title 'TNNN (efM): task name' --body 'detail' --parent P
    ```
 
 4. Add each dependency, where `N` and `M` are issue numbers:
