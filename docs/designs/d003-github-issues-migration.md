@@ -8,7 +8,7 @@
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 4
+- Current step: Step 5
 
 ## 1. Spec — what and why
 
@@ -303,7 +303,7 @@ The mention at `docs/architecture.md` that cites `tasks.md › T036` stays, beca
 
 ### Step 4 — Open the draft PR
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `docs: record the draft PR of design d003`
 - **R:** —
