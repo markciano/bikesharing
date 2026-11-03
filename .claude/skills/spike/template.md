@@ -190,17 +190,19 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 ### 5.5 Production inputs
 
-<!-- Optional. Points worth taking to production, from any part of the spike. Each one has a Destination: a design (with its task) or discarded with a reason. -->
+<!-- Optional. What a later task must take into account when it builds, from any part of the spike: done when that task runs. Each one has a Destination: a design (with its task) or discarded with a reason. -->
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
 | P1 | | `<e.g. D1, #2, F3>` | |
 
-### 5.6 Follow-ups
+### 5.6 Records
 
-<!-- ADRs to write, from Decided at framing (each in its own commit), and new tasks agreed with the owner. Production inputs are not repeated here. -->
+<!-- Documents this spike updates when it closes: ADRs from Decided at framing (each in its own commit), architecture, requirements, source cards and new tasks agreed with the owner. Every decision has a row, also one with no output, so nothing looks forgotten. Commit: "Done", or "Its own, after closing" while pending. Production inputs are not repeated here. -->
 
-- `<ADR or task>`
+| Output | From | Destination | Commit |
+|---|---|---|---|
+| `<ADR, requirement, source card, task or "No output">` | `<e.g. D1, F3>` | `<document and section, or —>` | `<Done, or Its own, after closing>` |
 
 ## 6. Sources
 
