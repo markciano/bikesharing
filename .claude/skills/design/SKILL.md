@@ -32,17 +32,17 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
    - correction: current vs expected behaviour, how to reproduce it, what must not break.
    Stop when the what, the why and the closing condition are clear.
 3. **Playback.** Write Context. If a part can be delivered and closed on its own, or the task looks like more than 10 steps, propose splitting it now.
-4. **Decisions.** Write each decision about what the result does in Decided at framing as soon as the owner approves it.
-5. **Failure cases.** With the behaviour decided, go through the decisions asking what can go wrong. Each answer is a new decision or extends an existing one.
-6. **Security threats.** Only then, one STRIDE pass over the decisions. Its outcome is a security decision with its threat table.
-7. **Requirements.** Translate the decisions into EARS, each requirement citing its decision. Anything undecided that comes up goes back to Decided at framing first.
-8. **Done when**, if the task has closing conditions that Requirements cannot express.
-9. **Open questions**, whenever they come up.
+4. **Decisions to take.** List them in Open questions in dependency order: nothing is decided before what it depends on. The owner adjusts the list. A question that comes up later joins the list in its place.
+5. **Decisions.** Take them in that order. Each one closes as a decision in Decided at framing as soon as the owner approves it, and leaves the table.
+6. **Failure cases.** With the behaviour decided, go through the decisions asking what can go wrong. Each answer is a new decision or extends an existing one.
+7. **Security threats.** Only then, one STRIDE pass over the decisions. Its outcome is a security decision with its threat table.
+8. **Requirements.** Translate the decisions into EARS, each requirement citing its decision. Anything undecided that comes up goes back to Open questions first.
+9. **Done when**, if the task has closing conditions that Requirements cannot express.
 10. **Approval.** With no Open questions left, ask for the Spec approval. Once approved, check Spec in Phase.
 
 ## 2. Plan
 
-1. Propose the list of concerns to decide; the owner adjusts it. What reaches the owner and what is logged follow `.claude/rules/docs/decision-log.md`.
+1. Propose the list of concerns to decide, in dependency order; the owner adjusts it. What reaches the owner and what is logged follow `.claude/rules/docs/decision-log.md`.
 2. For each concern:
    - what is being decided and why it matters, in 2–3 lines;
    - the options, each with its practical consequence;

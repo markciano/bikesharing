@@ -65,11 +65,11 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 ### 1.6 Open questions
 
-<!-- Optional. Unresolved questions about the what. Questions about the how are Plan decisions. -->
+<!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
 
-| # | Question | Notes |
-|---|---|---|
-| | | |
+| # | Question | Depends on | Notes |
+|---|---|---|---|
+| | | | |
 
 ## 2. Plan — how
 
