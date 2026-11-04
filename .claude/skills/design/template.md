@@ -34,7 +34,14 @@ Current step: the step being implemented, or —. -->
 1. The decision and why, in one short paragraph.
 2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
 3. The options rejected.
-4. The artefact that fixes it, in whatever form the decision needs (e.g. a mapping table, a page map, a weighted matrix). A security decision lists its threats in a table: `| # | Threat (STRIDE) | Impact | Control | Requirement |`, with IDs `TH1`, `TH2`… per document. -->
+4. The artefact that fixes it, in whatever form the decision needs (e.g. a mapping table, a page map, a weighted matrix). An artefact that does not fit here or must outlive the design goes in its own file: the Plan decides where it lives and its format, File layout lists it, and this decision links to it.
+
+A security decision lists its threats in this table, with IDs `TH1`, `TH2`… per document:
+
+| # | Threat (STRIDE) | Impact | Control | Requirement |
+|---|---|---|---|---|
+| `TH1` | | | | |
+-->
 
 #### D`<N>`. `<Title of decision N>`
 
