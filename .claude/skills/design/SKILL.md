@@ -31,7 +31,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 3. **Decisions to take.** List them in Open questions in dependency order: nothing is decided before what it depends on. The owner adjusts the list. A question that comes up later joins the list in its place.
 4. **Decisions.** Take them in that order: with options and a recommendation when there is a reasonable range, open otherwise. A task that changes existing behaviour also decides what must not break. Each one closes as a decision in Decided at framing as soon as the owner approves it, and leaves the table.
 5. **Failure cases.** With the behaviour decided, go through the decisions asking what can go wrong. Each answer is a new decision or extends an existing one.
-6. **Security threats.** Only then, one STRIDE pass over the decisions. Its outcome is a security decision with its threat table.
+6. **Security threats.** Only then, one STRIDE pass over the decisions. Its outcome is a security decision with its threat table; the Requirement column stays empty until Requirements.
 7. **Requirements.** Translate the decisions into EARS, each requirement citing its decision, and fill the Requirement column of the threat table. Anything undecided that comes up goes back to Open questions first.
 8. **Done when**, if the task has closing conditions that Requirements cannot express.
 9. **Approval.** With no Open questions left, ask for the Spec approval. Once approved, check Spec in Phase.
