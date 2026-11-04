@@ -13,7 +13,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 
 ## Start
 
-- **Task ID (TNNN): new design.** Read only the task's issue, looked up with `/task`; it is a hint, the requirement comes from the owner. Propose `docs/designs/dNNN-short-title.md` (next free number). Once approved, create it from the template, keeping its comments.
+- **Task ID (TNNN): new design.** Read only the task's issue, looked up with `/task`; it is a hint, the requirement comes from the owner. Also run `grep "TODO(TNNN)"` over the repo: this design must pick up what it lists. Propose `docs/designs/dNNN-short-title.md` (next free number). Once approved, create it from the template, keeping its comments.
 - **Design ID (dNNN): resume.** Read its Status and continue from the first unchecked item in Phase.
 - **Design ID + `review-plan` or `review-steps`: review.** Follow [review-plan.md](review-plan.md) or [review-steps.md](review-steps.md), and § Reviews. The rest of this file does not apply.
 
