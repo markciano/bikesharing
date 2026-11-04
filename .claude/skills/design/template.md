@@ -67,9 +67,9 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
 
-| # | Question | Depends on | Notes |
+| OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| | | | |
+| `OQ1` | | | |
 
 ## 2. Plan — how
 
