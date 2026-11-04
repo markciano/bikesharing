@@ -37,7 +37,7 @@ This skill fills Questions, Method, Steps and Conclusion. Findings are filled du
 
 1. **Explanation.** The owner explains what must be decided. Whether it needs evidence is not assumed: triage settles it.
 2. **Kind of question.** Name the kind (e.g. whether a data source fits the project, which technology to adopt, whether an approach holds under load) and the standard that applies to evaluate it (e.g. DAMA data quality dimensions, a weighted decision matrix, a load test against a target percentile). The owner confirms; it shapes the questions and the criteria.
-3. **Triage.** List the decisions and find the central one the others depend on; it goes first. For each decision ask: which specific unknown would change the choice?
+3. **Triage.** List the decisions in dependency order: nothing is decided before what it depends on, so the central one goes first. For each decision ask: which specific unknown would change the choice?
    - None: it is decided in this session (step 4).
    - One that documents or arithmetic can settle: settle it in this session the same way.
    - One that only a run can settle: it becomes a Q that names the decision it unblocks and the Gate that confirms or reopens it. If no result would change the choice, it is not a Q: decide now.
