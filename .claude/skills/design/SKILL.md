@@ -34,7 +34,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 6. **Security threats.** Only then, one STRIDE pass over the decisions. Its outcome is a security decision with its threat table; the Requirement column stays empty until Requirements.
 7. **Requirements.** Translate the decisions into EARS, each requirement citing its decision, and fill the Requirement column of the threat table. Anything undecided that comes up goes back to Open questions first.
 8. **Done when**, if the task has closing conditions that Requirements cannot express.
-9. **Approval.** With no Open questions left, ask for the Spec approval. Once approved, check Spec in Phase.
+9. **Approval.** With no Open questions left, check that every decision reaches a requirement or a Done when item, every requirement cites its decision, and no Requirement cell of a threat table is empty. Then ask for the Spec approval, telling the owner to verify that each requirement says what its decision says. Once approved, check Spec in Phase.
 
 ## 2. Plan
 
