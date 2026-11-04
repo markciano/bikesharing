@@ -13,7 +13,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 
 ## Start
 
-- **Task ID (TNNN): new design.** Read only the task's issue, looked up with `/task`; it is a hint, the requirement comes from the owner. Propose `docs/designs/dNNN-short-title.md` (next free number). Once approved, create it from the template without its comments.
+- **Task ID (TNNN): new design.** Read only the task's issue, looked up with `/task`; it is a hint, the requirement comes from the owner. Propose `docs/designs/dNNN-short-title.md` (next free number). Once approved, create it from the template, keeping its comments.
 - **Design ID (dNNN): resume.** Read its Status and continue from the first unchecked item in Phase.
 - **Design ID + `review-plan` or `review-steps`: review.** Follow [review-plan.md](review-plan.md) or [review-steps.md](review-steps.md), and § Reviews. The rest of this file does not apply.
 
@@ -26,19 +26,15 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 
 ## 1. Spec
 
-1. **Explanation.** The owner explains the feature in their own words.
-2. **Refine.** Ask about the gaps: with options and a recommendation when there is a reasonable range, open otherwise. Check for:
-   - new behaviour: goal, inputs and outputs, who or what uses the result, failure cases, how we will know it is done;
-   - correction: current vs expected behaviour, how to reproduce it, what must not break.
-   Stop when the what, the why and the closing condition are clear.
-3. **Playback.** Write Context. If a part can be delivered and closed on its own, or the task looks like more than 10 steps, propose splitting it now.
-4. **Decisions to take.** List them in Open questions in dependency order: nothing is decided before what it depends on. The owner adjusts the list. A question that comes up later joins the list in its place.
-5. **Decisions.** Take them in that order. Each one closes as a decision in Decided at framing as soon as the owner approves it, and leaves the table.
-6. **Failure cases.** With the behaviour decided, go through the decisions asking what can go wrong. Each answer is a new decision or extends an existing one.
-7. **Security threats.** Only then, one STRIDE pass over the decisions. Its outcome is a security decision with its threat table.
-8. **Requirements.** Translate the decisions into EARS, each requirement citing its decision. Anything undecided that comes up goes back to Open questions first.
-9. **Done when**, if the task has closing conditions that Requirements cannot express.
-10. **Approval.** With no Open questions left, ask for the Spec approval. Once approved, check Spec in Phase.
+1. **Introduction.** The owner explains the task in their own words. Ask only what is needed to write Context and to list the decisions to take; the decisions themselves come later.
+2. **Playback.** Write Context. If a part can be delivered and closed on its own, or the task looks like more than 10 steps, propose splitting it now.
+3. **Decisions to take.** List them in Open questions in dependency order: nothing is decided before what it depends on. The owner adjusts the list. A question that comes up later joins the list in its place.
+4. **Decisions.** Take them in that order: with options and a recommendation when there is a reasonable range, open otherwise. A task that changes existing behaviour also decides what must not break. Each one closes as a decision in Decided at framing as soon as the owner approves it, and leaves the table.
+5. **Failure cases.** With the behaviour decided, go through the decisions asking what can go wrong. Each answer is a new decision or extends an existing one.
+6. **Security threats.** Only then, one STRIDE pass over the decisions. Its outcome is a security decision with its threat table.
+7. **Requirements.** Translate the decisions into EARS, each requirement citing its decision. Anything undecided that comes up goes back to Open questions first.
+8. **Done when**, if the task has closing conditions that Requirements cannot express.
+9. **Approval.** With no Open questions left, ask for the Spec approval. Once approved, check Spec in Phase.
 
 ## 2. Plan
 
