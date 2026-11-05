@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: Accepted
 date: 2026-10-24
 ---
 
@@ -17,7 +17,7 @@ The forces are: a collector can change tool or language; the pipeline must not d
 
 ### 1. An output contract that every collector meets
 
-Every collector writes its files under the same key layout, timestamp and payload rules, in a landing zone the pipeline reads. Pros: the files are the only interface, so any tool or language can meet it; a contract test checks each collector. Cons: the naming code is written once per collector language.
+Every collector writes its files under the same key layout, timestamp and payload rules, in the bronze bucket the pipeline reads. Pros: the files are the only interface, so any tool or language can meet it; a contract test checks each collector. Cons: the naming code is written once per collector language.
 
 ### 2. Shared logic behind platform adapters
 
@@ -36,7 +36,7 @@ Rules:
 - The payload MUST be the gzip bytes served by the origin, unchanged; no collector decompresses or recompresses, because the raw layer keeps the response as received (ADR-0006).
 - Decompression MUST happen in the first processing step, because it is the first component that needs the content.
 
-**Scope:** every collector that writes raw responses, whatever its tool or language. It does not set where the landing zone lives (T035) nor how processing is structured.
+**Scope:** every collector that writes raw responses, whatever its tool or language. It does not set the bucket ([ADR-0023](0023-storage-security-baseline.md)) nor how processing is structured.
 
 ### Consequences
 
