@@ -303,7 +303,8 @@ Only `storage.js` accesses the bucket; `index-state.js` and `log.js` go through 
 
 ```text
 capture/
-├── package.json          Dependencies and scripts, with the pinned Node version
+├── .nvmrc                Pinned Node version
+├── package.json          Dependencies and scripts
 ├── package-lock.json
 ├── wrangler.jsonc        Cron trigger, R2 binding, public URL disabled
 ├── vitest.config.js
@@ -422,7 +423,7 @@ The schedule uses `scheduledTime` and the keys use the actual start; the two dif
 
 #### Tests and contracts
 
-Shared contract vectors live in a top-level `contracts/` folder, owned by neither component; the CI jobs of capture and of the pipeline both filter on `contracts/**` ([ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md)).
+Shared contract vectors live in a top-level `contracts/` folder, owned by neither component; every CI job that reads them runs on any change to `contracts/**` ([ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md)).
 
 What local tests cannot verify, and what covers it (**DL9**):
 
@@ -464,12 +465,12 @@ Options considered:
 
 #### Switch tooling
 
-The owner runs the switch of D11 from the local machine with rclone, as in [s006](../spikes/s006-cloudflare-capture.md), and one script, `scripts/spike_raw_switch.py` (Python standard library only), with two commands:
+The owner runs the switch of D11 from the local machine with rclone, as in [s006](../spikes/s006-cloudflare-capture.md), and one throwaway script next to the spike's analysis, `spikes/cloudflare-capture-spike/analysis/spike_raw_switch.py` (Python standard library only), with two commands:
 
 - `keys`: lists the keys under `V4/raw/` whose timestamp is earlier than the cutoff, the minute of production's first object under `raw/`, as paths relative to `V4/raw/`.
 - `count`: compares the number of objects per day and feed under `V4/raw/` before the cutoff and under `bikesharing-bronze/raw/` before the cutoff, from two `rclone lsf -R` listings, and exits non-zero on any difference.
 
-The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 rerun `spikes/cloudflare-capture-spike/analysis/analyze_remote_capture.py` on the local copy, after a last `rclone copy` once `capture-v4` has stopped. The script is deleted together with the spike's bucket.
+The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 rerun `spikes/cloudflare-capture-spike/analysis/analyze_remote_capture.py` on the local copy, after a last `rclone copy` once `capture-v4` has stopped.
 
 rclone uses an R2 token with Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, deleted with the spike's bucket (D11).
 
