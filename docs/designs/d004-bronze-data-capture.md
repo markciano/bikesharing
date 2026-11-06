@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18); s012 in File layout; the CPU check (DL19). Pending the owner's decision: no tool for the 7-day completeness check; `Content-Encoding` of the simulated sources undecided; minor: heartbeat timeout, token names (ADR-0035), size limit on non-gzip bodies, the fixture-binding rule in `cloudflare-worker.md`.
+- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18); s012 in File layout; the CPU check (DL19); the 7-day completeness check (DL20). Pending the owner's decision: `Content-Encoding` of the simulated sources undecided; minor: heartbeat timeout, token names (ADR-0035), size limit on non-gzip bodies, the fixture-binding rule in `cloudflare-worker.md`.
 
 ## 1. Spec — what and why
 
@@ -271,10 +271,10 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - The bucket lock is enabled, and overwriting an existing object fails. (D11, TH4)
 - The queries of D2 have run on the spike's complete logs. (D2)
 - `bikesharing-capture-spike`, `capture-v4` and its token are deleted. (D11)
-- The probe's test bucket `bikesharing-t039-write-once` is deleted. ([ADR-0035](../decisions/0035-cloud-resource-naming.md))
+- The probe's test bucket `bikesharing-t039-write-once` and the token `bikesharing-t039-completeness` are deleted. ([ADR-0035](../decisions/0035-cloud-resource-naming.md))
 - The deployment token is scoped to the production Worker only. (TH6)
 - Every pass stays below 10 ms of CPU over the first 3 full days of production, checked as in [Deployment](#deployment). (D4)
-- Each dynamic feed has a clean capture in at least 99.5% of the minutes of the first 7 days of production. (D6)
+- Each dynamic feed has a clean capture in at least 99.5% of the minutes of the first 7 full UTC days of production, checked as in [Switch tooling](#switch-tooling). (D6)
 
 ### 1.5 Out of scope
 
@@ -519,7 +519,9 @@ The cutoff is per source and feed: the minute of that feed's first object in pro
 
 The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 are `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, run with DuckDB over the local copy of the spike's logs after a last `rclone copy` once `capture-v4` has stopped. Close records the cutoff of each feed, the counts per day and feed, and what the queries found.
 
-rclone uses an R2 token with Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, deleted with the spike's bucket (D11). **DL18**
+The completeness check of D6 covers the 7 full UTC days that follow production's first day. It is `spikes/cloudflare-capture-spike/analysis/capture-completeness.sql`, run with DuckDB over an `rclone lsf -R` listing of `bikesharing-bronze/raw/` saved to a local file; no object is downloaded. For each source and dynamic feed, it counts the distinct minutes of the window with at least one object, read from the key's timestamp, divides them by 10,080, and flags any feed below 99.5%. Close records the window and the percentage of each feed.
+
+rclone uses an R2 token with Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, deleted with the spike's bucket (D11). The completeness listing runs after that, with its own token, `bikesharing-t039-completeness`, with Object Read on `bikesharing-bronze` only ([ADR-0035](../decisions/0035-cloud-resource-naming.md)), deleted when the task closes. **DL18** **DL20**
 
 Options considered:
 
@@ -557,6 +559,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL17 | [Write-once](#write-once) | When a conditional put throws, `head` decides whether the object exists: if so it counts as written, otherwise the attempt is retried | Under the lock R2 throws instead of returning `null` (probe); `head` depends on no error message | R9, R10 | Plan |
 | DL18 | [D11](#d11-switch-from-spike-capture-to-production), [Switch tooling](#switch-tooling) | The copy cutoff is per source and feed, the minute of its first object in production, read before the first copy (high-water mark per partition); Spec change **refines DL11** | No minute is lost, nothing is duplicated, and the count check compares like with like | — | Plan review |
 | DL19 | [Deployment](#deployment) | CPU is checked as the max of `$workers.cpuTimeMs` over every invocation in the Workers Logs Query Builder, over the first 3 full days, with no `exceededCpu` outcome (IADT Analysis) | Exact per pass, unlike the sampled quantiles of the GraphQL Analytics API | — | Plan review |
+| DL20 | [Switch tooling](#switch-tooling) | The 7-day completeness check is a DuckDB query over a local `rclone lsf -R` listing of `raw/`, next to the switch tooling, with a temporary read-only token (IADT Analysis; least privilege, NIST SP 800-53 AC-6) | One credential path and a reproducible input for a one-off check that T042 replaces; the write token still goes with the spike's bucket | — | Plan review |
 
 ### 2.3 Architecture
 
@@ -647,8 +650,9 @@ Colours show what each box touches: grey, no I/O (the functional core); blue, R2
 │   └── spikes/
 │       └── s012-execution-target.md           (modified) `TODO(T039)` removed: its items are resolved by D9 and D10
 └── spikes/cloudflare-capture-spike/
-    ├── README.md                              (modified) The switch script, the log queries and the probe
+    ├── README.md                              (modified) The switch script, the log queries, the completeness query and the probe
     ├── analysis/
+    │   ├── capture-completeness.sql           (new) Completeness of the first 7 days of production (Switch tooling)
     │   ├── spike_raw_switch.py                (new) Key list up to the cutoff and count comparison (Switch tooling)
     │   └── spike-log-queries.sql              (new) The queries of D2
     └── js/
