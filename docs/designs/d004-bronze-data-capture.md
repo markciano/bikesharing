@@ -8,7 +8,7 @@ Sections marked Optional are kept only when they apply.
 
 - **Task:** T039
 - **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md), [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0030](../decisions/0030-pipeline-logs.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)
-- **New ADRs from this doc:** one for the bucket naming convention (D1), unless an existing ADR already covers it; [ADR-0030](../decisions/0030-pipeline-logs.md) is amended (D9)
+- **New ADRs from this doc:** [ADR-0035](../decisions/0035-cloud-resource-naming.md) (D1); [ADR-0030](../decisions/0030-pipeline-logs.md) is amended (D9)
 
 ## Status
 
@@ -387,7 +387,7 @@ Options considered:
 
 `storage.js` writes every object under `raw/` and `logs/` as a conditional put, `onlyIf` with `If-None-Match: *` (RFC 9110 conditional requests): R2 writes only if the key holds nothing, and returns `null` otherwise, which counts as written (R10). The check and the write are one atomic operation, so it holds with or without the bucket lock; the lock remains a second barrier. Objects under `state/` are overwritten with a plain put.
 
-A probe confirms R2's behaviour before this Plan is approved, in its own test bucket `bikesharing-probe-write-once` with a lock rule on one prefix, created and deleted afterwards, through the R2 binding in `wrangler dev` with the bucket connected remotely. Its cases: a conditional put on a new key writes; on an existing key it returns `null`; under the lock, a conditional put on an existing key also returns `null`; under the lock, a plain put on an existing key fails, and its error is recorded. The cases without the lock also run against Miniflare's in-memory R2, which the integration tests use, to confirm it answers as R2 does. **DL9**
+A probe confirms R2's behaviour before this Plan is approved, in its own test bucket `bikesharing-t039-write-once` with a lock rule on one prefix, created and deleted afterwards, through the R2 binding in `wrangler dev` with the bucket connected remotely. Its cases: a conditional put on a new key writes; on an existing key it returns `null`; under the lock, a conditional put on an existing key also returns `null`; under the lock, a plain put on an existing key fails, and its error is recorded. The cases without the lock also run against Miniflare's in-memory R2, which the integration tests use, to confirm it answers as R2 does. **DL9**
 
 TODO(T039): record here how R2 answers each case of the write-once probe, with and without the lock.
 
@@ -499,6 +499,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL9 | [Tests](#tests-and-contracts) | The write-once probe also runs against Miniflare's R2; the fetch timeout is a parameter | Integration tests rest on a verified simulator; the timeout is testable without waiting 60 s | R7, R10 | Plan |
 | DL10 | [Deployment](#deployment) | Deploy with an account-owned token scoped to Editor on this Worker, one-year expiry; first deploy with `wrangler login` (least privilege, NIST SP 800-53 AC-6) | A leak reaches only this Worker | R21 | Plan |
 | DL11 | [Switch tooling](#switch-tooling) | rclone server-side copy with a key list up to the cutoff, and a standard-library script that lists keys and compares counts | Proven tool from s006; the only new code filters and counts | — | Plan |
+| DL12 | [ADR-0035](../decisions/0035-cloud-resource-naming.md) | One naming pattern for every cloud resource, `bikesharing-<name>`: buckets by content, compute by component, tokens by component and purpose, temporary resources by task (resource naming conventions) | Cheap to fix while resources are few; buckets cannot be renamed | — | Plan |
 
 ### 2.3 Architecture
 
