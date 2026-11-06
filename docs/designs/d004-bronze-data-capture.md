@@ -510,29 +510,46 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 <!-- Optional. One diagram and 2–3 sentences. -->
 
-One pass, started by the cron every minute. Each source is handled on its own, so a source without a valid index does not hold back the other; the pass's log is written last, whatever happened before.
+One pass, started by the cron every minute. Each source is handled on its own, so a source without a valid index fetches only that index and does not hold back the other; the heartbeat and the log belong to the whole pass, and the log is written last, whatever happened before.
 
 ```mermaid
 flowchart TD
-    cron([Cron trigger, every minute]) --> pass[Read each source's last valid index from state/]
-    pass --> valid{Source has a valid index?}
-    valid -- no --> refresh[Fetch and store its index, validate it, update state/ if valid]
-    valid -- yes --> dyn[Fetch and store its dynamic feeds]
-    dyn --> extra{Extra fetch at this minute?}
-    extra -- static feed --> stat[Fetch and store the static feed]
-    extra -- index --> refresh
-    extra -- heartbeat --> hb{All dynamic feeds stored?}
-    hb -- yes --> signal[Send the heartbeat to Healthchecks.io]
+    cron([Cron trigger,<br>every minute]) --> read[Read each<br>source's last<br>valid index<br>from state/]
+    read --> valid
+
+    subgraph each [For each source]
+        valid{Index in<br>state/?}
+        valid -- no --> refresh[Fetch and store<br>its index;<br>if valid, update<br>state/]
+        valid -- yes --> dyn[Fetch and store<br>its dynamic<br>feeds]
+        dyn --> extra{Extra fetch<br>for this source<br>at this minute?}
+        extra -- index --> refresh
+        extra -- static feed --> stat[Fetch and store<br>the static feed]
+        extra -- none --> next([Source done])
+    end
+
+    refresh --> hbmin
+    stat --> hbmin
+    next --> hbmin
+    hbmin{Heartbeat<br>minute?}
+    hbmin -- no --> log
+    hbmin -- yes --> hb{Every dynamic<br>feed of every<br>source stored?}
+    hb -- yes --> signal[Send the<br>heartbeat to<br>Healthchecks.io]
     hb -- no --> skip[No signal]
-    extra -- none --> done
-    stat --> done
-    refresh --> done
-    signal --> done
-    skip --> done
-    done[Write the pass's log object to logs/]
+    signal --> log
+    skip --> log
+    log[Write the<br>pass's log<br>object to logs/]
+
+    classDef decision fill:#f3f4f6,stroke:#6b7280,color:#111827
+    classDef r2 fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    classDef source fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef external fill:#f3e8ff,stroke:#7e22ce,color:#581c87
+    class cron,valid,extra,next,hbmin,hb,skip decision
+    class read,log r2
+    class refresh,dyn,stat source
+    class signal external
 ```
 
-The schedule decides the extra fetch ([Pass schedule](#pass-schedule)); every object goes through the write-once put of `storage.js` ([Write-once](#write-once)), and a failure at any box is logged and does not stop the rest of the pass (D8).
+Colours show what each box touches: grey, no I/O (the functional core); blue, R2 only; green, a source fetch stored in R2; purple, Healthchecks.io. The schedule decides the extra fetch ([Pass schedule](#pass-schedule)); every object goes through the write-once put of `storage.js` ([Write-once](#write-once)), and a failure at any box is logged and does not stop the rest of the pass (D8).
 
 ### 2.4 File layout
 
