@@ -19,6 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
+- Next: Plan › 2.5 Components, then 2.6 Test plan, 2.7 What does not change, the rule documents of File layout (ADR-0030, `cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
 
 ## 1. Spec — what and why
 
@@ -508,6 +509,30 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 ### 2.3 Architecture
 
 <!-- Optional. One diagram and 2–3 sentences. -->
+
+One pass, started by the cron every minute. Each source is handled on its own, so a source without a valid index does not hold back the other; the pass's log is written last, whatever happened before.
+
+```mermaid
+flowchart TD
+    cron([Cron trigger, every minute]) --> pass[Read each source's last valid index from state/]
+    pass --> valid{Source has a valid index?}
+    valid -- no --> refresh[Fetch and store its index, validate it, update state/ if valid]
+    valid -- yes --> dyn[Fetch and store its dynamic feeds]
+    dyn --> extra{Extra fetch at this minute?}
+    extra -- static feed --> stat[Fetch and store the static feed]
+    extra -- index --> refresh
+    extra -- heartbeat --> hb{All dynamic feeds stored?}
+    hb -- yes --> signal[Send the heartbeat to Healthchecks.io]
+    hb -- no --> skip[No signal]
+    extra -- none --> done
+    stat --> done
+    refresh --> done
+    signal --> done
+    skip --> done
+    done[Write the pass's log object to logs/]
+```
+
+The schedule decides the extra fetch ([Pass schedule](#pass-schedule)); every object goes through the write-once put of `storage.js` ([Write-once](#write-once)), and a failure at any box is logged and does not stop the rest of the pass (D8).
 
 ### 2.4 File layout
 
