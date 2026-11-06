@@ -99,8 +99,8 @@ Access per component:
 
 - **Capture can read bronze:** R2 has no write-only token.
 - **The lock is the only guard:** R2 has no object versioning, so bronze depends on the lock and on the Admin token staying with the owner.
-- **The lock blocks rewrites too:** a capture retry that rewrites a key would fail. TODO(T039): before the lock is enabled, confirm that capture writes each key under its locked prefixes once ([ADR-0012](0012-collectors-decoupled-by-output-contract.md) key layout).
-- **Buckets cannot be renamed:** TODO(production design): capture's existing bucket keeps a spike name; a production name means copying the locked prefixes to a new bucket before the lock is enabled.
+- **The lock blocks rewrites too:** a capture retry that rewrites a key would fail.
+- **Buckets cannot be renamed:** fixing a bucket's name means copying its locked prefixes to a new bucket before the lock is enabled.
 - **More tokens to manage:** one per component, each to create and rotate.
 - **Private by default is not tested:** it rests on R2's documented default.
 
