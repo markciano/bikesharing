@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "bikesharing-capture",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-06",
+  // One pass per minute (d004 D3)
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "bikesharing-bronze"
+    }
+  ],
+  // No public URL (d004 R21); workers_dev defaults to true
+  "workers_dev": false,
+  "preview_urls": false,
+  // The `version` log field (d004 Pass logs)
+  "version_metadata": {
+    "binding": "CF_VERSION_METADATA"
+  },
+  // Workers Logs, the fallback for a failed log write (d004 R11)
+  "observability": {
+    "enabled": true
+  }
+}
