@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Steps (`/design d004`): Prerequisites written; next, the step skeleton.
+- Next: Steps (`/design d004`): skeleton approved; next, write Step 1 in full.
 
 ## 1. Spec — what and why
 
@@ -1075,6 +1075,33 @@ Accounts:
 - A Healthchecks.io account on the free plan ([ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)). The check itself is created in a step.
 
 The tokens of [Deployment](#deployment) and [Switch tooling](#switch-tooling) depend on the Worker and the bucket, so they are created in the steps.
+
+### Step skeleton
+
+<!-- Temporary: removed once every step below is written in full. -->
+
+| Step | Title | Who | R | Files or actions |
+|---|---|---|---|---|
+| 1 | Scaffold `capture/` | Claude | R21 | `.nvmrc`, `package.json`, `package-lock.json`, `wrangler.jsonc` |
+| 2 | Contract vectors | Claude | R1, R15 | `contracts/bronze-keys.json`, `contracts/capture-logs.json` |
+| 3 | Source table and GBFS adapter | Claude | R6, R12 | `sources.js`, `adapters/gbfs.js`, unit tests |
+| 4 | Pass schedule | Claude | R2, R3, R4, R5 | `schedule.js`, unit test |
+| 5 | Write-once storage | Claude | R1, R9, R10 | `storage.js`, unit and contract tests |
+| 6 | Pass logs | Claude | R11, R15, R16 | `log.js`, unit and contract tests |
+| 7 | Source fetch | Claude | R7, R14, R22 | `fetch.js`, unit test |
+| 8 | Index state and heartbeat | Claude | R12, R20, R23 | `index-state.js`, `heartbeat.js`, unit tests |
+| 9 | Fixtures | Claude, then Owner runs it | — | `scripts/trim-fixtures.js`, `test/fixtures/**` |
+| 10 | Pass and entry point | Claude | R1, R4, R6, R10, R15, R17, R21 | `pass.js`, `worker.js`, `vitest.config.js`, integration tests of the normal pass |
+| 11 | Pass failures | Claude | R7, R8, R12, R13, R14, R16, R18, R20, R22, R23, R24 | Integration tests of failures, fixes in `pass.js` |
+| 12 | CI job | Claude | — | `.github/workflows/ci.yml`: jobs `capture` and `ci-passed` |
+| 13 | Documents | Claude | — | `architecture.md`, `ambici.md`, `bicing.md`, `s012` TODO removed; `testing-strategy.md` checked against File layout |
+| 14 | Switch tooling | Claude | — | `spike_raw_switch.py`, `capture-completeness.sql` |
+| 15 | First deploy | Owner | R19, R21 | Bucket, Healthchecks.io check, `wrangler login`, `HEARTBEAT_URL`, smoke test, token `bikesharing-capture-deploy`, redeploy with it |
+| 16 | Copy and lock | Owner | — | Token `bikesharing-t039-switch`, `keys`, copy, `count`, lock, overwrite check (TH4) |
+| 17 | Retire the spike | Owner | — | Stop `capture-v4`, queries of D2, delete the spike's bucket, `capture-v4`, its tokens and the probe's bucket |
+| 18 | Production checks | Owner | — | CPU (day 3); 7-day completeness with `bikesharing-t039-completeness`, then deleted |
+
+🅿️ For steps 15 and 18: deploy from the branch or from `main` after a merge, and whether steps 17–18 close the task in a later PR, since the 7-day check keeps it open over a week.
 
 ### Step 1 — `<Title>`
 
