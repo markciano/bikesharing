@@ -3,7 +3,7 @@
   "name": "bikesharing-capture",
   "main": "src/worker.js",
   "compatibility_date": "2026-11-06",
-  // One pass per minute (d004 D3)
+  // One pass per minute (d004 D3, Feed cadence)
   "triggers": {
     "crons": ["* * * * *"]
   },
@@ -13,14 +13,14 @@
       "bucket_name": "bikesharing-bronze"
     }
   ],
-  // No public URL (d004 R21); workers_dev defaults to true
+  // No public URL (d004 D12, Capture security).
   "workers_dev": false,
   "preview_urls": false,
-  // The `version` log field (d004 Pass logs)
+  // The `version` log field (d004 D9, Capture logs)
   "version_metadata": {
     "binding": "CF_VERSION_METADATA"
   },
-  // Workers Logs, the fallback for a failed log write (d004 R11)
+  // Workers Logs, the fallback for a failed log write (d004 D8, Capture failure behaviour)
   "observability": {
     "enabled": true
   }
