@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Steps (`/design d004`): skeleton approved; next, write Step 1 in full.
+- Next: Steps (`/design d004`): Step 1 written; next, Steps 2–4 as one block (single steps: 1, 9–11, 15–18).
 
 ## 1. Spec — what and why
 
@@ -1094,7 +1094,7 @@ The tokens of [Deployment](#deployment) and [Switch tooling](#switch-tooling) de
 | 10 | Pass and entry point | Claude | R1, R4, R6, R10, R15, R17, R21 | `pass.js`, `worker.js`, `vitest.config.js`, integration tests of the normal pass |
 | 11 | Pass failures | Claude | R7, R8, R12, R13, R14, R16, R18, R20, R22, R23, R24 | Integration tests of failures, fixes in `pass.js` |
 | 12 | CI job | Claude | — | `.github/workflows/ci.yml`: jobs `capture` and `ci-passed` |
-| 13 | Documents | Claude | — | `architecture.md`, `ambici.md`, `bicing.md`, `s012` TODO removed; `testing-strategy.md` checked against File layout |
+| 13 | Documents | Claude | — | `architecture.md`, `ambici.md`, `bicing.md`, `s012` TODO removed; `testing-strategy.md` checked against File layout, its Node pin in `engines` changed to `.nvmrc` |
 | 14 | Switch tooling | Claude | — | `spike_raw_switch.py`, `capture-completeness.sql` |
 | 15 | First deploy | Owner | R19, R21 | Bucket, Healthchecks.io check, `wrangler login`, `HEARTBEAT_URL`, smoke test, token `bikesharing-capture-deploy`, redeploy with it |
 | 16 | Copy and lock | Owner | — | Token `bikesharing-t039-switch`, `keys`, copy, `count`, lock, overwrite check (TH4) |
@@ -1103,29 +1103,52 @@ The tokens of [Deployment](#deployment) and [Switch tooling](#switch-tooling) de
 
 🅿️ For steps 15 and 18: deploy from the branch or from `main` after a merge, and whether steps 17–18 close the task in a later PR, since the 7-day check keeps it open over a week.
 
-### Step 1 — `<Title>`
+### Step 1 — Scaffold `capture/`
 
 - **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md, including `<dNNN.sN - >` at the begining of the message, for the design and the step number.
-- **R:** R1, R3 (or —)
-- **Model:** `<model · effort>` (or —)
+- **Who:** Claude
+- **Commit:** `build: d004.s1 - scaffold the capture Worker`
+- **R:** R21
+- **Model:** sonnet · medium
 
 #### Scope
 
 <!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
 
+The `capture/` component with its runtime pin, its manifest with the test and deploy tools locked, and the Worker configuration of [Deployment](#deployment). No source code or tests yet: `src/worker.js`, which `wrangler.jsonc` names as `main`, comes in Step 10.
+
+- `capture/.nvmrc` (new): `26.12.1`, the same as the root `.nvmrc`.
+- `capture/package.json` (new): `private`, ES modules, scripts `test` and `fixtures`; development dependencies `wrangler`, `vitest` and `@cloudflare/vitest-plugin`.
+- `capture/package-lock.json` (new): written by npm.
+- `capture/wrangler.jsonc` (new): every key of the Deployment table, plus `main` and `compatibility_date`.
+
+Tests: none; R21's Inspection row of the Test plan is checked here on the file and again after deploy (Step 15).
+
 #### Reads
 
 <!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
+
+- `.claude/rules/code/dependencies.md`, whole: where the runtime pin and the lockfile go, and how dependencies are added.
+- `.claude/rules/code/cloudflare-worker.md` › Tools: the test packages to install.
+- d004 › [Deployment](#deployment), the table: the keys and values of `wrangler.jsonc`.
+- d004 › [Component layout](#component-layout), the tree: the paths `main` and the scripts point to.
 
 #### Do
 
 <!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
+1. Write `capture/.nvmrc` with `26.12.1`.
+2. Write `capture/package.json` with `"name": "bikesharing-capture"`, `"private": true`, `"type": "module"` and the scripts `"test": "vitest run"` and `"fixtures": "node scripts/trim-fixtures.js"`; no `engines`, since Node is pinned only in `.nvmrc`.
+3. Run `npm install --save-dev wrangler vitest @cloudflare/vitest-plugin` in `capture/`, which writes the ranges and `package-lock.json`. If npm reports a peer conflict, install the `vitest` major that `@cloudflare/vitest-plugin` declares in its `peerDependencies`.
+4. Write `capture/wrangler.jsonc` with `$schema` set to `./node_modules/wrangler/config-schema.json`, `main` set to `src/worker.js`, `compatibility_date` set to `2026-11-06`, and the keys of the Deployment table with their values; `workers_dev` and `preview_urls` are written explicitly as `false`.
+
 #### Check
 
 <!-- command/s or verification with a yes/no result. -->
+
+- `npm ci` in `capture/`, with `capture/.nvmrc` active, exits 0 and prints no `EBADENGINE` or peer dependency warning.
+- `git status` shows only the four files of Scope as new, and `node_modules/` is ignored.
+- `wrangler.jsonc` holds each key of the Deployment table with its value, and `workers_dev` and `preview_urls` are `false` (R21, Inspection).
 
 ## 4. Close
 
