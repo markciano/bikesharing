@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18); s012 in File layout; the CPU check (DL19); the 7-day completeness check (DL20). Pending the owner's decision: `Content-Encoding` of the simulated sources undecided; minor: heartbeat timeout, token names (ADR-0035), size limit on non-gzip bodies, the fixture-binding rule in `cloudflare-worker.md`.
+- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18); s012 in File layout; the CPU check (DL19); the 7-day completeness check (DL20); the simulated sources' `Content-Encoding` (DL21). Pending the owner's decision, minor: heartbeat timeout, token names (ADR-0035), size limit on non-gzip bodies, the fixture-binding rule in `cloudflare-worker.md`.
 
 ## 1. Spec — what and why
 
@@ -445,10 +445,11 @@ The schedule uses `scheduledTime` and the keys use the actual start; the two dif
 
 Shared contract vectors live in a top-level `contracts/` folder, owned by neither component; every CI job that reads them runs on any change to `contracts/**` ([ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md)).
 
-What local tests cannot verify, and what covers it (**DL9**):
+What local tests cannot verify, and what covers it (**DL9**, **DL21**):
 
 | Gap | Covered by |
 |---|---|
+| Whether `encodeResponseBody: "manual"` keeps a source's gzip in workerd | The post-deploy smoke test ([Deployment](#deployment)); simulated sources serve gzip bytes without `Content-Encoding`, so no local test depends on it |
 | Whether Miniflare's R2 answers a conditional put as R2 does | The write-once probe, run against both ([Write-once](#write-once)) |
 | The bucket lock, which Miniflare does not simulate | The write-once probe and the overwrite check after enabling the lock (TH4) |
 | The 60 s timeout, too long for a test | The duration is a parameter ([Source fetch](#source-fetch)) |
@@ -560,6 +561,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL18 | [D11](#d11-switch-from-spike-capture-to-production), [Switch tooling](#switch-tooling) | The copy cutoff is per source and feed, the minute of its first object in production, read before the first copy (high-water mark per partition); Spec change **refines DL11** | No minute is lost, nothing is duplicated, and the count check compares like with like | — | Plan review |
 | DL19 | [Deployment](#deployment) | CPU is checked as the max of `$workers.cpuTimeMs` over every invocation in the Workers Logs Query Builder, over the first 3 full days, with no `exceededCpu` outcome (IADT Analysis) | Exact per pass, unlike the sampled quantiles of the GraphQL Analytics API | — | Plan review |
 | DL20 | [Switch tooling](#switch-tooling) | The 7-day completeness check is a DuckDB query over a local `rclone lsf -R` listing of `raw/`, next to the switch tooling, with a temporary read-only token (IADT Analysis; least privilege, NIST SP 800-53 AC-6) | One credential path and a reproducible input for a one-off check that T042 replaces; the write token still goes with the spike's bucket | — | Plan review |
+| DL21 | [Tests](#tests-and-contracts), [Test plan](#26-test-plan) | Simulated sources serve gzip bytes without `Content-Encoding`; `encodeResponseBody` is covered only by the post-deploy smoke test | Local tests rest only on verified behaviour; the gzip check reads the magic number, not the header | R1, R16 | Plan review |
 
 ### 2.3 Architecture
 
@@ -991,7 +993,7 @@ export default {
 
 <!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
 
-Integration tests run the `scheduled` handler in workerd with in-memory R2 and the sources served by `outboundService` from fixtures, with `LIMITS` in milliseconds and bytes. Unit tests that need a failing bucket pass `storage.js` a fake binding, since the in-memory R2 cannot fail on demand.
+Integration tests run the `scheduled` handler in workerd with in-memory R2 and the sources served by `outboundService` from fixtures, with `LIMITS` in milliseconds and bytes. Each simulated source serves its fixture compressed in memory, without `Content-Encoding`, so the bytes reach capture unchanged whatever the runtime does with `encodeResponseBody`; the stored object is compared with those same bytes, and a fixture served uncompressed exercises `recompressed`. Unit tests that need a failing bucket pass `storage.js` a fake binding, since the in-memory R2 cannot fail on demand.
 
 | R | Method | What is verified | Level |
 |---|---|---|---|
