@@ -138,7 +138,7 @@ Each goal is made measurable by the scenarios in §10.
 ## 8. Cross-cutting concepts
 
 - **Time:** every stored timestamp, file name and partition is in UTC; hour and day boundaries are computed and shown in Europe/Madrid local time. [ADR-0005](decisions/0005-utc-for-all-stored-timestamps.md); [d002 › R12](designs/d002-requirements.md#requirements).
-- **Test data:** real source responses trimmed by a committed script, plus hand-written edge cases. [ADR-0009](decisions/0009-trimmed-source-samples-as-test-fixtures.md).
+- **Test data:** real source responses trimmed by a committed script, plus hand-written edge cases. [ADR-0037](decisions/0037-test-fixtures-per-component.md).
 - **Pipeline code architecture:** Dependency Rule, Humble Object and Twelve-Factor configuration, with four rules whose checks detect a deviation; a subset of hexagonal architecture, with no driven ports. [ADR-0029](decisions/0029-pipeline-code-architecture.md).
 - **Logs:** one convention for every component: JSON Lines, one object per run, and common fields that include the component and its deployed version; capture's logs stay in bronze under the lock, the pipeline's in R2 for 30 days. [ADR-0036](decisions/0036-log-convention-across-components.md).
 - **Pipeline alerts:** a heartbeat to a monitor outside the platform detects a run that fails, is killed or never starts. [ADR-0031](decisions/0031-heartbeat-alerts-for-the-pipeline.md).

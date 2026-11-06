@@ -16,7 +16,7 @@ Reasons and per-component detail: [testing strategy](../../../docs/testing-strat
 - Tests verify observable behaviour, not implementation details.
 - Tests are written first (TDD: red, green, refactor).
 - Arrange–Act–Assert; one concept per test; no shared state or order dependency between tests.
-- No test touches the network: use recorded fixtures (ADR-0009); edge cases are written by hand.
+- No test touches the network: use recorded fixtures (ADR-0037); edge cases are written by hand.
 - Code that uses the current time receives it as a parameter; tests pass a fixed UTC time.
 - Data quality checks on the data itself belong to the pipeline design, not to the test suite.
 

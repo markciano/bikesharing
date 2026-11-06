@@ -1,9 +1,12 @@
 ---
-status: accepted
+status: Superseded
 date: 2026-10-08
+superseded-by: 0037
 ---
 
 # Trimmed source samples are committed as test fixtures
+
+Superseded on 2026-11-06 (T039) by [ADR-0037](../0037-test-fixtures-per-component.md): fixtures are committed in each component's tests, not only in `tests/fixtures/`.
 
 ## Context and Problem Statement
 

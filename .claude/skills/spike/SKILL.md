@@ -68,7 +68,7 @@ This skill fills Questions, Method, Steps and Conclusion. Findings are filled du
 
    Typical concerns: what runs where, schedule and window, what is captured and logged, how the evidence is analysed (checks instead of tests: known arithmetic, independent counts, fault injection), cost limits and tear-down. A cross-cutting decision becomes an ADR, linked in the header.
 3. **Shared behaviour,** when several variants follow the same rules.
-4. **File layout** under `spikes/<short-title>/`, README included, captured data and outputs ignored by Git (ADR-0009).
+4. **File layout** under `spikes/<short-title>/`, README included, captured data and outputs ignored by Git.
 5. **Approval.** Ask for the Method approval. Once approved, check Method in Phase. Steps may follow in the same session.
 
 ## 3. Steps

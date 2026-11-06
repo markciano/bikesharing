@@ -41,5 +41,5 @@ Phase shows Steps checked and Steps review unchecked. Otherwise stop and tell th
 
 ### Safety and cost
 
-- Secrets in `.env`; captured data ignored by Git (ADR-0009); stored timestamps in UTC (ADR-0005).
+- Secrets in `.env`; captured data ignored by Git; stored timestamps in UTC (ADR-0005).
 - Every billable resource has an alert or a cap, and a tear-down step or a recorded decision to keep it.

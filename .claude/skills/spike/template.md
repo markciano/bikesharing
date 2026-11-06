@@ -106,7 +106,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 ### 2.4 File layout
 
-<!-- Every file and folder the spike creates, as a tree with its purpose in one line. Captured data and outputs are marked as ignored by Git (ADR-0009). The README is always included. -->
+<!-- Every file and folder the spike creates, as a tree with its purpose in one line. Captured data and outputs are marked as ignored by Git. The README is always included. -->
 
 ```text
 spikes/<name>/
