@@ -48,7 +48,7 @@ Rules:
 - Every cloud resource the project creates MUST be named `bikesharing-<name>`, in lowercase letters, digits and hyphens, at most 63 characters. 63 is R2's limit for bucket names, the strictest the project uses.
 - A bucket MUST be named after its content, not after the layer or the component that uses it: `bikesharing-bronze`, `bikesharing-lakehouse`. A layer prefix inside a bucket (e.g. `silver/`, `gold/`) is used only when the bucket holds more than one layer.
 - The first prefix inside a bucket SHOULD name the kind of content (e.g. `raw/`, `logs/`, `state/`). The bucket lock applies per prefix, so content with different lock rules needs its own prefix ([ADR-0023](0023-storage-security-baseline.md)).
-- A compute resource (a Worker, a Modal app) MUST be named after its component, the same name as the `component` field of its logs ([ADR-0030](0030-pipeline-logs.md)): `bikesharing-capture`.
+- A compute resource (a Worker, a Modal app) MUST be named `bikesharing-<component>`, where `<component>` is the `component` field of its logs ([ADR-0036](0036-log-convention-across-components.md)): `bikesharing-capture` for `capture`.
 - An API token MUST be named `bikesharing-<component>-<purpose>` (e.g. `bikesharing-capture-deploy`). Its name then tells what it reaches when it is reviewed or revoked.
 - A temporary resource, such as a probe's or a spike's, MUST carry the task that creates it, `bikesharing-<tnnn>-<purpose>` (e.g. `bikesharing-t039-write-once`), and is deleted when that task closes.
 - Names carry no environment segment: the project has one environment, production.
