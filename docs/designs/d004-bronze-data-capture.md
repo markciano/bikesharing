@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Steps (`/design d004`): Steps 1–15 written; next, Steps 16–19, starting with the parked decision on where to deploy from.
+- Next: Steps approval, then Steps review (`/design d004 review-steps`, in a new session).
 
 ## 1. Spec — what and why
 
@@ -480,7 +480,7 @@ Options considered:
 
 #### Deployment
 
-The owner deploys the Worker `bikesharing-capture` from the local machine with `npx wrangler deploy`. `wrangler.jsonc` sets:
+The owner deploys the Worker `bikesharing-capture` from the local machine with `npx wrangler deploy`, from an up-to-date `main`, once the PR with the code has merged. The results of the deployment, the switch and the production checks reach `main` in a second PR, which closes the task. **DL22** `wrangler.jsonc` sets:
 
 | Key | Value | Why |
 |---|---|---|
@@ -562,6 +562,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL19 | [Deployment](#deployment) | CPU is checked as the max of `$workers.cpuTimeMs` over every invocation in the Workers Logs Query Builder, over the first 3 full days, with no `exceededCpu` outcome (IADT Analysis) | Exact per pass, unlike the sampled quantiles of the GraphQL Analytics API | — | Plan review |
 | DL20 | [Switch tooling](#switch-tooling) | The 7-day completeness check is a DuckDB query over a local `rclone lsf -R` listing of `raw/`, next to the switch tooling, with a temporary read-only token (IADT Analysis; least privilege, NIST SP 800-53 AC-6) | One credential path and a reproducible input for a one-off check that T042 replaces; the write token still goes with the spike's bucket | — | Plan review |
 | DL21 | [Tests](#tests-and-contracts), [Test plan](#26-test-plan) | Simulated sources serve gzip bytes without `Content-Encoding`; `encodeResponseBody` is covered only by the post-deploy smoke test | Local tests rest only on verified behaviour; the gzip check reads the magic number, not the header | R1, R16 | Plan review |
+| DL22 | [Deployment](#deployment) | Deploy only from `main`, after the code's PR merges (`Refs`); a second PR records the operational results and closes the task (GitHub Flow, deploy from the default branch) | Only reviewed code that passed CI reaches production, as for the pipeline (d002 › R24–R28), and no PR stays open for the 7-day check | — | Steps |
 
 ### 2.3 Architecture
 
@@ -1075,34 +1076,6 @@ Accounts:
 - A Healthchecks.io account on the free plan ([ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)). The check itself is created in a step.
 
 The tokens of [Deployment](#deployment) and [Switch tooling](#switch-tooling) depend on the Worker and the bucket, so they are created in the steps.
-
-### Step skeleton
-
-<!-- Temporary: removed once every step below is written in full. -->
-
-| Step | Title | Who | R | Files or actions |
-|---|---|---|---|---|
-| 1 | Scaffold `capture/` | Claude | R21 | `.nvmrc`, `package.json`, `package-lock.json`, `wrangler.jsonc`, `vitest.config.js` |
-| 2 | Contract vectors | Claude | R1, R15 | `contracts/bronze-keys.json`, `contracts/capture-logs.json` |
-| 3 | Source table and GBFS adapter | Claude | R12 | `sources.js`, `adapters/gbfs.js`, unit tests |
-| 4 | Pass schedule | Claude | R2, R3, R4, R5 | `schedule.js`, unit test |
-| 5 | Write-once storage | Claude | R1, R9, R10 | `storage.js`, unit and contract tests |
-| 6 | Pass logs | Claude | R11, R15 | `log.js`, unit and contract tests |
-| 7 | Index state | Claude | R12, R13 | `index-state.js`, unit test |
-| 8 | Fixtures | Claude | — | `scripts/trim-fixtures.js`, `test/fixtures/**` |
-| 9 | Simulated sources and source fetch | Claude | R7, R14, R16, R22 | `vitest.config.js`, `fetch.js`, unit test |
-| 10 | Heartbeat | Claude | R20, R23 | `heartbeat.js`, unit test |
-| 11 | Pass and entry point | Claude | R1, R4, R6, R10, R15, R17, R21 | `pass.js`, `worker.js`, unit test of `worker.js`, integration tests of the normal pass |
-| 12 | Pass failures | Claude | R7, R8, R12, R13, R14, R15, R16, R18, R20, R22, R23, R24 | Integration tests of failures, fixes in `pass.js` |
-| 13 | CI job | Claude | — | `.github/workflows/ci.yml`: jobs `capture` and `ci-passed` |
-| 14 | Documents | Claude | — | `architecture.md`, `ambici.md`, `bicing.md`, `s012` TODO removed; `testing-strategy.md` checked against File layout, its Node pin in `engines` changed to `.nvmrc` |
-| 15 | Switch tooling | Claude | — | `spike_raw_switch.py`, `capture-completeness.sql` |
-| 16 | First deploy | Owner | R19, R21 | Bucket, Healthchecks.io check, `wrangler login`, `HEARTBEAT_URL`, smoke test, token `bikesharing-capture-deploy`, redeploy with it |
-| 17 | Copy and lock | Owner | — | Token `bikesharing-t039-switch`, `keys`, copy, `count`, lock, overwrite check (TH4) |
-| 18 | Retire the spike | Owner | — | Stop `capture-v4`, queries of D2, delete the spike's bucket, `capture-v4`, its tokens and the probe's bucket |
-| 19 | Production checks | Owner | — | CPU (day 3); 7-day completeness with `bikesharing-t039-completeness`, then deleted |
-
-🅿️ For steps 16 and 19: deploy from the branch or from `main` after a merge, and whether steps 18–19 close the task in a later PR, since the 7-day check keeps it open over a week.
 
 ### Step 1 — Scaffold `capture/`
 
@@ -1630,6 +1603,153 @@ Run in the scratchpad, with hand-written listings of two feeds over two days:
 - `keys` exits 1 when the spike listing has a feed that the production listing lacks.
 - `count` exits 0 on equal listings, and 1 after one line is removed from the production listing before the cutoff.
 - `capture-completeness.sql` on a listing with one minute missing in one feed prints `minutes` 10,079 for that feed and 10,080 for the others.
+
+### Step 16 — First deploy
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** — (only if the deployment token needed a wider permission: `docs: d004.s16 - record the deployment token permission`, in Deployment)
+- **R:** R19, R21
+- **Model:** —
+
+#### Scope
+
+Production capture running from `main`, monitored, with its scoped deployment token ([Deployment](#deployment), D10, D11 step 1). Before it starts, the PR with Steps 1–15 has merged by rebase, with `Refs #N` so the task stays open (DL22). From here on, the work runs on a new branch with the task's name, created from the updated `main`, which ends in the PR that closes the task.
+
+- Cloudflare: bucket `bikesharing-bronze`, with no lock yet (D11 step 4); Worker `bikesharing-capture` with the secret `HEARTBEAT_URL`; account-owned API token `bikesharing-capture-deploy`, Editor on that Worker only, one-year expiry; R2 token `bikesharing-t039-switch`, Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, used by rclone from here until Step 18.
+- Healthchecks.io: check `bikesharing-capture`, period 1 h, grace 1 h, email to the owner.
+- Local machine: `CLOUDFLARE_API_TOKEN` in `.env`; rclone remote `r2` switched to the switch token.
+- Verified: R19 (Demonstration), R21 (Inspection after deploy), the smoke test after each deploy, and TH6.
+
+#### Reads
+
+- d004 › [Deployment](#deployment), whole.
+- d004 › D10, the first paragraph; D11, steps 1–2.
+
+#### Do
+
+1. Create the bucket `bikesharing-bronze` in the Cloudflare dashboard, with no lock rule.
+2. Create the R2 token `bikesharing-t039-switch`, and set it as the credentials of the rclone remote `r2`.
+3. Create the Healthchecks.io check `bikesharing-capture` with a period of 1 min and a grace of 1 min. Send one signal with `curl` to its URL, and wait for the alert email (R19). Then set the period to 1 h and the grace to 1 h.
+4. From `capture/` on the updated `main`, run `npm ci`, `npx wrangler login` and `npx wrangler deploy`.
+5. Run `npx wrangler secret put HEARTBEAT_URL`, pasting the check's URL at the prompt. Until then, the passes at `:22` log `heartbeat_failed`.
+6. Run the smoke test of Deployment on the first passes.
+7. Create the API token `bikesharing-capture-deploy`, and store it in `.env` as `CLOUDFLARE_API_TOKEN`. Run `npx wrangler logout`, then `npx wrangler deploy` with the token loaded from `.env`, and repeat the smoke test.
+8. If that deploy fails for lack of permission, widen the token only as far as the error names, and have Claude record the permission in Deployment.
+
+#### Check
+
+- The alert email of Do 3 arrived.
+- After each deploy, each dynamic feed has a new object under `raw/` that passes `gunzip -t`, and the pass's log object exists with `recompressed: false` and the deployed version ID in `version` (smoke test).
+- The Worker's dashboard shows no `workers.dev` route and no preview URLs (R21, Inspection).
+- The deploy of Do 7 succeeded with `bikesharing-capture-deploy`, and the token's page lists only this Worker (TH6).
+- After the first `:22` that follows Do 5, Healthchecks.io shows the check as up.
+
+### Step 17 — Copy and lock
+
+- **Status:** 💤 todo
+- **Who:** Owner; Claude records the result in Close
+- **Commit:** `docs: d004.s17 - record the copy of the spike's data`
+- **R:** —
+- **Model:** sonnet · medium
+
+#### Scope
+
+The spike's responses copied into production up to each feed's cutoff, checked, and bronze locked (D2, D11 steps 2–4, TH4). It starts once production has stored every feed at least once, at least 24 h after Step 16, since the daily feeds run once every 24 h. Listings and the cutoffs file go to `spikes/cloudflare-capture-spike/analysis/output/`, which Git ignores.
+
+- Cloudflare: objects under `bikesharing-bronze/raw/` copied from `V4/raw/`; lock rules on `raw/` and `logs/` with no expiry ([ADR-0023](../decisions/0023-storage-security-baseline.md)).
+- d004 › 4.1 Implemented (modified): the cutoff of each feed and the counts per day and feed.
+
+#### Reads
+
+- d004 › [Switch tooling](#switch-tooling), the first three paragraphs; D11, steps 2–4.
+- `spikes/cloudflare-capture-spike/README.md` › Running it: the commands of Step 15.
+- [ADR-0023](../decisions/0023-storage-security-baseline.md): the lock rules.
+
+#### Do
+
+1. From `spikes/cloudflare-capture-spike/`, save the listings: `rclone lsf -R r2:bikesharing-bronze/raw > analysis/output/prod-before.txt` and `rclone lsf -R r2:bikesharing-capture-spike/V4/raw > analysis/output/spike.txt`.
+2. Run `keys` with `--prod analysis/output/prod-before.txt`, `--spike analysis/output/spike.txt`, `--cutoffs analysis/output/cutoffs.json` and `--out analysis/output/keys.txt`. If it exits 1, a feed is still missing in production: wait for it and repeat from Do 1.
+3. Run `rclone copy --files-from analysis/output/keys.txt r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`.
+4. Save `rclone lsf -R r2:bikesharing-bronze/raw > analysis/output/prod-after.txt`, and run `count` with it, the spike listing and the cutoffs. If it exits 1, repeat Do 3 and this one; never go on to Do 5 with a difference.
+5. Enable the bucket lock on `bikesharing-bronze` for the prefixes `raw/` and `logs/`, with no expiry.
+6. Try to overwrite one existing object under `raw/` with `rclone rcat` and to delete it with `rclone deletefile`.
+7. Give Claude the cutoffs and the output of `count`, for 4.1 Implemented.
+
+#### Check
+
+- `count` exits 0 before the lock is enabled.
+- Both attempts of Do 6 fail, and the object still passes `gunzip -t` (TH4).
+- After the lock, new objects keep arriving under `raw/` and `logs/`, and the next log objects show `feed_captured` with `attempts: 1`.
+
+### Step 18 — Retire the spike
+
+- **Status:** 💤 todo
+- **Who:** Owner; Claude reads the query results and records them in Close
+- **Commit:** `docs: d004.s18 - record the spike log queries`
+- **R:** —
+- **Model:** sonnet · medium
+
+#### Scope
+
+`capture-v4` stopped, its logs queried once, and every resource of the spike and of the probe deleted (D2, D11 steps 5–6, [ADR-0035](../decisions/0035-cloud-resource-naming.md)).
+
+- Cloudflare: Worker `capture-v4`, bucket `bikesharing-capture-spike`, the spike's tokens, `bikesharing-t039-switch` and bucket `bikesharing-t039-write-once` deleted.
+- d004 › 4.1 Implemented (modified): what the queries of D2 found; new findings that need work go to Out of scope as tasks.
+
+#### Reads
+
+- d004 › D2, the second paragraph; D11, steps 5–6.
+- `spikes/cloudflare-capture-spike/README.md` › Running it.
+- `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, the header: how to run it.
+
+#### Do
+
+1. From `spikes/cloudflare-capture-spike/js/`, run `npx wrangler delete -c wrangler.v4.jsonc`, which stops and deletes `capture-v4`.
+2. From the spike root, run `rclone copy r2:bikesharing-capture-spike data` for the last logs.
+3. From the repository root, run `duckdb -f spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, and give Claude its output.
+4. Delete the bucket and its contents with `rclone purge r2:bikesharing-capture-spike`.
+5. Delete the bucket `bikesharing-t039-write-once` in the dashboard.
+6. Delete the spike's tokens and `bikesharing-t039-switch` in the dashboard.
+
+#### Check
+
+- The dashboard lists neither `capture-v4`, `bikesharing-capture-spike` nor `bikesharing-t039-write-once`, and no token of the spike or of T039 other than `bikesharing-capture-deploy`.
+- `bikesharing-capture` keeps storing a new object per dynamic feed every minute.
+
+### Step 19 — Production checks
+
+- **Status:** 💤 todo
+- **Who:** Owner; Claude records the results in Close
+- **Commit:** `docs: d004.s19 - record the production checks`
+- **R:** —
+- **Model:** sonnet · medium
+
+#### Scope
+
+The two Done when checks on production data: CPU over days 1–3, and completeness over days 1–7 ([Deployment](#deployment), [Switch tooling](#switch-tooling), D4, D6). Day 1 is the first full UTC day after Step 16's deploy, since the day of the deploy is partial.
+
+- Cloudflare: R2 token `bikesharing-t039-completeness`, Object Read on `bikesharing-bronze` only, created and then deleted.
+- d004 › 4.1 Implemented (modified): the max CPU and the time of the costliest pass; the window and the percentage of each dynamic feed.
+
+#### Reads
+
+- d004 › [Deployment](#deployment), the CPU paragraph; [Switch tooling](#switch-tooling), the last two paragraphs.
+- `spikes/cloudflare-capture-spike/README.md` › Running it: the completeness query.
+
+#### Do
+
+1. On day 4, before day 1 leaves Workers Logs' 3-day retention, open the Query Builder for `bikesharing-capture` over days 1–3. Read the max of `$workers.cpuTimeMs` with the time of that invocation, and the count of invocations with outcome `exceededCpu`.
+2. On day 8, once day 7 has ended, create the token `bikesharing-t039-completeness`, and set it as the credentials of the rclone remote `r2`.
+3. Save `rclone lsf -R r2:bikesharing-bronze/raw > spikes/cloudflare-capture-spike/analysis/output/prod-completeness.txt`.
+4. Run `capture-completeness.sql` with that listing and day 1 as the first day of the window, and give Claude its output and the figures of Do 1.
+5. Delete the token `bikesharing-t039-completeness`.
+
+#### Check
+
+- The max of `$workers.cpuTimeMs` is below 10 ms, and no invocation has the outcome `exceededCpu`.
+- `below_target` is false for every dynamic feed.
+- The dashboard no longer lists `bikesharing-t039-completeness`.
 
 ## 4. Close
 
