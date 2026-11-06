@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-  - Next: Plan › 2.5 Components, then 2.6 Test plan, 2.7 What does not change, the rule documents of File layout (ADR-0030, `cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
+- Next: Plan › 2.6 Test plan, then 2.7 What does not change, the rule documents of File layout (ADR-0030, `cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
 
 ## 1. Spec — what and why
 
@@ -377,7 +377,7 @@ Every pass reads each source's last valid index from `state/index/<source>.json`
 { "refreshed_at": "2026-11-06T10:07:00Z", "feeds": { "station_status": "https://…" } }
 ```
 
-A refresh that returns a valid index overwrites it; a missing or unreadable object means the source has no valid index (D8). This costs 2 reads per pass, about 86,400 per month, or 0.9% of R2's free Class B quota.
+A refresh that returns a valid index overwrites it; a missing or unreadable object means the source has no valid index (D8). A valid index is adopted only once its response is stored under `raw/`: if that write or the write to `state/` fails after its retries, the refresh is logged as `index_rejected` with `error_type: write`, and the last valid index stays in use. So `index_refreshed` means stored, valid and in use, and the index in use is always in bronze. **DL13** This costs 2 reads per pass, about 86,400 per month, or 0.9% of R2's free Class B quota.
 
 If R2 reads approach the free Class B quota, for example as sources are added, evaluate the in-memory cache below.
 
@@ -505,6 +505,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL10 | [Deployment](#deployment) | Deploy with an account-owned token scoped to Editor on this Worker, one-year expiry; first deploy with `wrangler login` (least privilege, NIST SP 800-53 AC-6) | A leak reaches only this Worker | R21 | Plan |
 | DL11 | [Switch tooling](#switch-tooling) | rclone server-side copy with a key list up to the cutoff, and a standard-library script that lists keys and compares counts | Proven tool from s006; the only new code filters and counts | — | Plan |
 | DL12 | [ADR-0035](../decisions/0035-cloud-resource-naming.md) | One naming pattern for every cloud resource, `bikesharing-<name>`: buckets by content, compute by component, tokens by component and purpose, temporary resources by task (resource naming conventions) | Cheap to fix while resources are few; buckets cannot be renamed | — | Plan |
+| DL13 | [Index state](#index-state) | A valid index is adopted only once stored under `raw/` and `state/`; a failed write is `index_rejected` with `error_type: write` | `index_refreshed` keeps one meaning, and the index in use is always in bronze | R12, R24 | Plan |
 
 ### 2.3 Architecture
 
@@ -680,6 +681,248 @@ export function parseIndex(text, required);
  * @returns {ExtraFetch | null}  `null` when the minute carries no extra fetch
  */
 export function extraFetch(scheduledTime);
+```
+
+#### `fetch.js`
+
+- **Responsibility:** Fetches one source response and returns its gzip bytes as stored, or the failure ([Source fetch](#source-fetch)).
+- **Location:** `capture/src/fetch.js`
+- **Contract:**
+
+```js
+/** Production limits; tests pass their own (DL9). */
+export const LIMITS = { timeoutMs: 60_000, maxBytes: 10_000_000, retryDelayMs: 250 };
+
+/**
+ * @typedef {{ ok: true, status: number, latencyMs: number,
+ *             body: Uint8Array, recompressed: boolean }} FetchOk
+ * `body`: gzip bytes, as received or compressed by capture (`recompressed`).
+ *
+ * @typedef {{ ok: false, status: number | null, latencyMs: number | null,
+ *             errorType: 'http' | 'timeout' | 'network' | 'too_large',
+ *             error: string }} FetchFailed
+ * `status`: null when no response arrived. `latencyMs`: null when no headers arrived (R14).
+ * `http`: a status outside 200–299; its body is not stored.
+ */
+
+/**
+ * GET with `Accept-Encoding: gzip` and `encodeResponseBody: "manual"`, aborted by
+ * `AbortSignal.timeout(timeoutMs)` and once the body read exceeds `maxBytes`. Never throws.
+ * @param {string} url
+ * @param {{ timeoutMs: number, maxBytes: number }} limits
+ * @returns {Promise<FetchOk | FetchFailed>}
+ */
+export async function fetchFeed(url, limits);
+
+/**
+ * Decompresses an index body for its adapter. Never throws.
+ * @param {Uint8Array} gzipBytes
+ * @param {number} maxBytes Limit on the decompressed size
+ * @returns {Promise<{ ok: true, text: string } | { ok: false, error: string }>}
+ */
+export async function gunzipText(gzipBytes, maxBytes);
+```
+
+#### `storage.js`
+
+- **Responsibility:** Builds object keys and writes them to the bucket with write-once and retries; the only module that calls the R2 binding ([Write-once](#write-once)).
+- **Location:** `capture/src/storage.js`
+- **Contract:**
+
+```js
+/**
+ * The pass's start, truncated to the second, in the key format of ADR-0012.
+ * @param {Date} start
+ * @returns {string} `YYYYMMDDTHHMMSSZ`
+ */
+export function runIdOf(start);
+
+/** @returns {string} `raw/<source>/<feed>/<YYYY-MM-DD>/<runId>.json.gz` (D1) */
+export function rawKey(source, feed, runId);
+
+/** @returns {string} `logs/date=<YYYY-MM-DD>/<runId>.jsonl` (D9) */
+export function logKey(runId);
+
+/** @returns {string} `state/index/<source>.json` */
+export function stateKey(source);
+
+/**
+ * @typedef {{ ok: true, attempts: number }
+ *         | { ok: false, attempts: number, error: string }} PutResult
+ * `attempts`: write attempts made, 1 to 3.
+ */
+
+/**
+ * Conditional put, `onlyIf` with `If-None-Match: *`, for keys under `raw/` and `logs/`.
+ * A `null` answer counts as written (R10). Up to 2 retries, `retryDelayMs` apart (R9).
+ * Never throws.
+ * @param {R2Bucket} bucket
+ * @param {string} key
+ * @param {Uint8Array | string} body
+ * @param {{ retryDelayMs: number }} limits
+ * @returns {Promise<PutResult>}
+ */
+export async function putOnce(bucket, key, body, limits);
+
+/** Plain put, for keys under `state/`; same retries as `putOnce`. Never throws. */
+export async function putState(bucket, key, text, limits);
+
+/**
+ * @param {R2Bucket} bucket
+ * @param {string} key
+ * @returns {Promise<string | null>} null when the object is missing or the read fails
+ */
+export async function getState(bucket, key);
+```
+
+#### `index-state.js`
+
+- **Responsibility:** Reads and stores each source's last valid index under `state/`, through `storage.js` ([Index state](#index-state)).
+- **Location:** `capture/src/index-state.js`
+- **Contract:**
+
+```js
+/**
+ * @typedef {object} IndexState
+ * @property {string} refreshed_at          ISO 8601 UTC, the pass's start
+ * @property {Record<string, string>} feeds Feed name → URL, from `parseIndex`
+ */
+
+/**
+ * @param {R2Bucket} bucket
+ * @param {string} sourceId
+ * @returns {Promise<IndexState | null>} null when missing, unreadable or not an IndexState
+ */
+export async function readIndex(bucket, sourceId);
+
+/**
+ * @param {R2Bucket} bucket
+ * @param {string} sourceId
+ * @param {IndexState} state
+ * @param {{ retryDelayMs: number }} limits
+ * @returns {Promise<PutResult>}
+ */
+export async function writeIndex(bucket, sourceId, state, limits);
+```
+
+#### `log.js`
+
+- **Responsibility:** Builds the pass's events and writes them as one log object ([Pass logs](#pass-logs)).
+- **Location:** `capture/src/log.js`
+- **Contract:**
+
+```js
+/**
+ * @typedef {object} LogContext
+ * @property {string} runId
+ * @property {string} version `CF_VERSION_METADATA.id`
+ */
+
+/**
+ * One event: `ts`, `level`, `component` (`capture`), `version`, `run_id` and `event`,
+ * in that order, then `fields` (D9). Pure.
+ * @param {LogContext} ctx
+ * @param {Date} ts
+ * @param {'info' | 'warning' | 'error'} level
+ * @param {string} event  One of the events of D9
+ * @param {Record<string, unknown>} fields Its own fields, in snake_case
+ * @returns {Record<string, unknown>}
+ */
+export function buildEvent(ctx, ts, level, event, fields);
+
+/** @returns {string} JSON Lines, one event per line, ending in a newline. Pure. */
+export function toJsonl(events);
+
+/**
+ * `putOnce` to `logKey(runId)`. If it still fails, writes each line with `console.log`
+ * and the write error with `console.error`, which reach Workers Logs (R11). Never throws.
+ * @param {R2Bucket} bucket
+ * @param {string} runId
+ * @param {Record<string, unknown>[]} events
+ * @param {{ retryDelayMs: number }} limits
+ * @returns {Promise<void>}
+ */
+export async function writeLog(bucket, runId, events, limits);
+```
+
+#### `heartbeat.js`
+
+- **Responsibility:** Sends the Healthchecks.io signal (D10).
+- **Location:** `capture/src/heartbeat.js`
+- **Contract:**
+
+```js
+/**
+ * GET to `url`, aborted by `AbortSignal.timeout(timeoutMs)`. Never throws.
+ * `error` is built from the error's name and message with every occurrence of `url`
+ * removed, so no result carries the URL (R23).
+ * @param {string} url `HEARTBEAT_URL`
+ * @param {{ timeoutMs: number }} limits
+ * @returns {Promise<
+ *   { ok: true, status: number, latencyMs: number }
+ * | { ok: false, status: number | null, latencyMs: number | null,
+ *     errorType: 'http' | 'timeout' | 'network', error: string }>}
+ */
+export async function sendHeartbeat(url, limits);
+```
+
+#### `pass.js`
+
+- **Responsibility:** Runs one pass, as in [Architecture](#23-architecture), and writes its log whatever happens.
+- **Location:** `capture/src/pass.js`; it maps each `kind` to its adapter.
+- **Contract:**
+
+```js
+/**
+ * @typedef {object} PassDeps
+ * @property {R2Bucket} bucket
+ * @property {string} heartbeatUrl
+ * @property {string} version
+ * @property {readonly Source[]} [sources] Default `SOURCES`
+ * @property {typeof LIMITS} [limits]      Default `LIMITS`
+ * @property {() => Date} [now]            Default `() => new Date()`
+ */
+
+/**
+ * `runId` comes from `now()` at the start; the extra fetch from `scheduledTime`.
+ * An index refresh adopts a valid index only once stored under `raw/` and `state/` (DL13).
+ * Sources run in parallel, and so do the fetches within a source. The log is written in
+ * `finally`. Never throws.
+ * @param {number} scheduledTime
+ * @param {PassDeps} deps
+ * @returns {Promise<void>}
+ */
+export async function runPass(scheduledTime, deps);
+```
+
+#### `worker.js`
+
+- **Responsibility:** The Worker's entry point: the `scheduled` handler only, with no `fetch` handler (R21).
+- **Location:** `capture/src/worker.js`
+- **Contract:**
+
+```js
+/**
+ * @typedef {object} Env
+ * @property {R2Bucket} BUCKET                     `bikesharing-bronze`
+ * @property {string} HEARTBEAT_URL                Worker secret (R23)
+ * @property {{ id: string }} CF_VERSION_METADATA  Version metadata binding
+ */
+
+export default {
+  /**
+   * @param {ScheduledController} controller
+   * @param {Env} env
+   * @param {ExecutionContext} ctx
+   */
+  async scheduled(controller, env, ctx) {
+    await runPass(controller.scheduledTime, {
+      bucket: env.BUCKET,
+      heartbeatUrl: env.HEARTBEAT_URL,
+      version: env.CF_VERSION_METADATA.id,
+    });
+  },
+};
 ```
 
 ### 2.6 Test plan
