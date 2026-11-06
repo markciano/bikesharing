@@ -16,10 +16,10 @@ Sections marked Optional are kept only when they apply.
 Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
-- State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [ ] Steps review
+- State: Ready for implementation 🎬
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: —
-- Next: Steps review (`/design d004 review-steps`, in a new session).
+- Next: Step 1 (`/implement d004`).
 
 ## 1. Spec — what and why
 
@@ -497,7 +497,7 @@ The deployment credential is an account-owned API token, `bikesharing-capture-de
 
 After every deploy, the owner runs a smoke test on the first passes: each dynamic feed has a new object under `raw/` that passes `gunzip -t`, and the pass's log object exists with `recompressed: false` and the deployed version ID in `version`. It covers what local tests cannot, such as `encodeResponseBody` ([Tests and contracts](#tests-and-contracts)).
 
-At the end of the first 3 full days of production, before they leave Workers Logs' 3-day retention on the Free plan, the owner checks CPU time in the Workers Logs Query Builder: over every invocation of `bikesharing-capture`, the max of `$workers.cpuTimeMs` is below 10 ms, and no invocation has the outcome `exceededCpu`. The max over every pass also bounds the passes with an extra fetch (D4). Close records the max and the time of the costliest pass. **DL19**
+Over the first 3 full UTC days of production, the owner checks CPU time in the Workers Logs Query Builder, one full day at a time on the day after it, since the 3-day retention on the Free plan never holds the 3 full days at once: over every invocation of `bikesharing-capture` in that day, the max of `$workers.cpuTimeMs` is below 10 ms, and no invocation has the outcome `exceededCpu`. The max over every pass also bounds the passes with an extra fetch (D4). Close records the max of the 3 days and the time of the costliest pass. **DL19** **DL24**
 
 Options considered for the CPU check:
 
@@ -559,10 +559,12 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL16 | [Fixtures](#fixtures) | A Node script fetches live responses, keeps the index whole and the first 3 entries of each other feed, and writes uncompressed JSON with stable names and a provenance manifest | Current quirks and readable diffs; capture does not read feed entries, so choosing them adds nothing | — | Plan |
 | DL17 | [Write-once](#write-once) | When a conditional put throws, `head` decides whether the object exists: if so it counts as written, otherwise the attempt is retried | Under the lock R2 throws instead of returning `null` (probe); `head` depends on no error message | R9, R10 | Plan |
 | DL18 | [D11](#d11-switch-from-spike-capture-to-production), [Switch tooling](#switch-tooling) | The copy cutoff is per source and feed, the minute of its first object in production, read before the first copy (high-water mark per partition); Spec change **refines DL11** | No minute is lost, nothing is duplicated, and the count check compares like with like | — | Plan review |
-| DL19 | [Deployment](#deployment) | CPU is checked as the max of `$workers.cpuTimeMs` over every invocation in the Workers Logs Query Builder, over the first 3 full days, with no `exceededCpu` outcome (IADT Analysis) | Exact per pass, unlike the sampled quantiles of the GraphQL Analytics API | — | Plan review |
+| DL19 | [Deployment](#deployment) | CPU is checked as the max of `$workers.cpuTimeMs` over every invocation in the Workers Logs Query Builder, over the first 3 full days, with no `exceededCpu` outcome (IADT Analysis) **→ DL24** | Exact per pass, unlike the sampled quantiles of the GraphQL Analytics API | — | Plan review |
 | DL20 | [Switch tooling](#switch-tooling) | The 7-day completeness check is a DuckDB query over a local `rclone lsf -R` listing of `raw/`, next to the switch tooling, with a temporary read-only token (IADT Analysis; least privilege, NIST SP 800-53 AC-6) | One credential path and a reproducible input for a one-off check that T042 replaces; the write token still goes with the spike's bucket | — | Plan review |
 | DL21 | [Tests](#tests-and-contracts), [Test plan](#26-test-plan) | Simulated sources serve gzip bytes without `Content-Encoding`; `encodeResponseBody` is covered only by the post-deploy smoke test | Local tests rest only on verified behaviour; the gzip check reads the magic number, not the header | R1, R16 | Plan review |
 | DL22 | [Deployment](#deployment) | Deploy only from `main`, after the code's PR merges (`Refs`); a second PR records the operational results and closes the task (GitHub Flow, deploy from the default branch) | Only reviewed code that passed CI reaches production, as for the pipeline (d002 › R24–R28), and no PR stays open for the 7-day check | — | Steps |
+| DL23 | [Step 13](#step-13--ci-job) | Job `capture` behind a path filter (`dorny/paths-filter`); `ci-passed` fails only on `failure` or `cancelled`, so a filtered job passes (ADR-0013 path filter; "alls-green" aggregator) | A required aggregator that demands `success` blocks every PR that skips a filtered job | — | Steps review |
+| DL24 | [Deployment](#deployment) | The CPU check queries each of the first 3 full days on the day after it, and takes the max of the 3 (IADT Analysis) **refines DL19** | The 3-day retention never holds the 3 full days at once, so a single query misses part of day 1 | — | Steps review |
 
 ### 2.3 Architecture
 
@@ -684,7 +686,8 @@ The modules of `capture/src/`, as in [Component layout](#component-layout). Cont
  * @property {string} kind               Adapter that reads its index: `gbfs`
  * @property {string} indexUrl           URL of the source's index (`gbfs` feed)
  * @property {readonly string[]} dynamic Feeds captured every pass (D3)
- * @property {readonly string[]} hourly  Feeds captured hourly (D3)
+ * @property {readonly string[]} hourly  Feeds captured hourly (D3); the index is not a feed
+ *                                       here: `indexUrl` names it and `schedule.js` its refresh
  * @property {readonly string[]} daily   Feeds captured daily (D3)
  */
 
@@ -693,7 +696,7 @@ export const SOURCES;
 
 /**
  * Every feed the source's index must list for it to be valid (D8): its dynamic,
- * hourly and daily feeds, excluding the index itself.
+ * hourly and daily feeds.
  * @param {Source} source
  * @returns {string[]}
  */
@@ -921,7 +924,9 @@ export async function writeLog(bucket, runId, events, limits);
 ```js
 /**
  * GET to `url`, aborted by `AbortSignal.timeout(heartbeatTimeoutMs)`, 10 s in production
- * as in Healthchecks.io's examples. Never throws.
+ * as in Healthchecks.io's examples. The body is read and discarded within the same
+ * timeout, so the timeout covers the whole response and no connection is left open.
+ * Never throws.
  * `error` is built from the error's name and message with every occurrence of `url`
  * removed, so no result carries the URL (R23).
  * @param {string} url `HEARTBEAT_URL`
@@ -1089,13 +1094,14 @@ The tokens of [Deployment](#deployment) and [Switch tooling](#switch-tooling) de
 
 <!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
 
-The `capture/` component with its runtime pin, its manifest with the test and deploy tools locked, the Worker configuration of [Deployment](#deployment), and the test configuration that runs tests inside workerd. No source code or tests yet: `src/worker.js`, which `wrangler.jsonc` names as `main`, comes in Step 11.
+The `capture/` component with its runtime pin, its manifest with the test and deploy tools locked, the Worker configuration of [Deployment](#deployment), and the test configuration that runs tests inside workerd. The only source file is the entry point `src/worker.js`, which `wrangler.jsonc` names as `main`, with an empty `scheduled` handler; Step 11 makes it run the pass. No tests yet.
 
 - `capture/.nvmrc` (new): `26.12.1`, the same as the root `.nvmrc`.
 - `capture/package.json` (new): `private`, ES modules, scripts `test` and `fixtures`; development dependencies `wrangler`, `vitest` and `@cloudflare/vitest-plugin`.
 - `capture/package-lock.json` (new): written by npm.
 - `capture/wrangler.jsonc` (new): every key of the Deployment table, plus `main` and `compatibility_date`.
 - `capture/vitest.config.js` (new): the `cloudflareTest` plugin reading `wrangler.jsonc`; the simulated sources are added in Step 9.
+- `capture/src/worker.js` (new): a default export with an empty `async scheduled()` and no `fetch` handler (R21).
 
 Tests: none; R21's Inspection row of the Test plan is checked here on the file and again after deploy (Step 16).
 
@@ -1118,14 +1124,15 @@ Tests: none; R21's Inspection row of the Test plan is checked here on the file a
 3. Run `npm install --save-dev wrangler vitest @cloudflare/vitest-plugin` in `capture/`, which writes the ranges and `package-lock.json`. If npm reports a peer conflict, install the `vitest` major that `@cloudflare/vitest-plugin` declares in its `peerDependencies`.
 4. Write `capture/wrangler.jsonc` with `$schema` set to `./node_modules/wrangler/config-schema.json`, `main` set to `src/worker.js`, `compatibility_date` set to `2026-11-06`, and the keys of the Deployment table with their values; `workers_dev` and `preview_urls` are written explicitly as `false`.
 5. Write `capture/vitest.config.js` with `defineConfig` and the `cloudflareTest` plugin, `wrangler: { configPath: "./wrangler.jsonc" }`, as in the s008 configuration, without `bindings` or `outboundService`.
+6. Write `capture/src/worker.js` with a default export holding only an empty `async scheduled()`.
 
 #### Check
 
 <!-- command/s or verification with a yes/no result. -->
 
 - `npm ci` in `capture/`, with `capture/.nvmrc` active, exits 0 and prints no `EBADENGINE` or peer dependency warning.
-- `npx vitest run --passWithNoTests` in `capture/` exits 0, so the plugin starts workerd from `wrangler.jsonc`. If it fails because `src/worker.js` does not exist, the step stops and reports it, and the design is corrected.
-- `git status` shows only the five files of Scope as new, and `node_modules/` is ignored.
+- `npx vitest run --passWithNoTests` in `capture/` exits 0, so the plugin starts workerd from `wrangler.jsonc` and builds `src/worker.js`.
+- `git status` shows only the six files of Scope as new, and `node_modules/` is ignored.
 - `wrangler.jsonc` holds each key of the Deployment table with its value, and `workers_dev` and `preview_urls` are `false` (R21, Inspection).
 
 ### Step 2 — Contract vectors
@@ -1181,7 +1188,7 @@ The first two modules of the functional core, as in [Components](#25-components)
 
 - `capture/src/sources.js` (new): `SOURCES` with `ambici` and `bicing`, `kind: "gbfs"`, the index URL of each source card, and the feeds of D3 by cadence; `requiredFeeds`.
 - `capture/src/adapters/gbfs.js` (new): `parseIndex`. It reads the entries from `data.feeds` (GBFS 3.0, Bicing) or `data.en.feeds` (GBFS 2.x, AMBici), as `listFeeds` does in `capture-v4`. The `gbfs` entry is neither required nor unknown.
-- `capture/test/unit/sources.test.js` (new): `requiredFeeds` of each source is its dynamic, hourly and daily feeds without `gbfs`; across `SOURCES` there are 3 dynamic and 12 daily feeds.
+- `capture/test/unit/sources.test.js` (new): `requiredFeeds` of each source is its dynamic, hourly and daily feeds, and none of them is `gbfs`; across `SOURCES` there are 3 dynamic and 12 daily feeds.
 - `capture/test/unit/gbfs.test.js` (new): the R12 unit row of the Test plan; a valid index in each GBFS shape returns the required URLs and sorted `unknownFeeds`. Indexes are built in memory.
 
 #### Reads
@@ -1368,7 +1375,13 @@ The simulated sources every network test uses, and `fetch.js` ([Source fetch](#s
 
 - `capture/vitest.config.js` (modified), as described in the [Test plan](#26-test-plan) and [Fixtures](#fixtures):
   - each fixture compressed once with `gzipSync`, served by `outboundService` at the URL the manifest records for it, without `Content-Encoding`, and passed to the tests as a base64 binding;
-  - fixed routes on `https://sim.test/`, built in memory from a fixture: `http-500`, `stall-body` (headers, then a body that never ends), `network-error` (the request throws), `plain-json` (a fixture uncompressed), `oversized` (a body larger than the tests' `maxBytes`, with no `content-length`), `heartbeat/<id>`, `heartbeat-count/<id>` (how many requests `heartbeat/<id>` received), and `heartbeat-network-error` (throws an error whose message contains the request URL);
+  - fixed routes on `https://sim.test/`, built in memory from a fixture:
+    - failures: `http-500`, `stall-body` (headers, then a body that never ends), `network-error` (the request throws), `plain-json` (a fixture uncompressed), `oversized` (a body larger than the tests' `maxBytes`, with no `content-length`);
+    - indexes, each in the GBFS shape of its source: `invalid-index/<source>` (the fixture index without one required feed), `index-extra-feed/<source>` (with one entry not in `requiredFeeds`), `index-oversized/<source>` (gzip bytes that decompress beyond the tests' `maxBytes`);
+    - `moved/<source>/<feed>`: that fixture's gzip bytes at a URL other than its own (R6);
+    - heartbeat: `heartbeat` (HTTP 200) and `heartbeat-network-error` (throws an error whose message contains the request URL);
+    - counter: every route counts the requests it receives by path, and `count/<path>` answers that count. A test that counts requests appends a suffix of its own to the route, `/<id>`, so counts do not mix across tests;
+    - the routes are declared in one table, each with a one-line comment stating what it answers and the case it serves, so the file is the catalogue of simulated responses;
   - the binding `HEARTBEAT_URL` set to `https://sim.test/heartbeat/default`.
 - `capture/src/fetch.js` (new): `LIMITS`, `fetchFeed`, `gunzipText`.
 - `capture/test/unit/fetch.test.js` (new), with `LIMITS` in milliseconds and bytes: a fixture returns its gzip bytes unchanged with `recompressed: false`; `plain-json` returns gzip bytes with `recompressed: true`; `http-500`, `stall-body`, `network-error` and `oversized` return their `errorType`, with `status` and `latencyMs` as in R14; `gunzipText` rejects a body over `maxBytes` once decompressed.
@@ -1434,9 +1447,9 @@ The simulated sources every network test uses, and `fetch.js` ([Source fetch](#s
 `runPass` and the Worker's entry point, as in [Architecture](#23-architecture), tested on a normal pass.
 
 - `capture/src/pass.js` (new): `runPass`, mapping each `kind` to its adapter.
-- `capture/src/worker.js` (new): the default export of [Components](#25-components) › `worker.js`, with `scheduled` only.
+- `capture/src/worker.js` (modified): the default export of [Components](#25-components) › `worker.js`, its `scheduled` handler now calling `runPass`.
 - `capture/test/unit/worker.test.js` (new): the R21 unit row.
-- `capture/test/integration/pass.test.js` (new): the integration rows of R1, R4, R6, R10, R15 (one object per pass, with the common fields) and R17. Each test seeds `state/` with `writeIndex` from the fixture indexes. A plain pass runs the `scheduled` handler; a test that needs a fixed time, small limits or a request count calls `runPass` with `now`, `limits` or a `heartbeatUrl` of its own, `heartbeat/<id>`.
+- `capture/test/integration/pass.test.js` (new): the integration rows of R1, R4, R6, R10, R15 (one object per pass, with the common fields) and R17. Each test seeds `state/` with `writeIndex` from the fixture indexes. A plain pass runs the `scheduled` handler; a test that needs a fixed time, small limits or a request count calls `runPass` with `now`, `limits` or a `heartbeatUrl` of its own, `heartbeat/<id>`, and reads requests at `count/heartbeat/<id>`. R6 seeds `state/` with the feed's URL set to `moved/<source>/<feed>`.
 
 #### Reads
 
@@ -1453,7 +1466,7 @@ The simulated sources every network test uses, and `fetch.js` ([Source fetch](#s
 #### Check
 
 - `npx vitest run` in `capture/` passes.
-- Only `storage.js` calls methods of the bucket: `grep -rnE '\.(put|get|head|list|delete)\(' capture/src` matches only `capture/src/storage.js`.
+- Only `storage.js` calls methods of the bucket: `grep -rn 'bucket\.' capture/src` matches only `capture/src/storage.js`.
 - Only `worker.js` reads `env`: `grep -rn 'env\.' capture/src` matches only `capture/src/worker.js`.
 
 ### Step 12 — Pass failures
@@ -1468,7 +1481,7 @@ The simulated sources every network test uses, and `fetch.js` ([Source fetch](#s
 
 The pass under every failure of D8, D10 and D12, at integration level.
 
-- `capture/test/integration/pass-failures.test.js` (new): the integration rows of R7, R8, R12, R13, R14, R15 (the log is written when every data write fails), R16, R18, R20, R22, R23 and R24. Tests call `runPass` with `LIMITS` in milliseconds and bytes, and with sources or `state/` entries that point to the `sim.test` routes. A failing bucket is a proxy over the test's R2 binding that fails `put` for the prefixes a test chooses.
+- `capture/test/integration/pass-failures.test.js` (new): the integration rows of R7, R8, R12, R13, R14, R15 (the log is written when every data write fails), R16, R18, R20, R22, R23 and R24. Tests call `runPass` with `LIMITS` in milliseconds and bytes, and with sources or `state/` entries that point to the `sim.test` routes of Step 9: `invalid-index` for R12 and R24, `index-extra-feed` for R16, `index-oversized` for R22, and `http-500/<id>` with `count/http-500/<id>` for R8. A failing bucket is a proxy over the test's R2 binding that fails `put` for the prefixes a test chooses.
 - `capture/src/pass.js` (modified, only if a test shows a gap): the fix that makes it pass. If the fix contradicts a decision or a contract of this design, the step stops and reports it.
 
 #### Reads
@@ -1499,8 +1512,9 @@ The pass under every failure of D8, D10 and D12, at integration level.
 The CI job of the `capture` component and the aggregator that becomes the only required check (ADR-0013, `.claude/rules/code/ci.md`).
 
 - `.github/workflows/ci.yml` (modified):
-  - job `capture`, following the recipe of `ci.md` › Job per component: `working-directory: capture`, `actions/setup-node@v7` with `node-version-file: capture/.nvmrc`, `cache: npm` and `cache-dependency-path: capture/package-lock.json`, then `npm ci` and `npx vitest run`;
-  - job `ci-passed`, with `needs: [docs, capture]` and `if: always()`, whose only step fails unless every job in `needs` has the result `success`. Without `if: always()` it would be skipped when a job fails, and GitHub treats a skipped required check as passed;
+  - job `changes`, with `dorny/paths-filter` at its latest major, pinned by major tag as the other actions in `ci.yml`: one output `capture`, true when the PR touches `capture/**`, `contracts/**` or `.github/workflows/ci.yml` (ADR-0013 path filter; `ci.md`, contract inside the filter of every job that reads it);
+  - job `capture`, with `needs: changes` and `if: needs.changes.outputs.capture == 'true'`, following the recipe of `ci.md` › Job per component: `working-directory: capture`, `actions/setup-node@v7` with `node-version-file: capture/.nvmrc`, `cache: npm` and `cache-dependency-path: capture/package-lock.json`, then `npm ci` and `npx vitest run`, the whole suite;
+  - job `ci-passed`, with `needs: [changes, docs, capture]` and `if: always()`, whose only step fails if any job in `needs` has the result `failure` or `cancelled`; `skipped` passes, since a filtered job is skipped. Without `if: always()` it would be skipped when a job fails, and GitHub treats a skipped required check as passed;
   - the `TODO(T039)` comment removed.
 - Ruleset of `main` (owner, outside the repository): required check `ci-passed` in place of `docs`.
 
@@ -1517,7 +1531,8 @@ The CI job of the `capture` component and the aggregator that becomes the only r
 
 #### Check
 
-- The PR run shows `docs`, `capture` and `ci-passed` green, and the whole workflow takes less than 10 min.
+- The PR run shows `changes`, `docs`, `capture` and `ci-passed` green, and the whole workflow takes less than 10 min.
+- The step of `ci-passed` fails only on `failure` or `cancelled`, so a `capture` skipped by the filter passes (Inspection).
 - The ruleset of `main` lists `ci-passed` as its only required check.
 - `grep -rn "TODO(T039)" .github/` finds nothing.
 
@@ -1634,7 +1649,7 @@ Production capture running from `main`, monitored, with its scoped deployment to
 4. From `capture/` on the updated `main`, run `npm ci`, `npx wrangler login` and `npx wrangler deploy`.
 5. Run `npx wrangler secret put HEARTBEAT_URL`, pasting the check's URL at the prompt. Until then, the passes at `:22` log `heartbeat_failed`.
 6. Run the smoke test of Deployment on the first passes.
-7. Create the API token `bikesharing-capture-deploy`, and store it in `.env` as `CLOUDFLARE_API_TOKEN`. Run `npx wrangler logout`, then `npx wrangler deploy` with the token loaded from `.env`, and repeat the smoke test.
+7. Create the API token `bikesharing-capture-deploy`, and store it in `.env` as `CLOUDFLARE_API_TOKEN`. Run `npx wrangler logout`, then, from `capture/`, load the root `.env` with `set -a; source ../.env; set +a` and run `npx wrangler deploy`, and repeat the smoke test.
 8. If that deploy fails for lack of permission, widen the token only as far as the error names, and have Claude record the permission in Deployment.
 
 #### Check
@@ -1705,7 +1720,7 @@ The spike's responses copied into production up to each feed's cutoff, checked, 
 
 #### Do
 
-1. From `spikes/cloudflare-capture-spike/js/`, run `npx wrangler delete -c wrangler.v4.jsonc`, which stops and deletes `capture-v4`.
+1. Delete the Worker `capture-v4` in the dashboard, which stops it; no local credential is needed, as `bikesharing-capture-deploy` reaches only `bikesharing-capture`.
 2. From the spike root, run `rclone copy r2:bikesharing-capture-spike data` for the last logs.
 3. From the repository root, run `duckdb -f spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, and give Claude its output.
 4. Delete the bucket and its contents with `rclone purge r2:bikesharing-capture-spike`.
@@ -1739,7 +1754,7 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 
 #### Do
 
-1. On day 4, before day 1 leaves Workers Logs' 3-day retention, open the Query Builder for `bikesharing-capture` over days 1–3. Read the max of `$workers.cpuTimeMs` with the time of that invocation, and the count of invocations with outcome `exceededCpu`.
+1. On each of days 2, 3 and 4, open the Query Builder for `bikesharing-capture` over the previous full UTC day. Read the max of `$workers.cpuTimeMs` with the time of that invocation, and the count of invocations with outcome `exceededCpu`.
 2. On day 8, once day 7 has ended, create the token `bikesharing-t039-completeness`, and set it as the credentials of the rclone remote `r2`.
 3. Save `rclone lsf -R r2:bikesharing-bronze/raw > spikes/cloudflare-capture-spike/analysis/output/prod-completeness.txt`.
 4. Run `capture-completeness.sql` with that listing and day 1 as the first day of the window, and give Claude its output and the figures of Do 1.
@@ -1747,7 +1762,7 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 
 #### Check
 
-- The max of `$workers.cpuTimeMs` is below 10 ms, and no invocation has the outcome `exceededCpu`.
+- On each of the 3 days, the max of `$workers.cpuTimeMs` is below 10 ms, and no invocation has the outcome `exceededCpu`.
 - `below_target` is false for every dynamic feed.
 - The dashboard no longer lists `bikesharing-t039-completeness`.
 
