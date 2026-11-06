@@ -1,0 +1,23 @@
+// Write-once probe for T039 (d004 › Write-once). Run only with `wrangler dev`; never deployed.
+{
+  "name": "bikesharing-t039-write-once-probe",
+  "main": "src/probe-write-once.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Default: the test bucket in R2, reached from `wrangler dev` through a remote binding.
+  // Its bucket lock rule covers the prefix in LOCKED_PREFIX.
+  "r2_buckets": [
+    { "binding": "BUCKET", "bucket_name": "bikesharing-t039-write-once", "remote": true }
+  ],
+  "vars": { "LOCKED_PREFIX": "locked/" },
+  "env": {
+    // `--env miniflare`: Miniflare's in-memory R2, which has no bucket lock; lock cases are skipped.
+    "miniflare": {
+      "r2_buckets": [
+        { "binding": "BUCKET", "bucket_name": "bikesharing-t039-write-once" }
+      ],
+      "vars": { "LOCKED_PREFIX": "" }
+    }
+  }
+}
