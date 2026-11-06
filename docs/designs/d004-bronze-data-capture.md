@@ -382,6 +382,33 @@ Options considered:
 - **Read `state/` on every pass (chosen).** Always consistent with the last refresh, with no cache to test.
 - **Memory first, `state/` as fallback, as in `capture-v4`.** Saves reads when the isolate is reused, but an isolate that misses the refresh minute keeps a stale index unless the cache also expires.
 
+#### Write-once
+
+`storage.js` writes every object under `raw/` and `logs/` as a conditional put, `onlyIf` with `If-None-Match: *` (RFC 9110 conditional requests): R2 writes only if the key holds nothing, and returns `null` otherwise, which counts as written (R10). The check and the write are one atomic operation, so it holds with or without the bucket lock; the lock remains a second barrier. Objects under `state/` are overwritten with a plain put.
+
+A probe confirms R2's behaviour before this Plan is approved, in its own test bucket `bikesharing-probe-write-once` with a lock rule on one prefix, created and deleted afterwards, through the R2 binding in `wrangler dev` with the bucket connected remotely. Its cases: a conditional put on a new key writes; on an existing key it returns `null`; under the lock, a conditional put on an existing key also returns `null`; under the lock, a plain put on an existing key fails, and its error is recorded.
+
+TODO(T039): record here how R2 answers each case of the write-once probe, with and without the lock.
+
+Options considered:
+
+- **Conditional put (chosen).** One atomic operation, independent of the lock and of error messages.
+- **Plain put, reading the lock's error as "exists".** Before the lock is enabled a retry overwrites silently, and it depends on an undocumented error message.
+- **`head`, then put.** Two operations per object, with a window in which two passes can both write the key.
+
+#### Pass logs
+
+`log.js` collects the pass's events in memory and `pass.js` writes them as one object in a `finally` block, so a pass that fails halfway still writes its log (D9).
+
+| Field | Source |
+|---|---|
+| `run_id` | The pass's actual start, truncated to the second, in the [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md) key format; also the timestamp of the pass's data keys, so duplicate passes get distinct keys (D8) |
+| `ts` | The event's time, ISO 8601 UTC with milliseconds |
+| `component` | `capture` |
+| `version` | `CF_VERSION_METADATA.id`, the version metadata binding |
+
+The schedule uses `scheduledTime` and the keys use the actual start; the two differ by the seconds the cron starts late. If the log write still fails after its retries, its lines go to Workers Logs, enabled under `observability` in `wrangler.jsonc` (R11).
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -397,6 +424,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 2 | [Schedule](#pass-schedule) | Daily feeds one every 2 hours at `:52`, alternating sources | An outage of one hour loses at most one daily feed | R3, R4 | Plan |
 | 3 | [Index state](#index-state) | Each pass reads the last valid index from `state/`, nothing kept in memory (stateless processes, 12-factor) | Always consistent, no cache to expire, about 0.9% of the free read quota | R6, R12, R13 | Plan |
 | 4 | [D3](#d3-feed-cadence), [D5](#d5-hourly-index-refresh) | Every index response is stored under `raw/`, valid or not; Spec change | Bronze keeps every captured response (ADR-0006, ADR-0020); +1% objects, compacted in silver | R24 | Plan |
+| 5 | [Write-once](#write-once) | Conditional put with `If-None-Match: *` under `raw/` and `logs/` (RFC 9110 conditional requests) | Atomic and independent of the lock and of error messages | R9, R10 | Plan |
+| 6 | [Write-once](#write-once) | R2's answers are probed before Plan approval, in a test bucket of their own | `storage.js` rests on verified behaviour; the spike's bucket still holds uncopied data and a running capture | R10 | Plan |
 
 ### 2.3 Architecture
 
