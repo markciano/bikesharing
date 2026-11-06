@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan › the write-once probe, then Plan approval.
+- Next: Plan approval.
 
 ## 1. Spec — what and why
 
@@ -271,6 +271,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - The bucket lock is enabled, and overwriting an existing object fails. (D11, TH4)
 - The queries of D2 have run on the spike's complete logs. (D2)
 - `bikesharing-capture-spike`, `capture-v4` and its token are deleted. (D11)
+- The probe's test bucket `bikesharing-t039-write-once` is deleted. ([ADR-0035](../decisions/0035-cloud-resource-naming.md))
 - The deployment token is scoped to the production Worker only. (TH6)
 - Passes with an extra fetch stay below 10 ms of CPU in the first days of production. (D4)
 - Each dynamic feed has a clean capture in at least 99.5% of the minutes of the first 7 days of production. (D6)
@@ -393,16 +394,28 @@ Options considered:
 
 #### Write-once
 
-`storage.js` writes every object under `raw/` and `logs/` as a conditional put, `onlyIf` with `If-None-Match: *` (RFC 9110 conditional requests): R2 writes only if the key holds nothing, and returns `null` otherwise, which counts as written (R10). The check and the write are one atomic operation, so it holds with or without the bucket lock; the lock remains a second barrier. Objects under `state/` are overwritten with a plain put.
+`storage.js` writes every object under `raw/` and `logs/` as a conditional put, `onlyIf` with `If-None-Match: *` (RFC 9110 conditional requests): R2 writes only if the key holds nothing, as one atomic operation. A key that already holds an object counts as written (R10), and R2 signals it in two ways:
 
-A probe confirms R2's behaviour before this Plan is approved, in its own test bucket `bikesharing-t039-write-once` with a lock rule on one prefix, created and deleted afterwards, through the R2 binding in `wrangler dev` with the bucket connected remotely. Its cases: a conditional put on a new key writes; on an existing key it returns `null`; under the lock, a conditional put on an existing key also returns `null`; under the lock, a plain put on an existing key fails, and its error is recorded. The cases without the lock also run against Miniflare's in-memory R2, which the integration tests use, to confirm it answers as R2 does. **DL9**
+- **Without the bucket lock:** the put returns `null`.
+- **Under the bucket lock:** the put throws, with the code only in the message (`The object is locked by the bucket policy. (10069)`).
 
-TODO(T039): record here how R2 answers each case of the write-once probe, with and without the lock.
+So when a conditional put throws, `storage.js` checks the key with `head`: if an object is there, the write counts as done and is not retried; if not, or if `head` also fails, the attempt counts as failed and is retried (R9). This depends on no error code or message, and also covers a write that R2 stored but whose answer was lost. The `head` runs only on that error path. **DL17** Objects under `state/` are overwritten with a plain put.
+
+The write-once probe ran on 2026-11-06 in the test bucket `bikesharing-t039-write-once`, with a lock rule on `locked/`, through the R2 binding in `wrangler dev` with the bucket connected remotely, and against Miniflare's in-memory R2, which the integration tests use (`spikes/cloudflare-capture-spike/js/src/probe-write-once.js`). Every object kept its first body. **DL9**
+
+| Case | R2, no lock | R2, under the lock | Miniflare |
+|---|---|---|---|
+| Conditional put, new key | Writes | Writes | Writes |
+| Conditional put, existing key (`Headers` or `etagDoesNotMatch: "*"`) | `null` | Throws `10069` | `null` |
+| Plain put, existing key | — | Throws `10069` | — |
+
+Miniflare answers as R2 without the lock; it does not simulate the lock, so the error path is tested with a fake binding ([Test plan](#26-test-plan)).
 
 Options considered:
 
-- **Conditional put (chosen).** One atomic operation, independent of the lock and of error messages.
-- **Plain put, reading the lock's error as "exists".** Before the lock is enabled a retry overwrites silently, and it depends on an undocumented error message.
+- **Conditional put, with `head` on error (chosen).** One atomic operation, and no dependency on the lock or on error messages.
+- **Conditional put, reading `10069` in the message as "exists".** No extra operation, but it depends on the text of an error message; if the text changes, stored objects are logged as failed writes.
+- **Plain put, reading the lock's error as "exists".** Before the lock is enabled a retry overwrites silently, and it depends on an error message.
 - **`head`, then put.** Two operations per object, with a window in which two passes can both write the key.
 
 #### Pass logs
@@ -532,6 +545,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL14 | [D9](#d9-capture-logs), [ADR-0036](../decisions/0036-log-convention-across-components.md) | The common fields come from a new ADR that supersedes ADR-0030, not from amending it; Spec change | Accepted ADRs are immutable (`.claude/rules/docs/adr.md`) | R15 | Plan |
 | DL15 | [Layout](#component-layout), [ADR-0037](../decisions/0037-test-fixtures-per-component.md) | Fixtures in each component's tests, `capture/test/fixtures/` for capture; ADR-0037 supersedes ADR-0009 | Each component owns its test data, as it owns its code and tests (ADR-0016, ADR-0017) | — | Plan |
 | DL16 | [Fixtures](#fixtures) | A Node script fetches live responses, keeps the index whole and the first 3 entries of each other feed, and writes uncompressed JSON with stable names and a provenance manifest | Current quirks and readable diffs; capture does not read feed entries, so choosing them adds nothing | — | Plan |
+| DL17 | [Write-once](#write-once) | When a conditional put throws, `head` decides whether the object exists: if so it counts as written, otherwise the attempt is retried | Under the lock R2 throws instead of returning `null` (probe); `head` depends on no error message | R9, R10 | Plan |
 
 ### 2.3 Architecture
 
@@ -784,8 +798,9 @@ export function stateKey(source);
 
 /**
  * Conditional put, `onlyIf` with `If-None-Match: *`, for keys under `raw/` and `logs/`.
- * A `null` answer counts as written (R10). Up to 2 retries, `retryDelayMs` apart (R9).
- * Never throws.
+ * A `null` answer counts as written (R10). If the put throws, `head(key)` decides: an
+ * object there counts as written; otherwise the attempt failed (DL17). Up to 2 retries,
+ * `retryDelayMs` apart (R9). Never throws.
  * @param {R2Bucket} bucket
  * @param {string} key
  * @param {Uint8Array | string} body
@@ -975,7 +990,8 @@ Integration tests run the `scheduled` handler in workerd with in-memory R2 and t
 | R7 | Test | A source whose body stalls beyond `timeoutMs` is logged as `feed_failed` with `error_type: timeout`; the other feeds are stored | integration |
 | R8 | Test | A source answering HTTP 500 is requested once in the pass and logged as `feed_failed` with `error_type: http` and `attempts: 0` | integration |
 | R9 | Test | `putOnce` with a bucket that fails twice writes on the third attempt with `attempts: 3`; one that always fails returns `ok: false` with `attempts: 3` | unit |
-| R10 | Test | `putOnce` with a bucket that answers `null` returns `ok: true`; a pass whose key is already in R2 leaves the object unchanged and logs `feed_captured` | unit, integration |
+| R10 | Test | `putOnce` with a bucket that answers `null` returns `ok: true`; with a bucket whose put throws and whose `head` finds the object, it returns `ok: true` after 1 attempt; whose `head` finds nothing, it retries | unit |
+| R10 | Test | A pass whose key is already in R2 leaves the object unchanged and logs `feed_captured` | integration |
 | R10 | Demonstration | Write-once probe against R2 and Miniflare's R2, with and without the lock ([Write-once](#write-once)) | — |
 | R11 | Test | `writeLog` with a bucket that always fails writes each line with `console.log` and the error with `console.error` | unit |
 | R12 | Test | `parseIndex` rejects text that is not JSON, an entry without `name`, an entry without `url`, and an index missing a required feed | unit |
