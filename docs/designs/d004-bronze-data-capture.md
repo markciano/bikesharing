@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Steps (`/design d004`): Steps 1–12 written; next, Steps 13–15 as one block, then 16–19 one by one.
+- Next: Steps (`/design d004`): Steps 1–15 written; next, Steps 16–19, starting with the parked decision on where to deploy from.
 
 ## 1. Spec — what and why
 
@@ -1512,6 +1512,124 @@ The pass under every failure of D8, D10 and D12, at integration level.
 
 - `npx vitest run` in `capture/` passes.
 - Every row of the Test plan with Method Test has a test in `capture/test/`: each row's R appears in a test name or in a comment of the test that verifies it.
+
+### Step 13 — CI job
+
+- **Status:** 💤 todo
+- **Who:** Claude; the owner switches the ruleset's required check
+- **Commit:** `ci: d004.s13 - add the capture job and the ci-passed aggregator`
+- **R:** —
+- **Model:** sonnet · medium
+
+#### Scope
+
+The CI job of the `capture` component and the aggregator that becomes the only required check (ADR-0013, `.claude/rules/code/ci.md`).
+
+- `.github/workflows/ci.yml` (modified):
+  - job `capture`, following the recipe of `ci.md` › Job per component: `working-directory: capture`, `actions/setup-node@v7` with `node-version-file: capture/.nvmrc`, `cache: npm` and `cache-dependency-path: capture/package-lock.json`, then `npm ci` and `npx vitest run`;
+  - job `ci-passed`, with `needs: [docs, capture]` and `if: always()`, whose only step fails unless every job in `needs` has the result `success`. Without `if: always()` it would be skipped when a job fails, and GitHub treats a skipped required check as passed;
+  - the `TODO(T039)` comment removed.
+- Ruleset of `main` (owner, outside the repository): required check `ci-passed` in place of `docs`.
+
+#### Reads
+
+- `.claude/rules/code/ci.md`, whole: the job recipe and the aggregator rule.
+- `.github/workflows/ci.yml`, whole: the `docs` job and its action versions.
+
+#### Do
+
+1. Add the job `capture` to `.github/workflows/ci.yml`.
+2. Add the job `ci-passed`, and remove the `TODO(T039)` comment.
+3. The owner switches the ruleset's required check from `docs` to `ci-passed`, after the PR run of this commit shows `ci-passed`.
+
+#### Check
+
+- The PR run shows `docs`, `capture` and `ci-passed` green, and the whole workflow takes less than 10 min.
+- The ruleset of `main` lists `ci-passed` as its only required check.
+- `grep -rn "TODO(T039)" .github/` finds nothing.
+
+### Step 14 — Documents
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: d004.s14 - document production capture`
+- **R:** —
+- **Model:** sonnet · medium
+
+#### Scope
+
+The documents of File layout that describe the system and are not rule documents. Each change follows the rules of its document type (`.claude/rules/docs/architecture.md` for `architecture.md`).
+
+- `docs/architecture.md` (modified):
+  - § 6.1 Capture pass: rewritten for one pass of production capture: dynamic feeds every pass, at most one extra fetch at fixed minutes, the index read from `state/`, the heartbeat, and the log written last. It has the steps table and the diagram of d004 › [Architecture](#23-architecture), each row citing d004's decisions or ADRs.
+  - § 10 Quality requirements: a row `QS18`, Completeness, normal operation, each dynamic feed has a clean capture in at least 99.5% of the minutes of each month, citing d004 › D6; the line `TODO(T039): capture completeness target.` removed.
+- `docs/testing-strategy.md` (modified): in the Cloudflare Worker section, Where (item 4), "Node pinned in `package.json` `engines`" becomes "Node pinned in `.nvmrc`", as `.claude/rules/code/dependencies.md` sets; the rest of the section is checked against File layout and the Test plan, and any mismatch is fixed.
+- `docs/sources/ambici.md` (modified), § Known characteristics, and `docs/sources/bicing.md` (modified), § Data quality notes (real time): the facts capture depends on, listed after File layout. These are: how often each static feed changed (D3), the GBFS `ttl` values (D3), the stable index size (D5), the latency shifts (D4), Bicing's missing `content-length` ([Source fetch](#source-fetch)) and the largest response observed (D12). Each fact goes to the card of its source, citing d004 or s006.
+- `docs/spikes/s012-execution-target.md` (modified): the line with `TODO(T039)` (line 471) removed, since D9 and D10 resolve its items.
+
+#### Reads
+
+- `.claude/rules/docs/architecture.md`, whole.
+- `docs/architecture.md` › 6.1 and 10.
+- d004 › [Architecture](#23-architecture), [Pass schedule](#pass-schedule), D3, D4 (second paragraph), D5, D6, D12, and [Source fetch](#source-fetch) (size limit).
+- `docs/testing-strategy.md` › Cloudflare Worker.
+- `docs/sources/ambici.md` › Known characteristics; `docs/sources/bicing.md` › Data quality notes (real time).
+- [s006](../spikes/s006-cloudflare-capture.md), only to find which feed and source gave a fact that d004 states without it, such as the largest response.
+- `docs/spikes/s012-execution-target.md`, lines 225–235 and 465–475.
+
+#### Do
+
+1. Update `docs/architecture.md` § 6.1 and § 10.
+2. Update `docs/testing-strategy.md`.
+3. Update `docs/sources/ambici.md` and `docs/sources/bicing.md`.
+4. Remove the `TODO(T039)` line from `docs/spikes/s012-execution-target.md`.
+
+#### Check
+
+- `grep -rn "TODO(T039)" docs/` finds only lines of d004.
+- `grep -n "engines" docs/testing-strategy.md` finds nothing.
+- Each new row and bullet in `architecture.md` and in the source cards cites its source.
+- The Markdown lint hook reports no error on the five files.
+
+### Step 15 — Switch tooling
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: d004.s15 - add the switch and completeness tooling`
+- **R:** —
+- **Model:** sonnet · medium
+
+#### Scope
+
+The one-off tooling of [Switch tooling](#switch-tooling), next to the spike's analysis. It is throwaway code under `spikes/`, so `dependencies.md` does not apply; it runs with the Prerequisites' Python and DuckDB.
+
+- `spikes/cloudflare-capture-spike/analysis/spike_raw_switch.py` (new), with the standard library only and `argparse`. Listings are `rclone lsf -R` output: one path per line, relative to the listed root, `<source>/<feed>/<YYYY-MM-DD>/<YYYYMMDDTHHMMSSZ>.json.gz`; lines ending in `/` are folders and are skipped.
+  - `keys --prod <listing> --spike <listing> --cutoffs <file> --out <file>`: if `--cutoffs` does not exist, it writes it from `--prod`, as JSON mapping `<source>/<feed>` to the minute of that feed's first object, `YYYYMMDDTHHMM`. If it exists, it reads it unchanged. It then writes to `--out` every spike path whose timestamp is earlier than its feed's cutoff, and exits 1 if a feed under `--spike` has no cutoff.
+  - `count --prod <listing> --spike <listing> --cutoffs <file>`: for each source, feed and day before the cutoff, it prints the object count in both listings and exits 1 on any difference.
+- `spikes/cloudflare-capture-spike/analysis/capture-completeness.sql` (new), for DuckDB. Its inputs are two variables set at its top, the listing file and the first full UTC day of the window (`SET VARIABLE`). It reads the listing, keeps the dynamic feeds of D3 within the 7 days from that day, and counts per source and feed the distinct minutes with at least one object, from the key's timestamp. It prints `source`, `feed`, `minutes`, `pct` (minutes / 10,080) and `below_target` (`pct` < 99.5%).
+- `spikes/cloudflare-capture-spike/README.md` (modified), § Layout and § Running it: the switch script, `spike-log-queries.sql`, the completeness query and the write-once probe (`js/src/probe-write-once.js`, `js/wrangler.probe.jsonc`), each with its command.
+
+#### Reads
+
+- d004 › [Switch tooling](#switch-tooling), whole; D11, the numbered list.
+- d004 › D6, the first two sentences: what a clean minute is.
+- `spikes/cloudflare-capture-spike/README.md` › Layout and Running it.
+- `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, the first lines: how the existing query reads its input.
+
+#### Do
+
+1. Write `spikes/cloudflare-capture-spike/analysis/spike_raw_switch.py`.
+2. Write `spikes/cloudflare-capture-spike/analysis/capture-completeness.sql`.
+3. Update `spikes/cloudflare-capture-spike/README.md`.
+
+#### Check
+
+Run in the scratchpad, with hand-written listings of two feeds over two days:
+
+- `keys` writes the cutoffs and lists exactly the spike paths before each cutoff; run again after editing the production listing, it keeps the same cutoffs.
+- `keys` exits 1 when the spike listing has a feed that the production listing lacks.
+- `count` exits 0 on equal listings, and 1 after one line is removed from the production listing before the cutoff.
+- `capture-completeness.sql` on a listing with one minute missing in one feed prints `minutes` 10,079 for that feed and 10,080 for the others.
 
 ## 4. Close
 
