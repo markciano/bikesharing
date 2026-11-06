@@ -8,7 +8,7 @@ Sections marked Optional are kept only when they apply.
 
 - **Task:** T039
 - **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md), [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)
-- **New ADRs from this doc:** [ADR-0035](../decisions/0035-cloud-resource-naming.md) (D1); [ADR-0036](../decisions/0036-log-convention-across-components.md) (D9), which supersedes [ADR-0030](../decisions/archive/0030-pipeline-logs.md)
+- **New ADRs from this doc:** [ADR-0035](../decisions/0035-cloud-resource-naming.md) (D1); [ADR-0036](../decisions/0036-log-convention-across-components.md) (D9), which supersedes [ADR-0030](../decisions/archive/0030-pipeline-logs.md); [ADR-0037](../decisions/0037-test-fixtures-per-component.md) (DL15), which supersedes [ADR-0009](../decisions/archive/0009-trimmed-source-samples-as-test-fixtures.md)
 
 ## Status
 
@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan › the rule documents of File layout (`cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
+- Next: Plan › the fixture trimming script (ADR-0037: language, location, input; add to File layout), then the rule documents of File layout (`testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
 
 ## 1. Spec — what and why
 
@@ -325,7 +325,7 @@ capture/
     ├── unit/             <module>.test.js
     ├── integration/      The `scheduled` handler in workerd with in-memory R2
     ├── contract/         Producer side of the vectors in `contracts/`
-    └── fixtures/         Trimmed source responses (ADR-0009)
+    └── fixtures/         Trimmed source responses (ADR-0037)
 ```
 
 Options considered:
@@ -507,6 +507,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL12 | [ADR-0035](../decisions/0035-cloud-resource-naming.md) | One naming pattern for every cloud resource, `bikesharing-<name>`: buckets by content, compute by component, tokens by component and purpose, temporary resources by task (resource naming conventions) | Cheap to fix while resources are few; buckets cannot be renamed | — | Plan |
 | DL13 | [Index state](#index-state) | A valid index is adopted only once stored under `raw/` and `state/`; a failed write is `index_rejected` with `error_type: write` | `index_refreshed` keeps one meaning, and the index in use is always in bronze | R12, R24 | Plan |
 | DL14 | [D9](#d9-capture-logs), [ADR-0036](../decisions/0036-log-convention-across-components.md) | The common fields come from a new ADR that supersedes ADR-0030, not from amending it; Spec change | Accepted ADRs are immutable (`.claude/rules/docs/adr.md`) | R15 | Plan |
+| DL15 | [Layout](#component-layout), [ADR-0037](../decisions/0037-test-fixtures-per-component.md) | Fixtures in each component's tests, `capture/test/fixtures/` for capture; ADR-0037 supersedes ADR-0009 | Each component owns its test data, as it owns its code and tests (ADR-0016, ADR-0017) | — | Plan |
 
 ### 2.3 Architecture
 
@@ -576,7 +577,7 @@ Colours show what each box touches: grey, no I/O (the functional core); blue, R2
 │       ├── unit/                              (new) One file per module
 │       ├── integration/                       (new) The `scheduled` handler in workerd with in-memory R2
 │       ├── contract/                          (new) Producer side of the vectors in `contracts/`
-│       └── fixtures/                          (new) Trimmed source responses (ADR-0009)
+│       └── fixtures/                          (new) Trimmed source responses (ADR-0037)
 ├── contracts/                                 (new) Shared contract vectors (Tests and contracts)
 │   ├── bronze-keys.json                       (new) Object keys (ADR-0012, D1)
 │   └── capture-logs.json                      (new) Log lines (D9)
@@ -587,6 +588,8 @@ Colours show what each box touches: grey, no I/O (the functional core); blue, R2
 │   │   ├── 0023-storage-security-baseline.md  (modified) TODOs resolved by this design removed
 │   │   ├── 0035-cloud-resource-naming.md      (new) Cloud resource naming (D1)
 │   │   ├── 0036-log-convention-across-components.md (new) One log convention, with `component` and `version` (D9)
+│   │   ├── 0037-test-fixtures-per-component.md (new) Fixtures in each component's tests (DL15)
+│   │   ├── archive/0009-trimmed-source-samples-as-test-fixtures.md (moved) Superseded by ADR-0037
 │   │   └── archive/0030-pipeline-logs.md      (moved) Superseded by ADR-0036
 │   └── sources/
 │       ├── ambici.md                          (modified) Facts observed in the spike's capture that capture depends on
