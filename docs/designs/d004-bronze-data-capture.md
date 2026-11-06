@@ -17,9 +17,9 @@ Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
 - State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18); s012 in File layout; the CPU check (DL19); the 7-day completeness check (DL20); the simulated sources' `Content-Encoding` (DL21); minor: heartbeat timeout, token names, size limit wording, fixtures compressed once in `vitest.config.js`. Next: close the review (check Plan review in Phase).
+- Next: Steps (`/design d004`), starting with Prerequisites.
 
 ## 1. Spec — what and why
 
