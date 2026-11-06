@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan review (`/design d004 review-plan`, in a new session); it should check the `TODO(T039)` in s012 › 1.5 Out of scope against this design.
+- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18). Pending the owner's decision: `TODO(T039)` in s012 not in File layout; no method for the CPU check of passes with an extra fetch; no tool for the 7-day completeness check; `Content-Encoding` of the simulated sources undecided; minor: heartbeat timeout, token names (ADR-0035), size limit on non-gzip bodies, the fixture-binding rule in `cloudflare-worker.md`.
 
 ## 1. Spec — what and why
 
@@ -201,7 +201,7 @@ Rejected:
 Production capture replaces `capture-v4` by running in parallel with it, so the switch leaves no gap in data that cannot be captured again. The overlap also tests production against the spike's capture, minute by minute. It doubles the requests to the sources for its duration, at one per feed and minute, which is accepted since no volume limit has been observed.
 
 1. The production Worker is deployed and captures to `bikesharing-bronze` while `capture-v4` keeps capturing.
-2. `V4/raw/` is copied up to the last pass before production's first captured minute (D2), so the copy adds no duplicates and no key can collide.
+2. Once production has stored every feed at least once, `V4/raw/` is copied, for each source and feed, up to the last pass before that feed's first object in production (D2), so the copy leaves no gap, adds no duplicates and no key can collide.
 3. The copy is checked by object count per day and feed. If the counts differ, the copy is repeated: the lock is never enabled on an unchecked copy.
 4. The bucket lock is enabled.
 5. `capture-v4` is stopped, and the queries of D2 run on its complete logs.
@@ -212,7 +212,7 @@ The lock is enabled only after the check, as [ADR-0023](../decisions/0023-storag
 Rejected:
 
 - Stopping `capture-v4` before deploying production: it is simpler, but leaves a gap that grows if the deployment fails.
-- Keeping the spike's bucket as a test bucket: its name breaks the convention of D1, and it keeps an old token alive.
+- Keeping the spike's bucket as a test bucket: its name breaks the convention of D1, and it keeps an old token alive. **DL18**
 
 #### D12. Capture security
 
@@ -267,7 +267,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
-- `V4/raw/` is copied up to the switch cutoff and checked by object count before the bucket lock is enabled. (D2, D11)
+- `V4/raw/` is copied up to the cutoff of each feed and checked by object count before the bucket lock is enabled. (D2, D11)
 - The bucket lock is enabled, and overwriting an existing object fails. (D11, TH4)
 - The queries of D2 have run on the spike's complete logs. (D2)
 - `bikesharing-capture-spike`, `capture-v4` and its token are deleted. (D11)
@@ -503,14 +503,16 @@ Options considered:
 
 #### Switch tooling
 
-The owner runs the switch of D11 from the local machine with rclone, as in [s006](../spikes/s006-cloudflare-capture.md), and one throwaway script next to the spike's analysis, `spikes/cloudflare-capture-spike/analysis/spike_raw_switch.py` (Python standard library only), with two commands:
+The owner runs the switch of D11 from the local machine with rclone, as in [s006](../spikes/s006-cloudflare-capture.md), and one throwaway script next to the spike's analysis, `spikes/cloudflare-capture-spike/analysis/spike_raw_switch.py` (Python standard library only), with two commands.
 
-- `keys`: lists the keys under `V4/raw/` whose timestamp is earlier than the cutoff, the minute of production's first object under `raw/`, as paths relative to `V4/raw/`.
-- `count`: compares the number of objects per day and feed under `V4/raw/` before the cutoff and under `bikesharing-bronze/raw/` before the cutoff, from two `rclone lsf -R` listings, and exits non-zero on any difference.
+The cutoff is per source and feed: the minute of that feed's first object in production. It is read from an `rclone lsf -R` listing of `bikesharing-bronze/raw/` taken before the first copy, since copied objects come first afterwards, and kept in a file that both commands read, so a repeated copy uses the same cutoffs.
 
-The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 are `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, run with DuckDB over the local copy of the spike's logs after a last `rclone copy` once `capture-v4` has stopped. Close records the cutoff, the counts per day and feed, and what the queries found.
+- `keys`: writes the cutoffs file, then lists the keys under `V4/raw/` whose timestamp is earlier than their feed's cutoff, as paths relative to `V4/raw/`. It exits non-zero if a feed under `V4/raw/` has no object in production yet.
+- `count`: compares the number of objects per day and feed under `V4/raw/` and under `bikesharing-bronze/raw/`, both before each feed's cutoff, from two `rclone lsf -R` listings, and exits non-zero on any difference.
 
-rclone uses an R2 token with Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, deleted with the spike's bucket (D11).
+The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 are `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, run with DuckDB over the local copy of the spike's logs after a last `rclone copy` once `capture-v4` has stopped. Close records the cutoff of each feed, the counts per day and feed, and what the queries found.
+
+rclone uses an R2 token with Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, deleted with the spike's bucket (D11). **DL18**
 
 Options considered:
 
@@ -539,13 +541,14 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL8 | [Tests](#tests-and-contracts) | Shared contract vectors in a top-level `contracts/` folder | A contract between two components belongs to neither | R1, R15 | Plan |
 | DL9 | [Tests](#tests-and-contracts) | The write-once probe also runs against Miniflare's R2; the fetch timeout is a parameter | Integration tests rest on a verified simulator; the timeout is testable without waiting 60 s | R7, R10 | Plan |
 | DL10 | [Deployment](#deployment) | Deploy with an account-owned token scoped to Editor on this Worker, one-year expiry; first deploy with `wrangler login` (least privilege, NIST SP 800-53 AC-6) | A leak reaches only this Worker | R21 | Plan |
-| DL11 | [Switch tooling](#switch-tooling) | rclone server-side copy with a key list up to the cutoff, and a standard-library script that lists keys and compares counts | Proven tool from s006; the only new code filters and counts | — | Plan |
+| DL11 | [Switch tooling](#switch-tooling) | rclone server-side copy with a key list up to the cutoff, and a standard-library script that lists keys and compares counts **→ DL18** | Proven tool from s006; the only new code filters and counts | — | Plan |
 | DL12 | [ADR-0035](../decisions/0035-cloud-resource-naming.md) | One naming pattern for every cloud resource, `bikesharing-<name>`: buckets by content, compute by component, tokens by component and purpose, temporary resources by task (resource naming conventions) | Cheap to fix while resources are few; buckets cannot be renamed | — | Plan |
 | DL13 | [Index state](#index-state) | A valid index is adopted only once stored under `raw/` and `state/`; a failed write is `index_rejected` with `error_type: write` | `index_refreshed` keeps one meaning, and the index in use is always in bronze | R12, R24 | Plan |
 | DL14 | [D9](#d9-capture-logs), [ADR-0036](../decisions/0036-log-convention-across-components.md) | The common fields come from a new ADR that supersedes ADR-0030, not from amending it; Spec change | Accepted ADRs are immutable (`.claude/rules/docs/adr.md`) | R15 | Plan |
 | DL15 | [Layout](#component-layout), [ADR-0037](../decisions/0037-test-fixtures-per-component.md) | Fixtures in each component's tests, `capture/test/fixtures/` for capture; ADR-0037 supersedes ADR-0009 | Each component owns its test data, as it owns its code and tests (ADR-0016, ADR-0017) | — | Plan |
 | DL16 | [Fixtures](#fixtures) | A Node script fetches live responses, keeps the index whole and the first 3 entries of each other feed, and writes uncompressed JSON with stable names and a provenance manifest | Current quirks and readable diffs; capture does not read feed entries, so choosing them adds nothing | — | Plan |
 | DL17 | [Write-once](#write-once) | When a conditional put throws, `head` decides whether the object exists: if so it counts as written, otherwise the attempt is retried | Under the lock R2 throws instead of returning `null` (probe); `head` depends on no error message | R9, R10 | Plan |
+| DL18 | [D11](#d11-switch-from-spike-capture-to-production), [Switch tooling](#switch-tooling) | The copy cutoff is per source and feed, the minute of its first object in production, read before the first copy (high-water mark per partition); Spec change **refines DL11** | No minute is lost, nothing is duplicated, and the count check compares like with like | — | Plan review |
 
 ### 2.3 Architecture
 
