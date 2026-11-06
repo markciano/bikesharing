@@ -15,7 +15,7 @@ State is In progress 🔄, every step is ✅ with its commit in `git log`, and t
 ## Checklist
 
 1. **Tests.** The full test suite passes; its output is quoted literally.
-2. **Coverage.** Every requirement has at least one passing test; no test in the Test plan was dropped.
+2. **Coverage.** Every requirement verified by Test has at least one passing test, and no test in the Test plan was dropped; every requirement verified by another method has its result recorded in 4. Close › Implemented.
 3. **File layout.** Every item is delivered, and nothing outside it was created or modified (`git diff --stat` from the commit before the first step).
 4. **TODOs.** Every TODO in docs and code citing the task is resolved or re-pointed to another task.
 5. **Decisions.** Every entry in Decisions taken during implementation had the owner's OK; those affecting other tasks or the project have an ADR. Documents whose behaviour changed were updated.

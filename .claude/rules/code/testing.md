@@ -12,7 +12,7 @@ Reasons and per-component detail: [testing strategy](../../../docs/testing-strat
 ## Principles
 
 - Follow the test pyramid.
-- Every requirement is covered by at least one test, at the lowest level that can verify it.
+- Every requirement has a verification method in its design's Test plan (IADT: Inspection, Analysis, Demonstration, Test); those verified by Test have at least one test, at the lowest level that can verify it.
 - Tests verify observable behaviour, not implementation details.
 - Tests are written first (TDD: red, green, refactor).
 - Arrange–Act–Assert; one concept per test; no shared state or order dependency between tests.
