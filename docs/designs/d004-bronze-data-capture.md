@@ -7,8 +7,8 @@ Sections marked Optional are kept only when they apply.
 # Design: Bronze data capture
 
 - **Task:** T039
-- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md), [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0030](../decisions/0030-pipeline-logs.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)
-- **New ADRs from this doc:** [ADR-0035](../decisions/0035-cloud-resource-naming.md) (D1); [ADR-0030](../decisions/0030-pipeline-logs.md) is amended (D9)
+- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md), [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)
+- **New ADRs from this doc:** [ADR-0035](../decisions/0035-cloud-resource-naming.md) (D1); [ADR-0036](../decisions/0036-log-convention-across-components.md) (D9), which supersedes [ADR-0030](../decisions/archive/0030-pipeline-logs.md)
 
 ## Status
 
@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan › the rule documents of File layout (ADR-0030, `cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
+- Next: Plan › the rule documents of File layout (`cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
 
 ## 1. Spec — what and why
 
@@ -145,7 +145,7 @@ Rejected:
 
 #### D9. Capture logs
 
-Capture writes one log object per pass as JSON Lines, under `logs/date=<YYYY-MM-DD>/<run_id>.jsonl`, where `run_id` is the pass's capture time in the [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md) key format. The format follows [ADR-0030](../decisions/0030-pipeline-logs.md), which is amended to add two common fields for the whole project, with the owner's permission since nothing is built on it yet: `component` names the part of the system that wrote the event, following the practice of `service.name` in OpenTelemetry, and `version` identifies the deployed code of that component. Every event therefore carries `ts`, `level`, `component`, `version`, `run_id` and `event`, plus the fields of its event.
+Capture writes one log object per pass as JSON Lines, under `logs/date=<YYYY-MM-DD>/<run_id>.jsonl`, where `run_id` is the pass's capture time in the [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md) key format. The format follows [ADR-0036](../decisions/0036-log-convention-across-components.md), one log convention for every component, which supersedes [ADR-0030](../decisions/archive/0030-pipeline-logs.md) to add two common fields: `component` names the part of the system that wrote the event, following the practice of `service.name` in OpenTelemetry, and `version` identifies the deployed code of that component. Every event therefore carries `ts`, `level`, `component`, `version`, `run_id` and `event`, plus the fields of its event.
 
 In capture, `component` is `capture` and `version` is the Worker's version ID.
 
@@ -180,7 +180,7 @@ Rejected:
 
 - Daily compaction in capture: reading 1,440 objects does not fit the 10 ms CPU limit.
 - Logging failures only: it loses the latency and sizes of clean captures, which revealed the latency shifts and set the timeout in D8.
-- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **DL4** **DL7**
+- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **DL4** **DL7** **DL14**
 
 #### D10. Capture heartbeat
 
@@ -506,6 +506,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL11 | [Switch tooling](#switch-tooling) | rclone server-side copy with a key list up to the cutoff, and a standard-library script that lists keys and compares counts | Proven tool from s006; the only new code filters and counts | — | Plan |
 | DL12 | [ADR-0035](../decisions/0035-cloud-resource-naming.md) | One naming pattern for every cloud resource, `bikesharing-<name>`: buckets by content, compute by component, tokens by component and purpose, temporary resources by task (resource naming conventions) | Cheap to fix while resources are few; buckets cannot be renamed | — | Plan |
 | DL13 | [Index state](#index-state) | A valid index is adopted only once stored under `raw/` and `state/`; a failed write is `index_rejected` with `error_type: write` | `index_refreshed` keeps one meaning, and the index in use is always in bronze | R12, R24 | Plan |
+| DL14 | [D9](#d9-capture-logs), [ADR-0036](../decisions/0036-log-convention-across-components.md) | The common fields come from a new ADR that supersedes ADR-0030, not from amending it; Spec change | Accepted ADRs are immutable (`.claude/rules/docs/adr.md`) | R15 | Plan |
 
 ### 2.3 Architecture
 
@@ -584,8 +585,9 @@ Colours show what each box touches: grey, no I/O (the functional core); blue, R2
 │   ├── testing-strategy.md                    (modified) Worker section paths to `capture/`; contract tests; smoke test (Deployment)
 │   ├── decisions/
 │   │   ├── 0023-storage-security-baseline.md  (modified) TODOs resolved by this design removed
-│   │   ├── 0030-pipeline-logs.md              (modified) Common fields `component` and `version` (D9)
-│   │   └── 0035-cloud-resource-naming.md      (new) Cloud resource naming (D1)
+│   │   ├── 0035-cloud-resource-naming.md      (new) Cloud resource naming (D1)
+│   │   ├── 0036-log-convention-across-components.md (new) One log convention, with `component` and `version` (D9)
+│   │   └── archive/0030-pipeline-logs.md      (moved) Superseded by ADR-0036
 │   └── sources/
 │       ├── ambici.md                          (modified) Facts observed in the spike's capture that capture depends on
 │       └── bicing.md                          (modified) Same; `OPEN_DATA_BCN_TOKEN`

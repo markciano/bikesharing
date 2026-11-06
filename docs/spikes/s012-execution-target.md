@@ -1,7 +1,7 @@
 # Spike: Execution target
 
 - **Task:** T037
-- **ADRs:** [ADR-0010](../decisions/archive/0010-ingestion-logic-separated-from-platform.md) (replaced by [ADR-0029](../decisions/0029-pipeline-code-architecture.md)), [ADR-0016](../decisions/0016-runtime-versions-pinned-per-component.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0024](../decisions/0024-duckdb-as-processing-engine.md), [ADR-0025](../decisions/0025-sql-models-directed-by-python.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0027](../decisions/0027-modal-as-execution-platform.md), [ADR-0028](../decisions/0028-modal-cron-as-pipeline-scheduler.md), [ADR-0030](../decisions/0030-pipeline-logs.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)
+- **ADRs:** [ADR-0010](../decisions/archive/0010-ingestion-logic-separated-from-platform.md) (replaced by [ADR-0029](../decisions/0029-pipeline-code-architecture.md)), [ADR-0016](../decisions/0016-runtime-versions-pinned-per-component.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0024](../decisions/0024-duckdb-as-processing-engine.md), [ADR-0025](../decisions/0025-sql-models-directed-by-python.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0027](../decisions/0027-modal-as-execution-platform.md), [ADR-0028](../decisions/0028-modal-cron-as-pipeline-scheduler.md), [ADR-0030](../decisions/archive/0030-pipeline-logs.md) (replaced by [ADR-0036](../decisions/0036-log-convention-across-components.md)), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)
 - **Code:** `spikes/execution-target/`
 
 ## Status

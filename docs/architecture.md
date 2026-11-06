@@ -124,7 +124,7 @@ Each goal is made measurable by the scenarios in §10.
 | 2 | The platform module calls the package's entry point, which signals the start to the monitor | [ADR-0029](decisions/0029-pipeline-code-architecture.md); [ADR-0031](decisions/0031-heartbeat-alerts-for-the-pipeline.md) |
 | 3 | DuckDB runs the SQL models over bronze, and Python hands the results to `deltalake`, which writes the lakehouse tables | [ADR-0024](decisions/0024-duckdb-as-processing-engine.md); [ADR-0025](decisions/0025-sql-models-directed-by-python.md) |
 | 4 | The run generates the page's prepared files from an explicit list and deploys a new version on Workers Static Assets; a failed deployment does not fail the run's data | [ADR-0033](decisions/0033-data-published-by-redeploying-static-assets.md); [s013 › P8](spikes/s013-visualization-tool.md#55-production-inputs) |
-| 5 | The run writes its events to stdout and uploads them to R2 as one object | [ADR-0030](decisions/0030-pipeline-logs.md) |
+| 5 | The run writes its events to stdout and uploads them to R2 as one object | [ADR-0036](decisions/0036-log-convention-across-components.md) |
 | 6 | The run signals its result; on a failure signal, or if no signal arrives in time, the monitor emails the owner | [ADR-0031](decisions/0031-heartbeat-alerts-for-the-pipeline.md); [d002 › R23](designs/d002-requirements.md#requirements) |
 
 ## 7. Deployment view
@@ -140,7 +140,7 @@ Each goal is made measurable by the scenarios in §10.
 - **Time:** every stored timestamp, file name and partition is in UTC; hour and day boundaries are computed and shown in Europe/Madrid local time. [ADR-0005](decisions/0005-utc-for-all-stored-timestamps.md); [d002 › R12](designs/d002-requirements.md#requirements).
 - **Test data:** real source responses trimmed by a committed script, plus hand-written edge cases. [ADR-0009](decisions/0009-trimmed-source-samples-as-test-fixtures.md).
 - **Pipeline code architecture:** Dependency Rule, Humble Object and Twelve-Factor configuration, with four rules whose checks detect a deviation; a subset of hexagonal architecture, with no driven ports. [ADR-0029](decisions/0029-pipeline-code-architecture.md).
-- **Pipeline logs:** structured events as JSON Lines on stdout, and one object per run in R2 for 30 days, with common fields; capture's logs stay apart. [ADR-0030](decisions/0030-pipeline-logs.md).
+- **Logs:** one convention for every component: JSON Lines, one object per run, and common fields that include the component and its deployed version; capture's logs stay in bronze under the lock, the pipeline's in R2 for 30 days. [ADR-0036](decisions/0036-log-convention-across-components.md).
 - **Pipeline alerts:** a heartbeat to a monitor outside the platform detects a run that fails, is killed or never starts. [ADR-0031](decisions/0031-heartbeat-alerts-for-the-pipeline.md).
 - **Versions and dependencies:** runtimes pinned in each component's native version file; dependencies locked per component. [ADR-0016](decisions/0016-runtime-versions-pinned-per-component.md); [ADR-0017](decisions/0017-dependencies-locked-per-component.md).
 - **Retention:** bronze and gold kept indefinitely; silver in a rolling window covering the longest gold window (§1.1); Delta tables keep 7 days of history. [ADR-0021](decisions/0021-retention-per-layer.md).

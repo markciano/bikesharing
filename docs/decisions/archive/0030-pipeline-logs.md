@@ -1,19 +1,22 @@
 ---
-status: Accepted
+status: Superseded
 date: 2026-11-02
+superseded-by: 0036
 ---
 
 # Pipeline logs as structured events, kept in object storage for 30 days
+
+Superseded on 2026-11-06 (T039) by [ADR-0036](../0036-log-convention-across-components.md): the convention now covers every component, and adds the common fields `component` and `version`.
 
 ## Context and problem statement
 
 Each pipeline run leaves a record of what it did, and the owner reads it to find out why a run failed and how runs behave over time. A single operator may read it days after the run, so the record has to outlive the moment of the failure.
 
-- The platform keeps stdout and stderr for 1 day on the chosen plan, in the US, and no way to keep them elsewhere is documented ([ADR-0027](0027-modal-as-execution-platform.md)).
+- The platform keeps stdout and stderr for 1 day on the chosen plan, in the US, and no way to keep them elsewhere is documented ([ADR-0027](../0027-modal-as-execution-platform.md)).
 - Whether the platform stays depends on measures taken from real runs: run time and memory.
-- The data is public, but logs must not hold storage credentials ([d002/R22](../designs/d002-requirements.md#requirements)).
-- The budget is small and R2 bills operations ([d002/R4](../designs/d002-requirements.md#requirements), [ADR-0026](0026-budget-shares-per-component.md)).
-- Capture already writes log objects to bronze, as permanent evidence under a bucket lock ([ADR-0023](0023-storage-security-baseline.md)), and the pipeline must not write to bronze ([d002/R17](../designs/d002-requirements.md#requirements)).
+- The data is public, but logs must not hold storage credentials ([d002/R22](../../designs/d002-requirements.md#requirements)).
+- The budget is small and R2 bills operations ([d002/R4](../../designs/d002-requirements.md#requirements), [ADR-0026](../0026-budget-shares-per-component.md)).
+- Capture already writes log objects to bronze, as permanent evidence under a bucket lock ([ADR-0023](../0023-storage-security-baseline.md)), and the pipeline must not write to bronze ([d002/R17](../../designs/d002-requirements.md#requirements)).
 
 ## Considered Options
 
@@ -63,15 +66,15 @@ The base is a standard, logs as an event stream (The Twelve-Factor App), with on
 Why not the others:
 
 - The platform's logs only: 1 day is too short for one operator, and it leaves no history.
-- An external log service: it adds a component to maintain, which is what the Context and [ADR-0027](0027-modal-as-execution-platform.md) seek to avoid.
+- An external log service: it adds a component to maintain, which is what the Context and [ADR-0027](../0027-modal-as-execution-platform.md) seek to avoid.
 
 **Scope:** The pipeline's logs: format, common fields, where they live and for how long. It does not cover which events exist and their own fields, or the exact prefix, both in T040; how alerts reach the owner, in its own ADR; or capture's logs, whose format T039 aligns with this one while they stay where they are.
 
 ### The convention
 
 - **Format:** JSON Lines, one event per line.
-- **Common fields:** every event carries `ts` (UTC, [ADR-0005](0005-utc-for-all-stored-timestamps.md)), `level`, `run_id` and `event`.
-- **Final event of a run:** it also carries `duration_s` and `peak_memory_mb`, the measures that can reopen [ADR-0027](0027-modal-as-execution-platform.md).
+- **Common fields:** every event carries `ts` (UTC, [ADR-0005](../0005-utc-for-all-stored-timestamps.md)), `level`, `run_id` and `event`.
+- **Final event of a run:** it also carries `duration_s` and `peak_memory_mb`, the measures that can reopen [ADR-0027](../0027-modal-as-execution-platform.md).
 - **Place:** one object per run in a prefix of the pipeline's own, with the UTC day in the key (`date=YYYY-MM-DD/<run_id>.jsonl`), outside bronze, so a bucket lock does not block the lifecycle rule and the pipeline needs no write access there.
 - **Retention:** 30 days, by a lifecycle rule.
 - **Access:** SQL with the engine from the owner's machine, with a read-only token.
@@ -93,7 +96,7 @@ Why not the others:
 
 ## More information
 
-- Decision at framing: [s012/D5](../spikes/s012-execution-target.md#d5-pipeline-logs); outcome in [s012 Decisions to record](../spikes/s012-execution-target.md#54-decisions-to-record).
+- Decision at framing: [s012/D5](../../spikes/s012-execution-target.md#d5-pipeline-logs); outcome in [s012 Decisions to record](../../spikes/s012-execution-target.md#54-decisions-to-record).
 - Cost, with 10 KB per run as a deliberately high assumption: 30 days hold about 43 MB at a 10-minute cadence and 86 MB at 5 minutes, under $0.002 per month. Writes are 0.4% and 0.9% of R2's free 1M Class A per month. With at most 8,640 objects and one read per run of the day queried, no compaction is needed.
-- `peak_memory_mb` comes from `ru_maxrss`, since the platform's container has no `VmHWM` ([s012/F2](../spikes/s012-execution-target.md#4-findings)).
-- Facts on log retention and location: [Modal source card](../sources/modal.md).
+- `peak_memory_mb` comes from `ru_maxrss`, since the platform's container has no `VmHWM` ([s012/F2](../../spikes/s012-execution-target.md#4-findings)).
+- Facts on log retention and location: [Modal source card](../../sources/modal.md).
