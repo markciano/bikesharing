@@ -289,6 +289,43 @@ Block `3. Steps` is written using this plan.
 If some block contains `options considered`, include them with pros and cons.
 -->
 
+#### Component layout
+
+Production capture is one Worker for both sources, since every pass carries the dynamic feeds of both and the heartbeat depends on all of them (D4, D10). It lives in `capture/`, named after its `component` in the logs (D9), and is written in JavaScript. The code follows *functional core, imperative shell*: the schedule, the source table, index validation and event building are pure functions; fetching, writing and signalling are a thin layer around them.
+
+Sources are configuration: each entry in `sources.js` names its `kind`, and `adapters/<kind>.js` knows how that kind finds its feed URLs and validates its index (Adapter pattern). A new GBFS source adds one entry; a source that is not GBFS also adds an adapter. The heartbeat requires every dynamic feed in `sources.js`, not a fixed count.
+
+Only `storage.js` accesses the bucket; `index-state.js` and `log.js` go through it. Only `worker.js` and `wrangler.jsonc` depend on the Workers runtime's entry point and trigger.
+
+```text
+capture/
+├── package.json          Dependencies and scripts, with the pinned Node version
+├── package-lock.json
+├── wrangler.jsonc        Cron trigger, R2 binding, public URL disabled
+├── vitest.config.js
+├── src/
+│   ├── worker.js         Entry point: the `scheduled` handler only (R21)
+│   ├── sources.js        Source table: id, kind, index URL and feeds by cadence (D3)
+│   ├── adapters/
+│   │   └── gbfs.js       Reads a GBFS index and validates it (D5, D8)
+│   ├── schedule.js       Which extra fetch, if any, runs at each minute (D4, D5, D10)
+│   ├── pass.js           One pass: dynamic feeds plus at most one extra fetch
+│   ├── fetch.js          Source request with the 60 s timeout and 10 MB limit (D8, D12)
+│   ├── index-state.js    Reads and stores each source's last valid index under `state/`
+│   ├── storage.js        Object keys, write-once and retries; the only module that accesses the bucket (D1, D8)
+│   ├── log.js            Pass events and the log object (D9)
+│   └── heartbeat.js      Healthchecks.io signal (D10)
+└── test/
+    ├── unit/             <module>.test.js
+    ├── integration/      The `scheduled` handler in workerd with in-memory R2
+    └── fixtures/         Trimmed source responses (ADR-0009)
+```
+
+Options considered:
+
+- **One flat `capture/` folder, sources as configuration (chosen).** One code path for both sources; adding a source is mostly data.
+- **`collector/` with one subfolder per source and a shared core.** Matches the earlier rule's guess, but adds structure to separate sources that share all their logic.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -300,7 +337,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| | | | | | |
+| 1 | [Layout](#component-layout) | One Worker in `capture/`, sources as configuration with one adapter per kind; functional core, imperative shell | One code path for both sources, and a new source is mostly data | R1 | Plan |
 
 ### 2.3 Architecture
 
@@ -338,15 +375,7 @@ TODO(T039): list `docs/decisions/0030-pipeline-logs.md` (modified) to add `compo
 |---|---|---|
 | R1 | | unit / integration / e2e |
 
-### 2.7 Breaking changes
-
-<!-- Optional. Shared models or interfaces this design changes, and how their dependants are handled. -->
-
-| File | Why it breaks | Strategy |
-|---|---|---|
-| | | |
-
-### 2.8 What does not change
+### 2.7 What does not change
 
 <!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
 
