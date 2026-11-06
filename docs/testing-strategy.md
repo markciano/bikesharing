@@ -22,22 +22,20 @@ Each component design applies the five answers below. "Paper" marks a statement 
 4. **Where:** `tests/unit/` mirroring `src/`, `tests/integration/`, `tests/e2e/`, `tests/fixtures/`; one `conftest.py` in `tests/`, plus one per level when needed (F25, F27).
 5. **Runs:** locally before each commit via `/implement`, under 1 s (F37); every level in the PR run (F39) and again in the `main` run (F40).
 
-#### Cloudflare Worker (JS)
-
-TODO(T039): when the collector design fixes the layout, rename this section's paths.
+#### Cloudflare Worker (JS, `capture/`)
 
 1. **When:** tests before code, as in Python. TDD was shown only in Python (F22); the Worker follows the same rule on paper.
-2. **Type:** unit for the functional core (pure functions such as `objectKey`); integration for the `scheduled` handler in `workerd`, with an in-memory R2 binding and the source simulated by Miniflare `outboundService` (F33); contract, producer side, on the same vectors (F35); post-deploy smoke test for `encodeResponseBody: 'manual'`, on paper (F34).
+2. **Type:** unit for the functional core (pure functions such as `rawKey` or `extraFetch`), with a fake R2 binding where a test needs R2 to fail, since the in-memory one cannot; integration for the `scheduled` handler in `workerd`, with an in-memory R2 binding and the source simulated by Miniflare `outboundService` (F33), and timeouts and size limits passed as test values; contract, producer side, on the same vectors (F35); post-deploy smoke test for what no local simulation verifies, such as `encodeResponseBody: 'manual'` (F34; [d004 › Deployment](designs/d004-bronze-data-capture.md#deployment)).
 3. **Format:** `@cloudflare/vitest-plugin` with `vitest` (F8); Arrange–Act–Assert, one concept per test, assertions on outputs (F21, F23); no network: `outboundService`, not MSW, when bytes must stay unchanged (F6–F8, F28); the oracle does not travel through the mocked path. Files `<module>.test.js`, matched by the default `include` pattern of [Vitest](https://vitest.dev/config/#include); test names are plain sentences stating behaviour and condition, the JS form of `test_<behaviour>_<condition>` (F26).
-4. **Where:** `test/unit/` and `test/integration/` inside the component; Node pinned in `package.json` `engines` within the range the test tools support (F9).
-5. **Runs:** locally before each commit, about 1.3 s (F37); PR run 13–15 s (F39); `main` run (F40); smoke test after deploy (F40, paper).
+4. **Where:** `test/unit/`, `test/integration/` and `test/contract/` inside the component; fixtures in `test/fixtures/`, trimmed from live responses by `scripts/trim-fixtures.js` ([ADR-0037](decisions/0037-test-fixtures-per-component.md); [d004 › Fixtures](designs/d004-bronze-data-capture.md#fixtures)); Node pinned in `package.json` `engines` within the range the test tools support (F9).
+5. **Runs:** locally before each commit, about 1.3 s (F37); PR run 13–15 s (F39); `main` run (F40); smoke test after each deploy, run by the owner on the first passes (F40; [d004 › Deployment](designs/d004-bronze-data-capture.md#deployment)).
 
 #### Contract (between components)
 
 1. **When:** as soon as a contract between two components is defined, before either side is written.
 2. **Type:** contract tests. Format/behaviour contracts (keys, naming, encoding): shared golden test vectors (F35). Data-shape contracts (silver, gold): ODCS schema, on paper (F36). Reasons: ADR-0015.
 3. **Format:** one JSON file with `valid` cases (input → expected output) and `invalid` cases, each breaking exactly one rule with its `reason`; binary payloads are built in memory by the tests. A change to the contract makes the valid data stop meeting it; it never relaxes it.
-4. **Where:** one shared file, read by relative path by the producer tests and the consumer tests (F35); inside the path filters of every component job that reads it.
+4. **Where:** one shared file per contract in `contracts/` at the root, owned by no component, read by relative path by the producer tests and the consumer tests (F35); inside the path filters of every component job that reads it.
 5. **Runs:** inside the test runs of both sides, so a contract change fails both (F18, F35).
 
 #### Docs (Markdown)
