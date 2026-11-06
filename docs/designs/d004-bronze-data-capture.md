@@ -438,6 +438,28 @@ Options considered:
 - **Top-level `contracts/` (chosen).** Neutral ground for an agreement between two components.
 - **Inside the producer, `capture/test/contracts/`.** Next to who defines it, but the pipeline would read inside another component's test folder.
 
+#### Deployment
+
+The owner deploys the Worker `bikesharing-capture` from the local machine with `npx wrangler deploy`. `wrangler.jsonc` sets:
+
+| Key | Value | Why |
+|---|---|---|
+| `name` | `bikesharing-capture` | Project naming (D1) |
+| `triggers.crons` | `["* * * * *"]` | One pass per minute (D3) |
+| `r2_buckets` | binding `BUCKET` → `bikesharing-bronze` | The Worker reaches R2 through the binding, with no R2 token |
+| `workers_dev`, `preview_urls` | `false`, set explicitly | No public URL (R21); `workers_dev` defaults to `true` |
+| `version_metadata` | binding `CF_VERSION_METADATA` | The `version` log field ([Pass logs](#pass-logs)) |
+| `observability.enabled` | `true` | Workers Logs, the fallback for a failed log write (R11) |
+
+The heartbeat URL is a Worker secret, `HEARTBEAT_URL`, set with `wrangler secret put`, and never stored in a repository file (R23).
+
+The deployment credential is an account-owned API token scoped to Editor on this Worker only, with a one-year expiry, read by wrangler from `CLOUDFLARE_API_TOKEN` (least privilege, NIST SP 800-53 AC-6; TH6). Such a token can update a Worker but not create it, so the first deploy runs with `wrangler login`, and the owner then creates the token and runs `wrangler logout`. The first deploy with the token checks the two points Cloudflare's docs leave open: that Editor suffices for a Worker with an R2 binding, and for `workers_dev: false`; if either fails, the permission is widened only as far as needed, and recorded here.
+
+Options considered:
+
+- **Token scoped to this Worker (chosen).** A leak reaches only this Worker, and stops at expiry; available since Cloudflare's per-Worker permissions of September 2026.
+- **`wrangler login` for every deploy.** Simplest, but keeps an account-wide permission on the local machine.
+
 ### 2.2 Decision log
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -458,6 +480,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL7 | [D9](#d9-capture-logs), [Source fetch](#source-fetch) | Bodies that are not gzip by magic number are compressed and logged as `recompressed`; Spec change | Flags a change in the undocumented `encodeResponseBody` before it costs silent corruption | R16 | Plan |
 | DL8 | [Tests](#tests-and-contracts) | Shared contract vectors in a top-level `contracts/` folder | A contract between two components belongs to neither | R1, R15 | Plan |
 | DL9 | [Tests](#tests-and-contracts) | The write-once probe also runs against Miniflare's R2; the fetch timeout is a parameter | Integration tests rest on a verified simulator; the timeout is testable without waiting 60 s | R7, R10 | Plan |
+| DL10 | [Deployment](#deployment) | Deploy with an account-owned token scoped to Editor on this Worker, one-year expiry; first deploy with `wrangler login` (least privilege, NIST SP 800-53 AC-6) | A leak reaches only this Worker | R21 | Plan |
 
 ### 2.3 Architecture
 
