@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18); s012 in File layout; the CPU check (DL19); the 7-day completeness check (DL20); the simulated sources' `Content-Encoding` (DL21). Pending the owner's decision, minor: heartbeat timeout, token names (ADR-0035), size limit on non-gzip bodies, the fixture-binding rule in `cloudflare-worker.md`.
+- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18); s012 in File layout; the CPU check (DL19); the 7-day completeness check (DL20); the simulated sources' `Content-Encoding` (DL21); minor: heartbeat timeout, token names, size limit wording, fixtures compressed once in `vitest.config.js`. Next: close the review (check Plan review in Phase).
 
 ## 1. Spec — what and why
 
@@ -436,7 +436,7 @@ The schedule uses `scheduledTime` and the keys use the actual start; the two dif
 `fetch.js` requests every response with `Accept-Encoding: gzip` and `encodeResponseBody: "manual"`, which keeps the source's gzip bytes undecoded ([s006](../spikes/s006-cloudflare-capture.md), F9); those bytes are stored as received, with no compression work. The fetches of a pass run in parallel, since waiting uses no CPU.
 
 - **Timeout:** `AbortSignal.timeout()` covers the whole response, body included (R7); its expiry is `timeout`. The duration is a parameter, 60 s in production, so tests use milliseconds. **DL9**
-- **Size limit:** the body is read as a stream and the fetch is aborted once it exceeds 10 MB, measured on the stored, compressed bytes (R22); this is `too_large`. Bicing sends no `content-length`, so the header cannot be trusted for this.
+- **Size limit:** the body is read as a stream and the fetch is aborted once it exceeds 10 MB, measured on the bytes as received (R22); this is `too_large`. Bicing sends no `content-length`, so the header cannot be trusted for this.
 - **A response that is not gzip:** a body whose first two bytes are not the gzip magic number `1f 8b` (RFC 1952) is compressed with `CompressionStream` before storing, and logged with `recompressed: true` (D9). The check reads the bytes, not `Content-Encoding`, so a runtime that stopped honouring `encodeResponseBody` would cost CPU instead of storing plain JSON under a `.json.gz` key (ADR-0012) under the lock. **DL7**
 - **Index:** fetched like any feed, stored under `raw/` (R24), then decompressed in memory and validated by its adapter; the decompressed size has the same 10 MB limit.
 - **`latency_ms`:** from the request to the end of reading the body, success or failure, once headers have arrived; `null` when none arrive (R14).
@@ -466,7 +466,7 @@ Options considered:
 
 - **Input:** for each source in `sources.js`, its index, then every feed the index lists for it, fetched once from the source.
 - **Trimming:** the index is kept whole, since it is the only response capture parses. In every other feed, the list of entries under `data` (stations, vehicles, regions, plans, vehicle types, zones) keeps its first 3 entries, and everything else is kept as received; short lists stay whole. Capture stores feeds as opaque bytes, so which entries are kept changes no code path.
-- **Output:** pretty-printed, uncompressed JSON at `test/fixtures/<source>/<feed>.json`, a name that does not change when the fixtures are regenerated. Tests compress it in memory before serving it.
+- **Output:** pretty-printed, uncompressed JSON at `test/fixtures/<source>/<feed>.json`, a name that does not change when the fixtures are regenerated. `vitest.config.js` compresses each fixture once, serves those bytes from `outboundService` and passes the same bytes to the tests as a binding, since tests run inside workerd and do not read the repository's files.
 - **Provenance:** `test/fixtures/manifest.json` holds one entry per fixture, with `source`, `feed`, `url` and `captured_at` (ISO 8601 UTC), plus `attribution` for Bicing (see its source card); the script rewrites it with the fixtures.
 
 Edge cases are not fixtures: an invalid index, a body that is not gzip, an oversized body, a timeout and the absence of `content-length` are built in memory by each test from a fixture. **DL16**
@@ -493,7 +493,7 @@ The owner deploys the Worker `bikesharing-capture` from the local machine with `
 
 The heartbeat URL is a Worker secret, `HEARTBEAT_URL`, set with `wrangler secret put`, and never stored in a repository file (R23).
 
-The deployment credential is an account-owned API token scoped to Editor on this Worker only, with a one-year expiry, read by wrangler from `CLOUDFLARE_API_TOKEN` (least privilege, NIST SP 800-53 AC-6; TH6). Such a token can update a Worker but not create it, so the first deploy runs with `wrangler login`, and the owner then creates the token and runs `wrangler logout`. The first deploy with the token checks the two points Cloudflare's docs leave open: that Editor suffices for a Worker with an R2 binding, and for `workers_dev: false`; if either fails, the permission is widened only as far as needed, and recorded here.
+The deployment credential is an account-owned API token, `bikesharing-capture-deploy` ([ADR-0035](../decisions/0035-cloud-resource-naming.md)), scoped to Editor on this Worker only, with a one-year expiry, read by wrangler from `CLOUDFLARE_API_TOKEN` (least privilege, NIST SP 800-53 AC-6; TH6). Such a token can update a Worker but not create it, so the first deploy runs with `wrangler login`, and the owner then creates the token and runs `wrangler logout`. The first deploy with the token checks the two points Cloudflare's docs leave open: that Editor suffices for a Worker with an R2 binding, and for `workers_dev: false`; if either fails, the permission is widened only as far as needed, and recorded here.
 
 After every deploy, the owner runs a smoke test on the first passes: each dynamic feed has a new object under `raw/` that passes `gunzip -t`, and the pass's log object exists with `recompressed: false` and the deployed version ID in `version`. It covers what local tests cannot, such as `encodeResponseBody` ([Tests and contracts](#tests-and-contracts)).
 
@@ -522,7 +522,7 @@ The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys>
 
 The completeness check of D6 covers the 7 full UTC days that follow production's first day. It is `spikes/cloudflare-capture-spike/analysis/capture-completeness.sql`, run with DuckDB over an `rclone lsf -R` listing of `bikesharing-bronze/raw/` saved to a local file; no object is downloaded. For each source and dynamic feed, it counts the distinct minutes of the window with at least one object, read from the key's timestamp, divides them by 10,080, and flags any feed below 99.5%. Close records the window and the percentage of each feed.
 
-rclone uses an R2 token with Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, deleted with the spike's bucket (D11). The completeness listing runs after that, with its own token, `bikesharing-t039-completeness`, with Object Read on `bikesharing-bronze` only ([ADR-0035](../decisions/0035-cloud-resource-naming.md)), deleted when the task closes. **DL18** **DL20**
+rclone uses an R2 token, `bikesharing-t039-switch`, with Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, deleted with the spike's bucket (D11). The completeness listing runs after that, with its own token, `bikesharing-t039-completeness`, with Object Read on `bikesharing-bronze` only ([ADR-0035](../decisions/0035-cloud-resource-naming.md)), deleted when the task closes. **DL18** **DL20**
 
 Options considered:
 
@@ -625,7 +625,7 @@ Colours show what each box touches: grey, no I/O (the functional core); blue, R2
 │   ├── package.json                           (new) Manifest
 │   ├── package-lock.json                      (new) Lockfile
 │   ├── wrangler.jsonc                         (new) Worker configuration (Deployment), with `compatibility_date`
-│   ├── vitest.config.js                       (new) Test configuration, sources through `outboundService`
+│   ├── vitest.config.js                       (new) Test configuration, sources through `outboundService`, fixtures compressed once and passed as bindings
 │   ├── scripts/trim-fixtures.js               (new) Fetches and trims the fixtures (Fixtures)
 │   ├── src/                                   (new) The modules of Component layout
 │   └── test/
@@ -754,7 +754,9 @@ export function extraFetch(scheduledTime);
 
 ```js
 /** Production limits; tests pass their own (DL9). */
-export const LIMITS = { timeoutMs: 60_000, maxBytes: 10_000_000, retryDelayMs: 250 };
+export const LIMITS = {
+  timeoutMs: 60_000, maxBytes: 10_000_000, retryDelayMs: 250, heartbeatTimeoutMs: 10_000,
+};
 
 /**
  * @typedef {{ ok: true, status: number, latencyMs: number,
@@ -917,11 +919,12 @@ export async function writeLog(bucket, runId, events, limits);
 
 ```js
 /**
- * GET to `url`, aborted by `AbortSignal.timeout(timeoutMs)`. Never throws.
+ * GET to `url`, aborted by `AbortSignal.timeout(heartbeatTimeoutMs)`, 10 s in production
+ * as in Healthchecks.io's examples. Never throws.
  * `error` is built from the error's name and message with every occurrence of `url`
  * removed, so no result carries the URL (R23).
  * @param {string} url `HEARTBEAT_URL`
- * @param {{ timeoutMs: number }} limits
+ * @param {{ heartbeatTimeoutMs: number }} limits
  * @returns {Promise<
  *   { ok: true, status: number, latencyMs: number }
  * | { ok: false, status: number | null, latencyMs: number | null,
@@ -993,7 +996,7 @@ export default {
 
 <!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
 
-Integration tests run the `scheduled` handler in workerd with in-memory R2 and the sources served by `outboundService` from fixtures, with `LIMITS` in milliseconds and bytes. Each simulated source serves its fixture compressed in memory, without `Content-Encoding`, so the bytes reach capture unchanged whatever the runtime does with `encodeResponseBody`; the stored object is compared with those same bytes, and a fixture served uncompressed exercises `recompressed`. Unit tests that need a failing bucket pass `storage.js` a fake binding, since the in-memory R2 cannot fail on demand.
+Integration tests run the `scheduled` handler in workerd with in-memory R2 and the sources served by `outboundService` from fixtures, with `LIMITS` in milliseconds and bytes. Each simulated source serves its fixture as compressed once by `vitest.config.js` ([Fixtures](#fixtures)), without `Content-Encoding`, so the bytes reach capture unchanged whatever the runtime does with `encodeResponseBody`; the stored object is compared with those same bytes, passed to the test as a binding, and a fixture served uncompressed exercises `recompressed`. Unit tests that need a failing bucket pass `storage.js` a fake binding, since the in-memory R2 cannot fail on demand.
 
 | R | Method | What is verified | Level |
 |---|---|---|---|
