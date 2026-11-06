@@ -1,9 +1,9 @@
 -- One-off queries over the spike's capture logs (d004 > D2).
 --
 -- Run them from the repository root, in either of these ways:
---   All at once:   duckdb -f scratch/spike-log-queries.sql
+--   All at once:   duckdb -f spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql
 --   Interactive:   duckdb
---                  .read scratch/spike-log-queries.sql
+--                  .read spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql
 --                  (then paste a single query to try changes; .quit to leave)
 --
 -- DuckDB keeps nothing here: there is no database file, and it reads the JSONL

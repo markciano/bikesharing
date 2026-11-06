@@ -323,6 +323,7 @@ capture/
 └── test/
     ├── unit/             <module>.test.js
     ├── integration/      The `scheduled` handler in workerd with in-memory R2
+    ├── contract/         Producer side of the vectors in `contracts/`
     └── fixtures/         Trimmed source responses (ADR-0009)
 ```
 
@@ -512,12 +513,50 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
-TODO(T039): list `docs/decisions/0030-pipeline-logs.md` (modified) to add `component` and `version` to its common fields (D9).
-
 ```text
-<path>/
-└── <file>      (new)        <purpose>
+.
+├── CLAUDE.md                                  (modified) Project structure: `capture/` and `contracts/`
+├── .env.example                               (modified) Variables grouped and documented; deploy and R2 token scopes
+├── .claude/rules/code/
+│   ├── cloudflare-worker.md                   (modified) `paths:` to `capture/**`; contract tests; TODO removed
+│   └── testing.md                             (modified) `contracts/**` in `paths:`; TODO removed
+├── .github/workflows/ci.yml                   (modified) Job `capture` and final job `ci-passed`; TODO removed
+├── capture/                                   (new) Production capture Worker, as in Component layout
+│   ├── .nvmrc                                 (new) Pinned Node version
+│   ├── package.json                           (new) Manifest
+│   ├── package-lock.json                      (new) Lockfile
+│   ├── wrangler.jsonc                         (new) Worker configuration (Deployment), with `compatibility_date`
+│   ├── vitest.config.js                       (new) Test configuration, sources through `outboundService`
+│   ├── src/                                   (new) The modules of Component layout
+│   └── test/
+│       ├── unit/                              (new) One file per module
+│       ├── integration/                       (new) The `scheduled` handler in workerd with in-memory R2
+│       ├── contract/                          (new) Producer side of the vectors in `contracts/`
+│       └── fixtures/                          (new) Trimmed source responses (ADR-0009)
+├── contracts/                                 (new) Shared contract vectors (Tests and contracts)
+│   ├── bronze-keys.json                       (new) Object keys (ADR-0012, D1)
+│   └── capture-logs.json                      (new) Log lines (D9)
+├── docs/
+│   ├── architecture.md                        (modified) Runtime view: pass schedule and one-pass diagram; completeness target (D6)
+│   ├── testing-strategy.md                    (modified) Worker section paths to `capture/`; contract tests; smoke test (Deployment)
+│   ├── decisions/
+│   │   ├── 0023-storage-security-baseline.md  (modified) TODOs resolved by this design removed
+│   │   ├── 0030-pipeline-logs.md              (modified) Common fields `component` and `version` (D9)
+│   │   └── 0035-cloud-resource-naming.md      (new) Cloud resource naming (D1)
+│   └── sources/
+│       ├── ambici.md                          (modified) Facts observed in the spike's capture that capture depends on
+│       └── bicing.md                          (modified) Same; `OPEN_DATA_BCN_TOKEN`
+└── spikes/cloudflare-capture-spike/
+    ├── README.md                              (modified) The switch script, the log queries and the probe
+    ├── analysis/
+    │   ├── spike_raw_switch.py                (new) Key list up to the cutoff and count comparison (Switch tooling)
+    │   └── spike-log-queries.sql              (new) The queries of D2
+    └── js/
+        ├── src/probe-write-once.js            (new) Write-once probe, run remotely against R2 and locally against Miniflare (Write-once)
+        └── wrangler.probe.jsonc               (new) Probe configuration, bound to `bikesharing-t039-write-once`
 ```
+
+The facts for the source cards are those of D3, D4, D5, D8 and D12 that capture depends on: how often each static feed changed, the GBFS `ttl` values, the stable index size, the latency shifts, Bicing's missing `content-length` and the largest response observed.
 
 ### 2.5 Components
 
