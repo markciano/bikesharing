@@ -8,7 +8,7 @@ Sections marked Optional are kept only when they apply.
 
 - **Task:** T039
 - **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md), [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0030](../decisions/0030-pipeline-logs.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)
-- **New ADRs from this doc:** none
+- **New ADRs from this doc:** one for the bucket naming convention (D1), unless an existing ADR already covers it; [ADR-0030](../decisions/0030-pipeline-logs.md) is amended (D9)
 
 ## Status
 
@@ -17,7 +17,7 @@ Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
 - State: Draft 📝
-- Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
 
 ## 1. Spec — what and why
@@ -68,12 +68,13 @@ The spike logs are queried once before they are deleted, because they have only 
 
 Rejected: starting production with an empty bucket. It loses the captured responses that exist only in the spike's bucket.
 
-#### D3. Static feed cadence
+#### D3. Feed cadence
 
-Each static feed is captured at the cadence its observed changes justify, because a change that is not captured cannot be recovered. Over 12.5 days of hourly captures (2026-10-14 to 2026-10-26), comparing the `data` field, `station_information` changed 68 times in Bicing and 4 times in AMBici; two other feeds changed once and the remaining ten never did. The GBFS `ttl` does not help: nearly every feed declares 60 s or 0 regardless of how often it changes.
+This table lists every feed capture takes. The dynamic feeds are captured every minute, the cadence of the spike's capture. Each static feed is captured at the cadence its observed changes justify, because a change that is not captured cannot be recovered. Over 12.5 days of hourly captures (2026-10-14 to 2026-10-26), comparing the `data` field, `station_information` changed 68 times in Bicing and 4 times in AMBici; two other feeds changed once and the remaining ten never did. The GBFS `ttl` does not help: nearly every feed declares 60 s or 0 regardless of how often it changes.
 
 | Cadence | Feeds |
 |---|---|
+| Every minute (dynamic) | `station_status` of each source, `free_bike_status` of AMBici |
 | Hourly | `station_information` of each source |
 | Daily | The other 12 static feeds: `system_information`, `system_pricing_plans`, `system_regions`, `vehicle_types` and `geofencing_zones` of each source, `system_hours` of AMBici, `gbfs_versions` of Bicing |
 
@@ -85,7 +86,9 @@ Rejected: every 2 days or weekly for the daily feeds. Weekly saves about 1.2 MB 
 
 #### D4. Static feeds spread across passes
 
-Each capture pass carries the dynamic feeds and at most one extra fetch, either a static feed, an index refresh (D5) or the heartbeat (D10), so dynamic feeds are captured every minute and no extra fetch adds to another's CPU time. [s006](../spikes/s006-cloudflare-capture.md) measured about 5 ms for a dynamic pass and 23–28 ms with the 16 feeds of a static pass, which estimates 1.5 ms per added feed and about 6.5 ms for a pass with one extra fetch. Extra fetches run at fixed, distinct minutes; 134 of the 1,440 daily passes carry one.
+Each capture pass carries the dynamic feeds and at most one extra fetch, either a static feed, an index refresh (D5) or the heartbeat (D10), so dynamic feeds are captured every minute and no extra fetch adds to another's CPU time. [s006](../spikes/s006-cloudflare-capture.md) measured about 5 ms for a dynamic pass and 23–28 ms with the 16 feeds of a static pass, which estimates 1.5 ms per added feed and about 6.5 ms for a pass with one extra fetch. Extra fetches run at fixed, distinct minutes; 132 of the 1,440 daily passes carry one. While a source has no valid index, its passes fetch only that index, in place of its feeds and extras (D8), so they cost less than a normal pass.
+
+CPU time can shift without any change of ours. During the spike's capture, median source latency moved from about 270 ms to 38 ms on 2026-10-29 at 22:07 UTC, and to about 145 ms on 2026-11-03 at about 08:00 UTC, while the average CPU per run rose from 2–3 ms to almost 5 ms; the only deployment was on 2026-10-14. Both shifts coincided with a change in the second at which the cron starts, which suggests a move of the Worker by Cloudflare; this is not confirmed. Passes with a static feed therefore keep a margin below the limit.
 
 If passes with an extra fetch exceed the 10 ms limit in production, run them in their own executions.
 
@@ -102,7 +105,7 @@ Rejected:
 
 #### D6. Capture completeness target
 
-Each dynamic feed has a clean capture in at least 99.5% of the minutes of each calendar month, which allows 216 minutes of failures in a 30-day month. Over 21 full days of the spike's capture (2026-10-15 to 2026-11-04), each feed reached 99.81–99.82%, or about 78 minutes per month, and fell below 99.5% on a single day. The target follows the SRE practice of an indicator with an objective and an error budget. Static feeds have no percentage, because one failure in a daily feed is a whole day without data; a failure there is handled as an individual event.
+Each dynamic feed has a clean capture in at least 99.5% of the minutes of each calendar month, which allows 216 minutes of failures in a 30-day month. A minute is clean for a feed when an object of that feed is stored under `raw/` for that minute (D9). The first 7 days of production are checked against the same threshold; the monthly follow-up belongs to the data quality task (D7). Over 21 full days of the spike's capture (2026-10-15 to 2026-11-04), each feed reached 99.81–99.82%, or about 78 minutes per month, and fell below 99.5% on a single day. The target follows the SRE practice of an indicator with an objective and an error budget. Static feeds have no percentage, because one failure in a daily feed is a whole day without data; a failure there is handled as an individual event.
 
 A missed month leads to reviewing its cause, with no automatic action. If capture stays well above the target for several months, raise the target.
 
@@ -125,7 +128,8 @@ Capture retries only what cannot be recovered in another way, using bounded retr
 | A source fails | No retry in the pass. The failure is logged and the next scheduled capture applies, so a change in a daily feed can be recorded up to 48 h late. |
 | A data write fails | Up to 2 retries with a short wait. A key that already exists counts as written, not as a failure. |
 | A log write fails | Up to 2 retries with a short wait. If it still fails, the error goes to the Workers logs. |
-| An index refresh fails or returns an invalid index | Capture keeps the last valid index and logs the error. An index is valid when every entry has `name` and `url`, and it includes every feed captured (D3). |
+| An index refresh fails or returns an invalid index | Capture keeps the last valid index and logs the error. An index is valid when every entry has `name` and `url`, and it includes every feed listed in D3. |
+| A source has no valid index yet, as on the first pass | Capture refreshes that source's index on every pass and fetches none of its feeds until the index is valid, an exception to D4. |
 
 Each key is written once. Duplicate passes start at different seconds, so their keys differ; both objects are kept and the pipeline deduplicates them ([d002 › R13](d002-requirements.md#requirements)). In the unobserved case of two passes in the same second, the existing-key rule applies. `latency_ms` is recorded whenever the source responds, and is null only when no response arrives.
 
@@ -138,7 +142,7 @@ Rejected:
 
 #### D9. Capture logs
 
-Capture writes one log object per pass as JSON Lines, under `logs/date=<YYYY-MM-DD>/<run_id>.jsonl`, where `run_id` is the pass's capture time in the [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md) key format. The format follows [ADR-0030](../decisions/0030-pipeline-logs.md), which a new ADR replaces to add two common fields for the whole project: `component` names the part of the system that wrote the event, following the practice of `service.name` in OpenTelemetry, and `version` identifies the deployed code of that component. Every event therefore carries `ts`, `level`, `component`, `version`, `run_id` and `event`, plus the fields of its event.
+Capture writes one log object per pass as JSON Lines, under `logs/date=<YYYY-MM-DD>/<run_id>.jsonl`, where `run_id` is the pass's capture time in the [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md) key format. The format follows [ADR-0030](../decisions/0030-pipeline-logs.md), which is amended to add two common fields for the whole project, with the owner's permission since nothing is built on it yet: `component` names the part of the system that wrote the event, following the practice of `service.name` in OpenTelemetry, and `version` identifies the deployed code of that component. Every event therefore carries `ts`, `level`, `component`, `version`, `run_id` and `event`, plus the fields of its event.
 
 In capture, `component` is `capture` and `version` is the Worker's version ID.
 
@@ -146,10 +150,12 @@ In capture, `component` is `capture` and `version` is the Worker's version ID.
 |---|---|---|
 | `feed_captured` | `info` | `source`, `feed`, `status`, `latency_ms`, `bytes`, `attempts` |
 | `feed_failed` | `error` | `source`, `feed`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
-| `index_refreshed` | `info` | `source`, `status`, `latency_ms`, `bytes` |
+| `index_refreshed` | `info` | `source`, `status`, `latency_ms`, `bytes`, `unknown_feeds` |
 | `index_rejected` | `error` | `source`, `status`, `latency_ms`, `error_type`, `error` |
+| `heartbeat_sent` | `info` | `status`, `latency_ms` |
+| `heartbeat_failed` | `warning` | `status`, `latency_ms`, `error_type`, `error` |
 
-`attempts` counts write attempts, and is 0 when the source fails. `error_type` is one of `source_http`, `timeout`, `network`, `write` or `invalid_index`.
+`attempts` counts write attempts, and is 0 when the source fails. `error_type` is one of `http`, `timeout`, `network`, `too_large`, `write` or `invalid_index`; the event tells whether it came from a feed, an index or the heartbeat. `level` is `info`, `warning` for a failure that does not affect the data, such as the heartbeat's, or `error`. `unknown_feeds` lists the feeds in the index that are not listed in D3, and is usually empty; a feed that the source removes makes the index invalid (D8).
 
 These fields answer the following capture questions, the starting point for T042:
 
@@ -158,6 +164,9 @@ These fields answer the following capture questions, the starting point for T042
 - Are there duplicate or late passes, and does each object match a log line?
 - Did a failure come from the source, a timeout or R2, and is R2 failing even when retries succeed?
 - Which deployed code produced this data?
+- Has a source added or removed a feed?
+
+The objects under `raw/` are the record of what was captured, and the logs explain failures: a log write can fail after its data was stored (D8).
 
 Questions that need the response's content, such as whether a source keeps returning HTTP 200 with frozen data, belong to the pipeline.
 
@@ -171,7 +180,7 @@ Rejected:
 
 #### D10. Capture heartbeat
 
-Capture signals a heartbeat to Healthchecks.io once per hour, the service [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) chose for the pipeline, which emails the owner when no signal arrives within the period plus 1 h of grace. The monitor sits outside Cloudflare, because a stopped Worker cannot report its own stop. The pass sends the signal only if it stored all three dynamic feeds, so the signal means that data is being stored, not just that the Worker ran: an outage of R2 or of a source that lasts for hours also raises the alert. The goal is that capture never stays down for days unnoticed, which an alert within about 2 h meets, rather than a fast reaction. A failed signal does not affect capture.
+Capture signals a heartbeat to Healthchecks.io once per hour, the service [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) chose for the pipeline, which emails the owner when no signal arrives within the period plus 1 h of grace. The monitor sits outside Cloudflare, because a stopped Worker cannot report its own stop. The pass sends the signal only if it stored all three dynamic feeds listed in D3, so the signal means that data is being stored, not just that the Worker ran: an outage of R2 or of a source that lasts for hours also raises the alert. The goal is that capture never stays down for days unnoticed, which an alert within about 2 h meets, rather than a fast reaction. A failed signal does not affect capture, and is logged as `heartbeat_failed` (D9) without the signal URL (D12).
 
 One failed signal does not alert, since the next one arrives within the grace. An outage shorter than about an hour may raise no alert, and shows in completeness (D6) instead. The signal costs nothing on Cloudflare's Free plan: it is an outgoing request from an existing pass.
 
@@ -185,11 +194,11 @@ Rejected:
 
 #### D11. Switch from spike capture to production
 
-Production capture replaces `capture-v4` by running in parallel with it, so the switch leaves no gap in data that cannot be captured again. The overlap also tests production against the spike's capture, minute by minute.
+Production capture replaces `capture-v4` by running in parallel with it, so the switch leaves no gap in data that cannot be captured again. The overlap also tests production against the spike's capture, minute by minute. It doubles the requests to the sources for its duration, at one per feed and minute, which is accepted since no volume limit has been observed.
 
 1. The production Worker is deployed and captures to `bikesharing-bronze` while `capture-v4` keeps capturing.
 2. `V4/raw/` is copied up to the last pass before production's first captured minute (D2), so the copy adds no duplicates and no key can collide.
-3. The copy is checked by object count per day and feed.
+3. The copy is checked by object count per day and feed. If the counts differ, the copy is repeated: the lock is never enabled on an unchecked copy.
 4. The bucket lock is enabled.
 5. `capture-v4` is stopped, and the queries of D2 run on its complete logs.
 6. `bikesharing-capture-spike` is emptied and deleted, together with `capture-v4` and its token, so no access to unused data remains (least privilege, as in [ADR-0023](../decisions/0023-storage-security-baseline.md)). A spike that needs a test bucket creates and removes its own, as [s010](../spikes/s010-storage-table-format.md) did.
@@ -200,6 +209,19 @@ Rejected:
 
 - Stopping `capture-v4` before deploying production: it is simpler, but leaves a gap that grows if the deployment fails.
 - Keeping the spike's bucket as a test bucket: its name breaks the convention of D1, and it keeps an old token alive.
+
+#### D12. Capture security
+
+One STRIDE pass over D1–D11 keeps the threats with a real chance or a lasting impact; the storage-wide baseline of [ADR-0023](../decisions/0023-storage-security-baseline.md) still applies. Bronze's lock makes some impacts permanent, so their controls act before the write. The response size limit leaves room for legitimate growth, such as a source publishing real geofencing zones, since the largest response observed is 57 KB.
+
+| # | Threat (STRIDE) | Impact | Control | Requirement |
+|---|---|---|---|---|
+| `TH1` | Spoofing: an HTTP request triggers capture passes | Extra writes, CPU and duplicate data, kept forever under the lock | No HTTP handler in the production Worker; its public URL stays disabled | R21 |
+| `TH2` | Denial of service: an oversized response | Storage kept forever under the lock, and its cost | Responses over 10 MB are rejected and logged | R22 |
+| `TH3` | Information disclosure: the heartbeat URL ends up in a log | The secret cannot be deleted from a locked log | Errors of the heartbeat signal never include its URL | R23 |
+| `TH4` | Tampering: the bucket lock is misconfigured | Bronze can be deleted or overwritten | After enabling it, overwriting an existing object is checked to fail | Done when |
+| `TH5` | Spoofing: the heartbeat URL leaks | False signals hide an outage | Accepted, as in [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md); it gives access to nothing else | Accepted |
+| `TH6` | Elevation of privilege: the deployment token leaks | Code that writes junk or alters `state/` is deployed | A deployment token scoped to this Worker only, held by the owner | Done when |
 
 ### 1.3 Requirements
 
@@ -212,27 +234,49 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 - Optional: Where <feature is included>, the <system> shall <response>.
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
-- **R1** `<EARS statement>` (D`<N>`)
+- **R1** The capture shall store the response of each dynamic feed listed in D3 every minute in `bikesharing-bronze`, under the key layout of D1, except as R13 allows. (D1, D3, D4)
+- **R2** The capture shall capture `station_information` of each source once per hour. (D3)
+- **R3** The capture shall capture each of the 12 daily static feeds once per day. (D3)
+- **R4** The capture shall make at most one extra fetch per pass (a static feed, an index refresh or the heartbeat), at fixed and distinct minutes, except as R13 allows. (D4, D5, D10)
+- **R5** The capture shall refresh each source's index once per hour, at a different minute for each source, except as R13 allows. (D5)
+- **R6** The capture shall fetch each feed from the URL in its source's last valid index. (D5)
+- **R7** If a source takes longer than 60 s to return its complete response, then the capture shall abandon the fetch and log it as a failure. (D8)
+- **R8** If a source fails, then the capture shall log the failure without retrying in the same pass. (D8)
+- **R9** If a data or log write fails, then the capture shall retry it up to 2 times with a short wait. (D8)
+- **R10** If a write finds its key already stored, then the capture shall count it as written. (D8)
+- **R11** If a log write still fails after its retries, then the capture shall write the error to the Workers logs. (D8)
+- **R12** If an index refresh fails or returns an invalid index, because an entry lacks `name` or `url` or a feed listed in D3 is missing, then the capture shall keep the source's last valid index and log the rejection. (D8)
+- **R13** While a source has no valid index, the capture shall refresh that source's index on every pass and fetch none of its feeds. (D4, D8)
+- **R14** The capture shall record `latency_ms` whenever the source responds, and leave it null only when no response arrives. (D8)
+- **R15** The capture shall write one log object per pass under `logs/date=<YYYY-MM-DD>/<run_id>.jsonl`, whose events carry `ts`, `level`, `component`, `version`, `run_id` and `event`. (D9)
+- **R16** The capture shall log the events and fields listed in D9, including `unknown_feeds`. (D7, D9)
+- **R17** When the heartbeat pass has stored all three dynamic feeds listed in D3, the capture shall send the heartbeat signal. (D10)
+- **R18** If the heartbeat pass has not stored all three dynamic feeds listed in D3, then the capture shall not send the heartbeat signal. (D10)
+- **R19** If no signal arrives within 1 h plus 1 h of grace, then the monitor shall email the owner. (D10)
+- **R20** If the heartbeat signal fails, then the capture shall continue unaffected and log the failure. (D9, D10)
+- **R21** The production Worker shall run only from its cron trigger, with no HTTP handler, and its public URL shall stay disabled. (D12, TH1)
+- **R22** If a response exceeds 10 MB, then the capture shall reject it and log the failure. (D12, TH2)
+- **R23** The capture shall not include the heartbeat URL in any log or error. (D12, TH3)
 
 ### 1.4 Done when
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
-- `<extra condition>`
+- `V4/raw/` is copied up to the switch cutoff and checked by object count before the bucket lock is enabled. (D2, D11)
+- The bucket lock is enabled, and overwriting an existing object fails. (D11, TH4)
+- The queries of D2 have run on the spike's complete logs. (D2)
+- `bikesharing-capture-spike`, `capture-v4` and its token are deleted. (D11)
+- The deployment token is scoped to the production Worker only. (TH6)
+- Passes with an extra fetch stay below 10 ms of CPU in the first days of production. (D4)
+- Each dynamic feed has a clean capture in at least 99.5% of the minutes of the first 7 days of production. (D6)
 
 ### 1.5 Out of scope
 
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
-- Calculating and storing completeness and other quality answers (D7) — T042
+- Calculating and storing completeness and other quality answers (D7), from the questions and fields in D9 — T042
+- Quality checks capture does not make: repeated failures of a static feed or an index, and HTTP 200 with frozen data (D10) — T042
 - Centralising quality rules and targets, such as D6's, in one place — T042
-
-### 1.6 Open questions
-
-<!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
-
-| OQ | Question | Depends on | Notes |
-|---|---|---|---|
 
 ## 2. Plan — how
 
@@ -265,6 +309,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 ### 2.4 File layout
 
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
+
+TODO(T039): list `docs/decisions/0030-pipeline-logs.md` (modified) to add `component` and `version` to its common fields (D9).
 
 ```text
 <path>/
