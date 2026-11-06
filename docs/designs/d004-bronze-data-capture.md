@@ -460,6 +460,23 @@ Options considered:
 - **Token scoped to this Worker (chosen).** A leak reaches only this Worker, and stops at expiry; available since Cloudflare's per-Worker permissions of September 2026.
 - **`wrangler login` for every deploy.** Simplest, but keeps an account-wide permission on the local machine.
 
+#### Switch tooling
+
+The owner runs the switch of D11 from the local machine with rclone, as in [s006](../spikes/s006-cloudflare-capture.md), and one script, `scripts/spike_raw_switch.py` (Python standard library only), with two commands:
+
+- `keys`: lists the keys under `V4/raw/` whose timestamp is earlier than the cutoff, the minute of production's first object under `raw/`, as paths relative to `V4/raw/`.
+- `count`: compares the number of objects per day and feed under `V4/raw/` before the cutoff and under `bikesharing-bronze/raw/` before the cutoff, from two `rclone lsf -R` listings, and exits non-zero on any difference.
+
+The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 rerun `spikes/cloudflare-capture-spike/analysis/analyze_remote_capture.py` on the local copy, after a last `rclone copy` once `capture-v4` has stopped. The script is deleted together with the spike's bucket.
+
+rclone uses an R2 token with Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, deleted with the spike's bucket (D11).
+
+Options considered:
+
+- **rclone server-side copy and a small script (chosen).** A tool proven in the spike; the only new code filters and counts.
+- **One Python script with `boto3`.** One piece, but its retries and verification must be written, for a one-off run.
+- **rclone from the local copy to bronze.** Avoids the bucket-to-bucket copy, but uploads over 1.3 GB and trusts the local copy to be complete; the fallback if the server-side copy fails.
+
 ### 2.2 Decision log
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -481,6 +498,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL8 | [Tests](#tests-and-contracts) | Shared contract vectors in a top-level `contracts/` folder | A contract between two components belongs to neither | R1, R15 | Plan |
 | DL9 | [Tests](#tests-and-contracts) | The write-once probe also runs against Miniflare's R2; the fetch timeout is a parameter | Integration tests rest on a verified simulator; the timeout is testable without waiting 60 s | R7, R10 | Plan |
 | DL10 | [Deployment](#deployment) | Deploy with an account-owned token scoped to Editor on this Worker, one-year expiry; first deploy with `wrangler login` (least privilege, NIST SP 800-53 AC-6) | A leak reaches only this Worker | R21 | Plan |
+| DL11 | [Switch tooling](#switch-tooling) | rclone server-side copy with a key list up to the cutoff, and a standard-library script that lists keys and compares counts | Proven tool from s006; the only new code filters and counts | — | Plan |
 
 ### 2.3 Architecture
 
