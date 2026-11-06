@@ -326,6 +326,42 @@ Options considered:
 - **One flat `capture/` folder, sources as configuration (chosen).** One code path for both sources; adding a source is mostly data.
 - **`collector/` with one subfolder per source and a shared core.** Matches the earlier rule's guess, but adds structure to separate sources that share all their logic.
 
+#### Pass schedule
+
+`schedule.js` holds the calendar as an explicit table, keyed by the event's `scheduledTime` in UTC, not by the clock, so a late pass still makes its extra fetch. Each source's index refresh comes 5 minutes before its `station_information`, which then uses the refreshed URLs; minute `:00` carries no extra fetch.
+
+| Minute of every hour | Extra fetch |
+|---|---|
+| `:07` | Bicing index |
+| `:12` | Bicing `station_information` |
+| `:22` | Heartbeat |
+| `:37` | AMBici index |
+| `:42` | AMBici `station_information` |
+
+The 12 daily feeds run at minute `:52` of every even hour, alternating sources, so an outage of one hour costs at most one of them:
+
+| Time (UTC) | Source | Feed |
+|---|---|---|
+| 00:52 | Bicing | `system_information` |
+| 02:52 | AMBici | `system_information` |
+| 04:52 | Bicing | `system_pricing_plans` |
+| 06:52 | AMBici | `system_pricing_plans` |
+| 08:52 | Bicing | `system_regions` |
+| 10:52 | AMBici | `system_regions` |
+| 12:52 | Bicing | `vehicle_types` |
+| 14:52 | AMBici | `vehicle_types` |
+| 16:52 | Bicing | `geofencing_zones` |
+| 18:52 | AMBici | `geofencing_zones` |
+| 20:52 | Bicing | `gbfs_versions` |
+| 22:52 | AMBici | `system_hours` |
+
+This gives 5 × 24 + 12 = 132 extra fetches per day (D4).
+
+Options considered for the daily feeds:
+
+- **One every 2 hours (chosen).** Source failures tend to cluster; an outage of one hour loses at most one daily feed.
+- **All within one hour.** Equally readable, but an outage in that hour loses the day's daily feeds of the affected source.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -338,6 +374,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | 1 | [Layout](#component-layout) | One Worker in `capture/`, sources as configuration with one adapter per kind; functional core, imperative shell | One code path for both sources, and a new source is mostly data | R1 | Plan |
+| 2 | [Schedule](#pass-schedule) | Daily feeds one every 2 hours at `:52`, alternating sources | An outage of one hour loses at most one daily feed | R3, R4 | Plan |
 
 ### 2.3 Architecture
 
