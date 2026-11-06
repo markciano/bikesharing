@@ -2,7 +2,8 @@
 paths:
   - "src/**"
   - "tests/**"
-  - "collector/**"
+  - "capture/**"
+  - "contracts/**"
 ---
 
 # Testing rules (all languages)
@@ -23,8 +24,6 @@ Reasons and per-component detail: [testing strategy](../../../docs/testing-strat
 ## Contracts between components
 
 - A contract is tested as soon as it is defined, before either side is written.
-- Format and behaviour contracts (keys, naming, encoding) use shared test vectors: one JSON file with `valid` cases (input → expected output) and `invalid` cases, each breaking exactly one rule and stating its `reason`.
+- Format and behaviour contracts (keys, naming, encoding) use shared test vectors in `contracts/` at the root, owned by no component: one JSON file per contract, with `valid` cases (input → expected output) and `invalid` cases, each breaking exactly one rule and stating its `reason`.
 - Producer and consumer tests read the same file by relative path. Binary payloads are built in memory by the tests.
 - A contract change makes the valid data stop meeting it; the vectors never relax it.
-
-TODO(T039): add the shared contract folder to `paths:` when a design defines it.
