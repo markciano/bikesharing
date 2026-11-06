@@ -46,7 +46,7 @@ Bicing — public bike sharing of the city of Barcelona. Two access routes:
 
 Total about 19 MB per day compressed (4 October 2026, static feeds every 15 min).
 
-**Open Data BCN secured JSON resources** (one per dataset) — token sent raw in the `Authorization` header, stored in `.env` as `TOKEN_BICING` (never committed). On 2026-10-03 both returned HTTP 500 with a valid token. Not needed while the operator feed works.
+**Open Data BCN secured JSON resources** (one per dataset) — token sent raw in the `Authorization` header, stored in `.env` as `OPEN_DATA_BCN_TOKEN` (never committed). On 2026-10-03 both returned HTTP 500 with a valid token. Not needed while the operator feed works.
 
 **Monthly history** — two series of `.7z` archives, no token, from March 2019:
 
