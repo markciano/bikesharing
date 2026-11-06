@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18). Pending the owner's decision: `TODO(T039)` in s012 not in File layout; no method for the CPU check of passes with an extra fetch; no tool for the 7-day completeness check; `Content-Encoding` of the simulated sources undecided; minor: heartbeat timeout, token names (ADR-0035), size limit on non-gzip bodies, the fixture-binding rule in `cloudflare-worker.md`.
+- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18); s012 in File layout. Pending the owner's decision: no method for the CPU check of passes with an extra fetch; no tool for the 7-day completeness check; `Content-Encoding` of the simulated sources undecided; minor: heartbeat timeout, token names (ADR-0035), size limit on non-gzip bodies, the fixture-binding rule in `cloudflare-worker.md`.
 
 ## 1. Spec — what and why
 
@@ -633,9 +633,11 @@ Colours show what each box touches: grey, no I/O (the functional core); blue, R2
 │   │   ├── 0037-test-fixtures-per-component.md (new) Fixtures in each component's tests (DL15)
 │   │   ├── archive/0009-trimmed-source-samples-as-test-fixtures.md (moved) Superseded by ADR-0037
 │   │   └── archive/0030-pipeline-logs.md      (moved) Superseded by ADR-0036
-│   └── sources/
-│       ├── ambici.md                          (modified) Facts observed in the spike's capture that capture depends on
-│       └── bicing.md                          (modified) Same; `OPEN_DATA_BCN_TOKEN`
+│   ├── sources/
+│   │   ├── ambici.md                          (modified) Facts observed in the spike's capture that capture depends on
+│   │   └── bicing.md                          (modified) Same; `OPEN_DATA_BCN_TOKEN`
+│   └── spikes/
+│       └── s012-execution-target.md           (modified) `TODO(T039)` removed: its items are resolved by D9 and D10
 └── spikes/cloudflare-capture-spike/
     ├── README.md                              (modified) The switch script, the log queries and the probe
     ├── analysis/
