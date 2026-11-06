@@ -150,14 +150,14 @@ In capture, `component` is `capture` and `version` is the Worker's version ID.
 
 | Event | Level | Own fields |
 |---|---|---|
-| `feed_captured` | `info` | `source`, `feed`, `status`, `latency_ms`, `bytes`, `attempts` |
+| `feed_captured` | `info` | `source`, `feed`, `status`, `latency_ms`, `bytes`, `attempts`, `recompressed` |
 | `feed_failed` | `error` | `source`, `feed`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
-| `index_refreshed` | `info` | `source`, `status`, `latency_ms`, `bytes`, `attempts`, `unknown_feeds` |
+| `index_refreshed` | `info` | `source`, `status`, `latency_ms`, `bytes`, `attempts`, `recompressed`, `unknown_feeds` |
 | `index_rejected` | `error` | `source`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
 | `heartbeat_sent` | `info` | `status`, `latency_ms` |
 | `heartbeat_failed` | `warning` | `status`, `latency_ms`, `error_type`, `error` |
 
-`attempts` counts write attempts, and is 0 when the source fails. `error_type` is one of `http`, `timeout`, `network`, `too_large`, `write` or `invalid_index`; the event tells whether it came from a feed, an index or the heartbeat. `level` is `info`, `warning` for a failure that does not affect the data, such as the heartbeat's, or `error`. `unknown_feeds` lists the feeds in the index that are not listed in D3, and is usually empty; a feed that the source removes makes the index invalid (D8).
+`attempts` counts write attempts, and is 0 when the source fails. `error_type` is one of `http`, `timeout`, `network`, `too_large`, `write` or `invalid_index`; the event tells whether it came from a feed, an index or the heartbeat. `level` is `info`, `warning` for a failure that does not affect the data, such as the heartbeat's, or `error`. `unknown_feeds` lists the feeds in the index that are not listed in D3, and is usually empty; a feed that the source removes makes the index invalid (D8). `recompressed` is true when the response did not arrive as gzip and capture compressed it before storing; capture relies on an undocumented option to keep the source's gzip ([s006](../spikes/s006-cloudflare-capture.md), F9), so this flags a change in the source or the runtime.
 
 These fields answer the following capture questions, the starting point for T042:
 
@@ -167,6 +167,7 @@ These fields answer the following capture questions, the starting point for T042
 - Did a failure come from the source, a timeout or R2, and is R2 failing even when retries succeed?
 - Which deployed code produced this data?
 - Has a source added or removed a feed?
+- Do responses still arrive as gzip, or is capture compressing them?
 
 The objects under `raw/` are the record of what was captured, and the logs explain failures: a log write can fail after its data was stored (D8).
 
@@ -178,7 +179,7 @@ Rejected:
 
 - Daily compaction in capture: reading 1,440 objects does not fit the 10 ms CPU limit.
 - Logging failures only: it loses the latency and sizes of clean captures, which revealed the latency shifts and set the timeout in D8.
-- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention.
+- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **#4** **#7**
 
 #### D10. Capture heartbeat
 
@@ -409,6 +410,16 @@ Options considered:
 
 The schedule uses `scheduledTime` and the keys use the actual start; the two differ by the seconds the cron starts late. If the log write still fails after its retries, its lines go to Workers Logs, enabled under `observability` in `wrangler.jsonc` (R11).
 
+#### Source fetch
+
+`fetch.js` requests every response with `Accept-Encoding: gzip` and `encodeResponseBody: "manual"`, which keeps the source's gzip bytes undecoded ([s006](../spikes/s006-cloudflare-capture.md), F9); those bytes are stored as received, with no compression work. The fetches of a pass run in parallel, since waiting uses no CPU.
+
+- **Timeout:** `AbortSignal.timeout(60_000)` covers the whole response, body included (R7); its expiry is `timeout`.
+- **Size limit:** the body is read as a stream and the fetch is aborted once it exceeds 10 MB, measured on the stored, compressed bytes (R22); this is `too_large`. Bicing sends no `content-length`, so the header cannot be trusted for this.
+- **A response that is not gzip:** a body whose first two bytes are not the gzip magic number `1f 8b` (RFC 1952) is compressed with `CompressionStream` before storing, and logged with `recompressed: true` (D9). The check reads the bytes, not `Content-Encoding`, so a runtime that stopped honouring `encodeResponseBody` would cost CPU instead of storing plain JSON under a `.json.gz` key (ADR-0012) under the lock. **#7**
+- **Index:** fetched like any feed, stored under `raw/` (R24), then decompressed in memory and validated by its adapter; the decompressed size has the same 10 MB limit.
+- **`latency_ms`:** from the request to the end of reading the body, success or failure, once headers have arrived; `null` when none arrive (R14).
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -423,9 +434,10 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 1 | [Layout](#component-layout) | One Worker in `capture/`, sources as configuration with one adapter per kind; functional core, imperative shell | One code path for both sources, and a new source is mostly data | R1 | Plan |
 | 2 | [Schedule](#pass-schedule) | Daily feeds one every 2 hours at `:52`, alternating sources | An outage of one hour loses at most one daily feed | R3, R4 | Plan |
 | 3 | [Index state](#index-state) | Each pass reads the last valid index from `state/`, nothing kept in memory (stateless processes, 12-factor) | Always consistent, no cache to expire, about 0.9% of the free read quota | R6, R12, R13 | Plan |
-| 4 | [D3](#d3-feed-cadence), [D5](#d5-hourly-index-refresh) | Every index response is stored under `raw/`, valid or not; Spec change | Bronze keeps every captured response (ADR-0006, ADR-0020); +1% objects, compacted in silver | R24 | Plan |
+| 4 | [D3](#d3-feed-cadence), [D5](#d5-hourly-index-refresh), [D9](#d9-capture-logs) | Every index response is stored under `raw/`, valid or not; Spec change | Bronze keeps every captured response (ADR-0006, ADR-0020); +1% objects, compacted in silver | R24 | Plan |
 | 5 | [Write-once](#write-once) | Conditional put with `If-None-Match: *` under `raw/` and `logs/` (RFC 9110 conditional requests) | Atomic and independent of the lock and of error messages | R9, R10 | Plan |
 | 6 | [Write-once](#write-once) | R2's answers are probed before Plan approval, in a test bucket of their own | `storage.js` rests on verified behaviour; the spike's bucket still holds uncopied data and a running capture | R10 | Plan |
+| 7 | [D9](#d9-capture-logs), [Source fetch](#source-fetch) | Bodies that are not gzip by magic number are compressed and logged as `recompressed`; Spec change | Flags a change in the undocumented `encodeResponseBody` before it costs silent corruption | R16 | Plan |
 
 ### 2.3 Architecture
 
