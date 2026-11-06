@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan › 2.5 Components, then 2.6 Test plan, 2.7 What does not change, the rule documents of File layout (ADR-0030, `cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
+  - Next: Plan › 2.5 Components, then 2.6 Test plan, 2.7 What does not change, the rule documents of File layout (ADR-0030, `cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
 
 ## 1. Spec — what and why
 
@@ -604,13 +604,82 @@ The facts for the source cards are those of D3, D4, D5, D8 and D12 that capture 
 
 <!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
-#### `<ComponentName>`
+The modules of `capture/src/`, as in [Component layout](#component-layout). Contracts are JSDoc, the standard type annotation for JavaScript; the first three modules are the functional core and have no I/O.
 
-- **Responsibility:** `<one sentence>`
-- **Location:** `path/to/file`
+#### `sources.js`
+
+- **Responsibility:** The table of sources and the feeds each one captures by cadence (D3).
+- **Location:** `capture/src/sources.js`
 - **Contract:**
 
-```python
+```js
+/**
+ * @typedef {object} Source
+ * @property {string} id                 Source ID in object keys and logs: `ambici` or `bicing`
+ * @property {string} kind               Adapter that reads its index: `gbfs`
+ * @property {string} indexUrl           URL of the source's index (`gbfs` feed)
+ * @property {readonly string[]} dynamic Feeds captured every pass (D3)
+ * @property {readonly string[]} hourly  Feeds captured hourly (D3)
+ * @property {readonly string[]} daily   Feeds captured daily (D3)
+ */
+
+/** @type {readonly Source[]} */
+export const SOURCES;
+
+/**
+ * Every feed the source's index must list for it to be valid (D8): its dynamic,
+ * hourly and daily feeds, excluding the index itself.
+ * @param {Source} source
+ * @returns {string[]}
+ */
+export function requiredFeeds(source);
+```
+
+#### `adapters/gbfs.js`
+
+- **Responsibility:** Reads a GBFS index and validates it against the feeds its source requires (D8).
+- **Location:** `capture/src/adapters/gbfs.js`; every adapter in `adapters/` exports the same function.
+- **Contract:**
+
+```js
+/**
+ * @typedef {{ ok: true, feeds: Record<string, string>, unknownFeeds: string[] }
+ *         | { ok: false, error: string }} IndexResult
+ * `feeds`: feed name → URL, for the required feeds only.
+ * `unknownFeeds`: feeds in the index that are not required, sorted (D9).
+ * `error`: why the index is invalid, for the `index_rejected` event.
+ */
+
+/**
+ * Valid when the text parses as JSON, every feed entry has `name` and `url`,
+ * and every required feed is listed. Never throws.
+ * @param {string} text                Decompressed body of the index
+ * @param {readonly string[]} required From `requiredFeeds(source)`
+ * @returns {IndexResult}
+ */
+export function parseIndex(text, required);
+```
+
+#### `schedule.js`
+
+- **Responsibility:** Decides the extra fetch, if any, of the pass scheduled at a given time ([Pass schedule](#pass-schedule)).
+- **Location:** `capture/src/schedule.js`
+- **Contract:**
+
+```js
+/**
+ * @typedef {{ type: 'index', source: string }
+ *         | { type: 'feed', source: string, feed: string }
+ *         | { type: 'heartbeat' }} ExtraFetch
+ */
+
+/**
+ * Reads the minute and hour in UTC of `scheduledTime`, never the clock, and looks
+ * them up in the tables of Pass schedule.
+ * @param {number} scheduledTime The event's `scheduledTime`, in ms since the epoch
+ * @returns {ExtraFetch | null}  `null` when the minute carries no extra fetch
+ */
+export function extraFetch(scheduledTime);
 ```
 
 ### 2.6 Test plan
