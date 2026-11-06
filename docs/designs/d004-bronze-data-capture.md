@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan › 2.7 What does not change, then the rule documents of File layout (ADR-0030, `cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
+- Next: Plan › the rule documents of File layout (ADR-0030, `cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
 
 ## 1. Spec — what and why
 
@@ -971,7 +971,11 @@ Integration tests run the `scheduled` handler in workerd with in-memory R2 and t
 
 <!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
 
--
+- `capture-v4`, its code (`spikes/cloudflare-capture-spike/js/src/`, `wrangler.v4.jsonc`) and its configuration keep running unchanged until step 5 of D11 stops them: the overlap compares production against them.
+- `bikesharing-capture-spike` is only read until step 6 of D11; nothing is written to or deleted from `V4/` before then, so the copy and its count check stay repeatable.
+- The key layout of [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md) (D1): `contracts/bronze-keys.json` encodes it as it is.
+- The rules of [ADR-0023](../decisions/0023-storage-security-baseline.md) and the choice of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md); ADR-0023 only loses the TODOs this design resolves.
+- The spike's package (`spikes/cloudflare-capture-spike/js/package.json` and its lockfile): the probe runs with the wrangler it already pins.
 
 ## 3. Steps
 
