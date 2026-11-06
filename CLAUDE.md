@@ -66,8 +66,10 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 │   ├── designs/            Design documents
 │   ├── sources/            Source cards
 │   └── spikes/             Spike reports per system
+├── capture/                Capture Worker (JS), with its own src/, test/ and scripts/
+├── contracts/              Shared contract vectors between components
 ├── src/bikesharing/        Pipeline code
 ├── scripts/                Helper scripts
-├── tests/                  unit/, integration/, fixtures/
+├── tests/                  Pipeline tests: unit/, integration/, fixtures/
 └── spikes/                 Throwaway investigation code
 ```

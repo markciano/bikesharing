@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan › the last rule document of File layout (`CLAUDE.md`), the write-once probe, and Plan approval.
+- Next: Plan › the write-once probe, then Plan approval.
 
 ## 1. Spec — what and why
 
@@ -283,6 +283,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - Quality checks capture does not make: repeated failures of a static feed or an index, and HTTP 200 with frozen data (D10) — T042
 - Fixture entries chosen for variety of records (empty, full or out-of-service stations), which only code that reads them can use ([Fixtures](#fixtures)) — T040
 - Citing the finding IDs of other documents with their source, such as s008's in `docs/testing-strategy.md` — T058
+- Whether the pipeline gets a component folder of its own, like `capture/`, instead of `src/` and `tests/` at the root — T040
 - Centralising quality rules and targets, such as D6's, in one place — T042
 
 ## 2. Plan — how
