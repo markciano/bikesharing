@@ -39,6 +39,7 @@ A component design lists these files in its File layout and chooses the concrete
 - Development-only dependencies go apart: `uv add --dev <pkg>` (dependency group `dev`), `npm install --save-dev <pkg>`.
 - Commit the lockfile together with its manifest, in the same commit; never edit a lockfile by hand.
 - Repository tooling (root `package.json`, `"private": true`) is pinned exactly: the root `.npmrc` sets `save-exact=true`.
+- Install scripts (`preinstall`, `install`, `postinstall`) stay unapproved (npm `allowScripts`): approve one, by package, only when the package fails without it, and record why in the design or change that needs it.
 
 ## Running
 
