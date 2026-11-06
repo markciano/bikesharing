@@ -75,14 +75,14 @@ This table lists every feed capture takes. The dynamic feeds are captured every 
 | Cadence | Feeds |
 |---|---|
 | Every minute (dynamic) | `station_status` of each source, `free_bike_status` of AMBici |
-| Hourly | `station_information` of each source |
+| Hourly | `station_information` of each source; the index (`gbfs`) of each source, at its refresh (D5) |
 | Daily | The other 12 static feeds: `system_information`, `system_pricing_plans`, `system_regions`, `vehicle_types` and `geofencing_zones` of each source, `system_hours` of AMBici, `gbfs_versions` of Bicing |
 
 A change in a daily feed is recorded up to 24 h late, and two changes in one day keep only the last one.
 
 If a daily feed starts changing more than once a day as a habit, move it to hourly. A daily feed that changes occasionally does not reopen this decision.
 
-Rejected: every 2 days or weekly for the daily feeds. Weekly saves about 1.2 MB per year against bronze's roughly 2.9 GB per month, and delays a change by up to 7 days.
+Rejected: every 2 days or weekly for the daily feeds. Weekly saves about 1.2 MB per year against bronze's roughly 2.9 GB per month, and delays a change by up to 7 days. **#4**
 
 #### D4. Static feeds spread across passes
 
@@ -96,12 +96,14 @@ Rejected: separate executions for static feeds from the start. They give the low
 
 #### D5. Hourly index refresh
 
-Each source's index (`gbfs` feed) is refreshed once per hour, independently of the static feeds, at a different minute for each source. If a feed's URL changes, capture picks it up within an hour, which bounds the dynamic data lost. The size of both indexes did not change in 22 days of hourly reads, so the refresh rarely finds anything new, but its cost is small: 48 reads and 48 writes per day.
+Each source's index (`gbfs` feed) is refreshed once per hour, independently of the static feeds, at a different minute for each source. If a feed's URL changes, capture picks it up within an hour, which bounds the dynamic data lost. The size of both indexes did not change in 22 days of hourly reads, so the refresh rarely finds anything new, but its cost is small: 48 fetches and up to 96 writes per day.
+
+Each index response is stored under `raw/` like any feed, whether the index is valid or not, so its history, including a rejected index, can be rebuilt; only a valid index replaces the last one kept for capture (D8).
 
 Rejected:
 
 - Daily refresh: a changed URL could cost up to 24 h of dynamic data, which cannot be captured again.
-- Daily refresh, and also on a feed's 404: it loses the least data, but adds logic that a brief 404 would trigger needlessly.
+- Daily refresh, and also on a feed's 404: it loses the least data, but adds logic that a brief 404 would trigger needlessly. **#4**
 
 #### D6. Capture completeness target
 
@@ -150,8 +152,8 @@ In capture, `component` is `capture` and `version` is the Worker's version ID.
 |---|---|---|
 | `feed_captured` | `info` | `source`, `feed`, `status`, `latency_ms`, `bytes`, `attempts` |
 | `feed_failed` | `error` | `source`, `feed`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
-| `index_refreshed` | `info` | `source`, `status`, `latency_ms`, `bytes`, `unknown_feeds` |
-| `index_rejected` | `error` | `source`, `status`, `latency_ms`, `error_type`, `error` |
+| `index_refreshed` | `info` | `source`, `status`, `latency_ms`, `bytes`, `attempts`, `unknown_feeds` |
+| `index_rejected` | `error` | `source`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
 | `heartbeat_sent` | `info` | `status`, `latency_ms` |
 | `heartbeat_failed` | `warning` | `status`, `latency_ms`, `error_type`, `error` |
 
@@ -257,6 +259,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R21** The production Worker shall run only from its cron trigger, with no HTTP handler, and its public URL shall stay disabled. (D12, TH1)
 - **R22** If a response exceeds 10 MB, then the capture shall reject it and log the failure. (D12, TH2)
 - **R23** The capture shall not include the heartbeat URL in any log or error. (D12, TH3)
+- **R24** When an index refresh receives a successful response, the capture shall store it under `raw/<source>/gbfs/`, whether or not the index is valid. (D3, D5)
 
 ### 1.4 Done when
 
@@ -362,6 +365,23 @@ Options considered for the daily feeds:
 - **One every 2 hours (chosen).** Source failures tend to cluster; an outage of one hour loses at most one daily feed.
 - **All within one hour.** Equally readable, but an outage in that hour loses the day's daily feeds of the affected source.
 
+#### Index state
+
+Every pass reads each source's last valid index from `state/index/<source>.json`; the Worker keeps nothing in memory between passes (stateless processes, 12-factor). The object holds the validated form, independent of the adapter:
+
+```json
+{ "refreshed_at": "2026-11-06T10:07:00Z", "feeds": { "station_status": "https://…" } }
+```
+
+A refresh that returns a valid index overwrites it; a missing or unreadable object means the source has no valid index (D8). This costs 2 reads per pass, about 86,400 per month, or 0.9% of R2's free Class B quota.
+
+If R2 reads approach the free Class B quota, for example as sources are added, evaluate the in-memory cache below.
+
+Options considered:
+
+- **Read `state/` on every pass (chosen).** Always consistent with the last refresh, with no cache to test.
+- **Memory first, `state/` as fallback, as in `capture-v4`.** Saves reads when the isolate is reused, but an isolate that misses the refresh minute keeps a stale index unless the cache also expires.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -375,6 +395,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 |---|---|---|---|---|---|
 | 1 | [Layout](#component-layout) | One Worker in `capture/`, sources as configuration with one adapter per kind; functional core, imperative shell | One code path for both sources, and a new source is mostly data | R1 | Plan |
 | 2 | [Schedule](#pass-schedule) | Daily feeds one every 2 hours at `:52`, alternating sources | An outage of one hour loses at most one daily feed | R3, R4 | Plan |
+| 3 | [Index state](#index-state) | Each pass reads the last valid index from `state/`, nothing kept in memory (stateless processes, 12-factor) | Always consistent, no cache to expire, about 0.9% of the free read quota | R6, R12, R13 | Plan |
+| 4 | [D3](#d3-feed-cadence), [D5](#d5-hourly-index-refresh) | Every index response is stored under `raw/`, valid or not; Spec change | Bronze keeps every captured response (ADR-0006, ADR-0020); +1% objects, compacted in silver | R24 | Plan |
 
 ### 2.3 Architecture
 
