@@ -387,7 +387,7 @@ Options considered:
 
 `storage.js` writes every object under `raw/` and `logs/` as a conditional put, `onlyIf` with `If-None-Match: *` (RFC 9110 conditional requests): R2 writes only if the key holds nothing, and returns `null` otherwise, which counts as written (R10). The check and the write are one atomic operation, so it holds with or without the bucket lock; the lock remains a second barrier. Objects under `state/` are overwritten with a plain put.
 
-A probe confirms R2's behaviour before this Plan is approved, in its own test bucket `bikesharing-probe-write-once` with a lock rule on one prefix, created and deleted afterwards, through the R2 binding in `wrangler dev` with the bucket connected remotely. Its cases: a conditional put on a new key writes; on an existing key it returns `null`; under the lock, a conditional put on an existing key also returns `null`; under the lock, a plain put on an existing key fails, and its error is recorded.
+A probe confirms R2's behaviour before this Plan is approved, in its own test bucket `bikesharing-probe-write-once` with a lock rule on one prefix, created and deleted afterwards, through the R2 binding in `wrangler dev` with the bucket connected remotely. Its cases: a conditional put on a new key writes; on an existing key it returns `null`; under the lock, a conditional put on an existing key also returns `null`; under the lock, a plain put on an existing key fails, and its error is recorded. The cases without the lock also run against Miniflare's in-memory R2, which the integration tests use, to confirm it answers as R2 does. **#9**
 
 TODO(T039): record here how R2 answers each case of the write-once probe, with and without the lock.
 
@@ -414,11 +414,29 @@ The schedule uses `scheduledTime` and the keys use the actual start; the two dif
 
 `fetch.js` requests every response with `Accept-Encoding: gzip` and `encodeResponseBody: "manual"`, which keeps the source's gzip bytes undecoded ([s006](../spikes/s006-cloudflare-capture.md), F9); those bytes are stored as received, with no compression work. The fetches of a pass run in parallel, since waiting uses no CPU.
 
-- **Timeout:** `AbortSignal.timeout(60_000)` covers the whole response, body included (R7); its expiry is `timeout`.
+- **Timeout:** `AbortSignal.timeout()` covers the whole response, body included (R7); its expiry is `timeout`. The duration is a parameter, 60 s in production, so tests use milliseconds. **#9**
 - **Size limit:** the body is read as a stream and the fetch is aborted once it exceeds 10 MB, measured on the stored, compressed bytes (R22); this is `too_large`. Bicing sends no `content-length`, so the header cannot be trusted for this.
 - **A response that is not gzip:** a body whose first two bytes are not the gzip magic number `1f 8b` (RFC 1952) is compressed with `CompressionStream` before storing, and logged with `recompressed: true` (D9). The check reads the bytes, not `Content-Encoding`, so a runtime that stopped honouring `encodeResponseBody` would cost CPU instead of storing plain JSON under a `.json.gz` key (ADR-0012) under the lock. **#7**
 - **Index:** fetched like any feed, stored under `raw/` (R24), then decompressed in memory and validated by its adapter; the decompressed size has the same 10 MB limit.
 - **`latency_ms`:** from the request to the end of reading the body, success or failure, once headers have arrived; `null` when none arrive (R14).
+
+#### Tests and contracts
+
+Shared contract vectors live in a top-level `contracts/` folder, owned by neither component; the CI jobs of capture and of the pipeline both filter on `contracts/**` ([ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md)).
+
+What local tests cannot verify, and what covers it (**#9**):
+
+| Gap | Covered by |
+|---|---|
+| Whether Miniflare's R2 answers a conditional put as R2 does | The write-once probe, run against both ([Write-once](#write-once)) |
+| The bucket lock, which Miniflare does not simulate | The write-once probe and the overwrite check after enabling the lock (TH4) |
+| The 60 s timeout, too long for a test | The duration is a parameter ([Source fetch](#source-fetch)) |
+| CPU time against the 10 ms limit, unlike Cloudflare's locally | Measured in the first days of production (Done when) |
+
+Options considered:
+
+- **Top-level `contracts/` (chosen).** Neutral ground for an agreement between two components.
+- **Inside the producer, `capture/test/contracts/`.** Next to who defines it, but the pipeline would read inside another component's test folder.
 
 ### 2.2 Decision summary
 
@@ -438,6 +456,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 5 | [Write-once](#write-once) | Conditional put with `If-None-Match: *` under `raw/` and `logs/` (RFC 9110 conditional requests) | Atomic and independent of the lock and of error messages | R9, R10 | Plan |
 | 6 | [Write-once](#write-once) | R2's answers are probed before Plan approval, in a test bucket of their own | `storage.js` rests on verified behaviour; the spike's bucket still holds uncopied data and a running capture | R10 | Plan |
 | 7 | [D9](#d9-capture-logs), [Source fetch](#source-fetch) | Bodies that are not gzip by magic number are compressed and logged as `recompressed`; Spec change | Flags a change in the undocumented `encodeResponseBody` before it costs silent corruption | R16 | Plan |
+| 8 | [Tests](#tests-and-contracts) | Shared contract vectors in a top-level `contracts/` folder | A contract between two components belongs to neither | R1, R15 | Plan |
+| 9 | [Tests](#tests-and-contracts) | The write-once probe also runs against Miniflare's R2; the fetch timeout is a parameter | Integration tests rest on a verified simulator; the timeout is testable without waiting 60 s | R7, R10 | Plan |
 
 ### 2.3 Architecture
 
