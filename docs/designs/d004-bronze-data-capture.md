@@ -455,6 +455,8 @@ The heartbeat URL is a Worker secret, `HEARTBEAT_URL`, set with `wrangler secret
 
 The deployment credential is an account-owned API token scoped to Editor on this Worker only, with a one-year expiry, read by wrangler from `CLOUDFLARE_API_TOKEN` (least privilege, NIST SP 800-53 AC-6; TH6). Such a token can update a Worker but not create it, so the first deploy runs with `wrangler login`, and the owner then creates the token and runs `wrangler logout`. The first deploy with the token checks the two points Cloudflare's docs leave open: that Editor suffices for a Worker with an R2 binding, and for `workers_dev: false`; if either fails, the permission is widened only as far as needed, and recorded here.
 
+After every deploy, the owner runs a smoke test on the first passes: each dynamic feed has a new object under `raw/` that passes `gunzip -t`, and the pass's log object exists with `recompressed: false` and the deployed version ID in `version`. It covers what local tests cannot, such as `encodeResponseBody` ([Tests and contracts](#tests-and-contracts)).
+
 Options considered:
 
 - **Token scoped to this Worker (chosen).** A leak reaches only this Worker, and stops at expiry; available since Cloudflare's per-Worker permissions of September 2026.
