@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Steps (`/design d004`): Step 1 written; next, Steps 2–4 as one block (single steps: 1, 9–11, 15–18).
+- Next: Steps (`/design d004`): Steps 1–12 written; next, Steps 13–15 as one block, then 16–19 one by one.
 
 ## 1. Spec — what and why
 
@@ -996,7 +996,7 @@ export default {
 
 <!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
 
-Integration tests run the `scheduled` handler in workerd with in-memory R2 and the sources served by `outboundService` from fixtures, with `LIMITS` in milliseconds and bytes. Each simulated source serves its fixture as compressed once by `vitest.config.js` ([Fixtures](#fixtures)), without `Content-Encoding`, so the bytes reach capture unchanged whatever the runtime does with `encodeResponseBody`; the stored object is compared with those same bytes, passed to the test as a binding, and a fixture served uncompressed exercises `recompressed`. Unit tests that need a failing bucket pass `storage.js` a fake binding, since the in-memory R2 cannot fail on demand.
+Integration tests run the `scheduled` handler in workerd with in-memory R2 and the sources served by `outboundService` from fixtures, or `runPass` with its dependencies where a test needs a fixed time, `LIMITS` in milliseconds and bytes, or a request count. Each simulated source serves its fixture as compressed once by `vitest.config.js` ([Fixtures](#fixtures)), without `Content-Encoding`, so the bytes reach capture unchanged whatever the runtime does with `encodeResponseBody`; the stored object is compared with those same bytes, passed to the test as a binding, and a fixture served uncompressed exercises `recompressed`. Unit tests that need a failing bucket pass `storage.js` a fake binding, since the in-memory R2 cannot fail on demand.
 
 | R | Method | What is verified | Level |
 |---|---|---|---|
@@ -1082,26 +1082,27 @@ The tokens of [Deployment](#deployment) and [Switch tooling](#switch-tooling) de
 
 | Step | Title | Who | R | Files or actions |
 |---|---|---|---|---|
-| 1 | Scaffold `capture/` | Claude | R21 | `.nvmrc`, `package.json`, `package-lock.json`, `wrangler.jsonc` |
+| 1 | Scaffold `capture/` | Claude | R21 | `.nvmrc`, `package.json`, `package-lock.json`, `wrangler.jsonc`, `vitest.config.js` |
 | 2 | Contract vectors | Claude | R1, R15 | `contracts/bronze-keys.json`, `contracts/capture-logs.json` |
-| 3 | Source table and GBFS adapter | Claude | R6, R12 | `sources.js`, `adapters/gbfs.js`, unit tests |
+| 3 | Source table and GBFS adapter | Claude | R12 | `sources.js`, `adapters/gbfs.js`, unit tests |
 | 4 | Pass schedule | Claude | R2, R3, R4, R5 | `schedule.js`, unit test |
 | 5 | Write-once storage | Claude | R1, R9, R10 | `storage.js`, unit and contract tests |
-| 6 | Pass logs | Claude | R11, R15, R16 | `log.js`, unit and contract tests |
-| 7 | Source fetch | Claude | R7, R14, R22 | `fetch.js`, unit test |
-| 8 | Index state and heartbeat | Claude | R12, R20, R23 | `index-state.js`, `heartbeat.js`, unit tests |
-| 9 | Fixtures | Claude, then Owner runs it | — | `scripts/trim-fixtures.js`, `test/fixtures/**` |
-| 10 | Pass and entry point | Claude | R1, R4, R6, R10, R15, R17, R21 | `pass.js`, `worker.js`, `vitest.config.js`, integration tests of the normal pass |
-| 11 | Pass failures | Claude | R7, R8, R12, R13, R14, R16, R18, R20, R22, R23, R24 | Integration tests of failures, fixes in `pass.js` |
-| 12 | CI job | Claude | — | `.github/workflows/ci.yml`: jobs `capture` and `ci-passed` |
-| 13 | Documents | Claude | — | `architecture.md`, `ambici.md`, `bicing.md`, `s012` TODO removed; `testing-strategy.md` checked against File layout, its Node pin in `engines` changed to `.nvmrc` |
-| 14 | Switch tooling | Claude | — | `spike_raw_switch.py`, `capture-completeness.sql` |
-| 15 | First deploy | Owner | R19, R21 | Bucket, Healthchecks.io check, `wrangler login`, `HEARTBEAT_URL`, smoke test, token `bikesharing-capture-deploy`, redeploy with it |
-| 16 | Copy and lock | Owner | — | Token `bikesharing-t039-switch`, `keys`, copy, `count`, lock, overwrite check (TH4) |
-| 17 | Retire the spike | Owner | — | Stop `capture-v4`, queries of D2, delete the spike's bucket, `capture-v4`, its tokens and the probe's bucket |
-| 18 | Production checks | Owner | — | CPU (day 3); 7-day completeness with `bikesharing-t039-completeness`, then deleted |
+| 6 | Pass logs | Claude | R11, R15 | `log.js`, unit and contract tests |
+| 7 | Index state | Claude | R12, R13 | `index-state.js`, unit test |
+| 8 | Fixtures | Claude | — | `scripts/trim-fixtures.js`, `test/fixtures/**` |
+| 9 | Simulated sources and source fetch | Claude | R7, R14, R16, R22 | `vitest.config.js`, `fetch.js`, unit test |
+| 10 | Heartbeat | Claude | R20, R23 | `heartbeat.js`, unit test |
+| 11 | Pass and entry point | Claude | R1, R4, R6, R10, R15, R17, R21 | `pass.js`, `worker.js`, unit test of `worker.js`, integration tests of the normal pass |
+| 12 | Pass failures | Claude | R7, R8, R12, R13, R14, R15, R16, R18, R20, R22, R23, R24 | Integration tests of failures, fixes in `pass.js` |
+| 13 | CI job | Claude | — | `.github/workflows/ci.yml`: jobs `capture` and `ci-passed` |
+| 14 | Documents | Claude | — | `architecture.md`, `ambici.md`, `bicing.md`, `s012` TODO removed; `testing-strategy.md` checked against File layout, its Node pin in `engines` changed to `.nvmrc` |
+| 15 | Switch tooling | Claude | — | `spike_raw_switch.py`, `capture-completeness.sql` |
+| 16 | First deploy | Owner | R19, R21 | Bucket, Healthchecks.io check, `wrangler login`, `HEARTBEAT_URL`, smoke test, token `bikesharing-capture-deploy`, redeploy with it |
+| 17 | Copy and lock | Owner | — | Token `bikesharing-t039-switch`, `keys`, copy, `count`, lock, overwrite check (TH4) |
+| 18 | Retire the spike | Owner | — | Stop `capture-v4`, queries of D2, delete the spike's bucket, `capture-v4`, its tokens and the probe's bucket |
+| 19 | Production checks | Owner | — | CPU (day 3); 7-day completeness with `bikesharing-t039-completeness`, then deleted |
 
-🅿️ For steps 15 and 18: deploy from the branch or from `main` after a merge, and whether steps 17–18 close the task in a later PR, since the 7-day check keeps it open over a week.
+🅿️ For steps 16 and 19: deploy from the branch or from `main` after a merge, and whether steps 18–19 close the task in a later PR, since the 7-day check keeps it open over a week.
 
 ### Step 1 — Scaffold `capture/`
 
@@ -1115,14 +1116,15 @@ The tokens of [Deployment](#deployment) and [Switch tooling](#switch-tooling) de
 
 <!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
 
-The `capture/` component with its runtime pin, its manifest with the test and deploy tools locked, and the Worker configuration of [Deployment](#deployment). No source code or tests yet: `src/worker.js`, which `wrangler.jsonc` names as `main`, comes in Step 10.
+The `capture/` component with its runtime pin, its manifest with the test and deploy tools locked, the Worker configuration of [Deployment](#deployment), and the test configuration that runs tests inside workerd. No source code or tests yet: `src/worker.js`, which `wrangler.jsonc` names as `main`, comes in Step 11.
 
 - `capture/.nvmrc` (new): `26.12.1`, the same as the root `.nvmrc`.
 - `capture/package.json` (new): `private`, ES modules, scripts `test` and `fixtures`; development dependencies `wrangler`, `vitest` and `@cloudflare/vitest-plugin`.
 - `capture/package-lock.json` (new): written by npm.
 - `capture/wrangler.jsonc` (new): every key of the Deployment table, plus `main` and `compatibility_date`.
+- `capture/vitest.config.js` (new): the `cloudflareTest` plugin reading `wrangler.jsonc`; the simulated sources are added in Step 9.
 
-Tests: none; R21's Inspection row of the Test plan is checked here on the file and again after deploy (Step 15).
+Tests: none; R21's Inspection row of the Test plan is checked here on the file and again after deploy (Step 16).
 
 #### Reads
 
@@ -1132,6 +1134,7 @@ Tests: none; R21's Inspection row of the Test plan is checked here on the file a
 - `.claude/rules/code/cloudflare-worker.md` › Tools: the test packages to install.
 - d004 › [Deployment](#deployment), the table: the keys and values of `wrangler.jsonc`.
 - d004 › [Component layout](#component-layout), the tree: the paths `main` and the scripts point to.
+- `spikes/testing-conventions/worker/vitest.config.js`, whole: the plugin's configuration as proven in [s008](../spikes/s008-testing-conventions.md).
 
 #### Do
 
@@ -1141,14 +1144,374 @@ Tests: none; R21's Inspection row of the Test plan is checked here on the file a
 2. Write `capture/package.json` with `"name": "bikesharing-capture"`, `"private": true`, `"type": "module"` and the scripts `"test": "vitest run"` and `"fixtures": "node scripts/trim-fixtures.js"`; no `engines`, since Node is pinned only in `.nvmrc`.
 3. Run `npm install --save-dev wrangler vitest @cloudflare/vitest-plugin` in `capture/`, which writes the ranges and `package-lock.json`. If npm reports a peer conflict, install the `vitest` major that `@cloudflare/vitest-plugin` declares in its `peerDependencies`.
 4. Write `capture/wrangler.jsonc` with `$schema` set to `./node_modules/wrangler/config-schema.json`, `main` set to `src/worker.js`, `compatibility_date` set to `2026-11-06`, and the keys of the Deployment table with their values; `workers_dev` and `preview_urls` are written explicitly as `false`.
+5. Write `capture/vitest.config.js` with `defineConfig` and the `cloudflareTest` plugin, `wrangler: { configPath: "./wrangler.jsonc" }`, as in the s008 configuration, without `bindings` or `outboundService`.
 
 #### Check
 
 <!-- command/s or verification with a yes/no result. -->
 
 - `npm ci` in `capture/`, with `capture/.nvmrc` active, exits 0 and prints no `EBADENGINE` or peer dependency warning.
-- `git status` shows only the four files of Scope as new, and `node_modules/` is ignored.
+- `npx vitest run --passWithNoTests` in `capture/` exits 0, so the plugin starts workerd from `wrangler.jsonc`. If it fails because `src/worker.js` does not exist, the step stops and reports it, and the design is corrected.
+- `git status` shows only the five files of Scope as new, and `node_modules/` is ignored.
 - `wrangler.jsonc` holds each key of the Deployment table with its value, and `workers_dev` and `preview_urls` are `false` (R21, Inspection).
+
+### Step 2 — Contract vectors
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `test: d004.s2 - add the bronze key and capture log contract vectors`
+- **R:** R1, R15
+- **Model:** sonnet · medium
+
+#### Scope
+
+The two shared contracts of [Tests and contracts](#tests-and-contracts), as golden test vectors in the format of `.claude/rules/code/testing.md` › Contracts between components. No code: the producer tests that read them come in Steps 5 and 6, and the `invalid` cases serve the consumers (T040, T042).
+
+- `contracts/bronze-keys.json` (new): object keys under `raw/` and `logs/` (ADR-0012, D1, D9).
+  - `contract`: one line naming both layouts.
+  - `valid`: cases with `name`, `kind` (`raw` or `log`), `captured_at` (ISO 8601 UTC, may carry milliseconds), `run_id`, `source` and `feed` (only for `raw`), and `key`. At least the five valid cases of the s008 file; a `captured_at` with milliseconds, truncated and not rounded (`2026-10-18T12:00:03.987Z` → `20261018T120003Z`); the feed `gbfs`; a log key at midday and one just after midnight UTC.
+  - `invalid`: cases with `key` and `reason`. At least the invalid cases of the s008 file, and for log keys: no `date=`, the extension `.json`, and a date folder that does not match the `run_id`.
+- `contracts/capture-logs.json` (new): log lines (D9, [ADR-0036](../decisions/0036-log-convention-across-components.md)).
+  - `contract`: one line naming the convention.
+  - `valid`: cases with `name`, `inputs` (a list of `{ run_id, version, ts, level, event, fields }`) and `jsonl`, the exact expected text: one line per input, keys in the order `ts`, `level`, `component`, `version`, `run_id`, `event`, then the fields in the order of D9's table, ending in a newline. One case per event of D9; a `feed_failed` from a network failure, with `status` and `latency_ms` null; an `index_refreshed` with a non-empty `unknown_feeds`; and one case with two inputs.
+  - `invalid`: cases with `line` and `reason`, each breaking one rule: no `component`; `ts` without milliseconds; `ts` with an offset other than `Z`; `level` `warn`; an event not in D9; an `error_type` not in D9; a `run_id` not in the key format; a field in camelCase; a `feed_captured` without `attempts`.
+
+#### Reads
+
+- `.claude/rules/code/testing.md` › Contracts between components: the file format.
+- `spikes/testing-conventions/contract/collector-contract.json`, whole: the cases of s008 to reuse.
+- d004 › D1, the tree; D9, the table and the paragraph after it: the keys, events, fields and allowed values.
+- d004 › [Pass logs](#pass-logs), the table: the format of `run_id` and `ts`.
+
+#### Do
+
+1. Write `contracts/bronze-keys.json`.
+2. Write `contracts/capture-logs.json`.
+
+#### Check
+
+- Both files parse: `node -e 'for (const f of process.argv.slice(1)) JSON.parse(require("fs").readFileSync(f))' contracts/*.json` exits 0.
+- Each event of D9 has a valid case in `capture-logs.json`, and each invalid case in both files has a `reason` naming one rule.
+- In `bronze-keys.json`, each valid `key` carries its `run_id` and the date of its `captured_at` in UTC.
+
+### Step 3 — Source table and GBFS adapter
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d004.s3 - add the source table and the GBFS adapter`
+- **R:** R12
+- **Model:** sonnet · medium
+
+#### Scope
+
+The first two modules of the functional core, as in [Components](#25-components) › `sources.js` and `adapters/gbfs.js`.
+
+- `capture/src/sources.js` (new): `SOURCES` with `ambici` and `bicing`, `kind: "gbfs"`, the index URL of each source card, and the feeds of D3 by cadence; `requiredFeeds`.
+- `capture/src/adapters/gbfs.js` (new): `parseIndex`. It reads the entries from `data.feeds` (GBFS 3.0, Bicing) or `data.en.feeds` (GBFS 2.x, AMBici), as `listFeeds` does in `capture-v4`. The `gbfs` entry is neither required nor unknown.
+- `capture/test/unit/sources.test.js` (new): `requiredFeeds` of each source is its dynamic, hourly and daily feeds without `gbfs`; across `SOURCES` there are 3 dynamic and 12 daily feeds.
+- `capture/test/unit/gbfs.test.js` (new): the R12 unit row of the Test plan; a valid index in each GBFS shape returns the required URLs and sorted `unknownFeeds`. Indexes are built in memory.
+
+#### Reads
+
+- d004 › D3, the table; D8, the index row: the feeds and the validity rule.
+- d004 › [Components](#25-components), `sources.js` and `adapters/gbfs.js`: the contracts.
+- `docs/sources/ambici.md` and `docs/sources/bicing.md`, the Index row: the index URLs.
+- `spikes/cloudflare-capture-spike/js/src/V4.js`, `listFeeds` (lines 48–49): the two GBFS shapes.
+
+#### Do
+
+1. Write `capture/test/unit/sources.test.js` and `capture/test/unit/gbfs.test.js`, and run them to see them fail.
+2. Implement `capture/src/sources.js` and `capture/src/adapters/gbfs.js` until they pass.
+
+#### Check
+
+- `npx vitest run test/unit/sources.test.js test/unit/gbfs.test.js` in `capture/` passes.
+- `sources.js` and `gbfs.js` import nothing from the Workers runtime and do no I/O.
+
+### Step 4 — Pass schedule
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d004.s4 - add the pass schedule`
+- **R:** R2, R3, R4, R5
+- **Model:** sonnet · medium
+
+#### Scope
+
+`extraFetch`, the calendar of [Pass schedule](#pass-schedule) as explicit tables.
+
+- `capture/src/schedule.js` (new): the hourly table and the daily table, looked up by the UTC minute and hour of `scheduledTime`.
+- `capture/test/unit/schedule.test.js` (new): the R2, R3, R4 (unit) and R5 rows of the Test plan; the heartbeat 24 times a day at `:22`; a `scheduledTime` some seconds into its minute returns that minute's extra fetch.
+
+#### Reads
+
+- d004 › [Pass schedule](#pass-schedule), both tables.
+- d004 › [Components](#25-components), `schedule.js`.
+
+#### Do
+
+1. Write `capture/test/unit/schedule.test.js`, and run it to see it fail.
+2. Implement `capture/src/schedule.js` until it passes.
+
+#### Check
+
+- `npx vitest run test/unit/schedule.test.js` in `capture/` passes.
+
+### Step 5 — Write-once storage
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d004.s5 - add write-once storage with retries`
+- **R:** R1, R9, R10
+- **Model:** sonnet · high
+
+#### Scope
+
+`storage.js`, the only module that calls the R2 binding ([Write-once](#write-once)).
+
+- `capture/src/storage.js` (new): `runIdOf`, `rawKey`, `logKey`, `stateKey`, `putOnce`, `putState`, `getState`.
+- `capture/test/contract/bronze-keys.test.js` (new): the R1 contract row; every valid case of `contracts/bronze-keys.json`, through `runIdOf` and `rawKey` or `logKey` by `kind`.
+- `capture/test/unit/storage.test.js` (new): the R9 and R10 unit rows; `putState` retries as `putOnce`; `getState` returns null for a missing key and for a read that throws. The bucket is a fake binding whose `put`, `head` and `get` the test sets, and `retryDelayMs` is 0.
+
+#### Reads
+
+- d004 › [Write-once](#write-once), whole: the conditional put, the two answers and the `head` on error.
+- d004 › [Components](#25-components), `storage.js`.
+- `.claude/rules/code/cloudflare-worker.md` › Unit tests and Contract tests.
+
+#### Do
+
+1. Write `capture/test/contract/bronze-keys.test.js` and `capture/test/unit/storage.test.js`, and run them to see them fail.
+2. Implement `capture/src/storage.js` until they pass.
+
+#### Check
+
+- `npx vitest run test/contract/bronze-keys.test.js test/unit/storage.test.js` in `capture/` passes.
+- Changing one valid `key` in `contracts/bronze-keys.json` by one character makes the contract test fail; the change is reverted.
+
+### Step 6 — Pass logs
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d004.s6 - add the pass log`
+- **R:** R11, R15
+- **Model:** sonnet · medium
+
+#### Scope
+
+`log.js`, the events of D9 and the pass's log object ([Pass logs](#pass-logs)).
+
+- `capture/src/log.js` (new): `buildEvent`, `toJsonl`, `writeLog`, writing through `putOnce` and `logKey`.
+- `capture/test/contract/capture-logs.test.js` (new): the R15 contract row; every valid case of `contracts/capture-logs.json`, through `buildEvent` and `toJsonl`.
+- `capture/test/unit/log.test.js` (new): the R11 unit row, with a fake bucket that always fails and `console.log` and `console.error` spied.
+
+#### Reads
+
+- d004 › D9, the table and the paragraph after it.
+- d004 › [Pass logs](#pass-logs), the table.
+- d004 › [Components](#25-components), `log.js`.
+
+#### Do
+
+1. Write `capture/test/contract/capture-logs.test.js` and `capture/test/unit/log.test.js`, and run them to see them fail.
+2. Implement `capture/src/log.js` until they pass.
+
+#### Check
+
+- `npx vitest run test/contract/capture-logs.test.js test/unit/log.test.js` in `capture/` passes.
+
+### Step 7 — Index state
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d004.s7 - add the index state`
+- **R:** R12, R13
+- **Model:** sonnet · medium
+
+#### Scope
+
+`index-state.js`, each source's last valid index under `state/` ([Index state](#index-state)). Its requirements are verified at pass level in Steps 11 and 12; this step tests the module.
+
+- `capture/src/index-state.js` (new): `readIndex` and `writeIndex`, through `getState`, `putState` and `stateKey`.
+- `capture/test/unit/index-state.test.js` (new): with the in-memory R2 of `wrangler.jsonc`, a written state reads back equal; `readIndex` returns null for a missing key, for text that is not JSON, and for JSON without `refreshed_at` or `feeds`.
+
+#### Reads
+
+- d004 › [Index state](#index-state), the first paragraph and the JSON.
+- d004 › [Components](#25-components), `index-state.js`.
+
+#### Do
+
+1. Write `capture/test/unit/index-state.test.js`, and run it to see it fail.
+2. Implement `capture/src/index-state.js` until it passes.
+
+#### Check
+
+- `npx vitest run test/unit/index-state.test.js` in `capture/` passes.
+
+### Step 8 — Fixtures
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `test: d004.s8 - add the capture fixtures and their script`
+- **R:** —
+- **Model:** sonnet · medium
+
+#### Scope
+
+The script that builds capture's fixtures from live responses, and its first output ([Fixtures](#fixtures), [ADR-0037](../decisions/0037-test-fixtures-per-component.md)).
+
+- `capture/scripts/trim-fixtures.js` (new): Node built-in modules and `fetch` only; for each source in `SOURCES`, its index and every feed the index lists; trimming and output as in Fixtures.
+- `capture/test/fixtures/<source>/<feed>.json` (new): one file per fetched response; the index is `gbfs.json`.
+- `capture/test/fixtures/manifest.json` (new): one entry per fixture with `source`, `feed`, `url` and `captured_at`, and `attribution` for Bicing.
+
+#### Reads
+
+- d004 › [Fixtures](#fixtures), whole.
+- `docs/sources/bicing.md`: the attribution text.
+
+#### Do
+
+1. Write `capture/scripts/trim-fixtures.js`.
+2. Run `npm run fixtures` in `capture/`.
+
+#### Check
+
+- Each source has `gbfs.json` and one file per feed its index lists, including every feed of `requiredFeeds`.
+- `manifest.json` has one entry per fixture file, each with its four fields, and Bicing's with `attribution`.
+- No list under `data`, other than in `gbfs.json`, has more than 3 entries.
+
+### Step 9 — Simulated sources and source fetch
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d004.s9 - add the source fetch and the simulated sources`
+- **R:** R7, R14, R16, R22
+- **Model:** sonnet · high
+
+#### Scope
+
+The simulated sources every network test uses, and `fetch.js` ([Source fetch](#source-fetch)). These rows are verified at pass level in Step 12; this step tests the module.
+
+- `capture/vitest.config.js` (modified), as described in the [Test plan](#26-test-plan) and [Fixtures](#fixtures):
+  - each fixture compressed once with `gzipSync`, served by `outboundService` at the URL the manifest records for it, without `Content-Encoding`, and passed to the tests as a base64 binding;
+  - fixed routes on `https://sim.test/`, built in memory from a fixture: `http-500`, `stall-body` (headers, then a body that never ends), `network-error` (the request throws), `plain-json` (a fixture uncompressed), `oversized` (a body larger than the tests' `maxBytes`, with no `content-length`), `heartbeat/<id>`, `heartbeat-count/<id>` (how many requests `heartbeat/<id>` received), and `heartbeat-network-error` (throws an error whose message contains the request URL);
+  - the binding `HEARTBEAT_URL` set to `https://sim.test/heartbeat/default`.
+- `capture/src/fetch.js` (new): `LIMITS`, `fetchFeed`, `gunzipText`.
+- `capture/test/unit/fetch.test.js` (new), with `LIMITS` in milliseconds and bytes: a fixture returns its gzip bytes unchanged with `recompressed: false`; `plain-json` returns gzip bytes with `recompressed: true`; `http-500`, `stall-body`, `network-error` and `oversized` return their `errorType`, with `status` and `latencyMs` as in R14; `gunzipText` rejects a body over `maxBytes` once decompressed.
+
+#### Reads
+
+- d004 › [Source fetch](#source-fetch), whole.
+- d004 › [Tests and contracts](#tests-and-contracts), the table; the [Test plan](#26-test-plan), the paragraph before the table.
+- d004 › [Components](#25-components), `fetch.js`.
+- `spikes/testing-conventions/worker/vitest.config.js`, whole: `outboundService` and the fixture binding as proven in s008.
+- `.claude/rules/code/cloudflare-worker.md` › Integration tests and Not covered by local tests.
+
+#### Do
+
+1. Update `capture/vitest.config.js` with the fixtures, the routes and the bindings.
+2. Write `capture/test/unit/fetch.test.js`, and run it to see it fail.
+3. Implement `capture/src/fetch.js` until it passes.
+
+#### Check
+
+- `npx vitest run` in `capture/` passes, the earlier steps' tests included.
+- No test sends a request outside the simulated sources: `outboundService` answers any other URL with an error that fails the test.
+
+### Step 10 — Heartbeat
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d004.s10 - add the heartbeat signal`
+- **R:** R20, R23
+- **Model:** sonnet · medium
+
+#### Scope
+
+`heartbeat.js`, the Healthchecks.io signal (D10).
+
+- `capture/src/heartbeat.js` (new): `sendHeartbeat`.
+- `capture/test/unit/heartbeat.test.js` (new): the R23 unit row, with `heartbeat-network-error`; `heartbeat/<id>` returns `ok: true`; `http-500` returns `errorType: "http"`; `stall-body` with `heartbeatTimeoutMs` in milliseconds returns `errorType: "timeout"`.
+
+#### Reads
+
+- d004 › D10, the first paragraph.
+- d004 › [Components](#25-components), `heartbeat.js`.
+
+#### Do
+
+1. Write `capture/test/unit/heartbeat.test.js`, and run it to see it fail.
+2. Implement `capture/src/heartbeat.js` until it passes.
+
+#### Check
+
+- `npx vitest run test/unit/heartbeat.test.js` in `capture/` passes.
+
+### Step 11 — Pass and entry point
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d004.s11 - add the capture pass and the scheduled handler`
+- **R:** R1, R4, R6, R10, R15, R17, R21
+- **Model:** sonnet · high
+
+#### Scope
+
+`runPass` and the Worker's entry point, as in [Architecture](#23-architecture), tested on a normal pass.
+
+- `capture/src/pass.js` (new): `runPass`, mapping each `kind` to its adapter.
+- `capture/src/worker.js` (new): the default export of [Components](#25-components) › `worker.js`, with `scheduled` only.
+- `capture/test/unit/worker.test.js` (new): the R21 unit row.
+- `capture/test/integration/pass.test.js` (new): the integration rows of R1, R4, R6, R10, R15 (one object per pass, with the common fields) and R17. Each test seeds `state/` with `writeIndex` from the fixture indexes. A plain pass runs the `scheduled` handler; a test that needs a fixed time, small limits or a request count calls `runPass` with `now`, `limits` or a `heartbeatUrl` of its own, `heartbeat/<id>`.
+
+#### Reads
+
+- d004 › [Architecture](#23-architecture), the paragraph and the diagram.
+- d004 › [Index state](#index-state), the paragraph on adoption (DL13).
+- d004 › [Components](#25-components), `pass.js` and `worker.js`.
+- d004 › [Test plan](#26-test-plan), the rows of this step's R.
+
+#### Do
+
+1. Write `capture/test/unit/worker.test.js` and `capture/test/integration/pass.test.js`, and run them to see them fail.
+2. Implement `capture/src/pass.js` and `capture/src/worker.js` until they pass.
+
+#### Check
+
+- `npx vitest run` in `capture/` passes.
+- Only `storage.js` calls methods of the bucket: `grep -rnE '\.(put|get|head|list|delete)\(' capture/src` matches only `capture/src/storage.js`.
+- Only `worker.js` reads `env`: `grep -rn 'env\.' capture/src` matches only `capture/src/worker.js`.
+
+### Step 12 — Pass failures
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `test: d004.s12 - cover capture pass failures`
+- **R:** R7, R8, R12, R13, R14, R15, R16, R18, R20, R22, R23, R24
+- **Model:** sonnet · high
+
+#### Scope
+
+The pass under every failure of D8, D10 and D12, at integration level.
+
+- `capture/test/integration/pass-failures.test.js` (new): the integration rows of R7, R8, R12, R13, R14, R15 (the log is written when every data write fails), R16, R18, R20, R22, R23 and R24. Tests call `runPass` with `LIMITS` in milliseconds and bytes, and with sources or `state/` entries that point to the `sim.test` routes. A failing bucket is a proxy over the test's R2 binding that fails `put` for the prefixes a test chooses.
+- `capture/src/pass.js` (modified, only if a test shows a gap): the fix that makes it pass. If the fix contradicts a decision or a contract of this design, the step stops and reports it.
+
+#### Reads
+
+- d004 › D8, the table; D9, the paragraph after the table; D12, the table.
+- d004 › [Test plan](#26-test-plan), the rows of this step's R.
+
+#### Do
+
+1. Write `capture/test/integration/pass-failures.test.js`, and run it.
+2. Update `capture/src/pass.js` for each failing test, if any.
+
+#### Check
+
+- `npx vitest run` in `capture/` passes.
+- Every row of the Test plan with Method Test has a test in `capture/test/`: each row's R appears in a test name or in a comment of the test that verifies it.
 
 ## 4. Close
 
