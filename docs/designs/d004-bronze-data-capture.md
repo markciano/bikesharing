@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan › 2.6 Test plan, then 2.7 What does not change, the rule documents of File layout (ADR-0030, `cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
+- Next: Plan › 2.7 What does not change, then the rule documents of File layout (ADR-0030, `cloudflare-worker.md`, `testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
 
 ## 1. Spec — what and why
 
@@ -927,11 +927,45 @@ export default {
 
 ### 2.6 Test plan
 
-<!-- Optional. Every requirement has at least one test, at the lowest level that can verify it. -->
+<!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
 
-| R | Test concept | Level |
-|---|---|---|
-| R1 | | unit / integration / e2e |
+Integration tests run the `scheduled` handler in workerd with in-memory R2 and the sources served by `outboundService` from fixtures, with `LIMITS` in milliseconds and bytes. Unit tests that need a failing bucket pass `storage.js` a fake binding, since the in-memory R2 cannot fail on demand.
+
+| R | Method | What is verified | Level |
+|---|---|---|---|
+| R1 | Test | A pass stores each dynamic feed of each source under `rawKey`, with the fixture's bytes unchanged | integration |
+| R1 | Test | `rawKey` and `runIdOf` produce the valid cases of `contracts/bronze-keys.json` | contract |
+| R1 | Demonstration | Post-deploy smoke test: each dynamic feed has a new object that passes `gunzip -t` ([Deployment](#deployment)) | — |
+| R2 | Test | Over the 1,440 minutes of a day, `extraFetch` returns each source's `station_information` 24 times, at `:12` and `:42` | unit |
+| R3 | Test | Over the 1,440 minutes of a day, `extraFetch` returns each of the 12 daily feeds once | unit |
+| R4 | Test | `extraFetch` returns an extra fetch at exactly 132 minutes per day, those of [Pass schedule](#pass-schedule); every hourly and daily feed in `SOURCES` appears in the schedule | unit |
+| R4 | Test | A pass at a static feed's minute stores the dynamic feeds and that feed only | integration |
+| R5 | Test | Over the 1,440 minutes of a day, `extraFetch` returns each source's index 24 times, at `:07` and `:37` | unit |
+| R6 | Test | With an index in `state/` that points a feed to a new URL, the pass fetches that URL and stores its response | integration |
+| R7 | Test | A source whose body stalls beyond `timeoutMs` is logged as `feed_failed` with `error_type: timeout`; the other feeds are stored | integration |
+| R8 | Test | A source answering HTTP 500 is requested once in the pass and logged as `feed_failed` with `error_type: http` and `attempts: 0` | integration |
+| R9 | Test | `putOnce` with a bucket that fails twice writes on the third attempt with `attempts: 3`; one that always fails returns `ok: false` with `attempts: 3` | unit |
+| R10 | Test | `putOnce` with a bucket that answers `null` returns `ok: true`; a pass whose key is already in R2 leaves the object unchanged and logs `feed_captured` | unit, integration |
+| R10 | Demonstration | Write-once probe against R2 and Miniflare's R2, with and without the lock ([Write-once](#write-once)) | — |
+| R11 | Test | `writeLog` with a bucket that always fails writes each line with `console.log` and the error with `console.error` | unit |
+| R12 | Test | `parseIndex` rejects text that is not JSON, an entry without `name`, an entry without `url`, and an index missing a required feed | unit |
+| R12 | Test | A refresh with an invalid index, or whose write to `raw/` or `state/` fails, logs `index_rejected` and leaves `state/` unchanged (DL13) | integration |
+| R13 | Test | With no index in `state/` for one source, the pass fetches only that source's index, even at that source's extra minute, and the other source's feeds are stored | integration |
+| R14 | Test | `latency_ms` is a number for an HTTP 500 and for a body that times out after headers, and null for a network failure | integration |
+| R15 | Test | Each pass writes one object at `logKey(runId)`, also when every data write fails; its lines carry the common fields | integration |
+| R15 | Test | `buildEvent` and `toJsonl` produce the valid cases of `contracts/capture-logs.json` | contract |
+| R16 | Test | Each event of D9 is logged with its fields: `unknown_feeds` for an index with an extra feed, `recompressed: true` for a fixture served without gzip | integration |
+| R16 | Demonstration | Post-deploy smoke test: the pass's log has `recompressed: false` and the deployed version ID ([Deployment](#deployment)) | — |
+| R17 | Test | At minute `:22` with every dynamic feed stored, the pass sends one request to the heartbeat URL and logs `heartbeat_sent` | integration |
+| R18 | Test | At minute `:22` with one dynamic feed failed, the pass sends no request to the heartbeat URL | integration |
+| R19 | Demonstration | With the check configured, no signal for 1 h plus the grace sends the owner an email | — |
+| R20 | Test | A heartbeat answering HTTP 500, or failing on the network, logs `heartbeat_failed` at `warning`; the pass's data and log are stored | integration |
+| R21 | Test | The default export of `worker.js` has `scheduled` and no `fetch` | unit |
+| R21 | Inspection | `wrangler.jsonc` sets `workers_dev` and `preview_urls` to `false`; after deploy, the dashboard shows no public URL | — |
+| R22 | Test | A body over `maxBytes` with no `content-length` is logged as `feed_failed` with `error_type: too_large` and nothing is stored; an index over `maxBytes` once decompressed is rejected | integration |
+| R23 | Test | `sendHeartbeat` with a network error whose message contains the URL returns an `error` without it | unit |
+| R23 | Test | After a failed heartbeat, the log object does not contain the heartbeat URL | integration |
+| R24 | Test | A refresh that receives an invalid index stores it under `raw/<source>/gbfs/` | integration |
 
 ### 2.7 What does not change
 
