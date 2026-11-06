@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Steps (`/design d004`), starting with Prerequisites.
+- Next: Steps (`/design d004`): Prerequisites written; next, the step skeleton.
 
 ## 1. Spec — what and why
 
@@ -1057,6 +1057,24 @@ Integration tests run the `scheduled` handler in workerd with in-memory R2 and t
 ### 3.1 Prerequisites
 
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
+
+On the local machine:
+
+| Tool | Version | Used for | Verify |
+|---|---|---|---|
+| Node, through fnm | 26.12.1, as in the root `.nvmrc`, with npm 11.20.0 | `capture/`, wrangler, `trim-fixtures.js` | `node -v` and `npm -v` |
+| rclone | 1.75.2, with the remote `r2` (provider Cloudflare) | Switch copy and listings ([Switch tooling](#switch-tooling)) | `rclone version` and `rclone listremotes` |
+| DuckDB CLI | 2.0.0 | The queries of D2 and the completeness query | `duckdb --version` |
+| Python | 3.14.4, standard library only | `spike_raw_switch.py` | `python3 --version` |
+
+DuckDB and Python run only the one-off switch tooling, so they follow the local machine rather than the pipeline's versions ([s011](../spikes/s011-engine-pipeline-language.md)).
+
+Accounts:
+
+- A Cloudflare account with R2 enabled, the one that runs `capture-v4`.
+- A Healthchecks.io account on the free plan ([ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)). The check itself is created in a step.
+
+The tokens of [Deployment](#deployment) and [Switch tooling](#switch-tooling) depend on the Worker and the bucket, so they are created in the steps.
 
 ### Step 1 — `<Title>`
 
