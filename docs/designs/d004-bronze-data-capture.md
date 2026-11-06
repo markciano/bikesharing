@@ -82,7 +82,7 @@ A change in a daily feed is recorded up to 24 h late, and two changes in one day
 
 If a daily feed starts changing more than once a day as a habit, move it to hourly. A daily feed that changes occasionally does not reopen this decision.
 
-Rejected: every 2 days or weekly for the daily feeds. Weekly saves about 1.2 MB per year against bronze's roughly 2.9 GB per month, and delays a change by up to 7 days. **#4**
+Rejected: every 2 days or weekly for the daily feeds. Weekly saves about 1.2 MB per year against bronze's roughly 2.9 GB per month, and delays a change by up to 7 days. **DL4**
 
 #### D4. Static feeds spread across passes
 
@@ -103,7 +103,7 @@ Each index response is stored under `raw/` like any feed, whether the index is v
 Rejected:
 
 - Daily refresh: a changed URL could cost up to 24 h of dynamic data, which cannot be captured again.
-- Daily refresh, and also on a feed's 404: it loses the least data, but adds logic that a brief 404 would trigger needlessly. **#4**
+- Daily refresh, and also on a feed's 404: it loses the least data, but adds logic that a brief 404 would trigger needlessly. **DL4**
 
 #### D6. Capture completeness target
 
@@ -179,7 +179,7 @@ Rejected:
 
 - Daily compaction in capture: reading 1,440 objects does not fit the 10 ms CPU limit.
 - Logging failures only: it loses the latency and sizes of clean captures, which revealed the latency shifts and set the timeout in D8.
-- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **#4** **#7**
+- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **DL4** **DL7**
 
 #### D10. Capture heartbeat
 
@@ -387,7 +387,7 @@ Options considered:
 
 `storage.js` writes every object under `raw/` and `logs/` as a conditional put, `onlyIf` with `If-None-Match: *` (RFC 9110 conditional requests): R2 writes only if the key holds nothing, and returns `null` otherwise, which counts as written (R10). The check and the write are one atomic operation, so it holds with or without the bucket lock; the lock remains a second barrier. Objects under `state/` are overwritten with a plain put.
 
-A probe confirms R2's behaviour before this Plan is approved, in its own test bucket `bikesharing-probe-write-once` with a lock rule on one prefix, created and deleted afterwards, through the R2 binding in `wrangler dev` with the bucket connected remotely. Its cases: a conditional put on a new key writes; on an existing key it returns `null`; under the lock, a conditional put on an existing key also returns `null`; under the lock, a plain put on an existing key fails, and its error is recorded. The cases without the lock also run against Miniflare's in-memory R2, which the integration tests use, to confirm it answers as R2 does. **#9**
+A probe confirms R2's behaviour before this Plan is approved, in its own test bucket `bikesharing-probe-write-once` with a lock rule on one prefix, created and deleted afterwards, through the R2 binding in `wrangler dev` with the bucket connected remotely. Its cases: a conditional put on a new key writes; on an existing key it returns `null`; under the lock, a conditional put on an existing key also returns `null`; under the lock, a plain put on an existing key fails, and its error is recorded. The cases without the lock also run against Miniflare's in-memory R2, which the integration tests use, to confirm it answers as R2 does. **DL9**
 
 TODO(T039): record here how R2 answers each case of the write-once probe, with and without the lock.
 
@@ -414,9 +414,9 @@ The schedule uses `scheduledTime` and the keys use the actual start; the two dif
 
 `fetch.js` requests every response with `Accept-Encoding: gzip` and `encodeResponseBody: "manual"`, which keeps the source's gzip bytes undecoded ([s006](../spikes/s006-cloudflare-capture.md), F9); those bytes are stored as received, with no compression work. The fetches of a pass run in parallel, since waiting uses no CPU.
 
-- **Timeout:** `AbortSignal.timeout()` covers the whole response, body included (R7); its expiry is `timeout`. The duration is a parameter, 60 s in production, so tests use milliseconds. **#9**
+- **Timeout:** `AbortSignal.timeout()` covers the whole response, body included (R7); its expiry is `timeout`. The duration is a parameter, 60 s in production, so tests use milliseconds. **DL9**
 - **Size limit:** the body is read as a stream and the fetch is aborted once it exceeds 10 MB, measured on the stored, compressed bytes (R22); this is `too_large`. Bicing sends no `content-length`, so the header cannot be trusted for this.
-- **A response that is not gzip:** a body whose first two bytes are not the gzip magic number `1f 8b` (RFC 1952) is compressed with `CompressionStream` before storing, and logged with `recompressed: true` (D9). The check reads the bytes, not `Content-Encoding`, so a runtime that stopped honouring `encodeResponseBody` would cost CPU instead of storing plain JSON under a `.json.gz` key (ADR-0012) under the lock. **#7**
+- **A response that is not gzip:** a body whose first two bytes are not the gzip magic number `1f 8b` (RFC 1952) is compressed with `CompressionStream` before storing, and logged with `recompressed: true` (D9). The check reads the bytes, not `Content-Encoding`, so a runtime that stopped honouring `encodeResponseBody` would cost CPU instead of storing plain JSON under a `.json.gz` key (ADR-0012) under the lock. **DL7**
 - **Index:** fetched like any feed, stored under `raw/` (R24), then decompressed in memory and validated by its adapter; the decompressed size has the same 10 MB limit.
 - **`latency_ms`:** from the request to the end of reading the body, success or failure, once headers have arrived; `null` when none arrive (R14).
 
@@ -424,7 +424,7 @@ The schedule uses `scheduledTime` and the keys use the actual start; the two dif
 
 Shared contract vectors live in a top-level `contracts/` folder, owned by neither component; the CI jobs of capture and of the pipeline both filter on `contracts/**` ([ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md)).
 
-What local tests cannot verify, and what covers it (**#9**):
+What local tests cannot verify, and what covers it (**DL9**):
 
 | Gap | Covered by |
 |---|---|
@@ -438,7 +438,7 @@ Options considered:
 - **Top-level `contracts/` (chosen).** Neutral ground for an agreement between two components.
 - **Inside the producer, `capture/test/contracts/`.** Next to who defines it, but the pipeline would read inside another component's test folder.
 
-### 2.2 Decision summary
+### 2.2 Decision log
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
 Entries follow .claude/rules/docs/decision-log.md (log only, change links).
@@ -449,15 +449,15 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| 1 | [Layout](#component-layout) | One Worker in `capture/`, sources as configuration with one adapter per kind; functional core, imperative shell | One code path for both sources, and a new source is mostly data | R1 | Plan |
-| 2 | [Schedule](#pass-schedule) | Daily feeds one every 2 hours at `:52`, alternating sources | An outage of one hour loses at most one daily feed | R3, R4 | Plan |
-| 3 | [Index state](#index-state) | Each pass reads the last valid index from `state/`, nothing kept in memory (stateless processes, 12-factor) | Always consistent, no cache to expire, about 0.9% of the free read quota | R6, R12, R13 | Plan |
-| 4 | [D3](#d3-feed-cadence), [D5](#d5-hourly-index-refresh), [D9](#d9-capture-logs) | Every index response is stored under `raw/`, valid or not; Spec change | Bronze keeps every captured response (ADR-0006, ADR-0020); +1% objects, compacted in silver | R24 | Plan |
-| 5 | [Write-once](#write-once) | Conditional put with `If-None-Match: *` under `raw/` and `logs/` (RFC 9110 conditional requests) | Atomic and independent of the lock and of error messages | R9, R10 | Plan |
-| 6 | [Write-once](#write-once) | R2's answers are probed before Plan approval, in a test bucket of their own | `storage.js` rests on verified behaviour; the spike's bucket still holds uncopied data and a running capture | R10 | Plan |
-| 7 | [D9](#d9-capture-logs), [Source fetch](#source-fetch) | Bodies that are not gzip by magic number are compressed and logged as `recompressed`; Spec change | Flags a change in the undocumented `encodeResponseBody` before it costs silent corruption | R16 | Plan |
-| 8 | [Tests](#tests-and-contracts) | Shared contract vectors in a top-level `contracts/` folder | A contract between two components belongs to neither | R1, R15 | Plan |
-| 9 | [Tests](#tests-and-contracts) | The write-once probe also runs against Miniflare's R2; the fetch timeout is a parameter | Integration tests rest on a verified simulator; the timeout is testable without waiting 60 s | R7, R10 | Plan |
+| DL1 | [Layout](#component-layout) | One Worker in `capture/`, sources as configuration with one adapter per kind; functional core, imperative shell | One code path for both sources, and a new source is mostly data | R1 | Plan |
+| DL2 | [Schedule](#pass-schedule) | Daily feeds one every 2 hours at `:52`, alternating sources | An outage of one hour loses at most one daily feed | R3, R4 | Plan |
+| DL3 | [Index state](#index-state) | Each pass reads the last valid index from `state/`, nothing kept in memory (stateless processes, 12-factor) | Always consistent, no cache to expire, about 0.9% of the free read quota | R6, R12, R13 | Plan |
+| DL4 | [D3](#d3-feed-cadence), [D5](#d5-hourly-index-refresh), [D9](#d9-capture-logs) | Every index response is stored under `raw/`, valid or not; Spec change | Bronze keeps every captured response (ADR-0006, ADR-0020); +1% objects, compacted in silver | R24 | Plan |
+| DL5 | [Write-once](#write-once) | Conditional put with `If-None-Match: *` under `raw/` and `logs/` (RFC 9110 conditional requests) | Atomic and independent of the lock and of error messages | R9, R10 | Plan |
+| DL6 | [Write-once](#write-once) | R2's answers are probed before Plan approval, in a test bucket of their own | `storage.js` rests on verified behaviour; the spike's bucket still holds uncopied data and a running capture | R10 | Plan |
+| DL7 | [D9](#d9-capture-logs), [Source fetch](#source-fetch) | Bodies that are not gzip by magic number are compressed and logged as `recompressed`; Spec change | Flags a change in the undocumented `encodeResponseBody` before it costs silent corruption | R16 | Plan |
+| DL8 | [Tests](#tests-and-contracts) | Shared contract vectors in a top-level `contracts/` folder | A contract between two components belongs to neither | R1, R15 | Plan |
+| DL9 | [Tests](#tests-and-contracts) | The write-once probe also runs against Miniflare's R2; the fetch timeout is a parameter | Integration tests rest on a verified simulator; the timeout is testable without waiting 60 s | R7, R10 | Plan |
 
 ### 2.3 Architecture
 
