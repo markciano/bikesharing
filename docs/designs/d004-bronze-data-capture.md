@@ -470,7 +470,7 @@ The owner runs the switch of D11 from the local machine with rclone, as in [s006
 - `keys`: lists the keys under `V4/raw/` whose timestamp is earlier than the cutoff, the minute of production's first object under `raw/`, as paths relative to `V4/raw/`.
 - `count`: compares the number of objects per day and feed under `V4/raw/` before the cutoff and under `bikesharing-bronze/raw/` before the cutoff, from two `rclone lsf -R` listings, and exits non-zero on any difference.
 
-The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 rerun `spikes/cloudflare-capture-spike/analysis/analyze_remote_capture.py` on the local copy, after a last `rclone copy` once `capture-v4` has stopped.
+The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 are `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, run with DuckDB over the local copy of the spike's logs after a last `rclone copy` once `capture-v4` has stopped. Close records the cutoff, the counts per day and feed, and what the queries found.
 
 rclone uses an R2 token with Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, deleted with the spike's bucket (D11).
 
