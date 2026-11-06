@@ -130,11 +130,11 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 ### 2.6 Test plan
 
-<!-- Optional. Every requirement has at least one test, at the lowest level that can verify it. -->
+<!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
 
-| R | Test concept | Level |
-|---|---|---|
-| R1 | | unit / integration / e2e |
+| R | Method | What is verified | Level |
+|---|---|---|---|
+| R1 | Test / Inspection / Analysis / Demonstration | | unit / integration / e2e; — for other methods |
 
 ### 2.7 Breaking changes
 
