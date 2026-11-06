@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18); s012 in File layout. Pending the owner's decision: no method for the CPU check of passes with an extra fetch; no tool for the 7-day completeness check; `Content-Encoding` of the simulated sources undecided; minor: heartbeat timeout, token names (ADR-0035), size limit on non-gzip bodies, the fixture-binding rule in `cloudflare-worker.md`.
+- Next: Plan review in progress. Fixed: the switch cutoff per feed (DL18); s012 in File layout; the CPU check (DL19). Pending the owner's decision: no tool for the 7-day completeness check; `Content-Encoding` of the simulated sources undecided; minor: heartbeat timeout, token names (ADR-0035), size limit on non-gzip bodies, the fixture-binding rule in `cloudflare-worker.md`.
 
 ## 1. Spec — what and why
 
@@ -273,7 +273,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - `bikesharing-capture-spike`, `capture-v4` and its token are deleted. (D11)
 - The probe's test bucket `bikesharing-t039-write-once` is deleted. ([ADR-0035](../decisions/0035-cloud-resource-naming.md))
 - The deployment token is scoped to the production Worker only. (TH6)
-- Passes with an extra fetch stay below 10 ms of CPU in the first days of production. (D4)
+- Every pass stays below 10 ms of CPU over the first 3 full days of production, checked as in [Deployment](#deployment). (D4)
 - Each dynamic feed has a clean capture in at least 99.5% of the minutes of the first 7 days of production. (D6)
 
 ### 1.5 Out of scope
@@ -452,7 +452,7 @@ What local tests cannot verify, and what covers it (**DL9**):
 | Whether Miniflare's R2 answers a conditional put as R2 does | The write-once probe, run against both ([Write-once](#write-once)) |
 | The bucket lock, which Miniflare does not simulate | The write-once probe and the overwrite check after enabling the lock (TH4) |
 | The 60 s timeout, too long for a test | The duration is a parameter ([Source fetch](#source-fetch)) |
-| CPU time against the 10 ms limit, unlike Cloudflare's locally | Measured in the first days of production (Done when) |
+| CPU time against the 10 ms limit, unlike Cloudflare's locally | The CPU check of the first 3 days of production ([Deployment](#deployment)) |
 
 Options considered:
 
@@ -496,7 +496,14 @@ The deployment credential is an account-owned API token scoped to Editor on this
 
 After every deploy, the owner runs a smoke test on the first passes: each dynamic feed has a new object under `raw/` that passes `gunzip -t`, and the pass's log object exists with `recompressed: false` and the deployed version ID in `version`. It covers what local tests cannot, such as `encodeResponseBody` ([Tests and contracts](#tests-and-contracts)).
 
-Options considered:
+At the end of the first 3 full days of production, before they leave Workers Logs' 3-day retention on the Free plan, the owner checks CPU time in the Workers Logs Query Builder: over every invocation of `bikesharing-capture`, the max of `$workers.cpuTimeMs` is below 10 ms, and no invocation has the outcome `exceededCpu`. The max over every pass also bounds the passes with an extra fetch (D4). Close records the max and the time of the costliest pass. **DL19**
+
+Options considered for the CPU check:
+
+- **Max per invocation in the Workers Logs Query Builder (chosen).** Exact for every pass; bound to the 3-day retention.
+- **P99 of CPU time from the GraphQL Analytics API (`workersInvocationsAdaptive`).** Kept for at least 31 days, but its quantiles are sampled, as R2's were in [s010](../spikes/s010-storage-table-format.md) (F14), and leave the costliest 1% of passes, where those with an extra fetch fall, unchecked.
+
+Options considered for the deployment credential:
 
 - **Token scoped to this Worker (chosen).** A leak reaches only this Worker, and stops at expiry; available since Cloudflare's per-Worker permissions of September 2026.
 - **`wrangler login` for every deploy.** Simplest, but keeps an account-wide permission on the local machine.
@@ -549,6 +556,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL16 | [Fixtures](#fixtures) | A Node script fetches live responses, keeps the index whole and the first 3 entries of each other feed, and writes uncompressed JSON with stable names and a provenance manifest | Current quirks and readable diffs; capture does not read feed entries, so choosing them adds nothing | — | Plan |
 | DL17 | [Write-once](#write-once) | When a conditional put throws, `head` decides whether the object exists: if so it counts as written, otherwise the attempt is retried | Under the lock R2 throws instead of returning `null` (probe); `head` depends on no error message | R9, R10 | Plan |
 | DL18 | [D11](#d11-switch-from-spike-capture-to-production), [Switch tooling](#switch-tooling) | The copy cutoff is per source and feed, the minute of its first object in production, read before the first copy (high-water mark per partition); Spec change **refines DL11** | No minute is lost, nothing is duplicated, and the count check compares like with like | — | Plan review |
+| DL19 | [Deployment](#deployment) | CPU is checked as the max of `$workers.cpuTimeMs` over every invocation in the Workers Logs Query Builder, over the first 3 full days, with no `exceededCpu` outcome (IADT Analysis) | Exact per pass, unlike the sampled quantiles of the GraphQL Analytics API | — | Plan review |
 
 ### 2.3 Architecture
 
