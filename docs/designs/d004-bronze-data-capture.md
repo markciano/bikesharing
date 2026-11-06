@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Plan › the fixture trimming script (ADR-0037: language, location, input; add to File layout), then the rule documents of File layout (`testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
+- Next: Plan › the rule documents of File layout (`testing.md`, `testing-strategy.md`, `CLAUDE.md`), the write-once probe, and Plan approval.
 
 ## 1. Spec — what and why
 
@@ -281,6 +281,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 - Calculating and storing completeness and other quality answers (D7), from the questions and fields in D9 — T042
 - Quality checks capture does not make: repeated failures of a static feed or an index, and HTTP 200 with frozen data (D10) — T042
+- Fixture entries chosen for variety of records (empty, full or out-of-service stations), which only code that reads them can use ([Fixtures](#fixtures)) — T040
 - Centralising quality rules and targets, such as D6's, in one place — T042
 
 ## 2. Plan — how
@@ -309,6 +310,8 @@ capture/
 ├── package-lock.json
 ├── wrangler.jsonc        Cron trigger, R2 binding, public URL disabled
 ├── vitest.config.js
+├── scripts/
+│   └── trim-fixtures.js  Fetches and trims the fixtures (Fixtures)
 ├── src/
 │   ├── worker.js         Entry point: the `scheduled` handler only (R21)
 │   ├── sources.js        Source table: id, kind, index URL and feeds by cadence (D3)
@@ -325,7 +328,7 @@ capture/
     ├── unit/             <module>.test.js
     ├── integration/      The `scheduled` handler in workerd with in-memory R2
     ├── contract/         Producer side of the vectors in `contracts/`
-    └── fixtures/         Trimmed source responses (ADR-0037)
+    └── fixtures/         `<source>/<feed>.json` and `manifest.json` (ADR-0037)
 ```
 
 Options considered:
@@ -441,6 +444,24 @@ Options considered:
 - **Top-level `contracts/` (chosen).** Neutral ground for an agreement between two components.
 - **Inside the producer, `capture/test/contracts/`.** Next to who defines it, but the pipeline would read inside another component's test folder.
 
+#### Fixtures
+
+`scripts/trim-fixtures.js` builds capture's fixtures from live responses ([ADR-0037](../decisions/0037-test-fixtures-per-component.md)). It runs on the local machine with Node, `npm run fixtures`, using only Node's built-in modules and `fetch`; it is run again when a source changes its format, and its output is committed.
+
+- **Input:** for each source in `sources.js`, its index, then every feed the index lists for it, fetched once from the source.
+- **Trimming:** the index is kept whole, since it is the only response capture parses. In every other feed, the list of entries under `data` (stations, vehicles, regions, plans, vehicle types, zones) keeps its first 3 entries, and everything else is kept as received; short lists stay whole. Capture stores feeds as opaque bytes, so which entries are kept changes no code path.
+- **Output:** pretty-printed, uncompressed JSON at `test/fixtures/<source>/<feed>.json`, a name that does not change when the fixtures are regenerated. Tests compress it in memory before serving it.
+- **Provenance:** `test/fixtures/manifest.json` holds one entry per fixture, with `source`, `feed`, `url` and `captured_at` (ISO 8601 UTC), plus `attribution` for Bicing (see its source card); the script rewrites it with the fixtures.
+
+Edge cases are not fixtures: an invalid index, a body that is not gzip, an oversized body, a timeout and the absence of `content-length` are built in memory by each test from a fixture. **DL16**
+
+Options considered:
+
+- **Live fetch, uncompressed JSON with stable names, first entries (chosen).** Current quirks, readable diffs, and tests that survive a regeneration.
+- **The spike's local capture as input.** No request to the sources, but its responses get older with every regeneration.
+- **The capture date in the file name.** Visible at a glance, but each regeneration renames the files the tests load.
+- **Entries chosen for variety (empty, full, out of service).** Exercises nothing in capture, which does not read them; it belongs to the pipeline's fixtures.
+
 #### Deployment
 
 The owner deploys the Worker `bikesharing-capture` from the local machine with `npx wrangler deploy`. `wrangler.jsonc` sets:
@@ -508,6 +529,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL13 | [Index state](#index-state) | A valid index is adopted only once stored under `raw/` and `state/`; a failed write is `index_rejected` with `error_type: write` | `index_refreshed` keeps one meaning, and the index in use is always in bronze | R12, R24 | Plan |
 | DL14 | [D9](#d9-capture-logs), [ADR-0036](../decisions/0036-log-convention-across-components.md) | The common fields come from a new ADR that supersedes ADR-0030, not from amending it; Spec change | Accepted ADRs are immutable (`.claude/rules/docs/adr.md`) | R15 | Plan |
 | DL15 | [Layout](#component-layout), [ADR-0037](../decisions/0037-test-fixtures-per-component.md) | Fixtures in each component's tests, `capture/test/fixtures/` for capture; ADR-0037 supersedes ADR-0009 | Each component owns its test data, as it owns its code and tests (ADR-0016, ADR-0017) | — | Plan |
+| DL16 | [Fixtures](#fixtures) | A Node script fetches live responses, keeps the index whole and the first 3 entries of each other feed, and writes uncompressed JSON with stable names and a provenance manifest | Current quirks and readable diffs; capture does not read feed entries, so choosing them adds nothing | — | Plan |
 
 ### 2.3 Architecture
 
@@ -572,12 +594,13 @@ Colours show what each box touches: grey, no I/O (the functional core); blue, R2
 │   ├── package-lock.json                      (new) Lockfile
 │   ├── wrangler.jsonc                         (new) Worker configuration (Deployment), with `compatibility_date`
 │   ├── vitest.config.js                       (new) Test configuration, sources through `outboundService`
+│   ├── scripts/trim-fixtures.js               (new) Fetches and trims the fixtures (Fixtures)
 │   ├── src/                                   (new) The modules of Component layout
 │   └── test/
 │       ├── unit/                              (new) One file per module
 │       ├── integration/                       (new) The `scheduled` handler in workerd with in-memory R2
 │       ├── contract/                          (new) Producer side of the vectors in `contracts/`
-│       └── fixtures/                          (new) Trimmed source responses (ADR-0037)
+│       └── fixtures/                          (new) `<source>/<feed>.json` and `manifest.json` (Fixtures)
 ├── contracts/                                 (new) Shared contract vectors (Tests and contracts)
 │   ├── bronze-keys.json                       (new) Object keys (ADR-0012, D1)
 │   └── capture-logs.json                      (new) Log lines (D9)
