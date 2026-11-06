@@ -17,9 +17,9 @@ Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
 - State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [ ] Steps review
 - Current step: —
-- Next: Steps approval, then Steps review (`/design d004 review-steps`, in a new session).
+- Next: Steps review (`/design d004 review-steps`, in a new session).
 
 ## 1. Spec — what and why
 
