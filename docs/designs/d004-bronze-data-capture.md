@@ -18,7 +18,7 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 2
+- Current step: Step 3
 - Next: Step 1 (`/implement d004`).
 
 ## 1. Spec — what and why
@@ -1176,7 +1176,7 @@ The two shared contracts of [Tests and contracts](#tests-and-contracts), as gold
 
 ### Step 3 — Source table and GBFS adapter
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d004.s3 - add the source table and the GBFS adapter`
 - **R:** R12
