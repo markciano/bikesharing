@@ -1,0 +1,246 @@
+{
+  "contract": "ADR-0036 and d004 D9 capture log lines: JSON Lines, keys ts, level, component, version, run_id, event, then the event's fields in the order of D9",
+  "valid": [
+    {
+      "name": "feed_captured",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:03.871Z",
+          "level": "info",
+          "event": "feed_captured",
+          "fields": {
+            "source": "bicing",
+            "feed": "station_status",
+            "status": 200,
+            "latency_ms": 412,
+            "bytes": 48213,
+            "attempts": 1,
+            "recompressed": false
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}\n"
+    },
+    {
+      "name": "feed_failed from an HTTP error",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:04.102Z",
+          "level": "error",
+          "event": "feed_failed",
+          "fields": {
+            "source": "ambici",
+            "feed": "station_status",
+            "status": 503,
+            "latency_ms": 230,
+            "attempts": 0,
+            "error_type": "http",
+            "error": "HTTP 503"
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.102Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_failed\",\"source\":\"ambici\",\"feed\":\"station_status\",\"status\":503,\"latency_ms\":230,\"attempts\":0,\"error_type\":\"http\",\"error\":\"HTTP 503\"}\n"
+    },
+    {
+      "name": "feed_failed from a network failure: status and latency_ms are null",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:04.315Z",
+          "level": "error",
+          "event": "feed_failed",
+          "fields": {
+            "source": "ambici",
+            "feed": "vehicle_status",
+            "status": null,
+            "latency_ms": null,
+            "attempts": 0,
+            "error_type": "network",
+            "error": "Network connection lost."
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.315Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_failed\",\"source\":\"ambici\",\"feed\":\"vehicle_status\",\"status\":null,\"latency_ms\":null,\"attempts\":0,\"error_type\":\"network\",\"error\":\"Network connection lost.\"}\n"
+    },
+    {
+      "name": "index_refreshed",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:04.520Z",
+          "level": "info",
+          "event": "index_refreshed",
+          "fields": {
+            "source": "bicing",
+            "status": 200,
+            "latency_ms": 188,
+            "bytes": 1342,
+            "attempts": 1,
+            "recompressed": false,
+            "unknown_feeds": []
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.520Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"index_refreshed\",\"source\":\"bicing\",\"status\":200,\"latency_ms\":188,\"bytes\":1342,\"attempts\":1,\"recompressed\":false,\"unknown_feeds\":[]}\n"
+    },
+    {
+      "name": "index_refreshed with unknown feeds",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:04.733Z",
+          "level": "info",
+          "event": "index_refreshed",
+          "fields": {
+            "source": "ambici",
+            "status": 200,
+            "latency_ms": 201,
+            "bytes": 1517,
+            "attempts": 1,
+            "recompressed": true,
+            "unknown_feeds": [
+              "geofencing_zones",
+              "vehicle_availability"
+            ]
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.733Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"index_refreshed\",\"source\":\"ambici\",\"status\":200,\"latency_ms\":201,\"bytes\":1517,\"attempts\":1,\"recompressed\":true,\"unknown_feeds\":[\"geofencing_zones\",\"vehicle_availability\"]}\n"
+    },
+    {
+      "name": "index_rejected",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:04.946Z",
+          "level": "error",
+          "event": "index_rejected",
+          "fields": {
+            "source": "bicing",
+            "status": 200,
+            "latency_ms": 175,
+            "attempts": 0,
+            "error_type": "invalid_index",
+            "error": "required feed station_status is missing"
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.946Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"index_rejected\",\"source\":\"bicing\",\"status\":200,\"latency_ms\":175,\"attempts\":0,\"error_type\":\"invalid_index\",\"error\":\"required feed station_status is missing\"}\n"
+    },
+    {
+      "name": "heartbeat_sent",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:05.158Z",
+          "level": "info",
+          "event": "heartbeat_sent",
+          "fields": {
+            "status": 200,
+            "latency_ms": 96
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:05.158Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"heartbeat_sent\",\"status\":200,\"latency_ms\":96}\n"
+    },
+    {
+      "name": "heartbeat_failed",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:05.371Z",
+          "level": "warning",
+          "event": "heartbeat_failed",
+          "fields": {
+            "status": null,
+            "latency_ms": null,
+            "error_type": "timeout",
+            "error": "heartbeat timed out after 5000 ms"
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:05.371Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"heartbeat_failed\",\"status\":null,\"latency_ms\":null,\"error_type\":\"timeout\",\"error\":\"heartbeat timed out after 5000 ms\"}\n"
+    },
+    {
+      "name": "two events of one pass, in order",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:03.871Z",
+          "level": "info",
+          "event": "feed_captured",
+          "fields": {
+            "source": "bicing",
+            "feed": "station_status",
+            "status": 200,
+            "latency_ms": 412,
+            "bytes": 48213,
+            "attempts": 1,
+            "recompressed": false
+          }
+        },
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:05.158Z",
+          "level": "info",
+          "event": "heartbeat_sent",
+          "fields": {
+            "status": 200,
+            "latency_ms": 96
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}\n{\"ts\":\"2026-10-18T12:00:05.158Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"heartbeat_sent\",\"status\":200,\"latency_ms\":96}\n"
+    }
+  ],
+  "invalid": [
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "reason": "component is missing"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "reason": "ts has no milliseconds"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T14:00:03.871+02:00\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "reason": "ts has an offset other than Z"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "reason": "level warn is not one of info, warning, error"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_skipped\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "reason": "event is not one of the events of D9"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:04.102Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_failed\",\"source\":\"ambici\",\"feed\":\"station_status\",\"status\":503,\"latency_ms\":230,\"attempts\":0,\"error_type\":\"dns\",\"error\":\"HTTP 503\"}",
+      "reason": "error_type is not one of the types of D9"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"2026-10-18T12:00:03Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "reason": "run_id is not in the key format YYYYMMDDTHHMMSSZ"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latencyMs\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "reason": "field name is in camelCase, not snake_case"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"recompressed\":false}",
+      "reason": "feed_captured has no attempts"
+    }
+  ]
+}
