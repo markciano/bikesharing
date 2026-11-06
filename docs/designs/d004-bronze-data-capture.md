@@ -16,9 +16,9 @@ Sections marked Optional are kept only when they apply.
 Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
-- State: Ready for implementation 🎬
+- State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: —
+- Current step: Step 1
 - Next: Step 1 (`/implement d004`).
 
 ## 1. Spec — what and why
@@ -1084,7 +1084,7 @@ The tokens of [Deployment](#deployment) and [Switch tooling](#switch-tooling) de
 
 ### Step 1 — Scaffold `capture/`
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `build: d004.s1 - scaffold the capture Worker`
 - **R:** R21
