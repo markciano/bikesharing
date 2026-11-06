@@ -55,7 +55,7 @@ Starts only when Phase shows Plan review checked.
 
 1. **Prerequisites.** List what the owner prepares outside the repo before Step 1 (installs on the local machine, accounts, access), with exact versions decided now.
 2. Propose the step skeleton as a compact table (step · title · R · files); the owner adjusts order and cuts.
-3. Write each step in full.
+3. Write each step in full, in a row, without per-step approval: the Spec and the Plan already hold the decisions. Stop only for a decision the Plan does not cover or contradicts, or at a commit point; propose few commit points, grouping steps by kind. The review of all steps is `review-steps`.
 4. Ask for the Steps approval. Once approved, check Steps in Phase and tell the owner to run `/design dNNN review-steps` in a new session. The design goes to Ready when that review closes.
 
 ## End of session
