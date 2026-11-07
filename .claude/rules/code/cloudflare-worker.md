@@ -23,6 +23,8 @@ General testing principles are in `testing.md`; reasons and detail in the [testi
 
 - `vitest` with `@cloudflare/vitest-plugin`, which runs the tests inside `workerd`, the Workers runtime, through Miniflare, its local simulator.
 - A binding is how the Worker reaches a resource (an R2 bucket, a secret, a value) as an object in `env`, configured in `wrangler.jsonc`; in tests Miniflare provides the same objects, with R2 in memory.
+- Run the tests from the project root with `npm test --prefix capture`, and one file with `npm test --prefix capture -- <test path>`; this is the form `.claude/settings.json` allows.
+  - TODO(T039): generalize how tests are run to every component, in a project-wide rule, when d004 closes.
 
 ## Unit tests
 
