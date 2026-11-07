@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 4
-- Next: Step 5 (`/implement d004`).
+- Current step: Step 5
+- Next: Step 6 (`/implement d004`).
 
 ## 1. Spec — what and why
 
@@ -1239,7 +1239,7 @@ The first two modules of the functional core, as in [Components](#25-components)
 
 ### Step 5 — Write-once storage
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d004.s5 - add write-once storage with retries`
 - **R:** R1, R9, R10
