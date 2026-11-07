@@ -1,3 +1,4 @@
+// Unit tests of parseIndex: valid GBFS 2.x and 3.0 indexes, and each reason to reject one.
 import { describe, expect, it } from "vitest";
 import { parseIndex } from "../../src/adapters/gbfs.js";
 
