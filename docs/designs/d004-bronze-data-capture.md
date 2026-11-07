@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 13
-- Next: Step 14 (`/implement d004`).
+- Current step: Step 14
+- Next: Step 15 (`/implement d004`).
 
 ## 1. Spec — what and why
 
@@ -1542,7 +1542,7 @@ The CI job of the `capture` component and the aggregator that becomes the only r
 
 ### Step 14 — Documents
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: d004.s14 - document production capture`
 - **R:** —
@@ -1793,3 +1793,4 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 - `gunzipText` returns `errorType`, and an index over `maxBytes` once decompressed is logged with `error_type: too_large`, not `invalid_index` — `error_type` names the cause, so oversize gets one category whether detected before or after decompression; `invalid_index` stays for content that is wrong. Applied in Step 12.
 - Step 12 adds a `// Verifies d004 Rn` comment to the tests of Steps 2–11 that verify a Test plan row, outside its Scope, and the tag's format to `.claude/rules/code/cloudflare-worker.md` — Step 12's Check traces every Test row to its test, and those tests did not cite their R.
 - Step 13 also updates `.claude/rules/code/ci.md` › Aggregator and required check, outside its Scope: the section described the aggregator as future work, and the `changes` and `ci-passed` patterns are conventions the next component job reuses. Applied in Step 13.
+- Step 14 extends `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, outside its Scope, with the queries that attribute the source-card facts to each source, over the spike's logs and raw objects; the cards cite that file — d004 states several of those facts for both sources together, and s006 does not attribute them, so a per-source figure needs a reproducible source in the repository. Applied in Step 14.

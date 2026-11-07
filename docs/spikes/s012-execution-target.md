@@ -468,7 +468,6 @@ Modal's Starter plan can give the pipeline the memory it is estimated to need, 3
   - `docs/sources/modal.md`: resolved in this step.
 - No new tasks. Existing tasks pick up what this spike leaves them:
   - `TODO(T038)`: the item marked T038 in [1.5 Out of scope](#15-out-of-scope).
-  - `TODO(T039)`: the items marked T039 in [1.5 Out of scope](#15-out-of-scope).
   - `TODO(T040)`: the items marked T040 in [1.5 Out of scope](#15-out-of-scope), and [4.1 Production inputs](#41-production-inputs).
 - Tear-down: nothing is kept. The apps ended with their runs, and the owner revoked the token in Step 2.
 

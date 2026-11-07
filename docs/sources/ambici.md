@@ -42,6 +42,11 @@ Total about 75 MB per day compressed (4 October 2026, static feeds every 15 min)
 - **No public history.** Only the real-time GBFS feed exists. See `docs/spikes/s003-ambici-historical-data.md`.
 - **Size:** 237 stations, capacities 12–28 docks, 16 regions (IDs 833–856); about 2,100 bikes. Vehicle types `204` (e-bike) and `196` (classic) are in use, `204` with almost all the activity; `420` is defined but never seen in `station_status`.
 - **All bikes are docked.** Every bike in `free_bike_status` has a `station_id`.
+- **Static feeds rarely change.** Over 12.5 days of hourly captures (2026-10-14 to 2026-10-26), `station_information` changed 4 times and the other static feeds never did. [d004 › D3](../designs/d004-bronze-data-capture.md#d3-feed-cadence); [spike-log-queries.sql › 6](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql).
+- **`ttl` does not reflect changes.** Every feed declares a `ttl` of 60 s, except `geofencing_zones` and `system_pricing_plans` with 86,400 s, however often it changes (2026-10-14 to 2026-11-05). [d004 › D3](../designs/d004-bronze-data-capture.md#d3-feed-cadence); [spike-log-queries.sql › 6](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql).
+- **Stable index.** The `gbfs` index was 3,124 B in every hourly read from 2026-10-14 to 2026-11-05. [d004 › D5](../designs/d004-bronze-data-capture.md#d5-hourly-index-refresh); [spike-log-queries.sql › 5](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql).
+- **Latency shifts.** Median response latency moved from about 760 ms to 39 ms on 2026-10-29 and to about 317 ms on 2026-11-03, with no change on the capture side. [d004 › D4](../designs/d004-bronze-data-capture.md#d4-static-feeds-spread-across-passes); [spike-log-queries.sql › 5](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql).
+- **Largest response.** `free_bike_status` is the largest response of both sources, up to 56,711 B as gzip (2026-10-14 to 2026-11-05). [d004 › D12](../designs/d004-bronze-data-capture.md#d12-capture-security); [spike-log-queries.sql › 5](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql).
 - **Field mapping to GBFS 3.0:** see [bicing-realtime-capture.md](../spikes/s002-bicing-realtime-capture.md) › Findings 2a.
 
 ## Data quality notes

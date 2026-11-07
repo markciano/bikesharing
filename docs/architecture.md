@@ -111,10 +111,51 @@ Each goal is made measurable by the scenarios in §10.
 
 | Step | What happens | Source |
 |---|---|---|
-| 1 | A Cron Trigger starts the Worker | [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md) |
-| 2 | The Worker fetches each feed due in this pass, asking for gzip; static feeds are fetched once a day | [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md) |
-| 3 | Each response is stored unchanged in the bronze bucket, under the output contract's key | [ADR-0006](decisions/0006-raw-layer-keeps-source-responses-untouched.md); [ADR-0012](decisions/0012-collectors-decoupled-by-output-contract.md) |
-| 4 | The pass writes its log object to `logs/` and updates `state/` | [s010 › Probe B](spikes/s010-storage-table-format.md#b-measured-volume) |
+| 1 | A Cron Trigger starts the Worker every minute | [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md); [d004 › D3](designs/d004-bronze-data-capture.md#d3-feed-cadence) |
+| 2 | The pass reads each source's last valid index from `state/`; a source without one fetches only its index in this pass | [d004 › D5, D8](designs/d004-bronze-data-capture.md#d5-hourly-index-refresh) |
+| 3 | The Worker fetches the dynamic feeds of each source, asking for gzip, and stores each response unchanged in the bronze bucket, under the output contract's key; an existing key is never overwritten | [ADR-0006](decisions/0006-raw-layer-keeps-source-responses-untouched.md); [ADR-0012](decisions/0012-collectors-decoupled-by-output-contract.md); [d004 › D3](designs/d004-bronze-data-capture.md#d3-feed-cadence); [d004 › Write-once](designs/d004-bronze-data-capture.md#write-once) |
+| 4 | At fixed minutes the pass makes at most one extra fetch: a source's index, refreshed hourly and kept in `state/` when valid, or a static feed, hourly or daily | [d004 › D4, D5](designs/d004-bronze-data-capture.md#d4-static-feeds-spread-across-passes) |
+| 5 | At the heartbeat minute, the pass signals Healthchecks.io only if every dynamic feed of every source was stored | [d004 › D10](designs/d004-bronze-data-capture.md#d10-capture-heartbeat) |
+| 6 | The pass writes its log object to `logs/` last, whatever happened before; a failure at any step is logged and does not stop the rest of the pass | [ADR-0036](decisions/0036-log-convention-across-components.md); [d004 › D8, D9](designs/d004-bronze-data-capture.md#d8-capture-failure-behaviour) |
+
+```mermaid
+flowchart TD
+    cron([Cron trigger,<br>every minute]) --> read[Read each<br>source's last<br>valid index<br>from state/]
+    read --> valid
+
+    subgraph each [For each source]
+        valid{Index in<br>state/?}
+        valid -- no --> refresh[Fetch and store<br>its index;<br>if valid, update<br>state/]
+        valid -- yes --> dyn[Fetch and store<br>its dynamic<br>feeds]
+        dyn --> extra{Extra fetch<br>for this source<br>at this minute?}
+        extra -- index --> refresh
+        extra -- static feed --> stat[Fetch and store<br>the static feed]
+        extra -- none --> next([Source done])
+    end
+
+    refresh --> hbmin
+    stat --> hbmin
+    next --> hbmin
+    hbmin{Heartbeat<br>minute?}
+    hbmin -- no --> log
+    hbmin -- yes --> hb{Every dynamic<br>feed of every<br>source stored?}
+    hb -- yes --> signal[Send the<br>heartbeat to<br>Healthchecks.io]
+    hb -- no --> skip[No signal]
+    signal --> log
+    skip --> log
+    log[Write the<br>pass's log<br>object to logs/]
+
+    classDef decision fill:#f3f4f6,stroke:#6b7280,color:#111827
+    classDef r2 fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a
+    classDef source fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef external fill:#f3e8ff,stroke:#7e22ce,color:#581c87
+    class cron,valid,extra,next,hbmin,hb,skip decision
+    class read,log r2
+    class refresh,dyn,stat source
+    class signal external
+```
+
+Colours show what each box touches: grey, no I/O; blue, R2 only; green, a source fetch stored in R2; purple, Healthchecks.io. [d004 › Architecture](designs/d004-bronze-data-capture.md#23-architecture).
 
 ### 6.2 Pipeline run
 
@@ -175,8 +216,8 @@ Quality scenarios that make the goals in §1.2 measurable:
 | QS15 | Integrity | A history archive exceeds the size limit or holds a path outside its folder | It is rejected, the gap is recorded and the other months keep loading | [d002 › R21](designs/d002-requirements.md#requirements) |
 | QS16 | Confidentiality | A pipeline run writes logs and engine files | They hold no storage credentials | [d002 › R22](designs/d002-requirements.md#requirements) |
 | QS17 | Cost (§2) | A pipeline run fails or exceeds its time limit | It stops after a limited number of retries and the owner is alerted | [d002 › R23](designs/d002-requirements.md#requirements) |
+| QS18 | Completeness | Normal operation | Each dynamic feed has a clean capture in at least 99.5% of the minutes of each month | [d004 › D6](designs/d004-bronze-data-capture.md#d6-capture-completeness-target) |
 
-- TODO(T039): capture completeness target.
 - TODO(T042): data quality checks and targets.
 
 ## 11. Risks and technical debt

@@ -90,6 +90,11 @@ Differences with AMBici: AMBici is GBFS 2.3, Bicing is GBFS 3.0; field-by-field 
 - A new station can appear in `station_status` before `station_information` (station `309`, in 11 status responses).
 - `geofencing_zones` and `system_regions` are essentially empty; `rental_uris` is always an empty object.
 - `external_id` (station information) is not a GBFS 3.0 field; `default_pricing_plan_id` is sometimes an empty string.
+- Over 12.5 days of hourly captures (2026-10-14 to 2026-10-26), `station_information` changed 68 times, `system_pricing_plans` and `vehicle_types` once each, and the other static feeds never. [d004 › D3](../designs/d004-bronze-data-capture.md#d3-feed-cadence); [spike-log-queries.sql › 6](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql).
+- Every feed declares a `ttl` of 0, so `ttl` gives no refresh cadence (2026-10-14 to 2026-11-05). [d004 › D3](../designs/d004-bronze-data-capture.md#d3-feed-cadence); [spike-log-queries.sql › 6](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql).
+- The `gbfs` index was 968 B in every hourly read from 2026-10-14 to 2026-11-05. [d004 › D5](../designs/d004-bronze-data-capture.md#d5-hourly-index-refresh); [spike-log-queries.sql › 5](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql).
+- Median response latency moved from about 158 ms to 37 ms on 2026-10-29 and to about 139 ms on 2026-11-03, with no change on the capture side. [d004 › D4](../designs/d004-bronze-data-capture.md#d4-static-feeds-spread-across-passes); [spike-log-queries.sql › 5](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql).
+- The origin sends no `content-length`, also when serving gzip, so a response's size is known only by reading its body (2026-10-12). [s006 › F7](../spikes/s006-cloudflare-capture.md#findings); [d004 › Source fetch](../designs/d004-bronze-data-capture.md#source-fetch).
 
 ## Documented gaps (published by the provider)
 
