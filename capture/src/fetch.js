@@ -80,9 +80,11 @@ export async function fetchFeed(url, limits) {
 
 /**
  * Decompresses an index body for its adapter. Never throws.
+ * `too_large`: the decompressed size exceeds `maxBytes`; `invalid_index`: the bytes are not valid gzip.
  * @param {Uint8Array} gzipBytes
  * @param {number} maxBytes Limit on the decompressed size
- * @returns {Promise<{ ok: true, text: string } | { ok: false, error: string }>}
+ * @returns {Promise<{ ok: true, text: string }
+ *   | { ok: false, errorType: 'too_large' | 'invalid_index', error: string }>}
  */
 export async function gunzipText(gzipBytes, maxBytes) {
   try {
@@ -90,7 +92,7 @@ export async function gunzipText(gzipBytes, maxBytes) {
     const bytes = await readLimited(stream, maxBytes);
     return { ok: true, text: new TextDecoder().decode(bytes) };
   } catch (err) {
-    return { ok: false, error: message(err) };
+    return { ok: false, errorType: err instanceof TooLarge ? "too_large" : "invalid_index", error: message(err) };
   }
 }
 

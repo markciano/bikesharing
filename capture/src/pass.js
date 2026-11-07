@@ -140,9 +140,9 @@ async function captureFeed(pass, source, feed, url) {
 }
 
 /**
- * Fetches the source's index and adopts it only once it is valid and stored under
- * both `raw/` and `state/`, so the index in use is always in bronze; otherwise the
- * last valid index stays in use (d004, Index state).
+ * Fetches the source's index, stores it under `raw/` whether or not it is valid, and
+ * adopts it only once it is valid and also stored under `state/`, so the index in use
+ * is always in bronze; otherwise the last valid index stays in use (d004, Index state).
  * @param {Pass} pass
  * @param {import("./sources.js").Source} source
  * @returns {Promise<void>}
@@ -154,14 +154,17 @@ async function refreshIndex(pass, source) {
   const fetched = await fetchFeed(source.indexUrl, pass.limits);
   if (!fetched.ok) return reject(failedFields(fetched, 0));
 
-  const response = { status: fetched.status, latency_ms: fetched.latencyMs, attempts: 0 };
+  // Bronze keeps every response captured, so an invalid index is stored too, before
+  // it is validated (d004 D5, Hourly index refresh).
+  const put = await putOnce(pass.bucket, rawKey(source.id, adapter.indexFeed, pass.runId), fetched.body, pass.limits);
+  if (!put.ok) return reject(writeFailedFields(fetched, put));
+
+  const response = { status: fetched.status, latency_ms: fetched.latencyMs, attempts: put.attempts };
   const text = await gunzipText(fetched.body, pass.limits.maxBytes);
-  if (!text.ok) return reject({ ...response, error_type: "invalid_index", error: text.error });
+  if (!text.ok) return reject({ ...response, error_type: text.errorType, error: text.error });
   const parsed = adapter.parseIndex(text.text, requiredFeeds(source));
   if (!parsed.ok) return reject({ ...response, error_type: "invalid_index", error: parsed.error });
 
-  const put = await putOnce(pass.bucket, rawKey(source.id, adapter.indexFeed, pass.runId), fetched.body, pass.limits);
-  if (!put.ok) return reject(writeFailedFields(fetched, put));
   const state = await writeIndex(pass.bucket, source.id, { refreshed_at: isoSeconds(pass.start), feeds: parsed.feeds }, pass.limits);
   if (!state.ok) return reject(writeFailedFields(fetched, state));
 

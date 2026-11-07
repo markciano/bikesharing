@@ -58,6 +58,7 @@ describe("writeLog", () => {
     expect(error).not.toHaveBeenCalled();
   });
 
+  // Verifies d004 R11
   it("writes each line with console.log and the error with console.error when the bucket always fails", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const error = vi.spyOn(console, "error").mockImplementation(() => {});

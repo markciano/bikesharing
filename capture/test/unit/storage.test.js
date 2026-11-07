@@ -37,6 +37,7 @@ function fakeBucket({ put = [STORED], head = [null], get = [null] } = {}) {
 }
 
 describe("putOnce", () => {
+  // Verifies d004 R10
   it("writes with a conditional put on If-None-Match: *", async () => {
     const bucket = fakeBucket();
 
@@ -49,6 +50,7 @@ describe("putOnce", () => {
     expect(new Headers(bucket.calls.put[0].options.onlyIf).get("If-None-Match")).toBe("*");
   });
 
+  // Verifies d004 R10
   it("counts a null answer, the key already written, as written without a head", async () => {
     const bucket = fakeBucket({ put: [null] });
 
@@ -58,6 +60,7 @@ describe("putOnce", () => {
     expect(bucket.calls.head).toHaveLength(0);
   });
 
+  // Verifies d004 R9
   it("writes on the third attempt when the bucket fails twice", async () => {
     const bucket = fakeBucket({ put: [new Error("boom"), new Error("boom"), STORED] });
 
@@ -67,6 +70,7 @@ describe("putOnce", () => {
     expect(bucket.calls.put).toHaveLength(3);
   });
 
+  // Verifies d004 R9
   it("returns ok false after 3 attempts when the bucket always fails", async () => {
     const bucket = fakeBucket({ put: [new Error("boom")] });
 
@@ -76,6 +80,7 @@ describe("putOnce", () => {
     expect(bucket.calls.put).toHaveLength(3);
   });
 
+  // Verifies d004 R10
   it("counts a thrown put as written after 1 attempt when head finds the object", async () => {
     const bucket = fakeBucket({
       put: [new Error("The object is locked by the bucket policy. (10069)")],
@@ -89,6 +94,7 @@ describe("putOnce", () => {
     expect(bucket.calls.head).toEqual([KEY]);
   });
 
+  // Verifies d004 R10
   it("retries a thrown put when head finds nothing", async () => {
     const bucket = fakeBucket({ put: [new Error("boom"), STORED], head: [null] });
 

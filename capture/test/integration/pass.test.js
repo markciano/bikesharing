@@ -121,6 +121,7 @@ const dynamicFeeds = () => SOURCES.flatMap((s) => s.dynamic.map((f) => `${s.id}/
 const PLAIN_MINUTE = minuteWhere((extra) => extra === null);
 
 describe("a capture pass", () => {
+  // Verifies d004 R1
   it("stores each dynamic feed with the fixture's bytes when the scheduled handler runs", async () => {
     await seedIndexes();
     const before = new Map();
@@ -140,6 +141,7 @@ describe("a capture pass", () => {
     }
   });
 
+  // Verifies d004 R4
   it("stores the dynamic feeds and only that static feed at a static feed's minute", async () => {
     await seedIndexes();
     const scheduledTime = minuteWhere((extra) => extra?.type === "feed");
@@ -152,6 +154,7 @@ describe("a capture pass", () => {
     expect(new Uint8Array(await stored.arrayBuffer())).toEqual(fixtureBytes(source, feed));
   });
 
+  // Verifies d004 R6
   it("fetches a feed at the new URL its index in state/ points to, and stores it", async () => {
     const movedPath = "moved/bicing/station_status/r6";
     await seedIndexes({ "bicing/station_status": `${SIM}/${movedPath}` });
@@ -163,6 +166,7 @@ describe("a capture pass", () => {
     expect(new Uint8Array(await stored.arrayBuffer())).toEqual(fixtureBytes("bicing", "station_status"));
   });
 
+  // Verifies d004 R10
   it("leaves an object already at its key unchanged and logs feed_captured", async () => {
     await seedIndexes();
     const start = new Date(PLAIN_MINUTE + 3_000);
@@ -178,6 +182,7 @@ describe("a capture pass", () => {
     );
   });
 
+  // Verifies d004 R15
   it("writes one log object whose lines carry the common fields", async () => {
     await seedIndexes();
 
@@ -194,6 +199,7 @@ describe("a capture pass", () => {
     expect(captured.sort()).toEqual(dynamicFeeds());
   });
 
+  // Verifies d004 R17
   it("sends one heartbeat and logs heartbeat_sent at the heartbeat minute with every dynamic feed stored", async () => {
     await seedIndexes();
     const scheduledTime = minuteWhere((extra) => extra?.type === "heartbeat");

@@ -33,6 +33,7 @@ describe("sendHeartbeat", () => {
     expect(result).toMatchObject({ ok: false, errorType: "timeout" });
   });
 
+  // Verifies d004 R23
   it("returns an error without the URL when the network error's message contains it", async () => {
     const url = `${SIM}/heartbeat/secret-check-uuid`;
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError(`connect failed: ${url} (${url})`));

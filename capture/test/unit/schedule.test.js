@@ -21,6 +21,7 @@ function minutesOf(expected) {
 }
 
 describe("extraFetch over one UTC day", () => {
+  // Verifies d004 R5
   it.each([
     ["bicing", 7],
     ["ambici", 37],
@@ -31,6 +32,7 @@ describe("extraFetch over one UTC day", () => {
     expect(hits.every((h) => h.minute === minute)).toBe(true);
   });
 
+  // Verifies d004 R2
   it.each([
     ["bicing", 12],
     ["ambici", 42],
@@ -48,6 +50,7 @@ describe("extraFetch over one UTC day", () => {
     expect(hits.every((h) => h.minute === 22)).toBe(true);
   });
 
+  // Verifies d004 R3
   it.each([
     [0, "bicing", "system_information"],
     [2, "ambici", "system_information"],
@@ -68,10 +71,12 @@ describe("extraFetch over one UTC day", () => {
     expect(hits[0]).toMatchObject({ hour, minute: 52 });
   });
 
+  // Verifies d004 R4
   it("returns an extra fetch at exactly 132 minutes", () => {
     expect(day().filter(({ fetch }) => fetch !== null)).toHaveLength(132);
   });
 
+  // Verifies d004 R4
   it("schedules every hourly and daily feed of SOURCES", () => {
     const scheduled = new Set(
       day()
