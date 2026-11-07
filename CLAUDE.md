@@ -51,7 +51,7 @@ Work happens in three session types, each started with its skill: `/spike` (inve
 
 - Before changing a file, say in one line what changes; the owner approves on the edit's diff. Stop at each commit point before the next change.
 - Reading budget: use Project structure before exploring; list a folder before reading in it; read only the file or section the open decision needs; announce what you read and why in one line; ask before reading more than 3 files; do not re-read unchanged files.
-- Shell: one command per call, run from the project root or with absolute paths; no `cd &&`, pipes, loops, heredocs or inline scripts (`node -e`). Reading and searching use Read and Grep, not `cat`, `sed` or `grep`; a throwaway script is written to the scratchpad with Write and run with one command.
+- Shell: one command per call, run from the project root or with absolute paths; no `cd &&`, pipes, loops, heredocs or inline scripts (`node -e`). Reading uses Read, not `cat`, `head` or `sed`; searching uses `grep -rn` (`-E` for a regex); a throwaway script is written to the scratchpad with Write and run with one command.
 
 ## Project structure
 
