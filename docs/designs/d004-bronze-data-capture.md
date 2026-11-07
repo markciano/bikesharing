@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 8
-- Next: Step 9 (`/implement d004`).
+- Current step: Step 9
+- Next: Step 10 (`/implement d004`).
 
 ## 1. Spec — what and why
 
@@ -1363,7 +1363,7 @@ The script that builds capture's fixtures from live responses, and its first out
 
 ### Step 9 — Simulated sources and source fetch
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d004.s9 - add the source fetch and the simulated sources`
 - **R:** R7, R14, R16, R22
@@ -1379,7 +1379,7 @@ The simulated sources every network test uses, and `fetch.js` ([Source fetch](#s
     - failures: `http-500`, `stall-body` (headers, then a body that never ends), `network-error` (the request throws), `plain-json` (a fixture uncompressed), `oversized` (a body larger than the tests' `maxBytes`, with no `content-length`);
     - indexes, each in the GBFS shape of its source: `invalid-index/<source>` (the fixture index without one required feed), `index-extra-feed/<source>` (with one entry not in `requiredFeeds`), `index-oversized/<source>` (gzip bytes that decompress beyond the tests' `maxBytes`);
     - `moved/<source>/<feed>`: that fixture's gzip bytes at a URL other than its own (R6);
-    - heartbeat: `heartbeat` (HTTP 200) and `heartbeat-network-error` (throws an error whose message contains the request URL);
+    - heartbeat: `heartbeat` (HTTP 200) and `heartbeat-network-error` (the request throws, as `network-error`);
     - counter: every route counts the requests it receives by path, and `count/<path>` answers that count. A test that counts requests appends a suffix of its own to the route, `/<id>`, so counts do not mix across tests;
     - the routes are declared in one table, each with a one-line comment stating what it answers and the case it serves, so the file is the catalogue of simulated responses;
   - the binding `HEARTBEAT_URL` set to `https://sim.test/heartbeat/default`.
@@ -1418,7 +1418,7 @@ The simulated sources every network test uses, and `fetch.js` ([Source fetch](#s
 `heartbeat.js`, the Healthchecks.io signal (D10).
 
 - `capture/src/heartbeat.js` (new): `sendHeartbeat`.
-- `capture/test/unit/heartbeat.test.js` (new): the R23 unit row, with `heartbeat-network-error`; `heartbeat/<id>` returns `ok: true`; `http-500` returns `errorType: "http"`; `stall-body` with `heartbeatTimeoutMs` in milliseconds returns `errorType: "timeout"`.
+- `capture/test/unit/heartbeat.test.js` (new): the R23 unit row, with `fetch` replaced in that test alone by one that throws an error whose message contains the URL; `heartbeat/<id>` returns `ok: true`; `http-500` returns `errorType: "http"`; `stall-body` with `heartbeatTimeoutMs` in milliseconds returns `errorType: "timeout"`.
 
 #### Reads
 
@@ -1785,3 +1785,4 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 <!-- Decisions made after the Plan was approved: <decision> — <reason>. "None" is valid. -->
 
 - Step 8's Check limits each feed's entry list to 3 entries, not every list under `data` — [Fixtures](#fixtures) trims only the entry list; arrays inside an entry, such as a localized `name`, are kept as received.
+- `heartbeat-network-error` fails with no response, like `network-error`; the R23 unit test replaces `fetch` in that test alone with one that throws an error containing the URL — a simulated network failure reaches the Worker with workerd's fixed message, which never carries the URL.
