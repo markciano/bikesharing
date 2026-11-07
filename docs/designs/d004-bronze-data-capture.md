@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 5
-- Next: Step 6 (`/implement d004`).
+- Current step: Step 6
+- Next: Step 7 (`/implement d004`).
 
 ## 1. Spec — what and why
 
@@ -1271,7 +1271,7 @@ The first two modules of the functional core, as in [Components](#25-components)
 
 ### Step 6 — Pass logs
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d004.s6 - add the pass log`
 - **R:** R11, R15
