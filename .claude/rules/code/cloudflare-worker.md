@@ -18,6 +18,8 @@ General testing principles are in `testing.md`; reasons and detail in the [testi
 - A comment that cites a document writes `(<doc ID> <item ID>, <item title>)`, e.g. `(d004 D8, Capture failure behaviour)` or `(ADR-0012, Collectors decoupled by output contract)`. Never a bare item ID such as `(D3)`, and no file paths or anchors, which neither the editor nor GitHub follows from a comment; the doc ID finds the file, since file names start with it.
   - An item without a title, such as a requirement, is cited through the decision it comes from: `(d004 D12, Capture security)` rather than `R21`.
   - A section without an item ID is cited by document and section title: `(d004, Pass logs)`.
+- A test that verifies a Test plan row says so above it, `// Verifies <design ID> <R>`, e.g. `// Verifies d004 R7`: a traceability tag, cited by requirement since that is what the Test plan lists.
+  - TODO(T039): relocate the rules of this file that apply beyond the capture Worker, such as this tag and the comment conventions, to project-wide rules when d004 closes.
 
 ## Tools
 
