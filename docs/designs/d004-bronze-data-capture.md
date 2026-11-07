@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 10
-- Next: Step 11 (`/implement d004`).
+- Current step: Step 11
+- Next: Step 12 (`/implement d004`).
 
 ## 1. Spec — what and why
 
@@ -1436,7 +1436,7 @@ The simulated sources every network test uses, and `fetch.js` ([Source fetch](#s
 
 ### Step 11 — Pass and entry point
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d004.s11 - add the capture pass and the scheduled handler`
 - **R:** R1, R4, R6, R10, R15, R17, R21
