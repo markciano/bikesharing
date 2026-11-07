@@ -785,9 +785,11 @@ export async function fetchFeed(url, limits);
 
 /**
  * Decompresses an index body for its adapter. Never throws.
+ * `too_large`: the decompressed size exceeds `maxBytes`; `invalid_index`: the bytes are not valid gzip.
  * @param {Uint8Array} gzipBytes
  * @param {number} maxBytes Limit on the decompressed size
- * @returns {Promise<{ ok: true, text: string } | { ok: false, error: string }>}
+ * @returns {Promise<{ ok: true, text: string }
+ *   | { ok: false, errorType: 'too_large' | 'invalid_index', error: string }>}
  */
 export async function gunzipText(gzipBytes, maxBytes);
 ```
@@ -1483,6 +1485,7 @@ The pass under every failure of D8, D10 and D12, at integration level.
 
 - `capture/test/integration/pass-failures.test.js` (new): the integration rows of R7, R8, R12, R13, R14, R15 (the log is written when every data write fails), R16, R18, R20, R22, R23 and R24. Tests call `runPass` with `LIMITS` in milliseconds and bytes, and with sources or `state/` entries that point to the `sim.test` routes of Step 9: `invalid-index` for R12 and R24, `index-extra-feed` for R16, `index-oversized` for R22, and `http-500/<id>` with `count/http-500/<id>` for R8. A failing bucket is a proxy over the test's R2 binding that fails `put` for the prefixes a test chooses.
 - `capture/src/pass.js` (modified, only if a test shows a gap): the fix that makes it pass. If the fix contradicts a decision or a contract of this design, the step stops and reports it.
+- `capture/src/fetch.js` and `capture/test/unit/fetch.test.js` (modified): `gunzipText` returns `errorType` as in [Components](#25-components) › `fetch.js`, and the refresh in `pass.js` logs it, so an index over `maxBytes` once decompressed is `index_rejected` with `error_type: too_large` (R22).
 
 #### Reads
 
@@ -1786,3 +1789,4 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 
 - Step 8's Check limits each feed's entry list to 3 entries, not every list under `data` — [Fixtures](#fixtures) trims only the entry list; arrays inside an entry, such as a localized `name`, are kept as received.
 - `heartbeat-network-error` fails with no response, like `network-error`; the R23 unit test replaces `fetch` in that test alone with one that throws an error containing the URL — a simulated network failure reaches the Worker with workerd's fixed message, which never carries the URL.
+- `gunzipText` returns `errorType`, and an index over `maxBytes` once decompressed is logged with `error_type: too_large`, not `invalid_index` — `error_type` names the cause, so oversize gets one category whether detected before or after decompression; `invalid_index` stays for content that is wrong. Applied in Step 12.
