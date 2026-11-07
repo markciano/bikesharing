@@ -10,9 +10,25 @@ permissions:
   contents: read
 
 jobs:
-  # TODO(T039): when the second component job is added, add a final job `ci-passed`
-  # that needs all jobs, and switch the ruleset's required check from `docs`
-  # to `ci-passed` (ADR-0013).
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      capture: ${{ steps.filter.outputs.capture }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            capture:
+              - 'capture/**'
+              - 'contracts/**'
+              - '.github/workflows/ci.yml'
+
   docs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -24,3 +40,32 @@ jobs:
           cache: npm
       - run: npm ci
       - run: bash scripts/lint-docs.sh
+
+  capture:
+    needs: changes
+    if: needs.changes.outputs.capture == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: capture
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: capture/.nvmrc
+          cache: npm
+          cache-dependency-path: capture/package-lock.json
+      - run: npm ci
+      - run: npx vitest run
+
+  # The only required check. `if: always()` keeps it from being skipped when a
+  # job fails; a job skipped by its path filter passes.
+  ci-passed:
+    needs: [changes, docs, capture]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

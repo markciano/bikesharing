@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 12
-- Next: Step 13 (`/implement d004`).
+- Current step: Step 13
+- Next: Step 13 Check, on the PR run; then the owner switches the required check to `ci-passed`.
 
 ## 1. Spec — what and why
 
@@ -1504,7 +1504,7 @@ The pass under every failure of D8, D10 and D12, at integration level.
 
 ### Step 13 — CI job
 
-- **Status:** 💤 todo
+- **Status:** 🔄 in progress
 - **Who:** Claude; the owner switches the ruleset's required check
 - **Commit:** `ci: d004.s13 - add the capture job and the ci-passed aggregator`
 - **R:** —
@@ -1519,6 +1519,7 @@ The CI job of the `capture` component and the aggregator that becomes the only r
   - job `capture`, with `needs: changes` and `if: needs.changes.outputs.capture == 'true'`, following the recipe of `ci.md` › Job per component: `working-directory: capture`, `actions/setup-node@v7` with `node-version-file: capture/.nvmrc`, `cache: npm` and `cache-dependency-path: capture/package-lock.json`, then `npm ci` and `npx vitest run`, the whole suite;
   - job `ci-passed`, with `needs: [changes, docs, capture]` and `if: always()`, whose only step fails if any job in `needs` has the result `failure` or `cancelled`; `skipped` passes, since a filtered job is skipped. Without `if: always()` it would be skipped when a job fails, and GitHub treats a skipped required check as passed;
   - the `TODO(T039)` comment removed.
+- `.claude/rules/code/ci.md` (modified): § Aggregator and required check states the `changes` job and the `ci-passed` job as built here.
 - Ruleset of `main` (owner, outside the repository): required check `ci-passed` in place of `docs`.
 
 #### Reads
@@ -1791,3 +1792,4 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 - `heartbeat-network-error` fails with no response, like `network-error`; the R23 unit test replaces `fetch` in that test alone with one that throws an error containing the URL — a simulated network failure reaches the Worker with workerd's fixed message, which never carries the URL.
 - `gunzipText` returns `errorType`, and an index over `maxBytes` once decompressed is logged with `error_type: too_large`, not `invalid_index` — `error_type` names the cause, so oversize gets one category whether detected before or after decompression; `invalid_index` stays for content that is wrong. Applied in Step 12.
 - Step 12 adds a `// Verifies d004 Rn` comment to the tests of Steps 2–11 that verify a Test plan row, outside its Scope, and the tag's format to `.claude/rules/code/cloudflare-worker.md` — Step 12's Check traces every Test row to its test, and those tests did not cite their R.
+- Step 13 also updates `.claude/rules/code/ci.md` › Aggregator and required check, outside its Scope: the section described the aggregator as future work, and the `changes` and `ci-passed` patterns are conventions the next component job reuses. Applied in Step 13.
