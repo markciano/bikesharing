@@ -21,7 +21,7 @@ For a step with Who: Owner.
    - If it is evidence the spike needs (figures, behaviour, errors), write it as the next Finding (F), with step, date and source. The owner approves on the diff.
    - Check passes: the step goes to ✅. Check fails: it stays 🔄 and the report says why.
    - Gate fails: the step goes to ⛔. Report the consequence the Gate states; once the owner confirms it, record it in the Decision log and update the affected steps.
-5. End with the Change report: "Owner step N" instead of "Step N"; Check is the owner's result in one line; Commit only if the step has one.
+5. End with the Change report: "Paso del owner N" instead of "Paso N"; Check is the owner's result in one line; Commit only if the step has one.
 
 ## Findings
 
