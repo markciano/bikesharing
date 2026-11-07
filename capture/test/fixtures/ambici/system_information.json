@@ -1,0 +1,29 @@
+{
+  "last_updated": 1794011276,
+  "ttl": 60,
+  "data": {
+    "system_id": "nextbike_bs",
+    "language": "en",
+    "name": "AMBici",
+    "operator": "TIER Mobility SE, Karl-Heine-Str. 46, 04229 Leipzig, Germany",
+    "url": "https://www.ambici.cat/",
+    "phone_number": "+34 900 747 152",
+    "email": "info@ambici.cat",
+    "feed_contact_email": "gbfs@nextbike.net",
+    "timezone": "Europe/Berlin",
+    "license_id": "CC0-1.0",
+    "rental_apps": {
+      "android": {
+        "store_uri": "https://play.google.com/store/apps/details?id=net.nextbike.ambici",
+        "discovery_uri": "ambici://",
+        "x_app_link_host": "ambici.nextbike.app"
+      },
+      "ios": {
+        "store_uri": "https://apps.apple.com/app/id1640231653",
+        "discovery_uri": "ambici://",
+        "x_universal_link_host": "ambici.nextbike.app"
+      }
+    }
+  },
+  "version": "2.3"
+}

@@ -1,0 +1,60 @@
+{
+  "last_updated": 1794011276,
+  "ttl": 60,
+  "data": {
+    "bikes": [
+      {
+        "bike_id": "4wRpYNGxzDjyQ3YUVGaEdlgQJPkKr1Xy",
+        "is_reserved": false,
+        "is_disabled": false,
+        "rental_uris": {
+          "android": "https://ambici.nextbike.app/station?id=189004148",
+          "ios": "https://ambici.nextbike.app/station?id=189004148",
+          "web": "https://nxtb.it/p/189004148"
+        },
+        "lat": 41.423345,
+        "lon": 2.205672,
+        "vehicle_type_id": "204",
+        "current_fuel_percent": 0.96,
+        "current_range_meters": 57000,
+        "station_id": "189004148",
+        "pricing_plan_id": "Rate0010"
+      },
+      {
+        "bike_id": "Y8pMvRNbqD8v7A8u4WV1Gw65WaPLk0QG",
+        "is_reserved": false,
+        "is_disabled": false,
+        "rental_uris": {
+          "android": "https://ambici.nextbike.app/station?id=189004148",
+          "ios": "https://ambici.nextbike.app/station?id=189004148",
+          "web": "https://nxtb.it/p/189004148"
+        },
+        "lat": 41.423345,
+        "lon": 2.205672,
+        "vehicle_type_id": "204",
+        "current_fuel_percent": 0.82,
+        "current_range_meters": 47000,
+        "station_id": "189004148",
+        "pricing_plan_id": "Rate0010"
+      },
+      {
+        "bike_id": "NZoRjLV80gdVBzyhbpd0WXnPa7YyXAeM",
+        "is_reserved": false,
+        "is_disabled": false,
+        "rental_uris": {
+          "android": "https://ambici.nextbike.app/station?id=189004148",
+          "ios": "https://ambici.nextbike.app/station?id=189004148",
+          "web": "https://nxtb.it/p/189004148"
+        },
+        "lat": 41.423345,
+        "lon": 2.205672,
+        "vehicle_type_id": "204",
+        "current_fuel_percent": 1,
+        "current_range_meters": 60000,
+        "station_id": "189004148",
+        "pricing_plan_id": "Rate0010"
+      }
+    ]
+  },
+  "version": "2.3"
+}

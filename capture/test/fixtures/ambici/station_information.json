@@ -1,0 +1,54 @@
+{
+  "last_updated": 1794011276,
+  "ttl": 60,
+  "data": {
+    "stations": [
+      {
+        "station_id": "150867939",
+        "name": "AMB - Diagonal I",
+        "short_name": "34871",
+        "lat": 41.386505,
+        "lon": 2.116467,
+        "region_id": "833",
+        "rental_uris": {
+          "android": "https://ambici.nextbike.app/station?id=150867939",
+          "ios": "https://ambici.nextbike.app/station?id=150867939",
+          "web": "https://nxtb.it/p/150867939"
+        },
+        "is_virtual_station": false,
+        "capacity": 18
+      },
+      {
+        "station_id": "189004148",
+        "name": "AMB - METRO La Pau",
+        "short_name": "34872",
+        "lat": 41.423345,
+        "lon": 2.205672,
+        "region_id": "833",
+        "rental_uris": {
+          "android": "https://ambici.nextbike.app/station?id=189004148",
+          "ios": "https://ambici.nextbike.app/station?id=189004148",
+          "web": "https://nxtb.it/p/189004148"
+        },
+        "is_virtual_station": false,
+        "capacity": 20
+      },
+      {
+        "station_id": "196048973",
+        "name": "AMB - Campus Diagonal - Besòs",
+        "short_name": "34901",
+        "lat": 41.413419,
+        "lon": 2.22175,
+        "region_id": "833",
+        "rental_uris": {
+          "android": "https://ambici.nextbike.app/station?id=196048973",
+          "ios": "https://ambici.nextbike.app/station?id=196048973",
+          "web": "https://nxtb.it/p/196048973"
+        },
+        "is_virtual_station": false,
+        "capacity": 24
+      }
+    ]
+  },
+  "version": "2.3"
+}

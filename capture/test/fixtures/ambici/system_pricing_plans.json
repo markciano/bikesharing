@@ -1,0 +1,18 @@
+{
+  "last_updated": 1794011276,
+  "ttl": 86400,
+  "data": {
+    "plans": [
+      {
+        "plan_id": "Rate0010",
+        "name": "Free/Frei",
+        "currency": "EUR",
+        "price": 0,
+        "is_taxable": false,
+        "description": "Free/Frei",
+        "per_min_pricing": []
+      }
+    ]
+  },
+  "version": "2.3"
+}

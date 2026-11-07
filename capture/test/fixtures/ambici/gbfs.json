@@ -1,0 +1,127 @@
+{
+  "last_updated": 1794011276,
+  "ttl": 60,
+  "data": {
+    "ca": {
+      "feeds": [
+        {
+          "name": "system_information",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/system_information.json"
+        },
+        {
+          "name": "vehicle_types",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/vehicle_types.json"
+        },
+        {
+          "name": "station_information",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/station_information.json"
+        },
+        {
+          "name": "station_status",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/station_status.json"
+        },
+        {
+          "name": "free_bike_status",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/free_bike_status.json"
+        },
+        {
+          "name": "system_hours",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/system_hours.json"
+        },
+        {
+          "name": "system_regions",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/system_regions.json"
+        },
+        {
+          "name": "system_pricing_plans",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/system_pricing_plans.json"
+        },
+        {
+          "name": "geofencing_zones",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/ca/geofencing_zones.json"
+        }
+      ]
+    },
+    "es": {
+      "feeds": [
+        {
+          "name": "system_information",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/system_information.json"
+        },
+        {
+          "name": "vehicle_types",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/vehicle_types.json"
+        },
+        {
+          "name": "station_information",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/station_information.json"
+        },
+        {
+          "name": "station_status",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/station_status.json"
+        },
+        {
+          "name": "free_bike_status",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/free_bike_status.json"
+        },
+        {
+          "name": "system_hours",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/system_hours.json"
+        },
+        {
+          "name": "system_regions",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/system_regions.json"
+        },
+        {
+          "name": "system_pricing_plans",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/system_pricing_plans.json"
+        },
+        {
+          "name": "geofencing_zones",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/es/geofencing_zones.json"
+        }
+      ]
+    },
+    "en": {
+      "feeds": [
+        {
+          "name": "system_information",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_information.json"
+        },
+        {
+          "name": "vehicle_types",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/vehicle_types.json"
+        },
+        {
+          "name": "station_information",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/station_information.json"
+        },
+        {
+          "name": "station_status",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/station_status.json"
+        },
+        {
+          "name": "free_bike_status",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/free_bike_status.json"
+        },
+        {
+          "name": "system_hours",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_hours.json"
+        },
+        {
+          "name": "system_regions",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_regions.json"
+        },
+        {
+          "name": "system_pricing_plans",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_pricing_plans.json"
+        },
+        {
+          "name": "geofencing_zones",
+          "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/geofencing_zones.json"
+        }
+      ]
+    }
+  },
+  "version": "2.3"
+}

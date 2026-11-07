@@ -1,0 +1,150 @@
+{
+  "last_updated": "2026-11-07T00:28:30Z",
+  "ttl": 0,
+  "data": {
+    "vehicle_types": [
+      {
+        "vehicle_type_id": "ICONIC",
+        "form_factor": "bicycle",
+        "propulsion_type": "human",
+        "max_range_meters": 0,
+        "name": [
+          {
+            "text": "ICONIC",
+            "language": "ca"
+          },
+          {
+            "text": "ICONIC",
+            "language": "en"
+          },
+          {
+            "text": "ICONIC",
+            "language": "fr"
+          },
+          {
+            "text": "ICONIC",
+            "language": "nl"
+          },
+          {
+            "text": "ICONIC",
+            "language": "es"
+          }
+        ],
+        "default_pricing_plan_id": "8-4",
+        "pricing_plan_ids": [
+          "8-4",
+          "8-5",
+          "9-2",
+          "9-3",
+          "11-4",
+          "11-5",
+          "12-2",
+          "12-3",
+          "13-1",
+          "13-4",
+          "13-5",
+          "14-1",
+          "14-2",
+          "14-3"
+        ]
+      },
+      {
+        "vehicle_type_id": "FIT",
+        "form_factor": "bicycle",
+        "propulsion_type": "human",
+        "max_range_meters": 0,
+        "name": [
+          {
+            "text": "FIT",
+            "language": "ca"
+          },
+          {
+            "text": "FIT",
+            "language": "en"
+          },
+          {
+            "text": "FIT",
+            "language": "fr"
+          },
+          {
+            "text": "FIT",
+            "language": "nl"
+          },
+          {
+            "text": "FIT",
+            "language": "es"
+          }
+        ],
+        "default_pricing_plan_id": "8-4",
+        "pricing_plan_ids": [
+          "8-4",
+          "8-5",
+          "9-2",
+          "9-3",
+          "11-4",
+          "11-5",
+          "12-2",
+          "12-3",
+          "13-1",
+          "13-4",
+          "13-5",
+          "14-1",
+          "14-2",
+          "14-3"
+        ]
+      },
+      {
+        "vehicle_type_id": "BOOST",
+        "form_factor": "bicycle",
+        "propulsion_type": "electric_assist",
+        "max_range_meters": 0,
+        "name": [
+          {
+            "text": "BOOST",
+            "language": "ca"
+          },
+          {
+            "text": "BOOST",
+            "language": "en"
+          },
+          {
+            "text": "BOOST",
+            "language": "fr"
+          },
+          {
+            "text": "BOOST",
+            "language": "nl"
+          },
+          {
+            "text": "BOOST",
+            "language": "es"
+          }
+        ],
+        "default_pricing_plan_id": "1-4",
+        "pricing_plan_ids": [
+          "1-4",
+          "1-5",
+          "2-2",
+          "2-3",
+          "6-2",
+          "6-3",
+          "8-4",
+          "8-5",
+          "9-2",
+          "9-3",
+          "11-4",
+          "11-5",
+          "12-2",
+          "12-3",
+          "13-1",
+          "13-4",
+          "13-5",
+          "14-1",
+          "14-2",
+          "14-3"
+        ]
+      }
+    ]
+  },
+  "version": "3.0"
+}

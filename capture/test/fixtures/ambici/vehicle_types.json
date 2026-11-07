@@ -1,0 +1,38 @@
+{
+  "last_updated": 1794011276,
+  "ttl": 60,
+  "data": {
+    "vehicle_types": [
+      {
+        "vehicle_type_id": "204",
+        "vehicle_image": "https://static.nextbike.net/app/biketypes-v5/type/bs/204/h500.png",
+        "name": "E-Bike",
+        "_description": "- e-eco B frame with FrameLock\r\n- aluminum basket with ad panel\r\n- e-CFC fork with charging contact and RFID chip\r\n- Rollerbrake back and front\r\n- RFID Reader \r\n",
+        "form_factor": "bicycle",
+        "rider_capacity": 1,
+        "propulsion_type": "electric_assist",
+        "max_range_meters": 60000
+      },
+      {
+        "vehicle_type_id": "196",
+        "vehicle_image": "https://static.nextbike.net/app/biketypes-v5/type/bs/196/h500.png",
+        "name": "Classic Bike",
+        "_description": "SMARTbike 2.0 with labeling\r\n\r\n- eco frame with coverd Framelock +\r\n - analog fork with forkadapter and RFID chip\r\n - aluminum solar basket with ad panel\r\n - freewheel with rollerbrake back and front",
+        "form_factor": "bicycle",
+        "rider_capacity": 1,
+        "propulsion_type": "human"
+      },
+      {
+        "vehicle_type_id": "420",
+        "vehicle_image": "https://static.nextbike.net/app/biketypes-v5/type/bs/420/h500.png",
+        "name": "E-Bike",
+        "_description": "- SWAP3 frame with swappable battery BAFANG 540 Wh\r\n - steel fork\r\n - plastic basket with ad panel and solar\r\n - free wheel, rollerbrake back and front\r\n - TANNUS puncture protection\r\n - cockpit with phone holder and display\r\n - BSIOT \r\n - Brake Block",
+        "form_factor": "bicycle",
+        "rider_capacity": 1,
+        "propulsion_type": "electric_assist",
+        "max_range_meters": 60000
+      }
+    ]
+  },
+  "version": "2.3"
+}
