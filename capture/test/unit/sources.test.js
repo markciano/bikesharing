@@ -1,3 +1,4 @@
+// Unit tests of the source table: the feeds each source requires and the feed counts across sources.
 import { describe, expect, it } from "vitest";
 import { SOURCES, requiredFeeds } from "../../src/sources.js";
 
