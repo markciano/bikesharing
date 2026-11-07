@@ -13,7 +13,7 @@
 
 -- The listing file and the first full UTC day of the window (the day after
 -- production's first day).
-SET VARIABLE listing = 'spikes/cloudflare-capture-spike/data/bronze-raw.txt';
+SET VARIABLE listing = 'spikes/cloudflare-capture-spike/analysis/output/prod-completeness.txt';
 SET VARIABLE first_day = DATE '2026-11-09';
 
 -- The dynamic feeds of d004 > D3. A feed with no object in the window still
