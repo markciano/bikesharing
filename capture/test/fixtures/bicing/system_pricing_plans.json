@@ -1,0 +1,201 @@
+{
+  "last_updated": "2026-11-07T00:28:30Z",
+  "ttl": 0,
+  "data": {
+    "plans": [
+      {
+        "plan_id": "1-4",
+        "name": [
+          {
+            "text": "Tarifa Plana",
+            "language": "en"
+          },
+          {
+            "text": "Tarifa Plana",
+            "language": "ca"
+          },
+          {
+            "text": "Tarifa Plana",
+            "language": "es"
+          }
+        ],
+        "currency": "EUR",
+        "price": 50,
+        "description": [
+          {
+            "text": "",
+            "language": "en"
+          },
+          {
+            "text": "",
+            "language": "ca"
+          },
+          {
+            "text": "",
+            "language": "es"
+          }
+        ],
+        "is_taxable": false,
+        "per_min_pricing": [
+          {
+            "start": 31,
+            "rate": 0.81,
+            "interval": 30,
+            "end": 61
+          },
+          {
+            "start": 61,
+            "rate": 0.81,
+            "interval": 30,
+            "end": 91
+          },
+          {
+            "start": 91,
+            "rate": 0.81,
+            "interval": 30,
+            "end": 121
+          },
+          {
+            "start": 121,
+            "rate": 5.75,
+            "interval": 60,
+            "end": 1265
+          }
+        ]
+      },
+      {
+        "plan_id": "1-5",
+        "name": [
+          {
+            "text": "Tarifa Plana",
+            "language": "en"
+          },
+          {
+            "text": "Tarifa Plana",
+            "language": "ca"
+          },
+          {
+            "text": "Tarifa Plana",
+            "language": "es"
+          }
+        ],
+        "currency": "EUR",
+        "price": 50,
+        "description": [
+          {
+            "text": "",
+            "language": "en"
+          },
+          {
+            "text": "",
+            "language": "ca"
+          },
+          {
+            "text": "",
+            "language": "es"
+          }
+        ],
+        "is_taxable": false,
+        "per_min_pricing": [
+          {
+            "start": 0,
+            "rate": 0.4,
+            "interval": 31,
+            "end": 31
+          },
+          {
+            "start": 31,
+            "rate": 1.04,
+            "interval": 30,
+            "end": 61
+          },
+          {
+            "start": 61,
+            "rate": 1.04,
+            "interval": 30,
+            "end": 91
+          },
+          {
+            "start": 91,
+            "rate": 1.04,
+            "interval": 30,
+            "end": 121
+          },
+          {
+            "start": 121,
+            "rate": 5.75,
+            "interval": 60,
+            "end": 1264
+          }
+        ]
+      },
+      {
+        "plan_id": "2-2",
+        "name": [
+          {
+            "text": "Pagament per ús",
+            "language": "en"
+          },
+          {
+            "text": "Tarifa d'ús",
+            "language": "ca"
+          },
+          {
+            "text": "Tarifa de uso",
+            "language": "es"
+          }
+        ],
+        "currency": "EUR",
+        "price": 35,
+        "description": [
+          {
+            "text": "",
+            "language": "en"
+          },
+          {
+            "text": "",
+            "language": "ca"
+          },
+          {
+            "text": "",
+            "language": "es"
+          }
+        ],
+        "is_taxable": false,
+        "per_min_pricing": [
+          {
+            "start": 0,
+            "rate": 0.4,
+            "interval": 31,
+            "end": 31
+          },
+          {
+            "start": 31,
+            "rate": 0.81,
+            "interval": 30,
+            "end": 61
+          },
+          {
+            "start": 61,
+            "rate": 0.81,
+            "interval": 30,
+            "end": 91
+          },
+          {
+            "start": 91,
+            "rate": 0.81,
+            "interval": 30,
+            "end": 121
+          },
+          {
+            "start": 121,
+            "rate": 5.75,
+            "interval": 60,
+            "end": 1264
+          }
+        ]
+      }
+    ]
+  },
+  "version": "3.0"
+}

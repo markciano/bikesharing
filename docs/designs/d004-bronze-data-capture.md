@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 7
-- Next: Step 8 (`/implement d004`).
+- Current step: Step 8
+- Next: Step 9 (`/implement d004`).
 
 ## 1. Spec — what and why
 
@@ -1331,7 +1331,7 @@ The first two modules of the functional core, as in [Components](#25-components)
 
 ### Step 8 — Fixtures
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `test: d004.s8 - add the capture fixtures and their script`
 - **R:** —
@@ -1359,7 +1359,7 @@ The script that builds capture's fixtures from live responses, and its first out
 
 - Each source has `gbfs.json` and one file per feed its index lists, including every feed of `requiredFeeds`.
 - `manifest.json` has one entry per fixture file, each with its four fields, and Bicing's with `attribution`.
-- No list under `data`, other than in `gbfs.json`, has more than 3 entries.
+- No feed's entry list under `data`, other than in `gbfs.json`, has more than 3 entries.
 
 ### Step 9 — Simulated sources and source fetch
 
@@ -1783,3 +1783,5 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 ### 4.3 Decisions taken during implementation
 
 <!-- Decisions made after the Plan was approved: <decision> — <reason>. "None" is valid. -->
+
+- Step 8's Check limits each feed's entry list to 3 entries, not every list under `data` — [Fixtures](#fixtures) trims only the entry list; arrays inside an entry, such as a localized `name`, are kept as received.

@@ -1,0 +1,21 @@
+{
+  "last_updated": 1794011276,
+  "ttl": 60,
+  "data": {
+    "regions": [
+      {
+        "region_id": "833",
+        "name": "AMB"
+      },
+      {
+        "region_id": "840",
+        "name": "Badalona"
+      },
+      {
+        "region_id": "841",
+        "name": "Hospitalet de Llobregat"
+      }
+    ]
+  },
+  "version": "2.3"
+}

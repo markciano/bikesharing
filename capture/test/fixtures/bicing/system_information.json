@@ -1,0 +1,40 @@
+{
+  "last_updated": "2026-11-07T00:28:29Z",
+  "ttl": 0,
+  "data": {
+    "system_id": "bike_barcelona",
+    "timezone": "Europe/Madrid",
+    "languages": [
+      "ca",
+      "en",
+      "fr",
+      "nl",
+      "es"
+    ],
+    "name": [
+      {
+        "text": "Bike Barcelona",
+        "language": "ca"
+      },
+      {
+        "text": "Bike Barcelona",
+        "language": "en"
+      },
+      {
+        "text": "Bike Barcelona",
+        "language": "fr"
+      },
+      {
+        "text": "Bike Barcelona",
+        "language": "nl"
+      },
+      {
+        "text": "Bike Barcelona",
+        "language": "es"
+      }
+    ],
+    "opening_hours": "Mo-Su,PH 00:00-24:00",
+    "feed_contact_email": "mobility-data-client@lyft.com"
+  },
+  "version": "3.0"
+}

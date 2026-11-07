@@ -1,0 +1,125 @@
+[
+  {
+    "source": "ambici",
+    "feed": "free_bike_status",
+    "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/free_bike_status.json",
+    "captured_at": "2026-11-07T00:28:29.174Z"
+  },
+  {
+    "source": "ambici",
+    "feed": "gbfs",
+    "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/gbfs.json",
+    "captured_at": "2026-11-07T00:28:28.837Z"
+  },
+  {
+    "source": "ambici",
+    "feed": "geofencing_zones",
+    "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/geofencing_zones.json",
+    "captured_at": "2026-11-07T00:28:29.381Z"
+  },
+  {
+    "source": "ambici",
+    "feed": "station_information",
+    "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/station_information.json",
+    "captured_at": "2026-11-07T00:28:29.092Z"
+  },
+  {
+    "source": "ambici",
+    "feed": "station_status",
+    "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/station_status.json",
+    "captured_at": "2026-11-07T00:28:29.130Z"
+  },
+  {
+    "source": "ambici",
+    "feed": "system_hours",
+    "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_hours.json",
+    "captured_at": "2026-11-07T00:28:29.257Z"
+  },
+  {
+    "source": "ambici",
+    "feed": "system_information",
+    "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_information.json",
+    "captured_at": "2026-11-07T00:28:29.017Z"
+  },
+  {
+    "source": "ambici",
+    "feed": "system_pricing_plans",
+    "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_pricing_plans.json",
+    "captured_at": "2026-11-07T00:28:29.343Z"
+  },
+  {
+    "source": "ambici",
+    "feed": "system_regions",
+    "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/system_regions.json",
+    "captured_at": "2026-11-07T00:28:29.295Z"
+  },
+  {
+    "source": "ambici",
+    "feed": "vehicle_types",
+    "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/en/vehicle_types.json",
+    "captured_at": "2026-11-07T00:28:29.056Z"
+  },
+  {
+    "source": "bicing",
+    "feed": "gbfs",
+    "url": "https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/gbfs.json",
+    "captured_at": "2026-11-07T00:28:29.419Z",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "source": "bicing",
+    "feed": "gbfs_versions",
+    "url": "https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/gbfs_versions",
+    "captured_at": "2026-11-07T00:28:29.551Z",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "source": "bicing",
+    "feed": "geofencing_zones",
+    "url": "https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/geofencing_zones",
+    "captured_at": "2026-11-07T00:28:29.590Z",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "source": "bicing",
+    "feed": "station_information",
+    "url": "https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/station_information",
+    "captured_at": "2026-11-07T00:28:29.630Z",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "source": "bicing",
+    "feed": "station_status",
+    "url": "https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/station_status",
+    "captured_at": "2026-11-07T00:28:29.744Z",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "source": "bicing",
+    "feed": "system_information",
+    "url": "https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/system_information",
+    "captured_at": "2026-11-07T00:28:29.795Z",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "source": "bicing",
+    "feed": "system_pricing_plans",
+    "url": "https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/system_pricing_plans",
+    "captured_at": "2026-11-07T00:28:29.866Z",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "source": "bicing",
+    "feed": "system_regions",
+    "url": "https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/system_regions",
+    "captured_at": "2026-11-07T00:28:30.076Z",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "source": "bicing",
+    "feed": "vehicle_types",
+    "url": "https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/vehicle_types",
+    "captured_at": "2026-11-07T00:28:30.120Z",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  }
+]
