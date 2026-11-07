@@ -32,18 +32,23 @@ A step with Who: Owner is run by the owner: give its commands in code blocks and
 
 Report by exception: what follows the plan is not described; the owner reads the diff.
 
+The report is conversation, so it is written in Spanish (CLAUDE.md › Conventions), with the labels below. Only the Check output and the commit message stay literal, in English.
+
 ```text
-Step N ✅ — <one line: what the system does now>
+Paso N ✅ — <one line: what the system does now>
 Check: <last line of the output, literal>
-Exceptions: none
-Commit: Follow Git conventions in CLAUDE.md.
+Excepciones: ninguna
 ```
 
-- **Step line:** ✅ if the Check passes, 🔄 or ⛔ otherwise. For a one-step change, "Change" instead of "Step N".
+```text
+<commit message>
+```
+
+- **Step line:** ✅ if the Check passes, 🔄 or ⛔ otherwise. For a one-step change, "Cambio" instead of "Paso N".
 - **Check:** the summary line only, literal. If it fails, the full output, literal. For a one-step change, the test run, if it touches code.
-- **Exceptions:** "none", or one line each for:
+- **Excepciones:** "ninguna", or one line each for:
   - deviations, and their status (pending OK or approved);
   - files touched outside the step's Scope;
   - tests added, or planned tests that did not fail before the code;
   - new TODOs.
-- **Commit:** the step's Commit line, adjusted only if the step's content changed. For a one-step change, following the Git conventions in CLAUDE.md.
+- **Commit message:** the step's Commit line, adjusted only if the step's content changed. For a one-step change, following the Git conventions in CLAUDE.md. It goes alone in its own `text` block, on one line, with no label, backticks or other text, so it can be copied as is; when a step needs more than one commit, one block per commit, each preceded by the files it takes.
