@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 9
-- Next: Step 10 (`/implement d004`).
+- Current step: Step 10
+- Next: Step 11 (`/implement d004`).
 
 ## 1. Spec — what and why
 
@@ -1407,7 +1407,7 @@ The simulated sources every network test uses, and `fetch.js` ([Source fetch](#s
 
 ### Step 10 — Heartbeat
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d004.s10 - add the heartbeat signal`
 - **R:** R20, R23
