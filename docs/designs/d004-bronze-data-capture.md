@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: Step 13
-- Next: Step 13 Check, on the PR run; then the owner switches the required check to `ci-passed`.
+- Next: Step 14 (`/implement d004`).
 
 ## 1. Spec — what and why
 
@@ -1504,7 +1504,7 @@ The pass under every failure of D8, D10 and D12, at integration level.
 
 ### Step 13 — CI job
 
-- **Status:** 🔄 in progress
+- **Status:** ✅ done
 - **Who:** Claude; the owner switches the ruleset's required check
 - **Commit:** `ci: d004.s13 - add the capture job and the ci-passed aggregator`
 - **R:** —
