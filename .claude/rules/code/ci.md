@@ -45,5 +45,19 @@ A job for repository-wide tooling (e.g. `docs`) follows the same recipe at the r
 
 ## Aggregator and required check
 
-- When the second component job is added, add a final job `ci-passed` that `needs` every other job, and switch the ruleset's required check from `docs` to `ci-passed` (ADR-0013). The ruleset change is done by the owner. The TODO in `ci.yml` stays until then.
-- If a job uses path filters, the shared contract file must be inside the filters of every job that reads it, so a contract change runs the tests of both sides.
+- `ci-passed` is the only required check in the ruleset of `main` (ADR-0013); the ruleset is changed by the owner.
+- `ci-passed` `needs` every other job, runs with `if: always()`, and its only step fails when any of them ends in `failure` or `cancelled`. A job skipped by its path filter is `skipped` and passes. Without `if: always()`, `ci-passed` would be skipped when a job fails, and GitHub treats a skipped required check as passed.
+- Path filters live in one job `changes`, using `dorny/paths-filter`, with one output per component. Each component job has `needs: changes` and `if: needs.changes.outputs.<component> == 'true'`.
+- `changes` runs `actions/checkout` before the filter, since on `push` it compares commits with git. It sets its own `permissions` (`contents: read`, `pull-requests: read`), since on `pull_request` it lists the changed files through the API.
+- The filter of a component includes `.github/workflows/ci.yml`, and the shared contract file of every job that reads it, so a contract change runs the tests of both sides.
+
+```yaml
+  ci-passed:
+    needs: [changes, <every other job>]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+```
