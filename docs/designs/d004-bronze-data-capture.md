@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 14
-- Next: Step 15 (`/implement d004`).
+- Current step: Step 15
+- Next: Step 16 (`/implement d004`).
 
 ## 1. Spec — what and why
 
@@ -1585,7 +1585,7 @@ The documents of File layout that describe the system and are not rule documents
 
 ### Step 15 — Switch tooling
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: d004.s15 - add the switch and completeness tooling`
 - **R:** —

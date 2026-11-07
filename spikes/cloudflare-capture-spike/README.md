@@ -37,8 +37,13 @@ Observed window: 2026-10-14 10:51–22:09 UTC (findings F14 and F15 in the worki
 spikes/cloudflare-capture-spike/
 ├── README.md                 This file
 ├── js/                       V2, V4 (one Wrangler config per Worker)
+│   ├── src/probe-write-once.js   Write-once probe for T039, run only locally
+│   └── wrangler.probe.jsonc      Its Wrangler config
 ├── analysis/
 │   ├── analyze_remote_capture.py
+│   ├── spike-log-queries.sql     DuckDB queries over V4's logs and raw (d004 › D2)
+│   ├── spike_raw_switch.py       Cutoffs, keys and counts for the switch (d004 › D11)
+│   ├── capture-completeness.sql  Production's first 7 days (d004 › D6)
 │   └── output/               Report and issues (ignored by git)
 └── data/                     Copy of the bucket data (ignored by git)
     ├── V2/{raw,logs,state}/
@@ -64,4 +69,47 @@ Analyse the capture, from the spike root. The script recomputes everything from 
 
 ```bash
 python3 analysis/analyze_remote_capture.py
+```
+
+Probe R2's write-once condition, from `js/` (against the test bucket, or against Miniflare with `--env miniflare`), then request `/`. It is never deployed:
+
+```bash
+npx wrangler dev -c wrangler.probe.jsonc
+```
+
+### Switch to production (T039)
+
+The switch of [d004 › D11](../../docs/designs/d004-bronze-data-capture.md#d11-switch-from-spike-capture-to-production), with the tooling of [d004 › Switch tooling](../../docs/designs/d004-bronze-data-capture.md#switch-tooling). Run from the spike root; listings and the cutoffs file go to `data/`. List production before the first copy, since the cutoffs are read from it:
+
+```bash
+rclone lsf -R r2:bikesharing-bronze/raw > data/prod-raw.txt
+rclone lsf -R r2:bikesharing-capture-spike/V4/raw > data/spike-raw.txt
+```
+
+Write the cutoffs (only if `data/cutoffs.json` does not exist; it is then reused unchanged) and the keys to copy; it exits 1 while a spike feed has no object in production:
+
+```bash
+python3 analysis/spike_raw_switch.py keys --prod data/prod-raw.txt --spike data/spike-raw.txt --cutoffs data/cutoffs.json --out data/switch-keys.txt
+```
+
+Copy server-side, then list production again and compare the counts per day and feed before the cutoffs; it exits 1 on any difference, and the copy is repeated:
+
+```bash
+rclone copy --files-from data/switch-keys.txt r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw
+rclone lsf -R r2:bikesharing-bronze/raw > data/prod-raw-copied.txt
+python3 analysis/spike_raw_switch.py count --prod data/prod-raw-copied.txt --spike data/spike-raw.txt --cutoffs data/cutoffs.json
+```
+
+Once `capture-v4` has stopped, copy its last logs and run the queries of d004 › D2, from the repository root:
+
+```bash
+rclone copy r2:bikesharing-capture-spike spikes/cloudflare-capture-spike/data
+duckdb -f spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql
+```
+
+After production's first 7 full UTC days, list production to `data/bronze-raw.txt`, set `first_day` at the top of `capture-completeness.sql` to the day after production's first day, and run it from the repository root. It prints, per dynamic feed, the minutes with at least one object, their percentage of 10,080 and whether it is below 99.5%:
+
+```bash
+rclone lsf -R r2:bikesharing-bronze/raw > spikes/cloudflare-capture-spike/data/bronze-raw.txt
+duckdb -f spikes/cloudflare-capture-spike/analysis/capture-completeness.sql
 ```
