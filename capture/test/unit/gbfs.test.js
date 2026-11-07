@@ -35,6 +35,7 @@ describe("parseIndex", () => {
     expect(Object.keys(result.feeds).sort()).toEqual([...REQUIRED].sort());
   });
 
+  // Verifies d004 R12
   it("rejects text that is not JSON", () => {
     const result = parseIndex("<html>Bad gateway</html>", REQUIRED);
 
@@ -49,6 +50,7 @@ describe("parseIndex", () => {
     expect(result.error).toEqual(expect.any(String));
   });
 
+  // Verifies d004 R12
   it("rejects an index with an entry without name", () => {
     const text = v3([...entries(...REQUIRED), { url: url("alerts") }]);
 
@@ -58,6 +60,7 @@ describe("parseIndex", () => {
     expect(result.error).toMatch(/name/);
   });
 
+  // Verifies d004 R12
   it("rejects an index with an entry without url", () => {
     const text = v3([...entries("station_information"), { name: "station_status" }]);
 
@@ -67,6 +70,7 @@ describe("parseIndex", () => {
     expect(result.error).toMatch(/url/);
   });
 
+  // Verifies d004 R12
   it("rejects an index missing a required feed, naming it", () => {
     const result = parseIndex(v3(entries("gbfs", "station_information")), REQUIRED);
 

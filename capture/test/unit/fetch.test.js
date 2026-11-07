@@ -85,17 +85,17 @@ describe("gunzipText", () => {
     expect(result).toEqual({ ok: true, text: await gunzip(bytes) });
   });
 
-  it("rejects a body larger than maxBytes once decompressed", async () => {
+  it("rejects a body larger than maxBytes once decompressed as too_large", async () => {
     const bytes = await gzip(" ".repeat(LIMITS.maxBytes + 1));
 
     const result = await gunzipText(bytes, LIMITS.maxBytes);
 
-    expect(result).toEqual({ ok: false, error: expect.any(String) });
+    expect(result).toEqual({ ok: false, errorType: "too_large", error: expect.any(String) });
   });
 
-  it("rejects a body that is not gzip", async () => {
+  it("rejects a body that is not gzip as invalid_index", async () => {
     const result = await gunzipText(new TextEncoder().encode("{}"), LIMITS.maxBytes);
 
-    expect(result).toEqual({ ok: false, error: expect.any(String) });
+    expect(result).toEqual({ ok: false, errorType: "invalid_index", error: expect.any(String) });
   });
 });
