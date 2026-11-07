@@ -203,4 +203,13 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 ### 4.3 Decisions taken during implementation
 
-<!-- Decisions made after the Plan was approved: <decision> — <reason>. "None" is valid. -->
+<!-- Decisions made after the Plan was approved, including deviations from Scope approved by the owner. Oldest first; "None" is valid.
+- #: `DI1`, `DI2`… (decision during implementation).
+- Applies to: anchor link(s) to the design section the decision changes, or the path of a file outside the design.
+- Decision and Reason: one line each; the content goes where it applies.
+- Decided at: the step where it was decided (`Step N`).
+-->
+
+| # | Applies to | Decision | Reason | Decided at |
+|---|---|---|---|---|
+| | | | | |
