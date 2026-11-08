@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 15
-- Next: Step 16 (`/implement d004`).
+- Current step: Step 16
+- Next: Step 17 (`/implement d004`); first pass in production 2026-11-07 10:20 UTC. Pending: commands that filter all of `raw/` with `--max-age` are slow on a full bucket; decide `allowScripts` in `capture/package.json`.
 
 ## 1. Spec — what and why
 
@@ -225,7 +225,7 @@ One STRIDE pass over D1–D11 keeps the threats with a real chance or a lasting 
 | `TH3` | Information disclosure: the heartbeat URL ends up in a log | The secret cannot be deleted from a locked log | Errors of the heartbeat signal never include its URL | R23 |
 | `TH4` | Tampering: the bucket lock is misconfigured | Bronze can be deleted or overwritten | After enabling it, overwriting an existing object is checked to fail | Done when |
 | `TH5` | Spoofing: the heartbeat URL leaks | False signals hide an outage | Accepted, as in [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md); it gives access to nothing else | Accepted |
-| `TH6` | Elevation of privilege: the deployment token leaks | Code that writes junk or alters `state/` is deployed | A deployment token scoped to this Worker only, held by the owner | Done when |
+| `TH6` | Elevation of privilege: the deployment token leaks | Code that writes junk or alters `state/` is deployed | A deployment token with the Workers Editor role only, which cannot create or delete Workers, and a one-year expiry, held by the owner ([ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md)) | Done when |
 
 ### 1.3 Requirements
 
@@ -272,7 +272,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - The queries of D2 have run on the spike's complete logs. (D2)
 - `bikesharing-capture-spike`, `capture-v4` and its token are deleted. (D11)
 - The probe's test bucket `bikesharing-t039-write-once` and the token `bikesharing-t039-completeness` are deleted. ([ADR-0035](../decisions/0035-cloud-resource-naming.md))
-- The deployment token is scoped to the production Worker only. (TH6)
+- The deployment token has only the Workers Editor role and a one-year expiry. (TH6)
 - Every pass stays below 10 ms of CPU over the first 3 full days of production, checked as in [Deployment](#deployment). (D4)
 - Each dynamic feed has a clean capture in at least 99.5% of the minutes of the first 7 full UTC days of production, checked as in [Switch tooling](#switch-tooling). (D6)
 
@@ -493,7 +493,9 @@ The owner deploys the Worker `bikesharing-capture` from the local machine with `
 
 The heartbeat URL is a Worker secret, `HEARTBEAT_URL`, set with `wrangler secret put`, and never stored in a repository file (R23).
 
-The deployment credential is an account-owned API token, `bikesharing-capture-deploy` ([ADR-0035](../decisions/0035-cloud-resource-naming.md)), scoped to Editor on this Worker only, with a one-year expiry, read by wrangler from `CLOUDFLARE_API_TOKEN` (least privilege, NIST SP 800-53 AC-6; TH6). Such a token can update a Worker but not create it, so the first deploy runs with `wrangler login`, and the owner then creates the token and runs `wrangler logout`. The first deploy with the token checks the two points Cloudflare's docs leave open: that Editor suffices for a Worker with an R2 binding, and for `workers_dev: false`; if either fails, the permission is widened only as far as needed, and recorded here.
+The deployment credential is an account-owned API token, `bikesharing-capture-deploy` ([ADR-0035](../decisions/0035-cloud-resource-naming.md)), with the Workers Editor role on the account's Workers and a one-year expiry, read by wrangler from `CLOUDFLARE_API_TOKEN` ([ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md); TH6). Such a token can update a Worker but not create it, so the first deploy runs with `wrangler login`, and the owner then creates the token and runs `wrangler logout`. The Editor role alone deploys this Worker, with its R2 binding and `workers_dev: false`. **DI8**
+
+`wrangler secret put` deploys a new version, so the smoke test compares `version` with the active version that `wrangler deployments list` shows, not with the ID the deploy printed.
 
 After every deploy, the owner runs a smoke test on the first passes: each dynamic feed has a new object under `raw/` that passes `gunzip -t`, and the pass's log object exists with `recompressed: false` and the deployed version ID in `version`. It covers what local tests cannot, such as `encodeResponseBody` ([Tests and contracts](#tests-and-contracts)).
 
@@ -506,7 +508,8 @@ Options considered for the CPU check:
 
 Options considered for the deployment credential:
 
-- **Token scoped to this Worker (chosen).** A leak reaches only this Worker, and stops at expiry; available since Cloudflare's per-Worker permissions of September 2026.
+- **Token scoped to this Worker.** A leak reaches only this Worker, and stops at expiry; announced with Cloudflare's per-Worker permissions of September 2026, but not offered by the account's token form.
+- **Token with the Workers Editor role on the account's Workers (chosen).** A leak reaches every Worker of the account, and stops at expiry.
 - **`wrangler login` for every deploy.** Simplest, but keeps an account-wide permission on the local machine.
 
 #### Switch tooling
@@ -550,7 +553,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL7 | [D9](#d9-capture-logs), [Source fetch](#source-fetch) | Bodies that are not gzip by magic number are compressed and logged as `recompressed`; Spec change | Flags a change in the undocumented `encodeResponseBody` before it costs silent corruption | R16 | Plan |
 | DL8 | [Tests](#tests-and-contracts) | Shared contract vectors in a top-level `contracts/` folder | A contract between two components belongs to neither | R1, R15 | Plan |
 | DL9 | [Tests](#tests-and-contracts) | The write-once probe also runs against Miniflare's R2; the fetch timeout is a parameter | Integration tests rest on a verified simulator; the timeout is testable without waiting 60 s | R7, R10 | Plan |
-| DL10 | [Deployment](#deployment) | Deploy with an account-owned token scoped to Editor on this Worker, one-year expiry; first deploy with `wrangler login` (least privilege, NIST SP 800-53 AC-6) | A leak reaches only this Worker | R21 | Plan |
+| DL10 | [Deployment](#deployment) | Deploy with an account-owned token scoped to Editor on this Worker, one-year expiry; first deploy with `wrangler login` (least privilege, NIST SP 800-53 AC-6) **→ DI8** | A leak reaches only this Worker | R21 | Plan |
 | DL11 | [Switch tooling](#switch-tooling) | rclone server-side copy with a key list up to the cutoff, and a standard-library script that lists keys and compares counts **→ DL18** | Proven tool from s006; the only new code filters and counts | — | Plan |
 | DL12 | [ADR-0035](../decisions/0035-cloud-resource-naming.md) | One naming pattern for every cloud resource, `bikesharing-<name>`: buckets by content, compute by component, tokens by component and purpose, temporary resources by task (resource naming conventions) | Cheap to fix while resources are few; buckets cannot be renamed | — | Plan |
 | DL13 | [Index state](#index-state) | A valid index is adopted only once stored under `raw/` and `state/`; a failed write is `index_rejected` with `error_type: write` | `index_refreshed` keeps one meaning, and the index in use is always in bronze | R12, R24 | Plan |
@@ -1625,7 +1628,7 @@ Run in the scratchpad, with hand-written listings of two feeds over two days:
 
 ### Step 16 — First deploy
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** — (only if the deployment token needed a wider permission: `docs: d004.s16 - record the deployment token permission`, in Deployment)
 - **R:** R19, R21
@@ -1635,7 +1638,7 @@ Run in the scratchpad, with hand-written listings of two feeds over two days:
 
 Production capture running from `main`, monitored, with its scoped deployment token ([Deployment](#deployment), D10, D11 step 1). Before it starts, the PR with Steps 1–15 has merged by rebase, with `Refs #N` so the task stays open (DL22). From here on, the work runs on a new branch with the task's name, created from the updated `main`, which ends in the PR that closes the task.
 
-- Cloudflare: bucket `bikesharing-bronze`, with no lock yet (D11 step 4); Worker `bikesharing-capture` with the secret `HEARTBEAT_URL`; account-owned API token `bikesharing-capture-deploy`, Editor on that Worker only, one-year expiry; R2 token `bikesharing-t039-switch`, Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, used by rclone from here until Step 18.
+- Cloudflare: bucket `bikesharing-bronze`, with no lock yet (D11 step 4); Worker `bikesharing-capture` with the secret `HEARTBEAT_URL`; account-owned API token `bikesharing-capture-deploy`, Workers Editor role on the account's Workers, one-year expiry; R2 token `bikesharing-t039-switch`, Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, used by rclone from here until Step 18.
 - Healthchecks.io: check `bikesharing-capture`, period 1 h, grace 1 h, email to the owner.
 - Local machine: `CLOUDFLARE_API_TOKEN` in `.env`; rclone remote `r2` switched to the switch token.
 - Verified: R19 (Demonstration), R21 (Inspection after deploy), the smoke test after each deploy, and TH6.
@@ -1661,7 +1664,7 @@ Production capture running from `main`, monitored, with its scoped deployment to
 - The alert email of Do 3 arrived.
 - After each deploy, each dynamic feed has a new object under `raw/` that passes `gunzip -t`, and the pass's log object exists with `recompressed: false` and the deployed version ID in `version` (smoke test).
 - The Worker's dashboard shows no `workers.dev` route and no preview URLs (R21, Inspection).
-- The deploy of Do 7 succeeded with `bikesharing-capture-deploy`, and the token's page lists only this Worker (TH6).
+- The deploy of Do 7 succeeded with `bikesharing-capture-deploy`, whose summary lists only the Workers Editor role and a one-year expiry (TH6).
 - After the first `:22` that follows Do 5, Healthchecks.io shows the check as up.
 
 ### Step 17 — Copy and lock
@@ -1797,3 +1800,4 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 | DI5 | `.claude/rules/code/ci.md` | Aggregator and required check is updated, outside Step 13's Scope | The section described the aggregator as future work, and the `changes` and `ci-passed` patterns are conventions the next component job reuses | Step 13 |
 | DI6 | `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql` | The queries that attribute the source-card facts to each source, over the spike's logs and raw objects, are added outside Step 14's Scope; the cards cite that file | d004 states several of those facts for both sources together and s006 does not attribute them, so a per-source figure needs a reproducible source in the repository | Step 14 |
 | DI7 | [Switch tooling](#switch-tooling) | `spike_raw_switch.py keys` writes neither the cutoffs file nor the keys file while a feed under `V4/raw/` has no object in production | The cutoffs file is never rewritten, so writing it then would leave that feed without a cutoff until the file is deleted by hand | Step 15 |
+| DI8 | [Deployment](#deployment), TH6 | The deployment token has the Workers Editor role on the account's Workers, not on this Worker only ([ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md)) **replaces DL10** (scope) | The account's token form offers the Workers roles only at account level | Step 16 |
