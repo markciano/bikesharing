@@ -71,7 +71,7 @@ What would change it: a new question that needs a discarded feed; the feed then 
 | `station_information` | Enters | Enters | Station dimension; Q8, and Bicing's `post_code` for Q4 |
 | `vehicle_types` | Enters | Enters | Bikes by type in Q1, through `vehicle_type_id` in `vehicle_types_available` |
 | `system_regions` | Enters | Discarded: empty | AMBici's regions are municipalities, linked by `region_id` in `station_information`: the municipality of Q4 |
-| `free_bike_status` | Candidate | Not published | Bikes one by one with their `station_id`, to estimate the fleet in Q5; bike IDs rotate, so it only counts. Confirmed in the bus matrix (OQ3), and discarded if `station_status` already carries the same counts |
+| `free_bike_status` | Discarded: adds nothing to `station_status` | Not published | Over 17,870 passes (2026-10-14 to 10-26), every bike has a `station_id`, none is disabled, a mean of 0.6 are reserved, and 99.1% of the station counts match `num_bikes_available`, with the rest off by about one bike. Its battery fields (`current_fuel_percent`, `current_range_meters`) answer no question yet |
 | `geofencing_zones` | Discarded: empty | Discarded: empty | — |
 | `system_pricing_plans` | Discarded | Discarded | No question uses prices |
 | `system_hours` | Discarded | Not published | No question uses opening hours |
@@ -116,7 +116,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
-- Capturing less often, or no longer capturing, the feeds that do not enter the model ([D3](#d3-feeds-that-enter-the-model)) — task assigned at the end of this design
+- Capturing less often, or no longer capturing, the feeds that do not enter the model ([D3](#d3-feeds-that-enter-the-model)), except `free_bike_status`, kept for future questions on AMBici's battery levels — task assigned at the end of this design
 
 ### 1.6 Open questions
 
