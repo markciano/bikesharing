@@ -110,8 +110,6 @@ Sizing, an order of magnitude with no measurement. Rows are stations × points i
 
 The hourly case cannot be downloaded whole on each visit, but it can be split into one file per station. A refresh every 5–10 minutes is 4,300–8,600 refreshes per month.
 
-TODO(T040): the visitor sees cadence plus run time (about 2 minutes, not measured), so a 5–10 minute cadence gives an age of about 7–12 minutes, above R3's 5 minutes. Choose the cadence and review R3 and the freshness of d002's Q1, Q2 and Q5 together.
-
 #### D4. Data published by redeploying on Workers Static Assets
 
 The pipeline publishes the page's data by deploying a new version on Cloudflare Workers Static Assets at each refresh. [Requests for static assets are free and unlimited](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/), so abuse has no quota to use up and cannot bill, which meets N5 and leaves the visualization's expected cost at €0 against its €2 share. It needs no domain, and page and data always match because they are published together.
@@ -125,8 +123,6 @@ TODO(T041): decide whether to buy a custom domain, before the link is shared; wi
 #### D5. No separate operations panel
 
 The pipeline's health is viewed through the public section for feed health (d002's Q2), the existing email alerts and ad hoc SQL. A separate panel would add a login, which [d002 › R1](../designs/d002-requirements.md#requirements) does not contemplate for the page, and one more component to protect and maintain, and the cost of Modal's OpenTelemetry integration is not checked. It can be added later if needed. This closes the item left to T038 in [s012 › Out of scope](s012-execution-target.md#15-out-of-scope).
-
-TODO(T040): write a script with the common health queries for the owner to run, and decide whether it can run from a phone.
 
 - **Rejected:** a private panel with login, for the reasons above.
 
@@ -178,7 +174,7 @@ No Q was raised, so there is nothing to answer; D1–D6 hold the decisions.
 | Criterion | Kind | Result | Findings |
 |---|---|---|---|
 | N1, N2, N4, N6, N10: public access, attribution, data age, private storage, any screen | Hard cut | Pass by design: a static page has full control of what it shows, and it reads no stored data | D2, D3 |
-| N3: freshness of R3 | Hard cut | Open: a 5–10 minute cadence gives about 7–12 minutes of age; `TODO(T040)` in D3 reviews it. The tool does not limit it | D3 |
+| N3: freshness of R3 | Hard cut | Open: a 5–10 minute cadence gives about 7–12 minutes of age; T040 reviews it. The tool does not limit it | D3 |
 | N5: at most €2, including under abuse, and back within 1 day | Hard cut | Pass on documentation: static asset requests are free and unlimited | D4 |
 
 ### 5.3 Verdict
@@ -208,10 +204,6 @@ The visualization is a public static web page with JavaScript, without login, wh
 | P7 | No cookies or analytics; reviewed if analytics are wanted | TH8 | T041's design |
 | P8 | The pipeline generates the prepared files from an explicit list and deploys them at the end of a run, with the token from the secret store; a failed deployment does not fail the run's data | D4, R25, R32 | T040's design, with T041 |
 | P9 | The health script could run from a phone through a manual GitHub Actions run: no server, but its summary is public if the repository is, and GitHub holds one more read-only key. Not verified | D5 | T040's design |
-
-TODO(T040): P8 and P9.
-
-TODO(T040): proposal to evaluate in the design: before building the publishing step, try a few deployments with the token limited to one Worker and read Cloudflare's terms, both open in [Not verified](#54-not-verified).
 
 TODO(T041): P1–P7.
 
