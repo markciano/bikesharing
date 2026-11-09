@@ -70,27 +70,95 @@ Four choices follow from the questions:
 | Stock movements | ✓ | ✓ | ✓ | ✓ | | |
 | Capture passes | ✓ | ✓ | ✓ | | | ✓ |
 
-### Star schema
+### Star schemas
+
+One star per process; the bus matrix above shows the dimensions they share. Facts are white, and each dimension keeps its colour in every star.
+
+#### Station stock
 
 ```mermaid
+%%{init: {"themeVariables": {"relationLabelBackground": "#f5f5f5", "relationLabelColor": "#000000"}}}%%
 erDiagram
     DATE ||--o{ STATION_STOCK : "day of"
     TIME_OF_DAY ||--o{ STATION_STOCK : "minute of"
     SYSTEM ||--o{ STATION_STOCK : "operated by"
     STATION ||--o{ STATION_STOCK : "counted at"
+    classDef fact fill:#ffffff,stroke:#424242,color:#000
+    classDef date fill:#bbdefb,stroke:#1565c0,color:#000
+    classDef time fill:#c8e6c9,stroke:#2e7d32,color:#000
+    classDef system fill:#e1bee7,stroke:#6a1b9a,color:#000
+    classDef station fill:#ffcdd2,stroke:#c62828,color:#000
+    class STATION_STOCK fact
+    class DATE date
+    class TIME_OF_DAY time
+    class SYSTEM system
+    class STATION station
+```
+
+#### Stock by vehicle type
+
+```mermaid
+%%{init: {"themeVariables": {"relationLabelBackground": "#f5f5f5", "relationLabelColor": "#000000"}}}%%
+erDiagram
     DATE ||--o{ STOCK_BY_VEHICLE_TYPE : "day of"
     TIME_OF_DAY ||--o{ STOCK_BY_VEHICLE_TYPE : "minute of"
     SYSTEM ||--o{ STOCK_BY_VEHICLE_TYPE : "operated by"
     STATION ||--o{ STOCK_BY_VEHICLE_TYPE : "counted at"
     VEHICLE_TYPE ||--o{ STOCK_BY_VEHICLE_TYPE : "of type"
+    classDef fact fill:#ffffff,stroke:#424242,color:#000
+    classDef date fill:#bbdefb,stroke:#1565c0,color:#000
+    classDef time fill:#c8e6c9,stroke:#2e7d32,color:#000
+    classDef system fill:#e1bee7,stroke:#6a1b9a,color:#000
+    classDef station fill:#ffcdd2,stroke:#c62828,color:#000
+    classDef vehicle fill:#fff9c4,stroke:#f9a825,color:#000
+    class STOCK_BY_VEHICLE_TYPE fact
+    class DATE date
+    class TIME_OF_DAY time
+    class SYSTEM system
+    class STATION station
+    class VEHICLE_TYPE vehicle
+```
+
+#### Stock movements
+
+```mermaid
+%%{init: {"themeVariables": {"relationLabelBackground": "#f5f5f5", "relationLabelColor": "#000000"}}}%%
+erDiagram
     DATE ||--o{ STOCK_MOVEMENTS : "day of"
     TIME_OF_DAY ||--o{ STOCK_MOVEMENTS : "minute of"
     SYSTEM ||--o{ STOCK_MOVEMENTS : "operated by"
     STATION ||--o{ STOCK_MOVEMENTS : "moved at"
+    classDef fact fill:#ffffff,stroke:#424242,color:#000
+    classDef date fill:#bbdefb,stroke:#1565c0,color:#000
+    classDef time fill:#c8e6c9,stroke:#2e7d32,color:#000
+    classDef system fill:#e1bee7,stroke:#6a1b9a,color:#000
+    classDef station fill:#ffcdd2,stroke:#c62828,color:#000
+    class STOCK_MOVEMENTS fact
+    class DATE date
+    class TIME_OF_DAY time
+    class SYSTEM system
+    class STATION station
+```
+
+#### Capture passes
+
+```mermaid
+%%{init: {"themeVariables": {"relationLabelBackground": "#f5f5f5", "relationLabelColor": "#000000"}}}%%
+erDiagram
     DATE ||--o{ CAPTURE_PASSES : "day of"
     TIME_OF_DAY ||--o{ CAPTURE_PASSES : "minute of"
     SYSTEM ||--o{ CAPTURE_PASSES : "captured from"
     FEED ||--o{ CAPTURE_PASSES : "of feed"
+    classDef fact fill:#ffffff,stroke:#424242,color:#000
+    classDef date fill:#bbdefb,stroke:#1565c0,color:#000
+    classDef time fill:#c8e6c9,stroke:#2e7d32,color:#000
+    classDef system fill:#e1bee7,stroke:#6a1b9a,color:#000
+    classDef feed fill:#cfd8dc,stroke:#455a64,color:#000
+    class CAPTURE_PASSES fact
+    class DATE date
+    class TIME_OF_DAY time
+    class SYSTEM system
+    class FEED feed
 ```
 
 Columns of each table are fixed by the slice that builds it ([d005 › D1](designs/d005-processing-pipeline.md#d1-vertical-slices-over-one-bus-matrix)).
