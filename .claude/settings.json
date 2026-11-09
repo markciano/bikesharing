@@ -13,7 +13,7 @@
       "Bash(git log)", "Bash(git log *)", "Bash(git show *)",
       "Bash(ls)", "Bash(ls *)", "Bash(grep *)",
 
-      "Bash(npm test)", "Bash(npm test *)", "Bash(npx vitest run)", "Bash(npx vitest run *)",
+      "Bash(npm test)", "Bash(npm test *)",
       "Bash(uv run pytest)", "Bash(uv run pytest *)",
 
       "Bash(node --version)", "Bash(python3 --version)", "Bash(duckdb --version)"
