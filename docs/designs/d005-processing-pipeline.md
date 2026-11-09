@@ -28,6 +28,8 @@ Current step: the step being implemented, or —. -->
 
 <!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
 
+Capture runs in production and writes the raw feeds of AMBici and Bicing to the bronze layer on R2 ([d004](d004-bronze-data-capture.md)). Nothing reads bronze yet: the silver and gold layers do not exist, so the questions of [d002](d002-requirements.md) have no answer and the public visualization (T041) has no data to show. This task builds the processing pipeline from bronze to silver and gold on the stack chosen by s010–s013, within the project's budget. It also covers how the owner inspects the operation of capture and the pipeline, which today means downloading hundreds of capture log files.
+
 ### 1.2 Decided at framing
 
 <!-- Optional. One heading per decision about what the result does. In this order, so the reader finds what matters first:
@@ -43,7 +45,11 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 | `TH1` | | | | |
 -->
 
-#### D`<N>`. `<Title of decision N>`
+#### D1. Vertical slices over one bus matrix
+
+T040 is split into child tasks by vertical slice, following Kimball's bus architecture: the whole model is designed once and built one business process at a time. This design fixes what crosses slices: the feeds that enter, the bus matrix (business processes, the grain of each fact, the conformed dimensions) and the cross-cutting concerns. Each child builds one business process from bronze to silver and gold, runs it on Modal, and its own design fixes the columns, its gold tables and the code. Observability is a child of its own. The first slice measures real run time and memory, which several carried-over inputs depend on.
+
+Rejected: a split by layer (silver, then gold), since silver would be built with no consumer to validate it, and real runs would be measured late.
 
 ### 1.3 Requirements
 
@@ -76,8 +82,18 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ1 | The pipeline's mode (24/7 or on demand) and refresh cadence, reviewed together with [d002 › R3](d002-requirements.md#requirements) and the freshness of d002's Q1, Q2 and Q5 | — | The visitor sees cadence plus run time (about 2 min, not measured): a 5–10 minute cadence gives about 7–12 minutes of age, above R3's 5 minutes ([s013 › D3](../spikes/s013-visualization-tool.md#d3-static-web-page-with-javascript)). Running 24/7, R2's Class B quota allows commits every 10 minutes or more ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)) |
-| OQ2 | A script with the common health queries for the owner, and whether it can run from a phone | — | [s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel). Option from [s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs): a manual GitHub Actions run, with no server, but its summary is public if the repository is, and GitHub holds one more read-only key; not verified |
+| OQ1 | A hand-cut sample of each feed for the owner to inspect: where it lives and its format | — | Raw data stays out of Git except test fixtures ([ADR-0037](../decisions/0037-test-fixtures-per-component.md)). Also explains why some bronze files do not display well in an editor |
+| OQ2 | Which feeds enter the model and which are discarded | OQ1 | E.g. `geofencing_zones`, which may carry no data |
+| OQ3 | The bus matrix: business processes, the grain of each fact, the conformed dimensions | OQ2 | Bikes and docks per station as a periodic snapshot, Kimball's inventory case. The model also fits the historical archives, zips not split by feed ([s003](../spikes/s003-ambici-historical-data.md), [s004](../spikes/s004-bicing-historical-data.md)) |
+| OQ4 | Normalization of terms and values across AMBici and Bicing | OQ3 | Within the common model on GBFS 3.0 of [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) |
+| OQ5 | Which d002 questions gold answers, and which Must question the first slice builds | OQ3 | Handed to T040 by [d002 › Out of scope](d002-requirements.md) |
+| OQ6 | The pipeline's mode (24/7 or on demand) and refresh cadence, reviewed together with [d002 › R3](d002-requirements.md#requirements) and the freshness of d002's Q1, Q2 and Q5 | OQ5 | The visitor sees cadence plus run time (about 2 min, not measured): a 5–10 minute cadence gives about 7–12 minutes of age, above R3's 5 minutes ([s013 › D3](../spikes/s013-visualization-tool.md#d3-static-web-page-with-javascript)). Running 24/7, R2's Class B quota allows commits every 10 minutes or more ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)) |
+| OQ7 | How the historical archives reach R2 and are loaded, and the check of the Bicing archive against the real-time capture | OQ3 | Bicing's archive is not on R2 yet. The check is handed to T040 by [d002 › Out of scope](d002-requirements.md) |
+| OQ8 | Data quality rules and indicators: what T040 does and what T042 does | OQ3 | [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) leaves where rules live and their format to T042 |
+| OQ9 | Metadata and lineage: how a silver or gold row is traced back to bronze and to its run | OQ3 | |
+| OQ10 | How the owner queries the logs of capture, the pipeline and the web page, together | — | Today, querying capture's logs means downloading hundreds of files |
+| OQ11 | A script with the common health queries for the owner, and whether it can run from a phone | OQ10 | [s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel). Option from [s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs): a manual GitHub Actions run, with no server, but its summary is public if the repository is, and GitHub holds one more read-only key; not verified |
+| OQ12 | The child tasks `T040.M`: one per business process, plus observability, in build order | OQ3–OQ11 | [D1](#d1-vertical-slices-over-one-bus-matrix) |
 
 ## 2. Plan — how
 
@@ -94,7 +110,7 @@ If some block contains `options considered`, include them with pros and cons.
 
 Inputs about the how, left to this design by earlier spikes; each becomes a Plan concern or part of one.
 
-- **Execution platform check:** if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, or OQ1 chooses the on-demand mode, the decision of [ADR-0027](../decisions/0027-modal-as-execution-platform.md) is reopened with Cloud Run and Fly.io as candidates. The run's final log event carries `duration_s` and `peak_memory_mb`, the latter from `ru_maxrss` ([s012 › D1, P1](../spikes/s012-execution-target.md#d1-execution-platform)).
+- **Execution platform check:** if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, or OQ6 chooses the on-demand mode, the decision of [ADR-0027](../decisions/0027-modal-as-execution-platform.md) is reopened with Cloud Run and Fly.io as candidates. The run's final log event carries `duration_s` and `peak_memory_mb`, the latter from `ru_maxrss` ([s012 › D1, P1](../spikes/s012-execution-target.md#d1-execution-platform)).
 - **Memory:** set DuckDB's memory limit below the container's; decide on a hard container limit (`memory=(request, limit)`; without one, usage above the request is billed, as Modal charges the higher of the two); cap what one run processes and leave the rest to the next; do not retry memory errors, since they are permanent; check in the first slice how Modal treats a memory kill of a scheduled function ([s012 › D3, TH12](../spikes/s012-execution-target.md#d3-pipeline-security), [d002 › R23](d002-requirements.md#requirements)).
 - **Platform separation:** CI checks for rules 1, 2 and 4 of [ADR-0029](../decisions/0029-pipeline-code-architecture.md), and where the platform module lives in the repository ([s012 › D4](../spikes/s012-execution-target.md#d4-processing-logic-separated-from-the-platform)).
 - **Run operation** ([s012 › Out of scope](../spikes/s012-execution-target.md#15-out-of-scope)): which events the pipeline logs; preventing two runs from overlapping; the region (`eu` costs 1.15x); runs safe to run again after an interruption; Modal's usage and spend limits; the size of catch-up batches and where the one-off history load runs; the end-to-end and post-deploy smoke tests.
