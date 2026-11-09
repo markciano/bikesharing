@@ -51,6 +51,33 @@ T040 is split into child tasks by vertical slice, following Kimball's bus archit
 
 Rejected: a split by layer (silver, then gold), since silver would be built with no consumer to validate it, and real runs would be measured late.
 
+#### D2. Capture's fixtures as the feed sample
+
+The sample for inspecting each feed is capture's fixtures, `capture/test/fixtures/<source>/<feed>.json`: pretty-printed, uncompressed JSON with the whole index and the first 3 entries of every other feed, and their provenance in `manifest.json` ([d004 › Fixtures](d004-bronze-data-capture.md#fixtures)). They show the full structure of each feed, enough to judge what it contributes to the model. Bronze objects are gzip (`.json.gz`), which is why an editor shows them as binary; DuckDB reads them directly.
+
+What would change it: a feed whose value cannot be judged from 3 entries; that feed's latest bronze object is then downloaded and decompressed for inspection, outside Git.
+
+Rejected: a new sample from R2 in a folder ignored by Git, since it shows the same structure and adds local R2 credentials and a script to maintain.
+
+#### D3. Feeds that enter the model
+
+A feed enters silver only if it answers a question of [d002 › Guiding questions](d002-requirements.md#guiding-questions). The rest stay in bronze untouched ([ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md)) and the model does not read them. Prices and opening hours answer no question, and no feed ties a trip to a pricing plan, since trips are estimated from stock changes; if a measure ever needs them, they enter as parameters.
+
+What would change it: a new question that needs a discarded feed; the feed then enters, and its history is already in bronze.
+
+| Feed | AMBici | Bicing | Use in the model |
+|---|---|---|---|
+| `station_status` | Enters | Enters | The stock snapshot, base fact of Q1 and Q3–Q7 |
+| `station_information` | Enters | Enters | Station dimension; Q8, and Bicing's `post_code` for Q4 |
+| `vehicle_types` | Enters | Enters | Bikes by type in Q1, through `vehicle_type_id` in `vehicle_types_available` |
+| `system_regions` | Enters | Discarded: empty | AMBici's regions are municipalities, linked by `region_id` in `station_information`: the municipality of Q4 |
+| `free_bike_status` | Candidate | Not published | Bikes one by one with their `station_id`, to estimate the fleet in Q5; bike IDs rotate, so it only counts. Confirmed in the bus matrix (OQ3), and discarded if `station_status` already carries the same counts |
+| `geofencing_zones` | Discarded: empty | Discarded: empty | — |
+| `system_pricing_plans` | Discarded | Discarded | No question uses prices |
+| `system_hours` | Discarded | Not published | No question uses opening hours |
+| `system_information` | Discarded | Discarded | One row per system with nothing to measure; the system dimension's few static attributes are fixed in OQ3 |
+| `gbfs.json`, `gbfs_versions` | Discarded | Discarded | Discovery index, used only by capture |
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -74,7 +101,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
-- `<item>` — TNNN
+- Capturing less often, or no longer capturing, the feeds that do not enter the model ([D3](#d3-feeds-that-enter-the-model)) — task assigned at the end of this design
 
 ### 1.6 Open questions
 
@@ -82,9 +109,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ1 | A hand-cut sample of each feed for the owner to inspect: where it lives and its format | — | Raw data stays out of Git except test fixtures ([ADR-0037](../decisions/0037-test-fixtures-per-component.md)). Also explains why some bronze files do not display well in an editor |
-| OQ2 | Which feeds enter the model and which are discarded | OQ1 | E.g. `geofencing_zones`, which may carry no data |
-| OQ3 | The bus matrix: business processes, the grain of each fact, the conformed dimensions | OQ2 | Bikes and docks per station as a periodic snapshot, Kimball's inventory case. The model also fits the historical archives, zips not split by feed ([s003](../spikes/s003-ambici-historical-data.md), [s004](../spikes/s004-bicing-historical-data.md)) |
+| OQ3 | The bus matrix: business processes, the grain of each fact, the conformed dimensions | D3 | Bikes and docks per station as a periodic snapshot, Kimball's inventory case. The model also fits the historical archives, zips not split by feed ([s003](../spikes/s003-ambici-historical-data.md), [s004](../spikes/s004-bicing-historical-data.md)) |
 | OQ4 | Normalization of terms and values across AMBici and Bicing | OQ3 | Within the common model on GBFS 3.0 of [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) |
 | OQ5 | Which d002 questions gold answers, and which Must question the first slice builds | OQ3 | Handed to T040 by [d002 › Out of scope](d002-requirements.md) |
 | OQ6 | The pipeline's mode (24/7 or on demand) and refresh cadence, reviewed together with [d002 › R3](d002-requirements.md#requirements) and the freshness of d002's Q1, Q2 and Q5 | OQ5 | The visitor sees cadence plus run time (about 2 min, not measured): a 5–10 minute cadence gives about 7–12 minutes of age, above R3's 5 minutes ([s013 › D3](../spikes/s013-visualization-tool.md#d3-static-web-page-with-javascript)). Running 24/7, R2's Class B quota allows commits every 10 minutes or more ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)) |
