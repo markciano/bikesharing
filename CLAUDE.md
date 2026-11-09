@@ -2,7 +2,10 @@
 
 Data engineering portfolio project on public bike sharing in the Barcelona area (AMBici + Bicing).
 
-Work happens in three session types, each started with its skill: `/spike` (investigate and decide), `/design` (frame and plan a task), `/implement` (build and review). Tasks are GitHub Issues, proposed and looked up with `/task`. Path-specific rules live in `.claude/rules/`.
+- Work happens in three session types, each started with its skill: `/spike` (investigate and decide), `/design` (frame and plan a task), `/implement` (build and review).
+- Tasks are GitHub Issues, proposed and looked up with `/task`.
+- Path-specific rules live in `.claude/rules/`, in layers: project-wide by concern, then per language, then per component.
+  - A language with a single component keeps both layers in its language file; its second component splits them.
 
 ## Working rules
 
