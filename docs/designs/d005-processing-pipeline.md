@@ -93,6 +93,20 @@ What would change it: silver's storage cost approaching its share of the budget 
 
 Rejected: one row per station state with `valid_from` and `valid_to` (a timespan tracking fact). It stores far fewer rows, but every change rewrites the open row with a MERGE, with more R2 operations and more conflicts, and a gap in capture reads as an unchanged state.
 
+#### D5. Conformed dimensions
+
+Each dimension answers what describes a fact row: when, where, whose and what. The bus matrix and the reasons for each dimension live in [data-model.md › Dimensions](../data-model.md#dimensions).
+
+- **Date** and **time of day**, apart, since questions group by day and by hour or time band; the exact UTC instant stays in the fact.
+- **System**, its own dimension, since capture passes have no station and every question compares AMBici with Bicing.
+- **Station**, with its history (SCD type 2), since Q8 asks for it and past occupancy needs the capacity of its time; post code and municipality flattened into it.
+- **Vehicle type**, with its propulsion as the level that compares across systems and with the Bicing archive, whose only split is mechanical and electric.
+- **Feed**, for capture passes.
+
+The status flags `is_installed`, `is_renting` and `is_returning` stay in the stock fact, not in a dimension.
+
+Rejected: system as an attribute of the station, since capture passes could not be compared by system; municipality as a dimension of its own linked to the station (a snowflake), since it adds a join for a small hierarchy.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -124,16 +138,15 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ3 | The bus matrix: business processes, the grain of each fact, the conformed dimensions | D3 | Bikes and docks per station as a periodic snapshot, Kimball's inventory case. The model also fits the historical archives, zips not split by feed ([s003](../spikes/s003-ambici-historical-data.md), [s004](../spikes/s004-bicing-historical-data.md)) |
-| OQ4 | Normalization of terms and values across AMBici and Bicing | OQ3 | Within the common model on GBFS 3.0 of [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) |
-| OQ5 | Which d002 questions gold answers, and which Must question the first slice builds | OQ3 | Handed to T040 by [d002 › Out of scope](d002-requirements.md) |
+| OQ4 | Normalization of terms and values across AMBici and Bicing | D5 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. To find out: what `is_installed`, `is_renting` and `is_returning` mean in each system; what Bicing's four vehicle types (`ICONIC`, `BOOST`, `FIT`, `EFIT`) are, against its two known kinds, mechanical and electric; AMBici's post code, which it does not publish, and its region "AMB", which is not a municipality |
+| OQ5 | Which d002 questions gold answers, and which Must question the first slice builds | D5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md) |
 | OQ6 | The pipeline's mode (24/7 or on demand) and refresh cadence, reviewed together with [d002 › R3](d002-requirements.md#requirements) and the freshness of d002's Q1, Q2 and Q5 | OQ5 | The visitor sees cadence plus run time (about 2 min, not measured): a 5–10 minute cadence gives about 7–12 minutes of age, above R3's 5 minutes ([s013 › D3](../spikes/s013-visualization-tool.md#d3-static-web-page-with-javascript)). Running 24/7, R2's Class B quota allows commits every 10 minutes or more ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)) |
-| OQ7 | How the historical archives reach R2 and are loaded, and the check of the Bicing archive against the real-time capture | OQ3 | Bicing's archive is not on R2 yet. The check is handed to T040 by [d002 › Out of scope](d002-requirements.md) |
-| OQ8 | Data quality rules and indicators: what T040 does and what T042 does | OQ3 | [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) leaves where rules live and their format to T042 |
-| OQ9 | Metadata and lineage: how a silver or gold row is traced back to bronze and to its run | OQ3 | |
-| OQ10 | How the owner queries the logs of capture, the pipeline and the web page, together | — | Today, querying capture's logs means downloading hundreds of files |
+| OQ7 | How the historical archives reach R2 and are loaded, and the check of the Bicing archive against the real-time capture | D5 | Bicing's archive is not on R2 yet. The check is handed to T040 by [d002 › Out of scope](d002-requirements.md) |
+| OQ8 | Data quality rules and indicators: what T040 does and what T042 does | D5 | [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) leaves where rules live and their format to T042 |
+| OQ9 | Metadata and lineage: how a silver or gold row is traced back to bronze and to its run | D5 | |
+| OQ10 | How the owner queries the logs of capture, the pipeline and the web page, together | — | Today, querying capture's logs means downloading hundreds of files. The capture passes fact ([D4](#d4-business-processes-and-the-grain-of-the-stock)) already turns capture's logs into a table |
 | OQ11 | A script with the common health queries for the owner, and whether it can run from a phone | OQ10 | [s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel). Option from [s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs): a manual GitHub Actions run, with no server, but its summary is public if the repository is, and GitHub holds one more read-only key; not verified |
-| OQ12 | The child tasks `T040.M`: one per business process, plus observability, in build order | OQ3–OQ11 | [D1](#d1-vertical-slices-over-one-bus-matrix) |
+| OQ12 | The child tasks `T040.M`: one per business process, plus observability, in build order | OQ4–OQ11 | [D1](#d1-vertical-slices-over-one-bus-matrix) |
 
 ## 2. Plan — how
 

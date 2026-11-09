@@ -40,3 +40,57 @@ Movements can be derived from the stock, but they are a fact of their own becaus
 | Capture passes | One row per source, feed and capture pass | Capture's logs |
 
 The stock is a periodic snapshot: every capture is a row, even when the station has not changed. Rows are only appended, a gap in capture shows as missing rows, and the archive's 5-minute snapshots fit the same grain. Repeated values compress well in columnar storage, so unchanged rows cost little space. The alternative, one row per station state with `valid_from` and `valid_to`, stores fewer rows but rewrites the open row on every change and cannot tell an unchanged state from a gap in capture ([d005 › D4](designs/d005-processing-pipeline.md#d4-business-processes-and-the-grain-of-the-stock)).
+
+## Dimensions
+
+A dimension answers what describes a fact row: when, where, whose and what. Asking those questions of the station stock's grain, one row per station and capture, gives:
+
+| Question to the row | Answer | Dimension |
+|---|---|---|
+| When? | The instant of the capture | Date and time of day, apart, since questions group by day (Q4, Q6) and by hour or time band (Q3, Q7). The exact UTC instant stays in the fact |
+| Where? | The station | Station: name, capacity, location, post code, municipality |
+| Whose? | AMBici or Bicing | System, since every question compares the two |
+| In what state? | `is_installed`, `is_renting`, `is_returning` | None: flags of the row itself, kept in the fact |
+
+Stock by vehicle type adds *what*: the vehicle type. Stock movements share the stock's dimensions. Capture passes add *which feed* and have no station.
+
+Four choices follow from the questions:
+
+- **System is a dimension of its own,** not an attribute of the station: capture passes have no station, and Q2 compares systems as Q1 does. It is conformed: every fact shares it.
+- **Station keeps its history** as a slowly changing dimension of type 2: a change of name, capacity or location adds a new version with its validity period. Q8 asks for that history, and occupancy in the past needs the capacity of its time.
+- **Post code and municipality are flattened into the station,** the usual dimensional form for a small hierarchy, rather than tables of their own linked to it (a snowflake).
+- **Vehicle types compare by propulsion.** Type IDs are local to each system, while propulsion, mechanical or electric, is shared by both and is the only split of the Bicing archive.
+
+### Bus matrix
+
+| Process | Date | Time of day | System | Station | Vehicle type | Feed |
+|---|---|---|---|---|---|---|
+| Station stock | ✓ | ✓ | ✓ | ✓ | | |
+| Stock by vehicle type | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| Stock movements | ✓ | ✓ | ✓ | ✓ | | |
+| Capture passes | ✓ | ✓ | ✓ | | | ✓ |
+
+### Star schema
+
+```mermaid
+erDiagram
+    DATE ||--o{ STATION_STOCK : "day of"
+    TIME_OF_DAY ||--o{ STATION_STOCK : "minute of"
+    SYSTEM ||--o{ STATION_STOCK : "operated by"
+    STATION ||--o{ STATION_STOCK : "counted at"
+    DATE ||--o{ STOCK_BY_VEHICLE_TYPE : "day of"
+    TIME_OF_DAY ||--o{ STOCK_BY_VEHICLE_TYPE : "minute of"
+    SYSTEM ||--o{ STOCK_BY_VEHICLE_TYPE : "operated by"
+    STATION ||--o{ STOCK_BY_VEHICLE_TYPE : "counted at"
+    VEHICLE_TYPE ||--o{ STOCK_BY_VEHICLE_TYPE : "of type"
+    DATE ||--o{ STOCK_MOVEMENTS : "day of"
+    TIME_OF_DAY ||--o{ STOCK_MOVEMENTS : "minute of"
+    SYSTEM ||--o{ STOCK_MOVEMENTS : "operated by"
+    STATION ||--o{ STOCK_MOVEMENTS : "moved at"
+    DATE ||--o{ CAPTURE_PASSES : "day of"
+    TIME_OF_DAY ||--o{ CAPTURE_PASSES : "minute of"
+    SYSTEM ||--o{ CAPTURE_PASSES : "captured from"
+    FEED ||--o{ CAPTURE_PASSES : "of feed"
+```
+
+Columns of each table are fixed by the slice that builds it ([d005 › D1](designs/d005-processing-pipeline.md#d1-vertical-slices-over-one-bus-matrix)).
