@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 17
-- Next: Step 18 (`/implement d004`); first pass in production 2026-11-07 10:20 UTC; bronze locked 2026-11-09 08:09 UTC. Pending: commands that filter all of `raw/` with `--max-age` are slow on a full bucket; decide `allowScripts` in `capture/package.json`.
+- Current step: Step 18
+- Next: Step 19 (`/implement d004`); first pass in production 2026-11-07 10:20 UTC; bronze locked 2026-11-09 08:09 UTC; `capture-v4` stopped 2026-11-09 08:17 UTC. On 2026-11-10, check that production gets no Bicing 403 in the 24 h after the stop (4.1), and propose a task if it does. Step 19 decides its completeness window, since day 1 (2026-11-08) overlaps `capture-v4`. Pending: commands that filter all of `raw/` with `--max-age` are slow on a full bucket; decide `allowScripts` in `capture/package.json`.
 
 ## 1. Spec — what and why
 
@@ -1706,7 +1706,7 @@ The spike's responses copied into production up to each feed's cutoff, checked, 
 
 ### Step 18 — Retire the spike
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner; Claude reads the query results and records them in Close
 - **Commit:** `docs: d004.s18 - record the spike log queries`
 - **R:** —
@@ -1727,7 +1727,7 @@ The spike's responses copied into production up to each feed's cutoff, checked, 
 
 #### Do
 
-1. Delete the Worker `capture-v4` in the dashboard, which stops it; no local credential is needed, as `bikesharing-capture-deploy` reaches only `bikesharing-capture`.
+1. Delete the Worker `capture-v4` in the dashboard, which stops it.
 2. From the spike root, run `rclone copy r2:bikesharing-capture-spike data` for the last logs.
 3. From the repository root, run `duckdb -f spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, and give Claude its output.
 4. Delete the bucket and its contents with `rclone purge r2:bikesharing-capture-spike`.
@@ -1800,6 +1800,16 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 | `system_pricing_plans` | 2026-11-08 06:52 | 2026-11-08 04:52 |
 
 The bucket lock on `raw/` and `logs/`, with no expiry, was enabled on 2026-11-09 at 08:09 UTC ([ADR-0023](../decisions/0023-storage-security-baseline.md)). An overwrite and a delete of a copied object, with the switch token, both failed with `409 ObjectLockedByBucketPolicy`, and the object still passed `gunzip -t` (TH4). The passes after the lock kept writing to `raw/` and `logs/`, with `feed_captured` and `attempts: 1`.
+
+#### Spike logs queried
+
+The queries of D2 (`spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`) ran once over the complete logs of `capture-v4`: 120,792 lines from 37,262 passes, 2026-10-14 10:51:47 to 2026-11-09 08:16:36 UTC.
+
+- Missed passes: 2026-10-16 17:23–17:38 and 17:55–18:13 (35 min), and one minute each on 2026-10-29 09:59 and 2026-11-06 13:48.
+- Failures: mostly on the dynamic feeds, as Bicing's 403s below and source responses 5xx and 404; 10 R2 writes with `internal error (10001)`, and 1 lost connection.
+- The dynamic feeds have 98.85–99.01% of minutes with a clean response, by the query's count.
+- The median latency fell to 35–39 ms for both sources from 2026-10-30 to 2026-11-02, from about 760 ms for AMBici and 158 ms for Bicing, and was back at 317 ms and 159 ms by 2026-11-05.
+- Bicing answered HTTP 403 to 4 requests in the spike's first 24 days, and to 60 from 2026-11-07 10:00 UTC, when production began requesting the same feeds. Production received 57 on `bicing/station_status` and 4 on Bicing's index over the same period, at 1–5 per hour. This points to a volume limit at Bicing that D11 had not observed. In the first 20 minutes after `capture-v4` stopped, production received none, which is too short to conclude.
 
 ### 4.2 Known gaps at close
 
