@@ -9,7 +9,7 @@ paths: # mirrors the lint scope (globs) in .markdownlint-cli2.yaml; keep both in
 # Documentation rules
 
 - **Documents** record decisions, not discussion, without repetition.
-- **Diagrams (Mermaid)** only where a flow branches or has several actors; the text is authoritative.
+- **Diagrams (Mermaid)** only where a picture explains more than the text: a flow that branches or has several actors, or a structure with several related parts, such as a data model; the text is authoritative.
 - **Markdown lint** (scope and rules in `.markdownlint-cli2.yaml`; how it runs in `docs/testing-strategy.md`): a hook fixes cosmetic issues and reports the rest after every edit, and the CI job `docs` fails the PR on them; never run the lint by hand, the hook output is the result. Write these right the first time:
   - fenced code blocks state their language (`text` if it is not code);
   - URLs go between `<>` or as a link;
