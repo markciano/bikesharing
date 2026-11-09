@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 16
-- Next: Step 17 (`/implement d004`); first pass in production 2026-11-07 10:20 UTC. Pending: commands that filter all of `raw/` with `--max-age` are slow on a full bucket; decide `allowScripts` in `capture/package.json`.
+- Current step: Step 17
+- Next: Step 18 (`/implement d004`); first pass in production 2026-11-07 10:20 UTC; bronze locked 2026-11-09 08:09 UTC. Pending: commands that filter all of `raw/` with `--max-age` are slow on a full bucket; decide `allowScripts` in `capture/package.json`.
 
 ## 1. Spec — what and why
 
@@ -521,7 +521,7 @@ The cutoff is per source and feed: the minute of that feed's first object in pro
 - `keys`: writes the cutoffs file, then lists the keys under `V4/raw/` whose timestamp is earlier than their feed's cutoff, as paths relative to `V4/raw/`. It exits non-zero if a feed under `V4/raw/` has no object in production yet.
 - `count`: compares the number of objects per day and feed under `V4/raw/` and under `bikesharing-bronze/raw/`, both before each feed's cutoff, from two `rclone lsf -R` listings, and exits non-zero on any difference.
 
-The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 are `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, run with DuckDB over the local copy of the spike's logs after a last `rclone copy` once `capture-v4` has stopped. Close records the cutoff of each feed, the counts per day and feed, and what the queries found.
+The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 are `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, run with DuckDB over the local copy of the spike's logs after a last `rclone copy` once `capture-v4` has stopped. Close records the cutoff of each feed, the total of objects copied, the result of `count`, and what the queries found. **DI9**
 
 The completeness check of D6 covers the 7 full UTC days that follow production's first day. It is `spikes/cloudflare-capture-spike/analysis/capture-completeness.sql`, run with DuckDB over an `rclone lsf -R` listing of `bikesharing-bronze/raw/` saved to a local file; no object is downloaded. For each source and dynamic feed, it counts the distinct minutes of the window with at least one object, read from the key's timestamp, divides them by 10,080, and flags any feed below 99.5%. Close records the window and the percentage of each feed.
 
@@ -1669,7 +1669,7 @@ Production capture running from `main`, monitored, with its scoped deployment to
 
 ### Step 17 — Copy and lock
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner; Claude records the result in Close
 - **Commit:** `docs: d004.s17 - record the copy of the spike's data`
 - **R:** —
@@ -1680,7 +1680,7 @@ Production capture running from `main`, monitored, with its scoped deployment to
 The spike's responses copied into production up to each feed's cutoff, checked, and bronze locked (D2, D11 steps 2–4, TH4). It starts once production has stored every feed at least once, at least 24 h after Step 16, since the daily feeds run once every 24 h. Listings and the cutoffs file go to `spikes/cloudflare-capture-spike/analysis/output/`, which Git ignores.
 
 - Cloudflare: objects under `bikesharing-bronze/raw/` copied from `V4/raw/`; lock rules on `raw/` and `logs/` with no expiry ([ADR-0023](../decisions/0023-storage-security-baseline.md)).
-- d004 › 4.1 Implemented (modified): the cutoff of each feed and the counts per day and feed.
+- d004 › 4.1 Implemented (modified): the cutoff of each feed, the total of objects copied and the result of `count` (DI9).
 
 #### Reads
 
@@ -1781,6 +1781,26 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 
 <!-- Component — what was delivered; tests passing. -->
 
+#### Spike data copied and bronze locked
+
+`V4/raw/` was copied to `bikesharing-bronze/raw/` up to each feed's cutoff (D2, D11 steps 2–4): 110,783 objects, from 2026-10-14 to each cutoff's day. `count` compared every day and feed before the cutoffs and found 0 differences. The spike never stored `gbfs`, so its cutoff selects no key.
+
+| Feed | AMBici cutoff (UTC) | Bicing cutoff (UTC) |
+|---|---|---|
+| `gbfs` | 2026-11-07 10:19 | 2026-11-07 10:19 |
+| `station_status` | 2026-11-07 10:20 | 2026-11-07 10:20 |
+| `free_bike_status` | 2026-11-07 10:20 | — |
+| `station_information` | 2026-11-07 10:42 | 2026-11-07 11:12 |
+| `system_regions` | 2026-11-07 10:52 | 2026-11-08 08:52 |
+| `vehicle_types` | 2026-11-07 14:52 | 2026-11-07 12:52 |
+| `geofencing_zones` | 2026-11-07 18:52 | 2026-11-07 16:52 |
+| `system_hours` | 2026-11-07 22:52 | — |
+| `gbfs_versions` | — | 2026-11-07 20:52 |
+| `system_information` | 2026-11-08 02:52 | 2026-11-08 00:52 |
+| `system_pricing_plans` | 2026-11-08 06:52 | 2026-11-08 04:52 |
+
+The bucket lock on `raw/` and `logs/`, with no expiry, was enabled on 2026-11-09 at 08:09 UTC ([ADR-0023](../decisions/0023-storage-security-baseline.md)). An overwrite and a delete of a copied object, with the switch token, both failed with `409 ObjectLockedByBucketPolicy`, and the object still passed `gunzip -t` (TH4). The passes after the lock kept writing to `raw/` and `logs/`, with `feed_captured` and `attempts: 1`.
+
 ### 4.2 Known gaps at close
 
 <!-- What the task leaves undone or imperfect, each with the task that covers it: requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
@@ -1801,3 +1821,4 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 | DI6 | `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql` | The queries that attribute the source-card facts to each source, over the spike's logs and raw objects, are added outside Step 14's Scope; the cards cite that file | d004 states several of those facts for both sources together and s006 does not attribute them, so a per-source figure needs a reproducible source in the repository | Step 14 |
 | DI7 | [Switch tooling](#switch-tooling) | `spike_raw_switch.py keys` writes neither the cutoffs file nor the keys file while a feed under `V4/raw/` has no object in production | The cutoffs file is never rewritten, so writing it then would leave that feed without a cutoff until the file is deleted by hand | Step 15 |
 | DI8 | [Deployment](#deployment), TH6 | The deployment token has the Workers Editor role on the account's Workers, not on this Worker only ([ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md)) **replaces DL10** (scope) | The account's token form offers the Workers roles only at account level | Step 16 |
+| DI9 | [Switch tooling](#switch-tooling) | Close records the total of objects copied and the result of `count`, not the counts per day and feed | The table per day and feed runs to hundreds of rows, and `count` already compares each of them | Step 17 |
