@@ -48,8 +48,6 @@ Facts confirmed on 2026-11-03 come from a tool that summarizes pages, so their w
 | Free operations: DeleteObject, DeleteBucket, AbortMultipartUpload | Pricing page | 2026-10-26 |
 | Storage is billed as the average of the daily peak over a 30-day billing period | Pricing page | 2026-10-26 |
 
-TODO(T040): confirm with R2's per-operation metrics (GraphQL Analytics) the class of conditional PutObject, ListObjectsV2 and DeleteObjects, which the pricing page does not name; s010 confirmed only class totals ([s010 › F14](../spikes/s010-storage-table-format.md#4-findings)).
-
 ### R2: security and access
 
 | Fact | Evidence | Confirmed |

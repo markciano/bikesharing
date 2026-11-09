@@ -27,8 +27,6 @@ What would change it: without the credit, Modal costs about €7.20 per month at
 
 The cut also assumes 4 GB in every run, which is the worst case. With 2 GB, Fly.io Machines would pass at about €2.41 per month at 10 minutes.
 
-`TODO(T040)`: if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, or T040 chooses the on-demand mode, reopen this decision with Cloud Run and Fly.io as candidates. To measure it, the final log event of every run ([D5](#d5-pipeline-logs)) carries `duration_s` and `peak_memory_mb`, the latter from `ru_maxrss` (**#1**).
-
 Options rejected:
 
 - **Oracle Cloud Always Free** (7.33) is the fallback: €0 and 12 GB, but the owner keeps the machine, and creating it can fail for lack of capacity.
@@ -134,8 +132,6 @@ Five new requirements, R24–R28, and the other threats documented without a req
 | TH11 | The heartbeat URL of [D5](#d5-pipeline-logs) leaks (Spoofing) | Low: false signals could hide a failure, and the visualization still shows the age of the data (R7) | Accepted: kept as a secret, as in TH2, and it gives access to nothing else | None |
 | TH12 | A memory kill is retried without limit: Modal's [retries guide](https://modal.com/docs/guide/retries) states this for deployed apps and does not cover scheduled functions (Denial of service) | Credit spent with no progress, against the limited retries of R23 | Accepted, bounded by three controls: DuckDB's memory limit below the container's, so memory errors are raised rather than killed, though it does not cover all of the process's memory; the heartbeat alert of [D5](#d5-pipeline-logs), after which the owner stops the app; and the usage limit of R28 | None |
 
-`TODO(T040)`: set DuckDB's memory limit, decide on a hard container limit (`memory=(request, limit)`; without one, usage above the request is billed, as Modal charges the higher of the two), cap what one run processes and leave the rest to the next, do not retry memory errors since they are permanent, and check in the first slice how Modal treats a memory kill of a scheduled function ([d002 › R23](../designs/d002-requirements.md#requirements)).
-
 Requirements transferred to [d002 › Requirements](../designs/d002-requirements.md#requirements):
 
 | R | Threat | Evidence |
@@ -165,8 +161,6 @@ It is a subset of hexagonal architecture: the platform module is a driving adapt
 | 3 | The package reads configuration and credentials only from environment variables | Review |
 | 4 | The entry point runs without Modal, on a local path | A CI test runs the pipeline with Modal not installed |
 
-`TODO(T040)`: add the checks of rules 1, 2 and 4 to CI, and place the platform module in the repository.
-
 Rejected: **full hexagonal architecture** (ports and adapters on both sides), with an interface for storage and one adapter per technology.
 
 - The processing logic is SQL ([ADR-0025](../decisions/0025-sql-models-directed-by-python.md)), so it would move into the adapter and leave the core almost empty.
@@ -190,7 +184,7 @@ The pipeline writes structured logs as an event stream (Twelve-Factor): JSON Lin
 
 Rejected:
 
-- **Modal's logs only:** nothing to build, but after a day there is no trace of why a run failed, nor any history of run duration, which T040 needs to check D1's reopening condition.
+- **Modal's logs only:** nothing to build, but after a day there is no trace of why a run failed, nor any history of run duration, which T040 needs to check whether D1 still holds.
 - **An external log service:** it adds an account, a secret and a component to maintain.
 
 Alerts follow the heartbeat pattern (dead man's switch), with Healthchecks.io on its free plan: each run signals its start and its result, and the service emails the owner on a failure signal or when the expected signal does not arrive. This satisfies [d002 › R23](../designs/d002-requirements.md#requirements) and detects the missed runs of [D2](#d2-scheduler), whatever their cause. The monitor runs outside Modal, because a failed platform cannot report its own failure.
@@ -452,9 +446,9 @@ Modal's Starter plan can give the pipeline the memory it is estimated to need, 3
 - DuckDB's real memory use on Modal, and spilling to disk under [N2](#d1-execution-platform): the probe holds a plain allocation — a run could need more memory than the 3 GB estimated — the first slice of T040 measures it with `peak_memory_mb`.
 - Occupying the full 4 GiB, and the plan's maximum memory: a request above 4 GiB could be rejected — T040 tries it again before raising the request.
 - The reliability of `Cron` and what happens to a missed run: runs could be skipped with no notice from Modal — the heartbeat of [D5](#d5-pipeline-logs) detects them.
-- How Modal retries a memory kill of a scheduled function (TH12): credit spent with no progress — the `TODO(T040)` in [D3](#d3-pipeline-security).
+- How Modal retries a memory kill of a scheduled function (TH12): credit spent with no progress — T040 checks it.
 - Whether the usage limit stops runs before any charge: an unexpected charge — the $1 spend limit bounds it, and T040 checks it with Modal's limits in [1.5 Out of scope](#15-out-of-scope).
-- Real run time, and the region: the credit may not cover it, and `eu` costs 1.15x — `duration_s` measures it, with D1's reopening condition.
+- Real run time, and the region: the credit may not cover it, and `eu` costs 1.15x — T040 measures it with `duration_s`.
 - The minimum period of Healthchecks.io: it may not fit the chosen cadence — checked when the monitor is created.
 
 ### 5.6 Follow-ups
@@ -467,9 +461,7 @@ Modal's Starter plan can give the pipeline the memory it is estimated to need, 3
   - `docs/architecture.md` › Runtime view, main flows: written in the commit of the alerts ADR, once the schedule, logs and alerts are recorded.
   - `docs/sources/modal.md`: resolved in this step.
 - No new tasks. Existing tasks pick up what this spike leaves them:
-  - `TODO(T038)`: the item marked T038 in [1.5 Out of scope](#15-out-of-scope).
-  - `TODO(T040)`: the items marked T040 in [1.5 Out of scope](#15-out-of-scope), and [4.1 Production inputs](#41-production-inputs).
-- Tear-down: nothing is kept. The apps ended with their runs, and the owner revoked the token in Step 2.
+  - `TODO(T038)`: the item marked T038 in [1.5 Out of scope](#15-out-of-scope).- Tear-down: nothing is kept. The apps ended with their runs, and the owner revoked the token in Step 2.
 
 ## 6. Sources
 
