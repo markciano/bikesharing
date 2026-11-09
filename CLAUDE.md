@@ -30,7 +30,8 @@ Data engineering portfolio project on public bike sharing in the Barcelona area 
 
 ## Git
 
-- Claude runs only `git status`, `diff`, `log` and `show`. The owner reviews the diff, makes every commit and runs every other git command, including removing a leftover `.git/index.lock`.
+- Claude runs only `git status`, `diff`, `log` and `show`, as plain `git <subcommand>` from the project root.
+- The owner reviews the diff, makes every commit.
 - Commits follow Conventional Commits without scope (type: description); the branch names the task. Claude proposes the message.
 - One logical change per commit: related edits go together; unrelated ones never do.
 
