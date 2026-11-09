@@ -9,15 +9,16 @@ paths:
 
 ## Code comments
 
+General comment rules are in `general.md`.
+
 - Docstrings follow numpydoc (NumPy style) on every module, class and public function/method.
 - Type hints are mandatory in signatures. For DataFrames, the Parameters and Returns sections list the required columns and their dtypes.
-- Inline comments explain *why* a non-obvious decision was made, never *what* the code does.
 
 ## Testing
 
 General principles are in `testing.md`; reasons and detail in the [testing strategy](../../../docs/testing-strategy.md) (Python section).
 
-- Tool: pytest; `pytest` runs every test, `pytest tests/<level>` one level.
+- Tool: pytest; `uv run pytest` runs every test, `uv run pytest tests/<level>` one level.
 - Line coverage (pytest-cov) is reported, never enforced with a threshold. The source is set in `[tool.coverage.run] source`, so the CI command cannot widen the report to the test files.
 - Levels are folders: `tests/unit/` (mirrors `src/`), `tests/integration/`, `tests/e2e/`.
 - Naming: files `test_<module>.py`; functions `test_<behaviour>_<condition>`.
