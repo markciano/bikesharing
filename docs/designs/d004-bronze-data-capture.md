@@ -19,7 +19,9 @@ Current step: the step being implemented, or —. -->
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: Step 18
-- Next: Step 19 (`/implement d004`); first pass in production 2026-11-07 10:20 UTC; bronze locked 2026-11-09 08:09 UTC; `capture-v4` stopped 2026-11-09 08:17 UTC. On 2026-11-10, check that production gets no Bicing 403 in the 24 h after the stop (4.1), and propose a task if it does. Step 19 decides its completeness window, since day 1 (2026-11-08) overlaps `capture-v4`. Pending: commands that filter all of `raw/` with `--max-age` are slow on a full bucket; decide `allowScripts` in `capture/package.json`.
+- Next: Step 19 (`/implement d004`); first pass in production 2026-11-07 10:20 UTC; bronze locked 2026-11-09 08:09 UTC; `capture-v4` stopped 2026-11-09 08:17 UTC. The R2 token `bikesharing-t039-completeness` already exists and is set in the rclone remote `r2`. Pending:
+  - Bicing 403s (4.1): count them again in production's logs about 6 h after the stop, from a local copy of `logs/date=2026-11-09/`, per hour from `run_id`. If they stay at 1–2 per hour, propose a task, since `bicing/station_status` would miss D6.
+  - Step 19: the completeness window ends 2026-11-11 12:00 UTC (DI10); the dashboard shows CPU time over 10 ms with no CPU errors, to settle with the figures of Do 1.
 
 ## 1. Spec — what and why
 
@@ -108,7 +110,7 @@ Rejected:
 
 #### D6. Capture completeness target
 
-Each dynamic feed has a clean capture in at least 99.5% of the minutes of each calendar month, which allows 216 minutes of failures in a 30-day month. A minute is clean for a feed when an object of that feed is stored under `raw/` for that minute (D9). The first 7 days of production are checked against the same threshold; the monthly follow-up belongs to the data quality task (D7). Over 21 full days of the spike's capture (2026-10-15 to 2026-11-04), each feed reached 99.81–99.82%, or about 78 minutes per month, and fell below 99.5% on a single day. The target follows the SRE practice of an indicator with an objective and an error budget. Static feeds have no percentage, because one failure in a daily feed is a whole day without data; a failure there is handled as an individual event.
+Each dynamic feed has a clean capture in at least 99.5% of the minutes of each calendar month, which allows 216 minutes of failures in a 30-day month. A minute is clean for a feed when an object of that feed is stored under `raw/` for that minute (D9). The first 48 h of production on its own, from 2026-11-09 12:00 to 2026-11-11 12:00 UTC, are checked against the same threshold; the monthly follow-up belongs to the data quality task (D7). **DI10** Over 21 full days of the spike's capture (2026-10-15 to 2026-11-04), each feed reached 99.81–99.82%, or about 78 minutes per month, and fell below 99.5% on a single day. The target follows the SRE practice of an indicator with an objective and an error budget. Static feeds have no percentage, because one failure in a daily feed is a whole day without data; a failure there is handled as an individual event.
 
 A missed month leads to reviewing its cause, with no automatic action. If capture stays well above the target for several months, raise the target.
 
@@ -274,7 +276,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - The probe's test bucket `bikesharing-t039-write-once` and the token `bikesharing-t039-completeness` are deleted. ([ADR-0035](../decisions/0035-cloud-resource-naming.md))
 - The deployment token has only the Workers Editor role and a one-year expiry. (TH6)
 - Every pass stays below 10 ms of CPU over the first 3 full days of production, checked as in [Deployment](#deployment). (D4)
-- Each dynamic feed has a clean capture in at least 99.5% of the minutes of the first 7 full UTC days of production, checked as in [Switch tooling](#switch-tooling). (D6)
+- Each dynamic feed has a clean capture in at least 99.5% of the minutes of the window of D6, checked as in [Switch tooling](#switch-tooling). (D6)
 
 ### 1.5 Out of scope
 
@@ -523,7 +525,7 @@ The cutoff is per source and feed: the minute of that feed's first object in pro
 
 The copy is server-side, from bucket to bucket: `rclone copy --files-from <keys> r2:bikesharing-capture-spike/V4/raw r2:bikesharing-bronze/raw`, so rclone verifies checksums and retries. The queries of D2 are `spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql`, run with DuckDB over the local copy of the spike's logs after a last `rclone copy` once `capture-v4` has stopped. Close records the cutoff of each feed, the total of objects copied, the result of `count`, and what the queries found. **DI9**
 
-The completeness check of D6 covers the 7 full UTC days that follow production's first day. It is `spikes/cloudflare-capture-spike/analysis/capture-completeness.sql`, run with DuckDB over an `rclone lsf -R` listing of `bikesharing-bronze/raw/` saved to a local file; no object is downloaded. For each source and dynamic feed, it counts the distinct minutes of the window with at least one object, read from the key's timestamp, divides them by 10,080, and flags any feed below 99.5%. Close records the window and the percentage of each feed.
+The completeness check of D6 covers its window, which starts about 4 h after `capture-v4` stopped, so that no minute of it has both captures requesting the sources. It is `spikes/cloudflare-capture-spike/analysis/capture-completeness.sql`, run with DuckDB over an `rclone lsf -R` listing of `bikesharing-bronze/raw/` saved to a local file; no object is downloaded. For each source and dynamic feed, it counts the distinct minutes of the window with at least one object, read from the key's timestamp, divides them by the window's minutes, and flags any feed below 99.5%. Close records the window and the percentage of each feed. **DI10**
 
 rclone uses an R2 token, `bikesharing-t039-switch`, with Object Read & Write on `bikesharing-capture-spike` and `bikesharing-bronze`, deleted with the spike's bucket (D11). The completeness listing runs after that, with its own token, `bikesharing-t039-completeness`, with Object Read on `bikesharing-bronze` only ([ADR-0035](../decisions/0035-cloud-resource-naming.md)), deleted when the task closes. **DL18** **DL20**
 
@@ -660,7 +662,7 @@ Colours show what each box touches: grey, no I/O (the functional core); blue, R2
 └── spikes/cloudflare-capture-spike/
     ├── README.md                              (modified) The switch script, the log queries, the completeness query and the probe
     ├── analysis/
-    │   ├── capture-completeness.sql           (new) Completeness of the first 7 days of production (Switch tooling)
+    │   ├── capture-completeness.sql           (new) Completeness over the window of D6 (Switch tooling)
     │   ├── spike_raw_switch.py                (new) Key list up to the cutoff and count comparison (Switch tooling)
     │   └── spike-log-queries.sql              (new) The queries of D2
     └── js/
@@ -1749,7 +1751,7 @@ The spike's responses copied into production up to each feed's cutoff, checked, 
 
 #### Scope
 
-The two Done when checks on production data: CPU over days 1–3, and completeness over days 1–7 ([Deployment](#deployment), [Switch tooling](#switch-tooling), D4, D6). Day 1 is the first full UTC day after Step 16's deploy, since the day of the deploy is partial.
+The two Done when checks on production data: CPU over days 1–3, and completeness over the window of D6 ([Deployment](#deployment), [Switch tooling](#switch-tooling), D4, D6). Day 1 is the first full UTC day after Step 16's deploy, since the day of the deploy is partial.
 
 - Cloudflare: R2 token `bikesharing-t039-completeness`, Object Read on `bikesharing-bronze` only, created and then deleted.
 - d004 › 4.1 Implemented (modified): the max CPU and the time of the costliest pass; the window and the percentage of each dynamic feed.
@@ -1762,9 +1764,9 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 #### Do
 
 1. On each of days 2, 3 and 4, open the Query Builder for `bikesharing-capture` over the previous full UTC day. Read the max of `$workers.cpuTimeMs` with the time of that invocation, and the count of invocations with outcome `exceededCpu`.
-2. On day 8, once day 7 has ended, create the token `bikesharing-t039-completeness`, and set it as the credentials of the rclone remote `r2`.
+2. Once the window of D6 has ended, create the token `bikesharing-t039-completeness`, and set it as the credentials of the rclone remote `r2`.
 3. Save `rclone lsf -R r2:bikesharing-bronze/raw > spikes/cloudflare-capture-spike/analysis/output/prod-completeness.txt`.
-4. Run `capture-completeness.sql` with that listing and day 1 as the first day of the window, and give Claude its output and the figures of Do 1.
+4. Run `capture-completeness.sql` with that listing and the window of D6, and give Claude its output and the figures of Do 1.
 5. Delete the token `bikesharing-t039-completeness`.
 
 #### Check
@@ -1809,7 +1811,7 @@ The queries of D2 (`spikes/cloudflare-capture-spike/analysis/spike-log-queries.s
 - Failures: mostly on the dynamic feeds, as Bicing's 403s below and source responses 5xx and 404; 10 R2 writes with `internal error (10001)`, and 1 lost connection.
 - The dynamic feeds have 98.85–99.01% of minutes with a clean response, by the query's count.
 - The median latency fell to 35–39 ms for both sources from 2026-10-30 to 2026-11-02, from about 760 ms for AMBici and 158 ms for Bicing, and was back at 317 ms and 159 ms by 2026-11-05.
-- Bicing answered HTTP 403 to 4 requests in the spike's first 24 days, and to 60 from 2026-11-07 10:00 UTC, when production began requesting the same feeds. Production received 57 on `bicing/station_status` and 4 on Bicing's index over the same period, at 1–5 per hour. This points to a volume limit at Bicing that D11 had not observed. In the first 20 minutes after `capture-v4` stopped, production received none, which is too short to conclude.
+- Bicing answered HTTP 403 to 4 requests in the spike's first 24 days, and to 60 from 2026-11-07 10:00 UTC, when production began requesting the same feeds. Production received 57 on `bicing/station_status` and 4 on Bicing's index over the same period, at 1–5 per hour. They began with the overlap, which points to a volume limit at Bicing that D11 had not observed, but production still received 2 in the first 1.5 h after `capture-v4` stopped, so the cause is not settled.
 
 ### 4.2 Known gaps at close
 
@@ -1832,3 +1834,4 @@ The queries of D2 (`spikes/cloudflare-capture-spike/analysis/spike-log-queries.s
 | DI7 | [Switch tooling](#switch-tooling) | `spike_raw_switch.py keys` writes neither the cutoffs file nor the keys file while a feed under `V4/raw/` has no object in production | The cutoffs file is never rewritten, so writing it then would leave that feed without a cutoff until the file is deleted by hand | Step 15 |
 | DI8 | [Deployment](#deployment), TH6 | The deployment token has the Workers Editor role on the account's Workers, not on this Worker only ([ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md)) **replaces DL10** (scope) | The account's token form offers the Workers roles only at account level | Step 16 |
 | DI9 | [Switch tooling](#switch-tooling) | Close records the total of objects copied and the result of `count`, not the counts per day and feed | The table per day and feed runs to hundreds of rows, and `count` already compares each of them | Step 17 |
+| DI10 | D6, [Switch tooling](#switch-tooling), `capture-completeness.sql` | The first check of D6 covers 48 h from 2026-11-09 12:00 UTC, not the 7 full UTC days after production's first day; the query takes the window's start and end | Production and `capture-v4` overlapped until 2026-11-09 08:17 UTC, and Bicing's 403s began with the overlap (4.1), so the window starts after it with a margin; a shorter window closes the task sooner, and the monthly follow-up stays with D7 | Step 19 |

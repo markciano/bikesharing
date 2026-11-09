@@ -43,7 +43,7 @@ spikes/cloudflare-capture-spike/
 │   ├── analyze_remote_capture.py
 │   ├── spike-log-queries.sql     DuckDB queries over V4's logs and raw (d004 › D2)
 │   ├── spike_raw_switch.py       Cutoffs, keys and counts for the switch (d004 › D11)
-│   ├── capture-completeness.sql  Production's first 7 days (d004 › D6)
+│   ├── capture-completeness.sql  Production's first 48 h on its own (d004 › D6)
 │   └── output/               Report, issues and switch listings (ignored by git)
 └── data/                     Copy of the bucket data (ignored by git)
     ├── V2/{raw,logs,state}/
@@ -107,7 +107,7 @@ rclone copy r2:bikesharing-capture-spike spikes/cloudflare-capture-spike/data
 duckdb -f spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql
 ```
 
-After production's first 7 full UTC days, list production to `analysis/output/prod-completeness.txt`, set `first_day` at the top of `capture-completeness.sql` to the day after production's first day, and run it from the repository root. It prints, per dynamic feed, the minutes with at least one object, their percentage of 10,080 and whether it is below 99.5%:
+Once the completeness window of d004 › D6 has ended, list production to `analysis/output/prod-completeness.txt`, set `window_start` and `window_end` at the top of `capture-completeness.sql` to that window, and run it from the repository root. It prints, per dynamic feed, the minutes with at least one object, their percentage of the window's minutes and whether it is below 99.5%:
 
 ```bash
 rclone lsf -R r2:bikesharing-bronze/raw > spikes/cloudflare-capture-spike/analysis/output/prod-completeness.txt
