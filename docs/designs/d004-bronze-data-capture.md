@@ -20,7 +20,7 @@ Current step: the step being implemented, or —. -->
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: Step 18
 - Next: Step 19 (`/implement d004`); first pass in production 2026-11-07 10:20 UTC; bronze locked 2026-11-09 08:09 UTC; `capture-v4` stopped 2026-11-09 08:17 UTC. The R2 token `bikesharing-t039-completeness` already exists and is set in the rclone remote `r2`. Pending:
-  - Bicing 403s (4.1): count them again in production's logs about 6 h after the stop, from a local copy of `logs/date=2026-11-09/`, per hour from `run_id`. If they stay at 1–2 per hour, propose a task, since `bicing/station_status` would miss D6.
+  - Bicing 403s (4.1): 4 in 2026-11-09 12:00–15:00 UTC, so `bicing/station_status` is likely to miss D6 in the window; covered by T059.
   - Step 19: the completeness window ends 2026-11-11 12:00 UTC (DI10); the dashboard shows CPU time over 10 ms with no CPU errors, to settle with the figures of Do 1.
 
 ## 1. Spec — what and why
@@ -288,6 +288,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - Citing the finding IDs of other documents with their source, such as s008's in `docs/testing-strategy.md` — T058
 - Whether the pipeline gets a component folder of its own, like `capture/`, instead of `src/` and `tests/` at the root — T040
 - Centralising quality rules and targets, such as D6's, in one place — T042
+- Bicing's HTTP 403s on `bicing/station_status` after `capture-v4` stopped, about 1.3 per hour with no retry (4.1, D8) — T059
 
 ## 2. Plan — how
 
@@ -1811,7 +1812,7 @@ The queries of D2 (`spikes/cloudflare-capture-spike/analysis/spike-log-queries.s
 - Failures: mostly on the dynamic feeds, as Bicing's 403s below and source responses 5xx and 404; 10 R2 writes with `internal error (10001)`, and 1 lost connection.
 - The dynamic feeds have 98.85–99.01% of minutes with a clean response, by the query's count.
 - The median latency fell to 35–39 ms for both sources from 2026-10-30 to 2026-11-02, from about 760 ms for AMBici and 158 ms for Bicing, and was back at 317 ms and 159 ms by 2026-11-05.
-- Bicing answered HTTP 403 to 4 requests in the spike's first 24 days, and to 60 from 2026-11-07 10:00 UTC, when production began requesting the same feeds. Production received 57 on `bicing/station_status` and 4 on Bicing's index over the same period, at 1–5 per hour. They began with the overlap, which points to a volume limit at Bicing that D11 had not observed, but production still received 2 in the first 1.5 h after `capture-v4` stopped, so the cause is not settled.
+- Bicing answered HTTP 403 to 4 requests in the spike's first 24 days, and to 60 from 2026-11-07 10:00 UTC, when production began requesting the same feeds. Production received 57 on `bicing/station_status` and 4 on Bicing's index over the same period, at 1–5 per hour. They began with the overlap, which points to a volume limit at Bicing that D11 had not observed, but production still received 2 in the first 1.5 h after `capture-v4` stopped, and 4 from 12:00 to 15:00 UTC, so the cause is not settled.
 
 ### 4.2 Known gaps at close
 
