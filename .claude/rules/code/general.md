@@ -3,6 +3,7 @@ paths:
   - "src/**"
   - "tests/**"
   - "capture/**"
+  - "scripts/**"
 ---
 
 # Code rules (all languages)
