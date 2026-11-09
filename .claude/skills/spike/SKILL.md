@@ -17,7 +17,8 @@ This skill fills Questions, Method, Steps and Conclusion. Findings are filled du
 
 ## Start
 
-- **Task ID (TNNN): new spike.** Read only the task's issue, looked up with `/task`; it is a hint, the question comes from the owner. Also run `grep "TODO(TNNN)"` over the repo: this spike must pick up what it lists. Propose `docs/spikes/sNNN-short-title.md` (next free number) and the code folder `spikes/<short-title>/`. Once approved, create the doc from the template, keeping its comments.
+- **Task ID (TNNN): new spike.** Read only the task's issue, looked up with `/task`; it is a hint, the question comes from the owner. Also run `grep "TODO(TNNN)"` over the repo. Propose `docs/spikes/sNNN-short-title.md` (next free number) and the code folder `spikes/<short-title>/`. Once approved, create the doc from the template, keeping its comments.
+  - Ask the owner whether to move the `grep` items into this spike, as set in CLAUDE.md › Pending items.
 - **Spike ID (sNNN): resume.** Read its Status and continue from the first unchecked item in Phase.
 - **Spike ID + `review-steps`: review.** Follow [review-steps.md](review-steps.md) and § Review. The rest of this file does not apply.
 

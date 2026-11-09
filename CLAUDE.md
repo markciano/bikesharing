@@ -26,6 +26,7 @@ Data engineering portfolio project on public bike sharing in the Barcelona area 
 - **Raw data:** never committed to Git, except test fixtures (ADR-0037).
 - **Stack versions and dependencies:** each component pins its runtimes and locks its dependencies in its own files (ADR-0016, ADR-0017); how in `.claude/rules/code/dependencies.md`.
 - **Pending items:** marked `TODO(TNNN):` followed by a short description, in docs and code alike; `TNNN` is the task that resolves it (its parent task, or a new task, if none exists yet), so `grep "TODO(TNNN)"` lists what a task must pick up; run it when the task starts.
+  - If the task has a working document, Claude asks the owner whether to move each item into it, linked to its origin, removing the marker from the origin in the same commit.
 - **File names:** proposed by Claude, approved by the owner. English, lowercase. Docs in kebab-case; Python code in snake_case (PEP 8). ADRs as `NNNN-short-title.md`; designs as `dNNN-short-title.md`. spikes as `sNNN-short-title.md`.
 
 ## Git
