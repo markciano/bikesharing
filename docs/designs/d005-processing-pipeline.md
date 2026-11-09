@@ -19,6 +19,9 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
+- Parked:
+  - Whether scripts that support a decision (the evidence of D3 and OQ4) are kept in `spikes/`, so the evidence can be reproduced.
+  - The owner asks ICGC whether the post code its geocoder returns may be stored and published (OQ4).
 
 ## 1. Spec — what and why
 
@@ -138,7 +141,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ4 | Normalization of terms and values across AMBici and Bicing | D5 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. To find out: what `is_installed`, `is_renting` and `is_returning` mean in each system; what Bicing's four vehicle types (`ICONIC`, `BOOST`, `FIT`, `EFIT`) are, against its two known kinds, mechanical and electric; AMBici's post code, which it does not publish, and its region "AMB", which is not a municipality |
+| OQ4 | Normalization of terms and values across AMBici and Bicing | D5 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. To find out: what `is_installed`, `is_renting` and `is_returning` mean in each system; what Bicing's four vehicle types (`ICONIC`, `BOOST`, `FIT`, `EFIT`) are, against its two known kinds, mechanical and electric; AMBici's post code, which it does not publish, and its region "AMB", which is not a municipality. Post code, findings so far: AMBici keeps a post code, and the owner checks doubtful ones by hand. AMBici's 237 stations sit in 16 regions, 15 of them municipalities; "AMB" groups 10 stations, most of them in Barcelona or on a boundary. No open post-code polygons exist ([BOE-A-2023-11522](https://www.boe.es/diario_boe/txt.php?id=BOE-A-2023-11522)); municipal boundaries are open (ICGC, CC BY 4.0). On Bicing stations, whose published `post_code` is the reference: the nearest GeoNames post-code point gives the right code for 71.4% of 539; ICGC reverse geocoding (`eines.icgc.cat/geocodificador/invers`) for 95.2% of a sample of 84, 2 per published code, and the owner confirmed Bicing right in the 4 misses. A doubt flag (the 5 nearest addresses disagree) flags 7 and catches 2 of the 4 misses: not enough. To decide: how to find ICGC's likely misses, and whether ICGC's post code may be stored and published (its source is not stated) |
 | OQ5 | Which d002 questions gold answers, and which Must question the first slice builds | D5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md) |
 | OQ6 | The pipeline's mode (24/7 or on demand) and refresh cadence, reviewed together with [d002 › R3](d002-requirements.md#requirements) and the freshness of d002's Q1, Q2 and Q5 | OQ5 | The visitor sees cadence plus run time (about 2 min, not measured): a 5–10 minute cadence gives about 7–12 minutes of age, above R3's 5 minutes ([s013 › D3](../spikes/s013-visualization-tool.md#d3-static-web-page-with-javascript)). Running 24/7, R2's Class B quota allows commits every 10 minutes or more ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)) |
 | OQ7 | How the historical archives reach R2 and are loaded, and the check of the Bicing archive against the real-time capture | D5 | Bicing's archive is not on R2 yet. The check is handed to T040 by [d002 › Out of scope](d002-requirements.md) |
