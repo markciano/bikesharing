@@ -78,6 +78,21 @@ What would change it: a new question that needs a discarded feed; the feed then 
 | `system_information` | Discarded | Discarded | One row per system with nothing to measure; the system dimension's few static attributes are fixed in OQ3 |
 | `gbfs.json`, `gbfs_versions` | Discarded | Discarded | Discovery index, used only by capture |
 
+#### D4. Business processes and the grain of the stock
+
+The model follows Kimball's inventory case, as framed in [d002 › Guiding questions](d002-requirements.md#guiding-questions): each capture is a stock count per station, and trips are stock movements derived from consecutive counts. Four business processes answer Q1–Q7; Q8 is answered by the history of the station dimension, not by a fact. The model, with how each question maps to a process, lives in [data-model.md](../data-model.md).
+
+- **Station stock:** one row per station and capture, a periodic snapshot. Semi-additive: it is not summed over time.
+- **Stock by vehicle type:** one row per station, capture and vehicle type, from the real-time feeds only, since the Bicing archive has no per-type counts.
+- **Stock movements:** one row per station and pair of consecutive captures with a change, derived from the stock. Additive: departures and arrivals are summed over time.
+- **Capture passes:** one row per source, feed and capture pass, from capture's logs.
+
+Every capture is kept as a row, even when the station has not changed: rows are only appended, a gap in capture is visible as missing rows, and the Bicing archive's 5-minute snapshots fit the same grain. Rows that repeat values compress well in columnar storage, and small files are compacted by the pipeline.
+
+What would change it: silver's storage cost approaching its share of the budget ([ADR-0026](../decisions/0026-budget-shares-per-component.md)); rows older than a set age are then reduced to intervals or a coarser resolution.
+
+Rejected: one row per station state with `valid_from` and `valid_to` (a timespan tracking fact). It stores far fewer rows, but every change rewrites the open row with a MERGE, with more R2 operations and more conflicts, and a gap in capture reads as an unchanged state.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
