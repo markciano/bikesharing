@@ -45,7 +45,68 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 | `TH1` | | | | |
 -->
 
-#### D`<N>`. `<Title of decision N>`
+#### D1. A 403 is retried once
+
+Capture retries a source request once when the source answers HTTP 403, on any source and for feeds and indexes alike; every other source failure keeps the no-retry rule of [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour), which this decision refines. With production alone, Bicing answers 403 to about 1.26 `station_status` requests per hour, never in two consecutive minutes, and a request a few seconds after a 403 usually gets through ([s014 › F1–F3](../spikes/s014-bicing-403.md#4-findings)): the 403 behaves as a transient rejection, unlike a source that is down. One rule for every source needs no per-source configuration and costs nothing where no 403 occurs, as on AMBici.
+
+If the retries logged in production recover fewer 403s than Done when requires, the wait or the approach is revisited. A 403 on another source or feed needs no change.
+
+Rejected:
+
+- Retrying only Bicing `station_status`: a per-source special case that misses the same 403 on another feed.
+- Also retrying 429, 5xx and network errors: at most about 0.2% of minutes (57 source failures in 22 days, d004 › D8), with no evidence that they recover within seconds; a timeout leaves no time to retry anyway.
+- Checking the retry with a probe before the deploy: only a Cloudflare Worker reproduces production's conditions, so it would deploy the same change twice; the retry is checked in production instead (Done when).
+
+#### D2. The retry waits 3–5 s at random
+
+The retry starts after a uniform random wait of 3 to 5 s (backoff with jitter). 3–4 s is the only delay after a 403 that has been measured ([s014 › F3](../spikes/s014-bicing-403.md#f3-a-request-a-few-seconds-after-a-403-usually-gets-through)), and a limiter that counts requests over a window of a few seconds could reject a shorter wait. A longer wait costs little: it happens about 1.3 times per hour, and waiting uses no Worker CPU. The jitter spreads the retries across any window the limiter counts.
+
+If the logged retries recover too few 403s (D1), the wait is the first thing revisited.
+
+Rejected:
+
+- A fixed 3 s wait: every retry would land at the same point of a fixed window.
+- A wait below 3 s: not measured.
+
+#### D3. One 60 s limit covers the retry
+
+The 60 s limit of [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour) covers the whole request: first attempt, wait and retry (an overall deadline). No request lasts longer than it does today, and the retry still has about 54 s, against about 1 s for a successful response (p90 935 ms, [s014 › 5.5](../spikes/s014-bicing-403.md#55-production-inputs)).
+
+Rejected:
+
+- 60 s per attempt: a request could last about 125 s, twice D8's limit, for no gain, since a 403 arrives fast.
+
+#### D4. A retry is logged as its own event
+
+Each 403 that capture retries writes a `fetch_retried` event, at level `warning`, before the wait, with `source`, `feed` (null for an index), `status` and `latency_ms` of the first attempt, plus `headers`, every response header except `Set-Cookie`, and `body`, the first 1,000 bytes of the response body as text. The request's outcome is then logged as today, by `feed_captured`, `feed_failed`, `index_refreshed` or `index_rejected`, whose `status` and `latency_ms` are those of the last attempt; the existing events keep their fields and meaning ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)). It extends D9's event table, and `warning` matches D9's level for a failure that does not affect the data.
+
+The pass log then answers how many 403s each source gets per hour (the `fetch_retried` events) and how many the retry recovers (those followed in the same pass by `feed_captured` or `index_refreshed` for the same feed), which Done when measures. Who sends the 403 and what it keys on is unknown ([s014 › 5.4](../spikes/s014-bicing-403.md#54-not-verified)): `headers` and `body` can name the limiter or the wait it asks for (`Retry-After`), which the next step needs if the retry falls short, and a 403 that arrives in tens of milliseconds points to a limiter at the network edge, one of hundreds to the origin server. `Set-Cookie` is left out because it can carry a session token (OWASP Logging Cheat Sheet). At about 3 KB per event and about 940 403s per month, they add about 3 MB per month to D9's 30–35 MB.
+
+A retry that succeeds:
+
+```json
+{"ts":"2026-11-12T10:15:36.120Z","level":"warning","event":"fetch_retried","source":"bicing","feed":"station_status","status":403,"latency_ms":85,"headers":{"content-type":"text/html","server":"…"},"body":"<html>…"}
+{"ts":"2026-11-12T10:15:40.530Z","level":"info","event":"feed_captured","source":"bicing","feed":"station_status","status":200,"latency_ms":640,"bytes":48210,"attempts":1,"recompressed":false}
+```
+
+The common fields `component`, `version` and `run_id` are left out, and the values are illustrative. When the retry also fails, the second event is `feed_failed` with the retry's `status`, or with `status` null and `error_type` `timeout` if D3's limit runs out.
+
+Rejected:
+
+- Counting fetch attempts in `attempts`: D9 defines it as write attempts, so one field would carry two meanings.
+- Two new fields in the four source events (fetch attempts and the first attempt's status): it changes four existing events with fields that are almost always empty.
+- A fixed list of headers and no body: it needs to guess which headers name the limiter, which is what is unknown.
+- Headers and body on every HTTP failure: it changes `feed_failed` and `index_rejected` with no open question to answer.
+
+#### D5. Every source request identifies the project
+
+Every source request, for feeds and indexes alike, sends `User-Agent: bikesharing-capture (+https://github.com/markciano/bikesharing)`: a product name and a contact link, as usual for automated clients of public APIs ([RFC 9110 › User-Agent](https://www.rfc-editor.org/rfc/rfc9110#name-user-agent)), so a source operator can identify the traffic and reach the project instead of blocking it. The link is the public repository; no personal contact is sent.
+
+It ships in the same deploy as D1. It may change the 403 rate in either direction ([s014 › 5.4](../spikes/s014-bicing-403.md#54-not-verified)); Done when measures the 403s the retry does not recover, which does not depend on telling the two effects apart, and D4 logs any change.
+
+Rejected:
+
+- Sending it in a later deploy to measure each change's effect apart: a second deploy and measurement window for a result Done when does not need.
 
 ### 1.3 Requirements
 
@@ -64,7 +125,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
-- `<extra condition>`
+- Over 48 h of production pass logs after the deploy, Bicing `station_status` requests whose retry also fails stay at or below 0.1 per hour, the hard cut of [s014 › Q1](../spikes/s014-bicing-403.md#13-questions). If not, the wait or the approach is revisited in a new task.
 
 ### 1.5 Out of scope
 
@@ -78,12 +139,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ1 | Which failures are retried, and how many times | — | s014 › P2: an HTTP 403 from any source, feed or index, once |
-| OQ2 | Wait before the retry | OQ1 | s014 › P2: uniform random 3–5 s |
-| OQ3 | Time limit of a request with its retry | OQ2 | s014 › P3: one 60 s deadline over both attempts |
-| OQ4 | How a retried request shows in the pass log | OQ1 | s014 › P4: `attempts: 1` and the first attempt's status, even when the retry succeeds |
-| OQ5 | Identification of the project in every source request | — | s014 › P1: `User-Agent` |
-| OQ6 | What must not break | OQ1–OQ5 | d004 › D8 for other failures, the pass within its minute, write-once, d004's requirements |
+| OQ6 | What must not break | D1–D5 | d004 › D8 for other failures, the pass within its minute, write-once, d004's requirements |
 
 ## 2. Plan — how
 
