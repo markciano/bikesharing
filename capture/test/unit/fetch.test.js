@@ -3,11 +3,14 @@
 // status and latency to log; an index body decompresses within a size limit.
 // Sources are the simulated ones in vitest.config.js; limits are the tests' own.
 import { env } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { USER_AGENT, fetchFeed, gunzipText, retryWait } from "../../src/fetch.js";
 
 const LIMITS = env.TEST_LIMITS;
 const SIM = "https://sim.test";
+
+/** How many requests a simulated path has received. @param {string} path */
+const requestsTo = async (path) => Number(await (await fetch(`${SIM}/count${path}`)).text());
 
 /** @param {string} b64 */
 const fromBase64 = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -80,6 +83,71 @@ describe("fetchFeed", () => {
 
     expect(result).toMatchObject({ ok: false, errorType: "too_large", status: 200 });
     expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("fetchFeed with a 403", () => {
+  // Verifies d006 R1
+  it("retries a 403 once and returns the retry's fixture bytes when retryOn403 is set", async () => {
+    const path = `/forbidden-once/bicing/station_status/${crypto.randomUUID()}`;
+    const onRetry = vi.fn();
+
+    const result = await fetchFeed(`${SIM}${path}`, LIMITS, { retryOn403: true, onRetry });
+
+    expect(result).toMatchObject({ ok: true, status: 200 });
+    expect(result.body).toEqual(fromBase64(env.FIXTURES["bicing/station_status"].gzipB64));
+    expect(await requestsTo(path)).toBe(2);
+    expect(onRetry).toHaveBeenCalledOnce();
+    expect(onRetry).toHaveBeenCalledWith(expect.objectContaining({ status: 403, latencyMs: expect.any(Number) }));
+  });
+
+  // Verifies d006 R2
+  it("does not retry a 500 when retryOn403 is set", async () => {
+    const path = `/http-500/${crypto.randomUUID()}`;
+    const onRetry = vi.fn();
+
+    const result = await fetchFeed(`${SIM}${path}`, LIMITS, { retryOn403: true, onRetry });
+
+    expect(result).toMatchObject({ ok: false, errorType: "http", status: 500 });
+    expect(await requestsTo(path)).toBe(1);
+    expect(onRetry).not.toHaveBeenCalled();
+  });
+
+  // Verifies d006 R2
+  it("returns the 403 after one request when retryOn403 is not set", async () => {
+    const path = `/forbidden/${crypto.randomUUID()}`;
+
+    const result = await fetchFeed(`${SIM}${path}`, LIMITS);
+
+    expect(result).toMatchObject({ ok: false, errorType: "http", status: 403 });
+    expect(await requestsTo(path)).toBe(1);
+  });
+
+  // Verifies d006 R2
+  it("returns the second 403 after two requests when the retry also gets a 403", async () => {
+    const path = `/forbidden/${crypto.randomUUID()}`;
+    const onRetry = vi.fn();
+
+    const result = await fetchFeed(`${SIM}${path}`, LIMITS, { retryOn403: true, onRetry });
+
+    expect(result).toMatchObject({ ok: false, errorType: "http", status: 403 });
+    expect(result.latencyMs).toEqual(expect.any(Number));
+    expect(await requestsTo(path)).toBe(2);
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  // Verifies d006 R4
+  it("times out during the wait, with null status and latency, when the wait outlasts the deadline", async () => {
+    const path = `/forbidden/${crypto.randomUUID()}`;
+    // A wait well past timeoutMs + 500 ms, so a wait that ignores the deadline fails the test.
+    const limits = { ...LIMITS, retry403MinMs: LIMITS.timeoutMs + 1_000, retry403MaxMs: LIMITS.timeoutMs + 1_100 };
+    const started = Date.now();
+
+    const result = await fetchFeed(`${SIM}${path}`, limits, { retryOn403: true });
+
+    expect(Date.now() - started).toBeLessThan(LIMITS.timeoutMs + 500);
+    expect(result).toMatchObject({ ok: false, errorType: "timeout", status: null, latencyMs: null });
+    expect(await requestsTo(path)).toBe(1);
   });
 });
 

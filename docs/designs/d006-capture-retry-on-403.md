@@ -18,7 +18,7 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 5
+- Current step: Step 6
 
 ## 1. Spec — what and why
 
@@ -520,7 +520,7 @@ None.
 
 ### Step 6 — Retry of a 403 within one deadline
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d006.s6 - retry a 403 once within the request deadline`
 - **R:** R1, R2, R4
