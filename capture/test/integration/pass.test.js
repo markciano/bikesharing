@@ -212,6 +212,7 @@ describe("a capture pass", () => {
     );
   });
 
+  // Verifies d004 R16
   it("stores the index, adopts it in state/ and logs index_refreshed at the source's index minute", async () => {
     await seedIndexes();
     const scheduledTime = minuteWhere((extra) => extra?.type === "index");
