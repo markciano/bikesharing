@@ -11,6 +11,8 @@
  * @property {readonly string[]} hourly  Feeds captured hourly; the index is not a feed
  *                                       here: `indexUrl` names it and `schedule.js` its refresh
  * @property {readonly string[]} daily   Feeds captured daily
+ * @property {boolean} retryOn403        Whether a 403 from this source is retried once
+ *   (ADR-0039, Retry a 403 only on sources where it is shown to be transient)
  */
 
 /** @type {readonly Source[]} */
@@ -29,6 +31,7 @@ export const SOURCES = Object.freeze([
       "geofencing_zones",
       "system_hours",
     ]),
+    retryOn403: false,
   }),
   Object.freeze({
     id: "bicing",
@@ -44,6 +47,7 @@ export const SOURCES = Object.freeze([
       "geofencing_zones",
       "gbfs_versions",
     ]),
+    retryOn403: true,
   }),
 ]);
 

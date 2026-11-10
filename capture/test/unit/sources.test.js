@@ -27,4 +27,12 @@ describe("SOURCES", () => {
   it("holds 12 daily feeds across sources", () => {
     expect(SOURCES.flatMap((s) => s.daily)).toHaveLength(12);
   });
+
+  // Verifies d006 R2
+  it("only Bicing retries a 403", () => {
+    expect(SOURCES.map((s) => [s.id, s.retryOn403])).toEqual([
+      ["ambici", false],
+      ["bicing", true],
+    ]);
+  });
 });

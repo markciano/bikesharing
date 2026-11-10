@@ -18,7 +18,7 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 1
+- Current step: Step 2
 
 ## 1. Spec — what and why
 
@@ -407,7 +407,7 @@ None.
 
 ### Step 2 — `retryOn403` per source
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d006.s2 - state per source whether a 403 is retried`
 - **R:** R2
