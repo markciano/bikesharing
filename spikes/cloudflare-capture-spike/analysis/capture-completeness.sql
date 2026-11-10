@@ -1,4 +1,4 @@
--- Completeness check of production's first 48 h on its own (d004 > D6).
+-- Completeness check of production's first 33 h on its own (d004 > D6).
 --
 -- Input: an `rclone lsf -R` listing of bikesharing-bronze/raw/ saved to a local
 -- file (one path per line, `<source>/<feed>/<YYYY-MM-DD>/<YYYYMMDDTHHMMSSZ>.json.gz`;
@@ -12,9 +12,9 @@
 -- Every timestamp is UTC.
 
 -- The listing file and the window [window_start, window_end).
-SET VARIABLE listing = 'spikes/cloudflare-capture-spike/analysis/output/prod-completeness.txt';
+SET VARIABLE listing = 'spikes/cloudflare-capture-spike/analysis/output/prod-progress.txt';
 SET VARIABLE window_start = TIMESTAMP '2026-11-09 12:00:00';
-SET VARIABLE window_end = TIMESTAMP '2026-11-11 12:00:00';
+SET VARIABLE window_end = TIMESTAMP '2026-11-10 21:00:00';
 
 -- The dynamic feeds of d004 > D3. A feed with no object in the window still
 -- gets a row, with 0 minutes.
