@@ -43,6 +43,7 @@ describe("parseIndex", () => {
     expect(result.error).toMatch(/JSON/);
   });
 
+  // Verifies d004 R12
   it("rejects JSON with no feed list", () => {
     const result = parseIndex(JSON.stringify({ data: {} }), REQUIRED);
 
