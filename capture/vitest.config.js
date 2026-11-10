@@ -96,6 +96,19 @@ function streamPast(bytes, limit) {
 }
 
 /**
+ * A 403 with what its event must filter and cut: a `set-cookie`, more than 50 headers,
+ * one value of 1,001 bytes, and a gzip body over 1,000 bytes whose 1,000-byte cut,
+ * once decompressed, splits a two-byte UTF-8 character (d006, The 403's headers and body).
+ */
+function forbiddenResponse() {
+  const headers = new Headers({ "Content-Type": "text/html", "X-Long": "v".repeat(1_001) });
+  headers.append("Set-Cookie", "session=secret");
+  for (let i = 0; i < 60; i += 1) headers.append(`X-Filler-${String(i).padStart(2, "0")}`, "x");
+  const body = `${"a".repeat(999)}é${"b".repeat(500)}`;
+  return new Response(gzipSync(body), { status: 403, headers });
+}
+
+/**
  * The simulated routes on https://sim.test/, by first path segment. Each handler gets
  * the segments that follow; a trailing `/<id>` of the test's own is ignored by the
  * handler and only keeps the request counts of one test apart from another's.
@@ -129,6 +142,12 @@ const ROUTES = {
     gzipResponse(gzipSync(fixture(source, "gbfs").text + " ".repeat(TEST_LIMITS.maxBytes))),
   // A fixture's gzip bytes at a URL other than its own: a feed the index moved (R6).
   moved: ([source, feed]) => gzipResponse(fixture(source, feed).gzip),
+  // Always 403: a source that refuses every attempt (d006, Source fetch).
+  forbidden: () => forbiddenResponse(),
+  // 403 on a path's first request, the fixture `<source>/<feed>` on the next: a 403
+  // that the retry recovers (d006, Source fetch).
+  "forbidden-once": ([source, feed], href) =>
+    counts.get(new URL(href).pathname) === 1 ? forbiddenResponse() : gzipResponse(fixture(source, feed).gzip),
   // 200 with the request's User-Agent as its body: what capture sends to identify
   // the project (d006 D5, Every source request identifies the project).
   "user-agent": (_args, _url, headers) => new Response(String(headers["user-agent"] ?? "")),
