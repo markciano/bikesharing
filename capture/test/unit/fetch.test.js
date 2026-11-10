@@ -4,7 +4,7 @@
 // Sources are the simulated ones in vitest.config.js; limits are the tests' own.
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { fetchFeed, gunzipText } from "../../src/fetch.js";
+import { USER_AGENT, fetchFeed, gunzipText } from "../../src/fetch.js";
 
 const LIMITS = env.TEST_LIMITS;
 const SIM = "https://sim.test";
@@ -33,6 +33,14 @@ describe("fetchFeed", () => {
     expect(result).toMatchObject({ ok: true, status: 200, recompressed: false });
     expect(result.body).toEqual(fromBase64(gzipB64));
     expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+  });
+
+  // Verifies d006 R8
+  it("sends the capture User-Agent to a source", async () => {
+    const result = await fetchFeed(`${SIM}/user-agent`, LIMITS);
+
+    expect(result.ok).toBe(true);
+    expect(await gunzip(result.body)).toBe(USER_AGENT);
   });
 
   it("compresses a plain JSON body and marks it recompressed", async () => {
