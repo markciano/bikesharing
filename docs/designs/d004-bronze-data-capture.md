@@ -18,8 +18,8 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 19
-- Next: Step 19 Do 5, delete the R2 token `bikesharing-t039-completeness`; then the review (`/implement d004 review`). CPU and completeness are recorded in Close (DI12, DI13).
+- Current step: —
+- Next: the review (`/implement d004 review`). CPU and completeness are recorded in Close (DI12, DI13).
 
 ## 1. Spec — what and why
 
@@ -1738,7 +1738,7 @@ The spike's responses copied into production up to each feed's cutoff, checked, 
 
 ### Step 19 — Production checks
 
-- **Status:** 🔄 in progress
+- **Status:** ✅ done
 - **Who:** Owner; Claude records the results in Close
 - **Commit:** `docs: d004.s19 - record the production checks`
 - **R:** —
