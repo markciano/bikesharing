@@ -309,24 +309,9 @@ export async function fetchFeed(url, limits, options = {}) {}
  * @returns {number} Milliseconds
  */
 export function retryWait(limits, random = Math.random) {}
-
-/**
- * A 403's headers for the log: lowercase names in sorted order, without `set-cookie`,
- * the first 50, each value cut to its first 1,000 bytes. Pure.
- * @param {Headers} headers
- * @returns {Record<string, string>}
- */
-export function headersForLog(headers) {}
-
-/**
- * A 403's body for the log: decompressed if it is gzip, cut to its first 1,000 bytes,
- * decoded as UTF-8 with a split character as U+FFFD. Never throws.
- * @param {Uint8Array} bytes As received, already within `maxBytes`
- * @param {number} maxBytes Limit on the decompressed size
- * @returns {Promise<string | null>} Null if the bytes cannot be decompressed
- */
-export async function bodyForLog(bytes, maxBytes) {}
 ```
+
+The 403's `headers` and `body` for `Retried` are built by private functions of the module, as set in [The 403's headers and body](#the-403s-headers-and-body), and tested through what `fetchFeed` passes to `onRetry`.
 
 #### `sources.js`
 
@@ -352,12 +337,12 @@ export async function bodyForLog(bytes, maxBytes) {}
 | R3 | Test | `retryWait` returns `retry403MinMs` for `random` 0, the midpoint for 0.5, and stays below `retry403MaxMs` for a value just under 1 | unit |
 | R4 | Test | With `retry403MinMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null and no second request | unit |
 | R5 | Test | A pass with a retried 403 logs `fetch_retried` at `warning` before the outcome event, with the fields in order and `feed` null for an index; the contract's valid cases build their JSON Lines | integration, contract |
-| R6 | Test | `headersForLog` drops `set-cookie`, keeps the first 50 and cuts a value to 1,000 bytes; `bodyForLog` decompresses gzip, cuts to 1,000 bytes with U+FFFD on a split character, and returns null for corrupt gzip | unit |
+| R6 | Test | What `fetchFeed` passes to `onRetry`: `headers` without `set-cookie`, the first 50, a value cut to 1,000 bytes; `body` decompressed from gzip and cut to 1,000 bytes with U+FFFD on a split character; `body` null for corrupt gzip | unit |
 | R7 | Test | After a 403 then a 200, `feed_captured` carries 200 and the retry's latency; after two 403s, `feed_failed` carries 403 | integration |
 | R8 | Test | A source request sends `USER_AGENT`; the heartbeat request does not | unit |
 | R9 | Test | The contract's valid case with quotes and a line break in `body` builds one line | contract |
 
-The new routes in `vitest.config.js`: `forbidden` (always 403, with a `set-cookie`, more than 50 headers and a gzip body over 1,000 bytes), `forbidden-once` (403 on a path's first request, the fixture on the next, by the existing request counts), and `user-agent` (200 with the request's `User-Agent` as its body). `TEST_LIMITS` adds `retry403MinMs: 1` and `retry403MaxMs: 2`.
+The new routes in `vitest.config.js`: `forbidden` (always 403, with a `set-cookie`, more than 50 headers and a gzip body over 1,000 bytes), `forbidden-corrupt-gzip` (403 with a body that starts as gzip and is not), `forbidden-once` (403 on a path's first request, the fixture on the next, by the existing request counts), and `user-agent` (200 with the request's `User-Agent` as its body). `TEST_LIMITS` adds `retry403MinMs: 1` and `retry403MaxMs: 2`.
 
 The cases added to `contracts/capture-logs.json` (#2):
 
