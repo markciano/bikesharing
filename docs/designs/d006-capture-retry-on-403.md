@@ -18,7 +18,7 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 7
+- Current step: Step 8
 
 ## 1. Spec — what and why
 
@@ -586,7 +586,7 @@ None.
 
 ### Step 8 — The pass logs `fetch_retried`
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d006.s8 - retry Bicing's 403s in the pass and log them`
 - **R:** R1, R2, R5, R7
