@@ -38,7 +38,7 @@ Data engineering portfolio project on public bike sharing in the Barcelona area 
 ### Branches, PRs and CI (GitHub Flow, ADR-0013)
 
 - `main` is protected by a GitHub ruleset (no bypass): changes reach it only through a PR with every required check green, by rebase merge.
-- One branch per task, `tNNN-short-title` (`tNNN.M-short-title` for a child), created from an up-to-date `main` before the task's first commit. PR title: `TNNN: Task name` and 2-3 lines of PR description, with `Closes #N` to close the task's issue on merge; the last child's PR also closes its parent. The PR of a parent's own working document carries `Refs #P` instead, so the parent stays open.
+- One branch per task, `tNNN-short-title` (`tNNN.M-short-title` for a child), created from an up-to-date `main` before the task's first commit. PR title: `TNNN: Task name` and 2-3 lines of PR description, with `Closes #N` to close the task's issue on merge; the last child's PR also closes its parent. The PR of a parent's own working document carries `Refs #P` instead, so the parent stays open. Likewise, a task whose Done when needs production data after the merge carries `Refs #N` in the PR that ships it and `Closes #N` in the PR that records the check, from its branch recreated from `main`.
 - The first push opens a draft PR. There is no CI on `push` to feature branches: the PR run fires on every push (`docs/testing-strategy.md`).
 - When a task starts, Claude checks with `git status` that the owner is on its branch. When the task is finished: push, PR, checks, rebase merge, clean up (local branch deleted with `-D`, since rebase rewrites SHAs).
 - A failing check is fixed in the PR, never by disabling or skipping it.
