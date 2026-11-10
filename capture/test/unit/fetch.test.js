@@ -4,7 +4,7 @@
 // Sources are the simulated ones in vitest.config.js; limits are the tests' own.
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { USER_AGENT, fetchFeed, gunzipText } from "../../src/fetch.js";
+import { USER_AGENT, fetchFeed, gunzipText, retryWait } from "../../src/fetch.js";
 
 const LIMITS = env.TEST_LIMITS;
 const SIM = "https://sim.test";
@@ -80,6 +80,26 @@ describe("fetchFeed", () => {
 
     expect(result).toMatchObject({ ok: false, errorType: "too_large", status: 200 });
     expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("retryWait", () => {
+  // Verifies d006 R3
+  it("waits the minimum when random is 0", () => {
+    expect(retryWait(LIMITS, () => 0)).toBe(LIMITS.retry403MinMs);
+  });
+
+  // Verifies d006 R3
+  it("waits the midpoint when random is 0.5", () => {
+    expect(retryWait(LIMITS, () => 0.5)).toBe((LIMITS.retry403MinMs + LIMITS.retry403MaxMs) / 2);
+  });
+
+  // Verifies d006 R3
+  it("waits less than the maximum when random is just below 1", () => {
+    const wait = retryWait(LIMITS, () => 1 - Number.EPSILON);
+
+    expect(wait).toBeLessThan(LIMITS.retry403MaxMs);
+    expect(wait).toBeGreaterThan(LIMITS.retry403MinMs);
   });
 });
 

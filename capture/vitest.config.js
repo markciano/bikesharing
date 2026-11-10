@@ -21,6 +21,8 @@ const TEST_LIMITS = Object.freeze({
   maxBytes: 64_000,
   retryDelayMs: 0,
   heartbeatTimeoutMs: 100,
+  retry403MinMs: 1,
+  retry403MaxMs: 2,
 });
 
 const SIM_ORIGIN = "https://sim.test";
