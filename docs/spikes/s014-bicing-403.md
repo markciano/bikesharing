@@ -17,9 +17,9 @@ Phase: the blocks and the review completed.
 Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current step: the step being executed, or —. -->
 
-- State: Draft 📝
-- Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
-- Started: — · Finished: —
+- State: Running 🔄
+- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review · [ ] Conclusion
+- Started: 2026-11-10 · Finished: —
 - Current step: —
 
 ## 1. Questions — what we need to know
@@ -62,7 +62,7 @@ Main question: Do Bicing's 403s on `station_status` stop now that production run
 ### 1.4 Exit criteria
 
 - **Standard:** SRE error budget, as set in D6: 99.5% allows 216 minutes of failures per 30-day month, about 0.3 per hour.
-- **Timebox:** D6's window, 2026-11-09 12:00 to 2026-11-11 12:00 UTC; it ends with the measurement after the window closes.
+- **Timebox:** D6's window, 2026-11-09 12:00 to 2026-11-11 12:00 UTC; it ends with the measurement after the window closes, or earlier once the 403s counted exceed what the hard cut allows over the whole window. **#1**
 - Bicing `station_status` 403s with production alone — at most 0.1 per hour (72 minutes per month, a third of the budget, leaving the rest for the ~78 minutes per month of other failures seen in the spike) — hard cut
 
 ## 2. Method — how we find out
@@ -79,7 +79,9 @@ A query over the window's pass logs counts the passes and the `feed_failed` and 
 
 ### 2.3 Decision log
 
-None.
+| # | Applies to | Decision | Reason | Decided at |
+|---|---|---|---|---|
+| 1 | [Timebox](#14-exit-criteria) | Close the measurement on 2026-11-10 07:48 UTC, before the window ends | The 25 403s counted already exceed the 4.8 the hard cut allows in 48 h, so the rest of the window cannot change the result | Running step 2 |
 
 ### 2.4 File layout
 
@@ -93,29 +95,29 @@ None.
 
 ### Step 1 — Copy the window's production logs
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Model:** —
 
 #### Scope
 
-Production's pass logs from 2026-11-09 to 2026-11-11, copied to `spikes/cloudflare-capture-spike/analysis/output/prod-logs/` (ignored by Git).
+Production's pass logs of the window, copied to `spikes/cloudflare-capture-spike/analysis/output/prod-logs/` (ignored by Git).
 
 #### Do
 
-1. After 2026-11-11 12:00 UTC, run:
+1. Run:
 
    ```bash
-   rclone copy r2:bikesharing-bronze/logs spikes/cloudflare-capture-spike/analysis/output/prod-logs --include "date=2026-11-{09,10,11}/**"
+   rclone copy -P r2:bikesharing-bronze/logs spikes/cloudflare-capture-spike/analysis/output/prod-logs --include "date=2026-11-{09,10}/**"
    ```
 
 #### Check
 
-The folders `date=2026-11-09` to `date=2026-11-11` hold one log per pass, about 1,440 per full day.
+The window's folders hold one log per pass, one pass per minute.
 
 ### Step 2 — Measure the 403 rate
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: s014 - record the Bicing 403 rate with production alone`
 - **Model:** opus · medium
@@ -132,11 +134,42 @@ Findings in this document. No other file.
 
 #### Check
 
-The window's pass count matches about 2,880 passes (48 h), and the 403 count matches a `grep -rc` of `"status":403` over the same folders.
+The pass count matches one pass per minute over the measured span, and the 403 count matches the passes with `"status":403` that `grep -rl` lists over the same folders.
 
 ## 4. Findings
 
 <!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
+
+### F1. Production alone gets 403s at the overlap's rate
+
+Step 2 · 2026-11-10 · production pass logs, 2026-11-09 12:00:40 to 2026-11-10 07:48:39 UTC
+
+- 1,189 passes over 19.8 h, with none missing; 25 of them have a Bicing `station_status` 403, or 1.26 per hour, against 1.2 per hour for each Worker during the overlap (D1). `grep -rl` lists the same 25 passes.
+- No downward trend:
+
+  | 6 h from (UTC) | Passes | 403s | Per hour |
+  |---|---|---|---|
+  | 2026-11-09 12:00 | 360 | 9 | 1.5 |
+  | 2026-11-09 18:00 | 360 | 9 | 1.5 |
+  | 2026-11-10 00:00 | 360 | 5 | 0.83 |
+  | 2026-11-10 06:00 | 109 | 2 | 1.1 |
+
+- No 403 on Bicing's index refresh in the span.
+- Consequence: Q1's hard cut allows at most 4.8 403s in the 48 h window, so it fails whatever the rest of the window brings (**#1**). The fix is decided in the Conclusion.
+
+### F2. Each 403 costs a single minute
+
+Step 2 · 2026-11-10 · production pass logs, same span as F1
+
+- No two consecutive minutes have a `station_status` 403; the next pass always gets the feed.
+- Consequence: a 403 is not a block of the client; the cost of each one is one missing minute.
+
+### F3. A request a few seconds after a 403 usually gets through
+
+Step 2 · 2026-11-10 · spike Worker and production logs of the overlap, 2026-11-07 10:19 to 2026-11-09 08:16 UTC
+
+- capture-v4 requested `station_status` at second 36 of each minute and production about 3–4 s later. Of the 60 minutes in which capture-v4 got a 403, production got no 403 in 56 (93%).
+- Consequence: one retry a few seconds after a 403 would recover most of them. At F1's rate it would leave about 1.26 × 4 / 60 ≈ 0.08 403s per hour, below Q1's 0.1. Whether a retry from the same Worker invocation behaves like a request from a second Worker is not shown.
 
 ## 5. Conclusion
 
