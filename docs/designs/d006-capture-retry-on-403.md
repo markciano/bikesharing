@@ -7,7 +7,7 @@ Sections marked Optional are kept only when they apply.
 # Design: Capture retry on 403
 
 - **Task:** T059
-- **ADRs:** `<ADRs this design must respect, or "none">`
+- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md), [ADR-0036](../decisions/0036-log-convention-across-components.md)
 - **New ADRs from this doc:** [ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md)
 
 ## Status
@@ -17,7 +17,7 @@ Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
 - State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
 
 ## 1. Spec — what and why
@@ -168,6 +168,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
 - Over 48 h of production pass logs after the deploy, Bicing `station_status` requests whose retry also fails stay at or below 0.1 per hour, the hard cut of [s014 › Q1](../spikes/s014-bicing-403.md#13-questions). If not, the wait or the approach is revisited in a new task.
+  - Owner check: list the bucket with `rclone lsf -R --fast-list r2:bikesharing-bronze/raw > spikes/cloudflare-capture-spike/analysis/output/prod-progress.txt`, then run `duckdb -f scratch/capture-progress.sql` to count the minutes without a Bicing `station_status` object. That count includes every failure, not only failed retries, so a result at or below the cut meets it; a result above it is split by the `fetch_retried` and `feed_failed` events of the pass logs.
 
 ## 2. Plan — how
 
@@ -187,7 +188,8 @@ The retry lives in the source fetch, which already owns the 60 s limit; the pass
 - `fetchFeed` owns the whole request: one `AbortSignal.timeout(timeoutMs)` covers the first attempt, the wait and the retry (D3). The result is the last attempt's, with that attempt's `status` and `latencyMs` (R7).
 - When the first attempt answers 403 and the caller passes `retryOn403`, it reads the 403's headers and body, hands them to the caller's `onRetry`, waits `retryWait(limits, random)` and fetches again. A 403 without `retryOn403`, any other failure and a failed retry return as today (R2).
 - `latencyMs` of a 403 is measured when its headers arrive, as for every HTTP failure; reading its body does not count.
-- If the deadline runs out during the wait or the retry, the result is a `timeout` with `status` and `latencyMs` null (D4).
+- The wait listens to the same signal, so the deadline cuts it short: no request outlasts `timeoutMs` (R4).
+- If the deadline runs out while reading the 403's body, during the wait or during the retry, the result is a `timeout` with `status` and `latencyMs` null (D4); a body cut short by the deadline is null in `fetch_retried`.
 - Every source request sends `USER_AGENT` (D5). The heartbeat keeps its own fetch in `heartbeat.js`, so it never sends it (R8).
 
 #### The 403's headers and body
@@ -226,7 +228,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 |---|---|---|---|---|---|
 | 1 | [D1](#d1-a-403-from-bicing-is-retried-once), [ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md) | A 403 is retried per source, turned on by evidence; Bicing only (ADR-0039, deviation from RFC 9110 › 403) | The deviation stays where a transient 403 has been measured; a real refusal gets no extra requests | R1, R2 | Plan |
 | 2 | [File layout](#23-file-layout), [Test plan](#25-test-plan) | `fetch_retried` joins the capture log contract `contracts/capture-logs.json`, with valid cases and one invalid case per rule of D4 (one file per contract, `.claude/rules/code/testing.md`) | Same log lines, format and object as the other events; the invalid cases give the pipeline's consumer tests the rules of TH1 and TH2 | R5, R6 | Plan |
-| 3 | [d004 › D8, D9, Requirements](d004-bronze-data-capture.md#d8-capture-failure-behaviour), `.claude/rules/docs/decision-log.md` | d004 is rewritten to the current state where d006 changes it, each changed section ending with a bold link to the d006 decision; change links extend across documents | d004 stays the source of truth for capture's behaviour (CLAUDE.md › Working rules); the rule extends the in-document change links | R1–R9 | Plan |
+| 3 | [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour), [D9](d004-bronze-data-capture.md#d9-capture-logs), [Requirements](d004-bronze-data-capture.md#13-requirements), `.claude/rules/docs/decision-log.md` | d004 is rewritten to the current state where d006 changes it, each changed section ending with a bold link to the d006 decision; change links extend across documents | d004 stays the source of truth for capture's behaviour (CLAUDE.md › Working rules); the rule extends the in-document change links | R1–R9 | Plan |
 
 ### 2.3 File layout
 
@@ -335,7 +337,7 @@ The 403's `headers` and `body` for `Retried` are built by private functions of t
 | R1 | Test | `fetchFeed` with `retryOn403` makes a second request after a 403 and returns its result; a pass stores a Bicing feed and adopts a Bicing index whose first request got a 403 | unit, integration |
 | R2 | Test | One request only after a 500, or after a 403 without `retryOn403`; two requests only after two 403s; only Bicing has `retryOn403`; a 403 on AMBici in a pass logs `feed_failed` with no retry | unit, integration |
 | R3 | Test | `retryWait` returns `retry403MinMs` for `random` 0, the midpoint for 0.5, and stays below `retry403MaxMs` for a value just under 1 | unit |
-| R4 | Test | With `retry403MinMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null and no second request | unit |
+| R4 | Test | With `retry403MinMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null, no second request, and within `timeoutMs` plus a small margin, not after the wait | unit |
 | R5 | Test | A pass with a retried 403 logs `fetch_retried` at `warning` before the outcome event, with the fields in order and `feed` null for an index; the contract's valid cases build their JSON Lines | integration, contract |
 | R6 | Test | What `fetchFeed` passes to `onRetry`: `headers` without `set-cookie`, the first 50, a value cut to 1,000 bytes; `body` decompressed from gzip and cut to 1,000 bytes with U+FFFD on a split character; `body` null for corrupt gzip | unit |
 | R7 | Test | After a 403 then a 200, `feed_captured` carries 200 and the retry's latency; after two 403s, `feed_failed` carries 403 | integration |
@@ -347,7 +349,7 @@ The new routes in `vitest.config.js`: `forbidden` (always 403, with a `set-cooki
 The cases added to `contracts/capture-logs.json` (#2):
 
 - Valid: `fetch_retried` of a feed; `fetch_retried` of an index, `feed` null; `fetch_retried` with `body` null; `fetch_retried` whose `body` holds quotes and a line break; `fetch_retried` then `feed_captured` in one pass.
-- Invalid, one rule each: `headers` holds `set-cookie`; `body` over 1,000 bytes; a header value over 1,000 bytes; `status` other than 403; `headers` missing.
+- Invalid, one rule each: `headers` holds `set-cookie`; `headers` with more than 50 entries; `body` over 1,000 bytes; a header value over 1,000 bytes; `status` other than 403; `headers` missing.
 
 ### 2.6 What does not change
 
