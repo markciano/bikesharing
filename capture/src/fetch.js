@@ -4,13 +4,16 @@
 /**
  * Production limits; tests pass their own, in milliseconds and bytes, so that the
  * timeout and the size limit are testable (d004, Tests and contracts).
- * @type {Readonly<{ timeoutMs: number, maxBytes: number, retryDelayMs: number, heartbeatTimeoutMs: number }>}
+ * @type {Readonly<{ timeoutMs: number, maxBytes: number, retryDelayMs: number,
+ *   heartbeatTimeoutMs: number, retry403MinMs: number, retry403MaxMs: number }>}
  */
 export const LIMITS = Object.freeze({
   timeoutMs: 60_000,
   maxBytes: 10_000_000,
   retryDelayMs: 250,
   heartbeatTimeoutMs: 10_000,
+  retry403MinMs: 3_000,
+  retry403MaxMs: 5_000,
 });
 
 /** Sent in every source request; the heartbeat does not use it (d006 D5, Every source request identifies the project). */
@@ -80,6 +83,16 @@ export async function fetchFeed(url, limits) {
   // flagged, since it means the runtime stopped honouring `encodeResponseBody`
   // (d004 D9, Capture logs).
   return { ok: true, status, latencyMs, body: await compress(bytes), recompressed: true };
+}
+
+/**
+ * Uniform wait before a retry: `retry403MinMs + random() * (retry403MaxMs - retry403MinMs)`. Pure.
+ * @param {{ retry403MinMs: number, retry403MaxMs: number }} limits
+ * @param {() => number} [random] Default `Math.random`
+ * @returns {number} Milliseconds
+ */
+export function retryWait(limits, random = Math.random) {
+  return limits.retry403MinMs + random() * (limits.retry403MaxMs - limits.retry403MinMs);
 }
 
 /**

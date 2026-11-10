@@ -18,7 +18,7 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 4
+- Current step: Step 5
 
 ## 1. Spec — what and why
 
@@ -491,7 +491,7 @@ None.
 
 ### Step 5 — `retryWait` and the retry limits
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d006.s5 - add the random wait before a 403 retry`
 - **R:** R3
