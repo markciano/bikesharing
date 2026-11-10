@@ -42,7 +42,7 @@ This skill fills Questions, Method, Steps and Conclusion. Findings are filled du
    - One that documents or arithmetic can settle: settle it in this session the same way.
    - One that only a run can settle: it becomes a Q that names the decision it unblocks and the Gate that confirms or reopens it. If no result would change the choice, it is not a Q: decide now.
 
-   If triage leaves no Q, there is no run: propose closing the spike with its decisions; Method and Steps do not apply. Once approved, write the Conclusion and, in the same change, close Status.
+   If triage leaves no Q, there is no run: propose closing the spike with its decisions; Method and Steps do not apply. Once approved, write the Conclusion and, in the same change, close Status and remove the template's comments.
 4. **Decide at framing.** On approval, write each decision in Decided at framing with its full reasoning. A choice with more than one live option uses a weighted decision matrix, in this order:
    1. **Needs:** what the choice must cover, each need traced to a requirement.
    2. **Hard cuts and criteria:** derived from the needs, with weights.
@@ -90,7 +90,7 @@ Applies to a spike with steps, when Conclusion is the first unchecked item in Ph
 2. Go through 5. Conclusion of the template with the owner, part by part: discuss each part, and write it as its own edit once agreed.
 3. Tear-down: what is torn down and what is kept; a kept resource gets a Decision log entry. The owner runs the tear-down.
 4. Deliver each item in 5.6 Records, each ADR in its own commit, and mark it Done.
-5. With every record Done: check Conclusion in Phase, set State to Concluded ✅, Finished (UTC date) and Current step to —. Tell the owner it is a commit point and propose `docs: conclude spike sNNN`.
+5. With every record Done: check Conclusion in Phase, set State to Concluded ✅, Finished (UTC date) and Current step to —, and remove the template's comments. Tell the owner it is a commit point and propose `docs: conclude spike sNNN`.
 
 ## End of session
 
