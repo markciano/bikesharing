@@ -18,7 +18,7 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 3
+- Current step: Step 4
 
 ## 1. Spec — what and why
 
@@ -466,7 +466,7 @@ None.
 
 ### Step 4 — The heartbeat sends no capture `User-Agent`
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `test: d006.s4 - check that the heartbeat sends no capture User-Agent`
 - **R:** R8
