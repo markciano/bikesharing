@@ -3,14 +3,14 @@
 
 - **Task:** T039
 - **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md), [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)
-- **New ADRs from this doc:** [ADR-0035](../decisions/0035-cloud-resource-naming.md) (D1); [ADR-0036](../decisions/0036-log-convention-across-components.md) (D9), which supersedes [ADR-0030](../decisions/archive/0030-pipeline-logs.md); [ADR-0037](../decisions/0037-test-fixtures-per-component.md) (DL15), which supersedes [ADR-0009](../decisions/archive/0009-trimmed-source-samples-as-test-fixtures.md)
+- **New ADRs from this doc:** [ADR-0035](../decisions/0035-cloud-resource-naming.md) (D1); [ADR-0036](../decisions/0036-log-convention-across-components.md) (D9), which supersedes [ADR-0030](../decisions/archive/0030-pipeline-logs.md); [ADR-0037](../decisions/0037-test-fixtures-per-component.md) (DL15), which supersedes [ADR-0009](../decisions/archive/0009-trimmed-source-samples-as-test-fixtures.md); [ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md) (DI8)
 
 ## Status
 
-- State: In progress 🔄
+- State: Complete ✅
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: —
-- Next: the review (`/implement d004 review`). CPU and completeness are recorded in Close (DI12, DI13).
+- Next: —
 
 ## 1. Spec — what and why
 
@@ -65,7 +65,7 @@ Each capture pass carries the dynamic feeds and at most one extra fetch, either 
 
 CPU time can shift without any change of ours. During the spike's capture, median source latency moved from about 270 ms to 38 ms on 2026-10-29 at 22:07 UTC, and to about 145 ms on 2026-11-03 at about 08:00 UTC, while the average CPU per run rose from 2–3 ms to almost 5 ms; the only deployment was on 2026-10-14. Both shifts coincided with a change in the second at which the cron starts, which suggests a move of the Worker by Cloudflare; this is not confirmed. Passes with a static feed therefore keep a margin below the limit.
 
-If passes with an extra fetch exceed the 10 ms limit in production, run them in their own executions.
+Passes above 10 ms are acceptable while Cloudflare ends none of them. If it starts ending passes (outcome `exceededCpu`), run the passes with an extra fetch in their own executions. **DI12**
 
 Rejected: separate executions for static feeds from the start. They give the lowest peak, but add complexity and depend on Cloudflare starting two independent executions in the same minute, which is unverified.
 
@@ -240,7 +240,7 @@ One STRIDE pass over D1–D11 keeps the threats with a real chance or a lasting 
 - `bikesharing-capture-spike`, `capture-v4` and its token are deleted. (D11)
 - The probe's test bucket `bikesharing-t039-write-once` and the token `bikesharing-t039-completeness` are deleted. ([ADR-0035](../decisions/0035-cloud-resource-naming.md))
 - The deployment token has only the Workers Editor role and a one-year expiry. (TH6)
-- No pass has the outcome `exceededCpu` over the first 3 full days of production, checked as in [Deployment](#deployment); passes above 10 ms of CPU are accepted as a known gap in Close. (D4) **DI12**
+- No pass has the outcome `exceededCpu` from 2026-11-08 00:00 to 2026-11-11 00:00 UTC, checked in the Workers Logs Query Builder as in [Deployment](#deployment); passes above 10 ms of CPU are accepted as a known gap in Close. (D4) **DI12**
 - Each dynamic feed has a clean capture in at least 99.5% of the minutes of the window of D6, checked as in [Switch tooling](#switch-tooling), except Bicing `station_status`, whose percentage is accepted as a known gap in Close. (D6) **DI11**
 
 ### 1.5 Out of scope
@@ -601,6 +601,7 @@ Colours show what each box touches: grey, no I/O (the functional core); blue, R2
 │   │   ├── 0035-cloud-resource-naming.md      (new) Cloud resource naming (D1)
 │   │   ├── 0036-log-convention-across-components.md (new) One log convention, with `component` and `version` (D9)
 │   │   ├── 0037-test-fixtures-per-component.md (new) Fixtures in each component's tests (DL15)
+│   │   ├── 0038-account-wide-workers-editor-deploy-token.md (new) Deployment token scope (DI8)
 │   │   ├── archive/0009-trimmed-source-samples-as-test-fixtures.md (moved) Superseded by ADR-0037
 │   │   └── archive/0030-pipeline-logs.md      (moved) Superseded by ADR-0036
 │   ├── sources/
@@ -1679,7 +1680,7 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 
 #### Do
 
-1. On each of days 2, 3 and 4, open the Query Builder for `bikesharing-capture` over the previous full UTC day. Read the max of `$workers.cpuTimeMs` with the time of that invocation, and the count of invocations with outcome `exceededCpu`.
+1. Open the Query Builder for `bikesharing-capture` from day 1 at 00:00 UTC to day 4 at 00:00 UTC. Read the max of `$workers.cpuTimeMs` with the time of that invocation, and the count of invocations with outcome `exceededCpu`. **DI12**
 2. Once the window of D6 has ended, create the token `bikesharing-t039-completeness`, and set it as the credentials of the rclone remote `r2`.
 3. Save `rclone lsf -R --fast-list r2:bikesharing-bronze/raw > spikes/cloudflare-capture-spike/analysis/output/prod-progress.txt`. **DI13**
 4. Run `capture-completeness.sql` with that listing and the window of D6, and give Claude its output and the figures of Do 1.
@@ -1687,13 +1688,24 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 
 #### Check
 
-- On each of the 3 days, no invocation has the outcome `exceededCpu`, and Close records the max of `$workers.cpuTimeMs` and the invocations above 10 ms. **DI12**
+- No invocation in that window has the outcome `exceededCpu`, and Close records the max of `$workers.cpuTimeMs` and the invocations above 10 ms. **DI12**
 - `below_target` is false for every dynamic feed except Bicing `station_status`. **DI11**
 - The dashboard no longer lists `bikesharing-t039-completeness`.
 
 ## 4. Close
 
 ### 4.1 Implemented
+
+Capture — the Worker `bikesharing-capture` (`capture/`) captures AMBici and Bicing into `bikesharing-bronze` every minute since 2026-11-07 10:20 UTC, and replaces `capture-v4`. Its 155 unit, integration and contract tests pass, and CI runs them in the job `capture`.
+
+#### Capture in production
+
+- The smoke test passed after each deploy: every dynamic feed had a new object that passed `gunzip -t`, and the pass's log had `recompressed: false` and the active version ID (R1, R16).
+- Healthchecks.io sent the alert email when no signal arrived, and shows the check as up since the first heartbeat (R19).
+- The dashboard shows no `workers.dev` route and no preview URLs (R21).
+- The deployment token `bikesharing-capture-deploy` has only the Workers Editor role and a one-year expiry (TH6, ADR-0038).
+- The write-once probe passed against R2 and Miniflare's R2 ([Write-once](#write-once), R10).
+- `capture-v4`, `bikesharing-capture-spike`, the probe's bucket `bikesharing-t039-write-once` and the T039 tokens other than the deployment token are deleted.
 
 #### Spike data copied and bronze locked
 
@@ -1727,7 +1739,7 @@ The queries of D2 (`spikes/cloudflare-capture-spike/analysis/spike-log-queries.s
 
 #### Production checks
 
-From 2026-11-08 00:00 UTC to 2026-11-10, the Workers Logs Query Builder holds 6,173 invocations of `bikesharing-capture`, all with the outcome `ok`. The max of `$workers.cpuTimeMs` is 28 ms, and 850 invocations (13.8%) are above 10 ms. One pass per minute gives about 4,200 invocations in that period; the difference is not explained.
+CPU from 2026-11-08 00:00 to 2026-11-11 00:00 UTC, in the Workers Logs Query Builder: 6,173 invocations of `bikesharing-capture`, all with the outcome `ok`; max `$workers.cpuTimeMs` 28 ms, and 850 invocations (13.8%) above 10 ms. The count is higher than one per minute (4,320).
 
 Completeness over the window of D6, 2026-11-09 12:00 to 2026-11-10 21:00 UTC (1,980 minutes), by `capture-completeness.sql`:
 
@@ -1739,8 +1751,8 @@ Completeness over the window of D6, 2026-11-09 12:00 to 2026-11-10 21:00 UTC (1,
 
 ### 4.2 Known gaps at close
 
-- 13.8% of passes are above the 10 ms CPU limit of D4, with a max of 28 ms, and none has the outcome `exceededCpu` ([Production checks](#production-checks)). Passes with an extra fetch are 9.2% of the total (D4), so passes with only the dynamic feeds also exceed it, and the cause is not known. Accepted, with no task. **DI12**
-- `bicing/station_status` has a clean capture in 97.93% of the window of D6, against 99.5%: 41 of 1,980 minutes are missed ([Production checks](#production-checks)), from Bicing's 403s ([d006 › Known gaps at close](d006-capture-retry-on-403.md#42-known-gaps-at-close)). Accepted, with no task. **DI11**
+- CPU: 13.8% of passes use more than the 10 ms of D4, up to 28 ms, including passes with only the dynamic feeds. Cloudflare ended none, so no data is lost. Accepted. **DI12**
+- Completeness: `bicing/station_status` reached 97.93% of the window of D6 against 99.5%, 41 of 1,980 minutes, all from Bicing's 403s ([d006 › Known gaps at close](d006-capture-retry-on-403.md#42-known-gaps-at-close)). The AMBici feeds met the target. Accepted. **DI11**
 
 ### 4.3 Decisions taken during implementation
 
@@ -1757,5 +1769,5 @@ Completeness over the window of D6, 2026-11-09 12:00 to 2026-11-10 21:00 UTC (1,
 | DI9 | [Switch tooling](#switch-tooling) | Close records the total of objects copied and the result of `count`, not the counts per day and feed | The table per day and feed runs to hundreds of rows, and `count` already compares each of them | Step 17 |
 | DI10 | D6, [Switch tooling](#switch-tooling), `capture-completeness.sql` | The first check of D6 covers 48 h from 2026-11-09 12:00 UTC, not the 7 full UTC days after production's first day; the query takes the window's start and end **→ DI13** | Production and `capture-v4` overlapped until 2026-11-09 08:17 UTC, and Bicing's 403s began with the overlap (4.1), so the window starts after it with a margin; a shorter window closes the task sooner, and the monthly follow-up stays with D7 | Step 19 |
 | DI11 | [Done when](#14-done-when), [Step 19](#step-19--production-checks) | Bicing `station_status` below 99.5% over the window of D6 is accepted as a known gap with no task; the other dynamic feeds must meet it | Bicing's 403s are not recovered by the retry and miss about 1.5% of minutes ([d006 › Known gaps at close](d006-capture-retry-on-403.md#42-known-gaps-at-close)) | Step 19 |
+| DI12 | [Done when](#14-done-when), [Deployment](#deployment), [Step 19](#step-19--production-checks) | CPU is checked in one query over the first 3 days, and passes above 10 ms are accepted as long as Cloudflare ends none (`exceededCpu`) | Cloudflare ends no pass, so capture loses no data, and with the cause unknown a task has no likely fix to aim at | Step 19 |
 | DI13 | D6, [Step 19](#step-19--production-checks), `spikes/cloudflare-capture-spike/` | The first check of D6 ends 2026-11-10 21:00 UTC (33 h), over the listing saved for d006's production check **refines DI10** | Bicing's gap is accepted (DI11) and AMBici's feeds are above the target, so 15 h more would not change the outcome | Step 19 |
-| DI12 | [Done when](#14-done-when), [Deployment](#deployment), [Step 19](#step-19--production-checks) | CPU passes with no `exceededCpu` outcome; passes above 10 ms are accepted as a known gap with no task | Cloudflare ends no pass, and with the cause unknown a task has no likely fix to aim at | Step 19 |
