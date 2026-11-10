@@ -99,9 +99,10 @@ function streamPast(bytes, limit) {
  * A 403 with what its event must filter and cut: a `set-cookie`, more than 50 headers,
  * one value of 1,001 bytes, and a gzip body over 1,000 bytes whose 1,000-byte cut,
  * once decompressed, splits a two-byte UTF-8 character (d006, The 403's headers and body).
+ * The long value's name sorts first, so it is among the 50 headers kept.
  */
 function forbiddenResponse() {
-  const headers = new Headers({ "Content-Type": "text/html", "X-Long": "v".repeat(1_001) });
+  const headers = new Headers({ "Content-Type": "text/html", "A-Long": "v".repeat(1_001) });
   headers.append("Set-Cookie", "session=secret");
   for (let i = 0; i < 60; i += 1) headers.append(`X-Filler-${String(i).padStart(2, "0")}`, "x");
   const body = `${"a".repeat(999)}é${"b".repeat(500)}`;
@@ -148,6 +149,10 @@ const ROUTES = {
   // that the retry recovers (d006, Source fetch).
   "forbidden-once": ([source, feed], href) =>
     counts.get(new URL(href).pathname) === 1 ? forbiddenResponse() : gzipResponse(fixture(source, feed).gzip),
+  // 403 with a body that starts as gzip and is not: its body cannot be decompressed.
+  "forbidden-corrupt-gzip": () => new Response(new Uint8Array([0x1f, 0x8b, 0x00, 0x01, 0x02]), { status: 403 }),
+  // 403 whose body never ends: the deadline cuts its read short.
+  "forbidden-slow-body": () => new Response(stallingBody(), { status: 403 }),
   // 200 with the request's User-Agent as its body: what capture sends to identify
   // the project (d006 D5, Every source request identifies the project).
   "user-agent": (_args, _url, headers) => new Response(String(headers["user-agent"] ?? "")),

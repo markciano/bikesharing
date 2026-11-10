@@ -18,7 +18,7 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 6
+- Current step: Step 7
 
 ## 1. Spec — what and why
 
@@ -194,8 +194,9 @@ The retry lives in the source fetch, which already owns the 60 s limit; the pass
 
 #### The 403's headers and body
 
-- `headers`: the response headers as the Fetch API iterates them, names in lowercase and in sorted order, without `set-cookie`; the first 50, each value cut to its first 1,000 bytes (R6).
-- `body`: read within `maxBytes` and the deadline, like any body; decompressed if it arrives as gzip, then cut to its first 1,000 bytes and decoded as UTF-8, with a character split at the cut replaced by U+FFFD. If the body cannot be read or decompressed, `body` is null.
+- `headers`: the response headers as the Fetch API iterates them, names in lowercase and in sorted order, without `set-cookie`; the first 50, each value cut to at most 1,000 bytes (R6).
+- `body`: read within `maxBytes` and the deadline, like any body; decompressed if it arrives as gzip, then decoded as UTF-8 and cut to at most 1,000 bytes. If the body cannot be read or decompressed, `body` is null.
+- A cut ends at the last whole UTF-8 character within 1,000 bytes, so it never splits a character. **DI1**
 - Bytes are cut, not characters, since the limit bounds the event's size (TH1).
 
 #### Retry wait
@@ -340,7 +341,7 @@ The 403's `headers` and `body` for `Retried` are built by private functions of t
 | R3 | Test | `retryWait` returns `retry403MinMs` for `random` 0, the midpoint for 0.5, and stays below `retry403MaxMs` for a value just under 1 | unit |
 | R4 | Test | With `retry403MinMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null, no second request, and within `timeoutMs` + 500 ms, not after the wait | unit |
 | R5 | Test | A pass with a retried 403 logs `fetch_retried` at `warning` before the outcome event, with the fields in order and `feed` null for an index; the contract's valid cases build their JSON Lines | integration, contract |
-| R6 | Test | What `fetchFeed` passes to `onRetry`: `headers` without `set-cookie`, the first 50, a value cut to 1,000 bytes; `body` decompressed from gzip and cut to 1,000 bytes with U+FFFD on a split character; `body` null for corrupt gzip and for a body cut short by the deadline | unit |
+| R6 | Test | What `fetchFeed` passes to `onRetry`: `headers` without `set-cookie`, the first 50, a value cut to 1,000 bytes; `body` decompressed from gzip and cut before a character the 1,000-byte limit would split (DI1); `body` null for corrupt gzip and for a body cut short by the deadline | unit |
 | R7 | Test | After a 403 then a 200, `feed_captured` carries 200 and a numeric `latency_ms`; after two 403s, `feed_failed` carries 403 | integration |
 | R8 | Test | A source request sends `USER_AGENT`; the heartbeat request does not | unit |
 | R9 | Test | The contract's valid case with quotes and a line break in `body` builds one line | contract |
@@ -554,7 +555,7 @@ None.
 
 ### Step 7 — The 403's headers and body for `onRetry`
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d006.s7 - pass the 403's headers and body to the retry log`
 - **R:** R6
@@ -574,7 +575,7 @@ None.
 #### Do
 
 1. Add the routes `forbidden-corrupt-gzip` and `forbidden-slow-body`.
-2. Write the tests, tagged `// Verifies d006 R6`, and run them red: `headers` has no `set-cookie`; it holds exactly the first 50 names in sorted order; a long value is cut to 1,000 bytes; `body` is the gzip body decompressed and cut to 1,000 bytes, ending in U+FFFD where a character is split; `body` is null for `forbidden-corrupt-gzip`; for `forbidden-slow-body`, `body` is null and the result is a `timeout`.
+2. Write the tests, tagged `// Verifies d006 R6`, and run them red: `headers` has no `set-cookie`; it holds exactly the first 50 names in sorted order; a long value is cut to 1,000 bytes; `body` is the gzip body decompressed and cut before the character the 1,000-byte limit would split (DI1); `body` is null for `forbidden-corrupt-gzip`; for `forbidden-slow-body`, `body` is null and the result is a `timeout`.
 3. Implement the private functions and remove the `TODO(T059)`.
 4. Run the test file.
 
@@ -698,4 +699,4 @@ The check of [Done when](#14-done-when) over the first 48 full hours after Step 
 
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
-| | | | | |
+| DI1 | [The 403's headers and body](#the-403s-headers-and-body), [Test plan](#25-test-plan) | Cut `body` and each header value at the last whole UTF-8 character within 1,000 bytes, with no U+FFFD (UTF-8-safe truncation) | U+FFFD takes 3 bytes, so replacing a split character could leave the field at up to 1,002 bytes, over the contract's limit | Step 7 |

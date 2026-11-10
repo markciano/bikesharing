@@ -151,6 +151,63 @@ describe("fetchFeed with a 403", () => {
   });
 });
 
+describe("fetchFeed passes the 403's headers and body to onRetry", () => {
+  /** What `onRetry` receives for a first 403 from `route`, and the request's result. @param {string} route */
+  async function retried(route) {
+    const onRetry = vi.fn();
+    const result = await fetchFeed(`${SIM}/${route}/${crypto.randomUUID()}`, LIMITS, { retryOn403: true, onRetry });
+    expect(onRetry).toHaveBeenCalledOnce();
+    return { retried: onRetry.mock.calls[0][0], result };
+  }
+
+  // Verifies d006 R6
+  it("leaves out set-cookie from the headers", async () => {
+    const { retried: r } = await retried("forbidden");
+
+    expect(Object.keys(r.headers)).not.toContain("set-cookie");
+  });
+
+  // Verifies d006 R6
+  it("keeps the first 50 header names in sorted order when there are more", async () => {
+    const response = await fetch(`${SIM}/forbidden/${crypto.randomUUID()}`);
+    await response.body?.cancel();
+    const expected = [...response.headers.keys()].filter((name) => name !== "set-cookie").sort().slice(0, 50);
+
+    const { retried: r } = await retried("forbidden");
+
+    expect(Object.keys(r.headers)).toEqual(expected);
+  });
+
+  // Verifies d006 R6
+  it("cuts a header value of 1,001 bytes to 1,000", async () => {
+    const { retried: r } = await retried("forbidden");
+
+    expect(r.headers["a-long"]).toBe("v".repeat(1_000));
+  });
+
+  // Verifies d006 R6
+  it("decompresses a gzip body and cuts it before the character the 1,000-byte limit would split", async () => {
+    const { retried: r } = await retried("forbidden");
+
+    expect(r.body).toBe("a".repeat(999));
+  });
+
+  // Verifies d006 R6
+  it("passes a null body when the body is not valid gzip", async () => {
+    const { retried: r } = await retried("forbidden-corrupt-gzip");
+
+    expect(r.body).toBeNull();
+  });
+
+  // Verifies d006 R6
+  it("passes a null body and times out when the deadline cuts the body short", async () => {
+    const { retried: r, result } = await retried("forbidden-slow-body");
+
+    expect(r.body).toBeNull();
+    expect(result).toMatchObject({ ok: false, errorType: "timeout", status: null, latencyMs: null });
+  });
+});
+
 describe("retryWait", () => {
   // Verifies d006 R3
   it("waits the minimum when random is 0", () => {
