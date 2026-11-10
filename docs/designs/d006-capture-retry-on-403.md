@@ -45,15 +45,16 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 | `TH1` | | | | |
 -->
 
-#### D1. A 403 is retried once
+#### D1. A 403 from Bicing is retried once
 
-Capture retries a source request once when the source answers HTTP 403, on any source and for feeds and indexes alike; every other source failure keeps the no-retry rule of [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour), which this decision refines. With production alone, Bicing answers 403 to about 1.26 `station_status` requests per hour, never in two consecutive minutes, and a request a few seconds after a 403 usually gets through ([s014 › F1–F3](../spikes/s014-bicing-403.md#4-findings)): the 403 behaves as a transient rejection, unlike a source that is down. One rule for every source needs no per-source configuration and costs nothing where no 403 occurs, as on AMBici.
+Capture retries a Bicing request once when Bicing answers HTTP 403, for feeds and indexes alike; every other failure, and any failure on another source, keeps the no-retry rule of [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour), which this decision refines. With production alone, Bicing answers 403 to about 1.26 `station_status` requests per hour, never in two consecutive minutes, and a request a few seconds after a 403 usually gets through ([s014 › F1–F3](../spikes/s014-bicing-403.md#4-findings)): Bicing's 403 behaves as a transient rejection, unlike a source that is down. A 403 is otherwise a final rejection ([RFC 9110 › 403](https://www.rfc-editor.org/rfc/rfc9110#name-403-forbidden)), so the retry stays on the source where that behaviour has been observed; each source states in its configuration whether it retries a 403.
 
-If the retries logged in production recover fewer 403s than Done when requires, the wait or the approach is revisited. A 403 on another source or feed needs no change.
+If the retries logged in production recover fewer 403s than Done when requires, the wait or the approach is revisited. If another source starts answering 403 (its `feed_failed` or `index_rejected` events with `status` 403), a new task checks whether its 403s follow Bicing's pattern before that source retries them.
 
 Rejected:
 
-- Retrying only Bicing `station_status`: a per-source special case that misses the same 403 on another feed.
+- Retrying a 403 on every source: there is no evidence of a transient 403 elsewhere, and a 403 that is a real rejection, such as a block, would get twice the requests.
+- Retrying only Bicing `station_status`: it misses the same 403 on Bicing's other feeds and its index.
 - Also retrying 429, 5xx and network errors: at most about 0.2% of minutes (57 source failures in the spike's 22 days of logs, before the 403s began, d004 › D8), with no evidence that they recover within seconds; a timeout leaves no time to retry anyway.
 - Checking the retry with a probe before the deploy: only a Cloudflare Worker reproduces production's conditions, so it would deploy the same change twice; the retry is checked in production instead (Done when).
 
@@ -116,7 +117,7 @@ D1–D5 change four requirements of [d004 › Requirements](d004-bronze-data-cap
 | d004 | Today | With this design |
 |---|---|---|
 | R7 | A source that takes longer than 60 s is abandoned | The 60 s limit covers the whole request, retry included (D3) |
-| R8 | No source failure is retried | Unchanged, except a 403, which is retried once (D1) |
+| R8 | No source failure is retried | Unchanged, except a 403 from Bicing, which is retried once (D1) |
 | R14 | `latency_ms` of the source's response | Unchanged, for the last attempt's response; the first attempt's goes in `fetch_retried` (D4) |
 | R16 | The events and fields of D9 | Plus `fetch_retried` (D4) |
 
@@ -139,7 +140,7 @@ D1–D5 add two things that cross the capture's boundary: data from a source's 4
 | TH1 | Tampering: a source writes `headers` and `body` into the pass log | Forged log lines, or oversized events | JSON serialisation; `body` cut to 1,000 bytes; at most 50 headers, each value cut to 1,000 bytes (D4); readers treat both as untrusted text (T042) | R6, R9 |
 | TH2 | Information disclosure: a 403 response carries a session cookie | A source's session token stored for good in the locked logs | `Set-Cookie` is left out (D4) | R6 |
 | TH3 | Information disclosure: the `User-Agent` identifies the project | Sources know who requests | Intended (D5): only the public repository's URL, no personal contact | R8 |
-| TH4 | Denial of service against a source: retries multiply requests | More load on a source that already limits | At most one retry per request, after 3–5 s (D1, D2): never more than twice today's requests | R1, R2, R3 |
+| TH4 | Denial of service against a source: retries multiply requests | More load on a source that already limits | Only on Bicing's 403s, at most one retry per request, after 3–5 s (D1, D2): never more than twice today's requests | R1, R2, R3 |
 
 ### 1.3 Requirements
 
@@ -152,8 +153,8 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 - Optional: Where <feature is included>, the <system> shall <response>.
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
-- **R1** If a source answers a feed or index request with HTTP 403, then the capture shall retry the request once in the same pass. (D1, TH4)
-- **R2** If a source request fails in any other way, or its retry fails, then the capture shall make no further attempt in the same pass. (D1, D6)
+- **R1** If Bicing answers a feed or index request with HTTP 403, then the capture shall retry the request once in the same pass. (D1, TH4)
+- **R2** If a source request fails in a way R1 does not retry, or its retry fails, then the capture shall make no further attempt in the same pass. (D1, D6)
 - **R3** When the capture retries a request, it shall wait a uniform random time between 3 and 5 s before the retry. (D2)
 - **R4** If a source request, retry included, takes longer than 60 s, then the capture shall abandon it and log it as a failure. (D3, D6)
 - **R5** When the capture retries a request, it shall log a `fetch_retried` event at level `warning`, before the wait, with `source`, `feed` (null for an index), and the first attempt's `status` and `latency_ms`. (D4, D6)
