@@ -27,6 +27,7 @@ const OWN_FIELDS = {
   index_rejected: ["source", "status", "latency_ms", "attempts", "error_type", "error"],
   heartbeat_sent: ["status", "latency_ms"],
   heartbeat_failed: ["status", "latency_ms", "error_type", "error"],
+  fetch_retried: ["source", "feed", "status", "latency_ms", "headers", "body"],
 };
 
 /** @param {string} b64 */
@@ -236,6 +237,73 @@ describe("a capture pass with a failing source", () => {
 
     expect(await readLog(runId)).toContainEqual(
       expect.objectContaining({ event: "feed_captured", source: "bicing", feed: "station_status", recompressed: true }),
+    );
+  });
+});
+
+describe("a capture pass with a 403", () => {
+  /** The position of the first event of a run's log that matches `fields`. */
+  const indexOf = (events, fields) => events.findIndex((e) => Object.entries(fields).every(([k, v]) => e[k] === v));
+
+  // Verifies d006 R1, R5, R7
+  it("stores a Bicing feed whose first request got a 403 and logs fetch_retried before feed_captured", async () => {
+    await seedIndexes({ "bicing/station_status": `${SIM}/forbidden-once/bicing/station_status/d006r1` });
+
+    const runId = await runAt(PLAIN_MINUTE, 15);
+
+    const stored = await env.BUCKET.get(rawKey("bicing", "station_status", runId));
+    expect(new Uint8Array(await stored.arrayBuffer())).toEqual(fixtureBytes("bicing", "station_status"));
+    const events = await readLog(runId);
+    const retried = indexOf(events, { event: "fetch_retried", source: "bicing", feed: "station_status" });
+    const captured = indexOf(events, { event: "feed_captured", source: "bicing", feed: "station_status" });
+    expect(retried).toBeGreaterThanOrEqual(0);
+    expect(captured).toBeGreaterThan(retried);
+    expect(events[retried]).toMatchObject({ level: "warning", status: 403, latency_ms: expect.any(Number) });
+    expect(Object.keys(events[retried]).slice(-6)).toEqual(OWN_FIELDS.fetch_retried);
+    expect(events[captured]).toMatchObject({ status: 200, latency_ms: expect.any(Number) });
+  });
+
+  // Verifies d006 R1, R5
+  it("adopts a Bicing index whose first request got a 403 and logs fetch_retried with a null feed", async () => {
+    await seedIndexes();
+
+    const runId = await runAt(BICING_INDEX_MINUTE, 26, {
+      sources: withIndexUrl("bicing", `${SIM}/forbidden-once/bicing/gbfs/d006r1`),
+    });
+
+    expect((await readIndex(env.BUCKET, "bicing")).refreshed_at).not.toBe(SEEDED_AT);
+    const events = await readLog(runId);
+    const retried = indexOf(events, { event: "fetch_retried", source: "bicing", feed: null });
+    expect(retried).toBeGreaterThanOrEqual(0);
+    expect(indexOf(events, { event: "index_refreshed", source: "bicing" })).toBeGreaterThan(retried);
+  });
+
+  // Verifies d006 R2, R7
+  it("logs fetch_retried then feed_failed with status 403 when a Bicing feed gets two 403s", async () => {
+    await seedIndexes({ "bicing/station_status": `${SIM}/forbidden/d006r2` });
+
+    const runId = await runAt(PLAIN_MINUTE, 16);
+
+    expect(await requestCount("forbidden/d006r2")).toBe(2);
+    const events = await readLog(runId);
+    const retried = indexOf(events, { event: "fetch_retried", source: "bicing", feed: "station_status" });
+    const failed = indexOf(events, { event: "feed_failed", source: "bicing", feed: "station_status" });
+    expect(retried).toBeGreaterThanOrEqual(0);
+    expect(failed).toBeGreaterThan(retried);
+    expect(events[failed]).toMatchObject({ status: 403, error_type: "http" });
+  });
+
+  // Verifies d006 R2
+  it("logs feed_failed and no fetch_retried when an AMBici feed gets a 403", async () => {
+    await seedIndexes({ "ambici/station_status": `${SIM}/forbidden/d006r2-ambici` });
+
+    const runId = await runAt(PLAIN_MINUTE, 17);
+
+    expect(await requestCount("forbidden/d006r2-ambici")).toBe(1);
+    const events = await readLog(runId);
+    expect(events.map((e) => e.event)).not.toContain("fetch_retried");
+    expect(events).toContainEqual(
+      expect.objectContaining({ event: "feed_failed", source: "ambici", feed: "station_status", status: 403 }),
     );
   });
 });
