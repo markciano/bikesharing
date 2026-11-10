@@ -1,8 +1,3 @@
-<!--
-Design doc template. A design doc is the working document of one task: Spec (what and why), Plan (how), Steps (implementation), Close (what was delivered).
-It is detailed enough that Code can implement it without making design decisions.
-Sections marked Optional are kept only when they apply.
--->
 
 # Design: Bronze data capture
 
@@ -12,10 +7,6 @@ Sections marked Optional are kept only when they apply.
 
 ## Status
 
-<!-- State: Draft 📝 · Ready for implementation 🎬 · In progress 🔄 · Complete ✅.
-Phase: the blocks and reviews completed.
-Current step: the step being implemented, or —. -->
-
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: —
@@ -23,28 +14,11 @@ Current step: the step being implemented, or —. -->
 
 ## 1. Spec — what and why
 
-<!-- What the result does seen from outside, not how it is built. The test: if whoever uses the result would notice a change, it belongs here; if not, it belongs to the Plan. External systems and their data (feeds, fields) may be named. -->
-
 ### 1.1 Context
-
-<!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
 
 The data pipeline needs a continuous, trustworthy record of the AMBici and Bicing feeds in the bronze layer. Today that record comes from the interim Worker `capture-v4`, left running by [s006](../spikes/s006-cloudflare-capture.md), which writes to the spike's bucket `bikesharing-capture-spike`. That deployment was built to answer the spike's questions, not for production: [s006 › Inputs for the production design](../spikes/s006-cloudflare-capture.md#inputs-for-the-production-design) lists its known gaps, and it captures every static feed in the same pass once per hour. Those passes reached 23–28 ms of CPU in the spike's window, against the 10 ms limit; the average per run has since stayed at or below 5 ms. This task replaces that Worker and that bucket with production capture.
 
 ### 1.2 Decided at framing
-
-<!-- Optional. One heading per decision about what the result does. In this order, so the reader finds what matters first:
-1. The decision and why, in one short paragraph.
-2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
-3. The options rejected.
-4. The artefact that fixes it, in whatever form the decision needs (e.g. a mapping table, a page map, a weighted matrix). An artefact that does not fit here or must outlive the design goes in its own file: the Plan decides where it lives and its format, File layout lists it, and this decision links to it.
-
-A security decision lists its threats in this table, with IDs `TH1`, `TH2`… per document:
-
-| # | Threat (STRIDE) | Impact | Control | Requirement |
-|---|---|---|---|---|
-| `TH1` | | | | |
--->
 
 #### D1. Bronze bucket and key convention
 
@@ -233,15 +207,6 @@ One STRIDE pass over D1–D11 keeps the threats with a real chance or a lasting 
 
 ### 1.3 Requirements
 
-<!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
-One behaviour per requirement, verifiable, with a measurable threshold where one applies. Written in EARS:
-- Ubiquitous: The <system> shall <response>.
-- Event: When <trigger>, the <system> shall <response>.
-- State: While <state>, the <system> shall <response>.
-- Unwanted: If <condition>, then the <system> shall <response>.
-- Optional: Where <feature is included>, the <system> shall <response>.
-Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
-
 - **R1** The capture shall store the response of each dynamic feed listed in D3 every minute in `bikesharing-bronze`, under the key layout of D1, except as R13 allows. (D1, D3, D4)
 - **R2** The capture shall capture `station_information` of each source once per hour. (D3)
 - **R3** The capture shall capture each of the 12 daily static feeds once per day. (D3)
@@ -269,8 +234,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 ### 1.4 Done when
 
-<!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
-
 - `V4/raw/` is copied up to the cutoff of each feed and checked by object count before the bucket lock is enabled. (D2, D11)
 - The bucket lock is enabled, and overwriting an existing object fails. (D11, TH4)
 - The queries of D2 have run on the spike's complete logs. (D2)
@@ -282,8 +245,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 ### 1.5 Out of scope
 
-<!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
-
 - Calculating and storing completeness and other quality answers (D7), from the questions and fields in D9 — T042
 - Quality checks capture does not make: repeated failures of a static feed or an index, and HTTP 200 with frozen data (D10) — T042
 - Fixture entries chosen for variety of records (empty, full or out-of-service stations), which only code that reads them can use ([Fixtures](#fixtures)) — T040
@@ -294,14 +255,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 ## 2. Plan — how
 
-<!-- 2-3 sentences -->
-
 ### 2.1 Approach
-
-<!-- Detailed plan organized by #### blocks.
-Block `3. Steps` is written using this plan.
-If some block contains `options considered`, include them with pros and cons.
--->
 
 #### Component layout
 
@@ -543,13 +497,6 @@ Options considered:
 
 ### 2.2 Decision log
 
-<!-- It logs decisions about the plan, including changes. Oldest first.
-Entries follow .claude/rules/docs/decision-log.md (log only, change links).
-- Applies to: anchor link(s) to the section where the decision is applied, named in one or two words.
-- Decided at: the Status phase where it was decided (Plan, Steps), or `<phase> review` when decided while reviewing that phase.
-- R: Requirement affected.
--->
-
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | DL1 | [Layout](#component-layout) | One Worker in `capture/`, sources as configuration with one adapter per kind; functional core, imperative shell | One code path for both sources, and a new source is mostly data | R1 | Plan |
@@ -578,8 +525,6 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | DL24 | [Deployment](#deployment) | The CPU check queries each of the first 3 full days on the day after it, and takes the max of the 3 (IADT Analysis) **refines DL19** | The 3-day retention never holds the 3 full days at once, so a single query misses part of day 1 | — | Steps review |
 
 ### 2.3 Architecture
-
-<!-- Optional. One diagram and 2–3 sentences. -->
 
 One pass, started by the cron every minute. Each source is handled on its own, so a source without a valid index fetches only that index and does not hold back the other; the heartbeat and the log belong to the whole pass, and the log is written last, whatever happened before.
 
@@ -623,8 +568,6 @@ flowchart TD
 Colours show what each box touches: grey, no I/O (the functional core); blue, R2 only; green, a source fetch stored in R2; purple, Healthchecks.io. The schedule decides the extra fetch ([Pass schedule](#pass-schedule)); every object goes through the write-once put of `storage.js` ([Write-once](#write-once)), and a failure at any box is logged and does not stop the rest of the pass (D8).
 
 ### 2.4 File layout
-
-<!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
 ```text
 .
@@ -679,8 +622,6 @@ Colours show what each box touches: grey, no I/O (the functional core); blue, R2
 The facts for the source cards are those of D3, D4, D5, D8 and D12 that capture depends on: how often each static feed changed, the GBFS `ttl` values, the stable index size, the latency shifts, Bicing's missing `content-length` and the largest response observed.
 
 ### 2.5 Components
-
-<!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
 The modules of `capture/src/`, as in [Component layout](#component-layout). Contracts are JSDoc, the standard type annotation for JavaScript; the first three modules are the functional core and have no I/O.
 
@@ -1002,8 +943,6 @@ export default {
 
 ### 2.6 Test plan
 
-<!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
-
 Integration tests run the `scheduled` handler in workerd with in-memory R2 and the sources served by `outboundService` from fixtures, or `runPass` with its dependencies where a test needs a fixed time, `LIMITS` in milliseconds and bytes, or a request count. Each simulated source serves its fixture as compressed once by `vitest.config.js` ([Fixtures](#fixtures)), without `Content-Encoding`, so the bytes reach capture unchanged whatever the runtime does with `encodeResponseBody`; the stored object is compared with those same bytes, passed to the test as a binding, and a fixture served uncompressed exercises `recompressed`. Unit tests that need a failing bucket pass `storage.js` a fake binding, since the in-memory R2 cannot fail on demand.
 
 | R | Method | What is verified | Level |
@@ -1045,8 +984,6 @@ Integration tests run the `scheduled` handler in workerd with in-memory R2 and t
 
 ### 2.7 What does not change
 
-<!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
-
 - `capture-v4`, its code (`spikes/cloudflare-capture-spike/js/src/`, `wrangler.v4.jsonc`) and its configuration keep running unchanged until step 5 of D11 stops them: the overlap compares production against them.
 - `bikesharing-capture-spike` is only read until step 6 of D11; nothing is written to or deleted from `V4/` before then, so the copy and its count check stay repeatable.
 - The key layout of [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md) (D1): `contracts/bronze-keys.json` encodes it as it is.
@@ -1055,16 +992,7 @@ Integration tests run the `scheduled` handler in workerd with in-memory R2 and t
 
 ## 3. Steps
 
-<!-- Each step is one reviewable result and one commit, touching at most 2–3 files.
-- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- R: the requirements the step implements or tests, or —.
-- Commit: the proposed message, following the Git conventions in CLAUDE.md.
-- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner. -->
-
 ### 3.1 Prerequisites
-
-<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
 On the local machine:
 
@@ -1094,8 +1022,6 @@ The tokens of [Deployment](#deployment) and [Switch tooling](#switch-tooling) de
 
 #### Scope
 
-<!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
-
 The `capture/` component with its runtime pin, its manifest with the test and deploy tools locked, the Worker configuration of [Deployment](#deployment), and the test configuration that runs tests inside workerd. The only source file is the entry point `src/worker.js`, which `wrangler.jsonc` names as `main`, with an empty `scheduled` handler; Step 11 makes it run the pass. No tests yet.
 
 - `capture/.nvmrc` (new): `26.12.1`, the same as the root `.nvmrc`.
@@ -1109,8 +1035,6 @@ Tests: none; R21's Inspection row of the Test plan is checked here on the file a
 
 #### Reads
 
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
-
 - `.claude/rules/code/dependencies.md`, whole: where the runtime pin and the lockfile go, and how dependencies are added.
 - `.claude/rules/code/cloudflare-worker.md` › Tools: the test packages to install.
 - d004 › [Deployment](#deployment), the table: the keys and values of `wrangler.jsonc`.
@@ -1118,8 +1042,6 @@ Tests: none; R21's Inspection row of the Test plan is checked here on the file a
 - `spikes/testing-conventions/worker/vitest.config.js`, whole: the plugin's configuration as proven in [s008](../spikes/s008-testing-conventions.md).
 
 #### Do
-
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
 1. Write `capture/.nvmrc` with `26.12.1`.
 2. Write `capture/package.json` with `"name": "bikesharing-capture"`, `"private": true`, `"type": "module"` and the scripts `"test": "vitest run"` and `"fixtures": "node scripts/trim-fixtures.js"`; no `engines`, since Node is pinned only in `.nvmrc`.
@@ -1129,8 +1051,6 @@ Tests: none; R21's Inspection row of the Test plan is checked here on the file a
 6. Write `capture/src/worker.js` with a default export holding only an empty `async scheduled()`.
 
 #### Check
-
-<!-- command/s or verification with a yes/no result. -->
 
 - `npm ci` in `capture/`, with `capture/.nvmrc` active, exits 0 and prints no `EBADENGINE` or peer dependency warning.
 - `npx vitest run --passWithNoTests` in `capture/` exits 0, so the plugin starts workerd from `wrangler.jsonc` and builds `src/worker.js`.
@@ -1773,11 +1693,7 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 
 ## 4. Close
 
-<!-- The record of what the task delivered, for whoever opens this design later. -->
-
 ### 4.1 Implemented
-
-<!-- Component — what was delivered; tests passing. -->
 
 #### Spike data copied and bronze locked
 
@@ -1823,14 +1739,10 @@ Completeness over the window of D6, 2026-11-09 12:00 to 2026-11-10 21:00 UTC (1,
 
 ### 4.2 Known gaps at close
 
-<!-- What the task leaves undone or imperfect, each with the task that covers it: requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
-
 - 13.8% of passes are above the 10 ms CPU limit of D4, with a max of 28 ms, and none has the outcome `exceededCpu` ([Production checks](#production-checks)). Passes with an extra fetch are 9.2% of the total (D4), so passes with only the dynamic feeds also exceed it, and the cause is not known. Accepted, with no task. **DI12**
 - `bicing/station_status` has a clean capture in 97.93% of the window of D6, against 99.5%: 41 of 1,980 minutes are missed ([Production checks](#production-checks)), from Bicing's 403s ([d006 › Known gaps at close](d006-capture-retry-on-403.md#42-known-gaps-at-close)). Accepted, with no task. **DI11**
 
 ### 4.3 Decisions taken during implementation
-
-<!-- Decisions made after the Plan was approved: <decision> — <reason>. "None" is valid. -->
 
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
