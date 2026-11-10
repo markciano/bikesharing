@@ -16,8 +16,8 @@ Sections marked Optional are kept only when they apply.
 Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
-- State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
+- State: Ready for implementation 🎬
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: —
 
 ## 1. Spec — what and why
@@ -229,6 +229,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 1 | [D1](#d1-a-403-from-bicing-is-retried-once), [ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md) | A 403 is retried per source, turned on by evidence; Bicing only (ADR-0039, deviation from RFC 9110 › 403) | The deviation stays where a transient 403 has been measured; a real refusal gets no extra requests | R1, R2 | Plan |
 | 2 | [File layout](#23-file-layout), [Test plan](#25-test-plan) | `fetch_retried` joins the capture log contract `contracts/capture-logs.json`, with valid cases and one invalid case per rule of D4 (one file per contract, `.claude/rules/code/testing.md`) | Same log lines, format and object as the other events; the invalid cases give the pipeline's consumer tests the rules of TH1 and TH2 | R5, R6 | Plan |
 | 3 | [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour), [D9](d004-bronze-data-capture.md#d9-capture-logs), [Requirements](d004-bronze-data-capture.md#13-requirements), `.claude/rules/docs/decision-log.md` | d004 is rewritten to the current state where d006 changes it, each changed section ending with a bold link to the d006 decision; change links extend across documents | d004 stays the source of truth for capture's behaviour (CLAUDE.md › Working rules); the rule extends the in-document change links | R1–R9 | Plan |
+| 4 | [Step 9](#step-9--merge-and-deploy), [Step 10](#step-10--48-h-check-in-production), CLAUDE.md › Branches, PRs and CI | T059 reaches `main` in two PRs: `Refs` in the one that ships the code, `Closes` in the one that records the 48 h check; CLAUDE.md extends `Refs` to any task whose Done when needs production data after the merge (GitHub closing keywords) | The issue stays open until Done when is checked, and closes with the result recorded | — | Steps review |
 
 ### 2.3 File layout
 
@@ -337,14 +338,14 @@ The 403's `headers` and `body` for `Retried` are built by private functions of t
 | R1 | Test | `fetchFeed` with `retryOn403` makes a second request after a 403 and returns its result; a pass stores a Bicing feed and adopts a Bicing index whose first request got a 403 | unit, integration |
 | R2 | Test | One request only after a 500, or after a 403 without `retryOn403`; two requests only after two 403s; only Bicing has `retryOn403`; a 403 on AMBici in a pass logs `feed_failed` with no retry | unit, integration |
 | R3 | Test | `retryWait` returns `retry403MinMs` for `random` 0, the midpoint for 0.5, and stays below `retry403MaxMs` for a value just under 1 | unit |
-| R4 | Test | With `retry403MinMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null, no second request, and within `timeoutMs` plus a small margin, not after the wait | unit |
+| R4 | Test | With `retry403MinMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null, no second request, and within `timeoutMs` + 500 ms, not after the wait | unit |
 | R5 | Test | A pass with a retried 403 logs `fetch_retried` at `warning` before the outcome event, with the fields in order and `feed` null for an index; the contract's valid cases build their JSON Lines | integration, contract |
-| R6 | Test | What `fetchFeed` passes to `onRetry`: `headers` without `set-cookie`, the first 50, a value cut to 1,000 bytes; `body` decompressed from gzip and cut to 1,000 bytes with U+FFFD on a split character; `body` null for corrupt gzip | unit |
-| R7 | Test | After a 403 then a 200, `feed_captured` carries 200 and the retry's latency; after two 403s, `feed_failed` carries 403 | integration |
+| R6 | Test | What `fetchFeed` passes to `onRetry`: `headers` without `set-cookie`, the first 50, a value cut to 1,000 bytes; `body` decompressed from gzip and cut to 1,000 bytes with U+FFFD on a split character; `body` null for corrupt gzip and for a body cut short by the deadline | unit |
+| R7 | Test | After a 403 then a 200, `feed_captured` carries 200 and a numeric `latency_ms`; after two 403s, `feed_failed` carries 403 | integration |
 | R8 | Test | A source request sends `USER_AGENT`; the heartbeat request does not | unit |
 | R9 | Test | The contract's valid case with quotes and a line break in `body` builds one line | contract |
 
-The new routes in `vitest.config.js`: `forbidden` (always 403, with a `set-cookie`, more than 50 headers and a gzip body over 1,000 bytes), `forbidden-corrupt-gzip` (403 with a body that starts as gzip and is not), `forbidden-once` (403 on a path's first request, the fixture on the next, by the existing request counts), and `user-agent` (200 with the request's `User-Agent` as its body). `TEST_LIMITS` adds `retry403MinMs: 1` and `retry403MaxMs: 2`.
+The new routes in `vitest.config.js`: `forbidden` (always 403, with a `set-cookie`, more than 50 headers, one header value of 1,001 bytes, and a gzip body over 1,000 bytes whose byte 1,000 falls inside a multi-byte UTF-8 character once decompressed), `forbidden-corrupt-gzip` (403 with a body that starts as gzip and is not), `forbidden-slow-body` (403 whose body does not finish before the deadline), `forbidden-once` (403 on a path's first request, the fixture on the next, by the existing request counts), and `user-agent` (200 with the request's `User-Agent` as its body). `TEST_LIMITS` adds `retry403MinMs: 1` and `retry403MaxMs: 2`.
 
 The cases added to `contracts/capture-logs.json` (#2):
 
@@ -477,11 +478,11 @@ None.
 
 #### Reads
 
-- `capture/test/unit/heartbeat.test.js`, whole: how the existing tests observe the heartbeat request; the new test asserts on that same request.
+- `capture/test/unit/heartbeat.test.js`, whole: the existing tests check only the result; the network test's `vi.spyOn(globalThis, "fetch")` is the pattern for observing the request.
 
 #### Do
 
-1. Write the test `does not send the capture User-Agent with the heartbeat`, tagged `// Verifies d006 R8`, comparing the request's `User-Agent` with the imported `USER_AGENT`.
+1. Write the test `does not send the capture User-Agent with the heartbeat`, tagged `// Verifies d006 R8`: spy on `globalThis.fetch` with a resolved `new Response(null, { status: 200 })`, call `sendHeartbeat`, and check that the headers of the spied call do not carry the imported `USER_AGENT`.
 2. Run the test file.
 
 #### Check
@@ -505,6 +506,7 @@ None.
 - d006 › [Components › fetch.js](#fetchjs): `LIMITS` and `retryWait`, contract and JSDoc.
 - `capture/src/fetch.js`, `LIMITS`: where the new limits go.
 - `capture/vitest.config.js`, `TEST_LIMITS`: where the test limits go.
+- `capture/test/unit/fetch.test.js`, whole: where the new tests go and their style.
 
 #### Do
 
@@ -526,13 +528,14 @@ None.
 
 #### Scope
 
-`capture/src/fetch.js`: `fetchFeed` takes `options` (`retryOn403`, `onRetry`, `random`). One `AbortSignal.timeout(timeoutMs)` covers the first attempt, the wait and the retry. The wait listens to that signal, and the result is the last attempt's ([Source fetch](#source-fetch), [Components › fetch.js](#fetchjs)). In this step `onRetry` receives `status` and `latencyMs`, with `headers: {}` and `body: null` marked `TODO(T059): headers and body of the 403, built in d006 Step 7`. `capture/vitest.config.js` adds the routes `forbidden` (always 403, with a `set-cookie`, more than 50 headers and a gzip body over 1,000 bytes) and `forbidden-once` (403 on a path's first request, the fixture on the next, by the existing request counts). `capture/test/unit/fetch.test.js`: the unit tests of Test plan R1, R2 and R4.
+`capture/src/fetch.js`: `fetchFeed` takes `options` (`retryOn403`, `onRetry`, `random`). One `AbortSignal.timeout(timeoutMs)` covers the first attempt, the wait and the retry. The wait listens to that signal, and the result is the last attempt's ([Source fetch](#source-fetch), [Components › fetch.js](#fetchjs)). In this step `onRetry` receives `status` and `latencyMs`, with `headers: {}` and `body: null` marked `TODO(T059): headers and body of the 403, built in d006 Step 7`. `capture/vitest.config.js` adds the routes `forbidden` (always 403, with a `set-cookie`, more than 50 headers, one header value of 1,001 bytes, and a gzip body over 1,000 bytes whose byte 1,000 falls inside a multi-byte UTF-8 character once decompressed) and `forbidden-once` (403 on a path's first request, the fixture on the next, by the existing request counts). `capture/test/unit/fetch.test.js`: the unit tests of Test plan R1, R2 and R4.
 
 #### Reads
 
 - d006 › [Source fetch](#source-fetch) and [Components › fetch.js](#fetchjs): the behaviour and the contract of `fetchFeed` and `Retried`.
 - `capture/src/fetch.js`, `fetchFeed`: the current timeout, the latency measure and the failure results.
 - `capture/vitest.config.js`, the routes and the request counts: how the new routes are declared and how a test reads how many requests a path got.
+- `capture/test/unit/fetch.test.js`, whole: the existing failure tests, which the new ones sit next to.
 
 #### Do
 
@@ -540,7 +543,7 @@ None.
 2. Write the tests, each tagged with the requirement it verifies, and run them red:
    - R1: with `retryOn403`, a 403 then the fixture makes two requests and returns the fixture's bytes with the second attempt's `status`; `onRetry` is called once, with `status` 403 and a number in `latencyMs`.
    - R2: one request after an existing 5xx route with `retryOn403`; one request after a 403 without `retryOn403`, returning the 403; two requests after two 403s, returning the second 403.
-   - R4: with `retry403MinMs` and `retry403MaxMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null, after one request, and within `timeoutMs` plus a small margin.
+   - R4: with `retry403MinMs` and `retry403MaxMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null, after one request, and within `timeoutMs` + 500 ms.
 3. Implement the options, the single deadline and the abortable wait in `fetchFeed`, with the `TODO(T059)` above.
 4. Run the full suite, since `fetchFeed`'s callers keep calling it without options.
 
@@ -559,24 +562,26 @@ None.
 
 #### Scope
 
-`capture/src/fetch.js`: private functions build `headers` and `body` of `Retried` as set in [The 403's headers and body](#the-403s-headers-and-body), replacing Step 6's `TODO(T059)`. A body cut short by the deadline gives `body` null ([Source fetch](#source-fetch)). `capture/vitest.config.js` adds the route `forbidden-corrupt-gzip` (403 with a body that starts as gzip and is not). `capture/test/unit/fetch.test.js`: the tests of Test plan R6, all through what `fetchFeed` passes to `onRetry`.
+`capture/src/fetch.js`: private functions build `headers` and `body` of `Retried` as set in [The 403's headers and body](#the-403s-headers-and-body), replacing Step 6's `TODO(T059)`. A body cut short by the deadline gives `body` null ([Source fetch](#source-fetch)). `capture/vitest.config.js` adds the routes `forbidden-corrupt-gzip` (403 with a body that starts as gzip and is not) and `forbidden-slow-body` (403 whose body does not finish before the deadline). `capture/test/unit/fetch.test.js`: the tests of Test plan R6, all through what `fetchFeed` passes to `onRetry`.
 
 #### Reads
 
 - d006 › [The 403's headers and body](#the-403s-headers-and-body): the rules for both fields.
 - `capture/src/fetch.js`, the body reading within `maxBytes` and `gunzipText`: reused to read and decompress the 403's body.
+- `capture/vitest.config.js`, the routes: how the new routes are declared, and Step 6's `forbidden`.
+- `capture/test/unit/fetch.test.js`, Step 6's retry tests: where the new tests go.
 
 #### Do
 
-1. Add the route `forbidden-corrupt-gzip`.
-2. Write the tests, tagged `// Verifies d006 R6`, and run them red: `headers` has no `set-cookie`; it holds exactly the first 50 names in sorted order; a long value is cut to 1,000 bytes; `body` is the gzip body decompressed and cut to 1,000 bytes, ending in U+FFFD where a character is split; `body` is null for `forbidden-corrupt-gzip`.
+1. Add the routes `forbidden-corrupt-gzip` and `forbidden-slow-body`.
+2. Write the tests, tagged `// Verifies d006 R6`, and run them red: `headers` has no `set-cookie`; it holds exactly the first 50 names in sorted order; a long value is cut to 1,000 bytes; `body` is the gzip body decompressed and cut to 1,000 bytes, ending in U+FFFD where a character is split; `body` is null for `forbidden-corrupt-gzip`; for `forbidden-slow-body`, `body` is null and the result is a `timeout`.
 3. Implement the private functions and remove the `TODO(T059)`.
 4. Run the test file.
 
 #### Check
 
 - `npm test --prefix capture -- test/unit/fetch.test.js` passes.
-- `grep -rn "TODO(T059)" .` finds nothing.
+- `grep -rn "TODO(T059)" capture/src capture/test` finds nothing.
 
 ### Step 8 — The pass logs `fetch_retried`
 
@@ -599,7 +604,7 @@ None.
 #### Do
 
 1. Write the tests, each tagged with the requirements it verifies, and run them red:
-   - A Bicing feed whose first request gets a 403 is stored; the log has `fetch_retried` at `warning`, fields in order, before `feed_captured`, which carries 200 and the retry's `latency_ms` (R1, R5, R7).
+   - A Bicing feed whose first request gets a 403 is stored; the log has `fetch_retried` at `warning`, fields in order, before `feed_captured`, which carries 200 and a numeric `latency_ms` (R1, R5, R7).
    - A Bicing index whose first request gets a 403 is adopted; `fetch_retried` has `feed` null (R1, R5).
    - A Bicing feed with two 403s logs `fetch_retried` then `feed_failed` with `status` 403 (R2, R7).
    - An AMBici feed with a 403 logs `feed_failed` and no `fetch_retried` (R2).
@@ -628,7 +633,7 @@ Production capture running d006's code from `main`, deployed as in [d004 › Dep
 
 #### Do
 
-1. Push the branch, open the PR `T059: Capture retry on 403` with `Refs` to T059's issue, wait for the checks to pass, and merge it by rebase.
+1. Push the branch and open the draft PR `T059: Capture retry on 403` with `Refs` to T059's issue; once the checks pass, mark it ready for review and merge it by rebase.
 2. Update `main` locally and delete the local branch with `-D`.
 3. From `capture/` on `main`, run `npm ci`, load the root `.env` with `set -a; source ../.env; set +a`, and run `npx wrangler deploy`.
 4. Run the smoke test of d004 › Deployment on the first passes.
@@ -662,7 +667,7 @@ The check of [Done when](#14-done-when) over the first 48 full hours after Step 
 2. Run `duckdb -f scratch/capture-progress.sql` and count the minutes without a Bicing `station_status` object in the window.
 3. If the count divided by 48 is above 0.1, split it by the `fetch_retried` and `feed_failed` events of those passes' logs, and propose a new task with `/task` to revisit the wait or the approach.
 4. Have Claude record the count, the rate per hour and, if needed, the new task, in Close.
-5. Push and open the PR `T059: Capture retry on 403`, with `Closes` for T059's issue; once the checks pass, merge it by rebase.
+5. Push and open the draft PR `T059: Capture retry on 403`, with `Closes` for T059's issue; once the checks pass, mark it ready for review and merge it by rebase.
 
 #### Check
 
