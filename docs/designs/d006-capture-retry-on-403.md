@@ -180,8 +180,6 @@ Block `3. Steps` is written using this plan.
 If some block contains `options considered`, include them with pros and cons.
 -->
 
-- TODO(T059): decide how d004 takes the change: which sections are rewritten, how they link to d006, and whether `.claude/rules/docs/decision-log.md` needs a rule for change links across documents.
-
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -195,6 +193,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 |---|---|---|---|---|---|
 | 1 | [D1](#d1-a-403-from-bicing-is-retried-once), [ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md) | A 403 is retried per source, turned on by evidence; Bicing only (ADR-0039, deviation from RFC 9110 › 403) | The deviation stays where a transient 403 has been measured; a real refusal gets no extra requests | R1, R2 | Plan |
 | 2 | [File layout](#24-file-layout), [Test plan](#26-test-plan) | `fetch_retried` joins the capture log contract `contracts/capture-logs.json`, with valid cases and one invalid case per rule of D4 (one file per contract, `.claude/rules/code/testing.md`) | Same log lines, format and object as the other events; the invalid cases make TH1 and TH2 tests | R5, R6 | Plan |
+| 3 | [d004 › D8, D9, Requirements](d004-bronze-data-capture.md#d8-capture-failure-behaviour), `.claude/rules/docs/decision-log.md` | d004 is rewritten to the current state where d006 changes it, each changed section ending with a bold link to the d006 decision; change links extend across documents | d004 stays the source of truth for capture's behaviour (CLAUDE.md › Working rules); the rule extends the in-document change links | R1–R9 | Plan |
 
 ### 2.3 Architecture
 
