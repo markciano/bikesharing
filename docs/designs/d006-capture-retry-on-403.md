@@ -16,9 +16,9 @@ Sections marked Optional are kept only when they apply.
 Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
-- State: Ready for implementation 🎬
+- State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: —
+- Current step: Step 1
 
 ## 1. Spec — what and why
 
@@ -378,7 +378,7 @@ None.
 
 ### Step 1 — `fetch_retried` cases in the capture log contract
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `test: d006.s1 - add fetch_retried cases to the capture log contract`
 - **R:** R5, R6, R9

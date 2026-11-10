@@ -203,6 +203,142 @@
         }
       ],
       "jsonl": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}\n{\"ts\":\"2026-10-18T12:00:05.158Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"heartbeat_sent\",\"status\":200,\"latency_ms\":96}\n"
+    },
+    {
+      "name": "fetch_retried of a feed",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:03.650Z",
+          "level": "warning",
+          "event": "fetch_retried",
+          "fields": {
+            "source": "bicing",
+            "feed": "station_status",
+            "status": 403,
+            "latency_ms": 85,
+            "headers": {
+              "content-type": "text/html",
+              "server": "nginx"
+            },
+            "body": "<html><body>403 Forbidden</body></html>"
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}\n"
+    },
+    {
+      "name": "fetch_retried of an index: feed is null",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:03.420Z",
+          "level": "warning",
+          "event": "fetch_retried",
+          "fields": {
+            "source": "bicing",
+            "feed": null,
+            "status": 403,
+            "latency_ms": 92,
+            "headers": {
+              "content-type": "text/html",
+              "server": "nginx"
+            },
+            "body": "<html><body>403 Forbidden</body></html>"
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.420Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":null,\"status\":403,\"latency_ms\":92,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}\n"
+    },
+    {
+      "name": "fetch_retried whose body cannot be read: body is null",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:03.650Z",
+          "level": "warning",
+          "event": "fetch_retried",
+          "fields": {
+            "source": "bicing",
+            "feed": "station_status",
+            "status": 403,
+            "latency_ms": 85,
+            "headers": {
+              "content-encoding": "gzip",
+              "content-type": "text/html"
+            },
+            "body": null
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-encoding\":\"gzip\",\"content-type\":\"text/html\"},\"body\":null}\n"
+    },
+    {
+      "name": "fetch_retried whose body holds quotes and a line break: one line",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:03.650Z",
+          "level": "warning",
+          "event": "fetch_retried",
+          "fields": {
+            "source": "bicing",
+            "feed": "station_status",
+            "status": 403,
+            "latency_ms": 85,
+            "headers": {
+              "content-type": "text/html; charset=utf-8",
+              "retry-after": "60"
+            },
+            "body": "<p class=\"error\">Access denied</p>\n<p>Retry later</p>"
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html; charset=utf-8\",\"retry-after\":\"60\"},\"body\":\"<p class=\\\"error\\\">Access denied</p>\\n<p>Retry later</p>\"}\n"
+    },
+    {
+      "name": "fetch_retried then feed_captured in one pass: status and latency_ms of the retry",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:03.650Z",
+          "level": "warning",
+          "event": "fetch_retried",
+          "fields": {
+            "source": "bicing",
+            "feed": "station_status",
+            "status": 403,
+            "latency_ms": 85,
+            "headers": {
+              "content-type": "text/html",
+              "server": "nginx"
+            },
+            "body": "<html><body>403 Forbidden</body></html>"
+          }
+        },
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:07.980Z",
+          "level": "info",
+          "event": "feed_captured",
+          "fields": {
+            "source": "bicing",
+            "feed": "station_status",
+            "status": 200,
+            "latency_ms": 640,
+            "bytes": 48213,
+            "attempts": 1,
+            "recompressed": false
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}\n{\"ts\":\"2026-10-18T12:00:07.980Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":640,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}\n"
     }
   ],
   "invalid": [
@@ -241,6 +377,30 @@
     {
       "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"recompressed\":false}",
       "reason": "feed_captured has no attempts"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"set-cookie\":\"session=abc123; Path=/; HttpOnly\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
+      "reason": "headers holds set-cookie"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"x-header-01\":\"v\",\"x-header-02\":\"v\",\"x-header-03\":\"v\",\"x-header-04\":\"v\",\"x-header-05\":\"v\",\"x-header-06\":\"v\",\"x-header-07\":\"v\",\"x-header-08\":\"v\",\"x-header-09\":\"v\",\"x-header-10\":\"v\",\"x-header-11\":\"v\",\"x-header-12\":\"v\",\"x-header-13\":\"v\",\"x-header-14\":\"v\",\"x-header-15\":\"v\",\"x-header-16\":\"v\",\"x-header-17\":\"v\",\"x-header-18\":\"v\",\"x-header-19\":\"v\",\"x-header-20\":\"v\",\"x-header-21\":\"v\",\"x-header-22\":\"v\",\"x-header-23\":\"v\",\"x-header-24\":\"v\",\"x-header-25\":\"v\",\"x-header-26\":\"v\",\"x-header-27\":\"v\",\"x-header-28\":\"v\",\"x-header-29\":\"v\",\"x-header-30\":\"v\",\"x-header-31\":\"v\",\"x-header-32\":\"v\",\"x-header-33\":\"v\",\"x-header-34\":\"v\",\"x-header-35\":\"v\",\"x-header-36\":\"v\",\"x-header-37\":\"v\",\"x-header-38\":\"v\",\"x-header-39\":\"v\",\"x-header-40\":\"v\",\"x-header-41\":\"v\",\"x-header-42\":\"v\",\"x-header-43\":\"v\",\"x-header-44\":\"v\",\"x-header-45\":\"v\",\"x-header-46\":\"v\",\"x-header-47\":\"v\",\"x-header-48\":\"v\",\"x-header-49\":\"v\",\"x-header-50\":\"v\",\"x-header-51\":\"v\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
+      "reason": "headers has more than 50 entries"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789x\"}",
+      "reason": "body is over 1,000 bytes"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"x-trace\":\"0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789x\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
+      "reason": "a header value is over 1,000 bytes"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":500,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
+      "reason": "fetch_retried has a status other than 403"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"body\":\"<html><body>403 Forbidden</body></html>\"}",
+      "reason": "fetch_retried has no headers"
     }
   ]
 }
