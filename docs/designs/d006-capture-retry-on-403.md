@@ -373,29 +373,300 @@ The cases added to `contracts/capture-logs.json` (#2):
 
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
-### Step 1 — `<Title>`
+None.
+
+### Step 1 — `fetch_retried` cases in the capture log contract
 
 - **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md, including `<dNNN.sN - >` at the begining of the message, for the design and the step number.
-- **R:** R1, R3 (or —)
-- **Model:** `<model · effort>` (or —)
+- **Who:** Claude
+- **Commit:** `test: d006.s1 - add fetch_retried cases to the capture log contract`
+- **R:** R5, R6, R9
+- **Model:** sonnet · medium
 
 #### Scope
 
-<!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
+`contracts/capture-logs.json` gains the `fetch_retried` cases listed in [Test plan](#25-test-plan) (#2): 5 valid and 6 invalid, each invalid case breaking one rule and stating its `reason`. The producer's contract test `capture/test/contract/capture-logs.test.js` builds every valid case unchanged ([What does not change](#26-what-does-not-change)), so it verifies R5's contract row and R9. No code changes: `log.js` already serialises any event.
 
 #### Reads
 
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
+- `contracts/capture-logs.json`, whole: the shape of the existing valid and invalid cases, which the new ones follow.
+- `capture/test/contract/capture-logs.test.js`, whole: how a valid case is built and compared, to confirm it needs no change.
+- d006 › [D4](#d4-a-retry-is-logged-as-its-own-event): the fields, their order, the limits on `headers` and `body`, and the example lines.
 
 #### Do
 
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
+1. Add the 5 valid cases: `fetch_retried` of a feed; of an index, with `feed` null; with `body` null; with quotes and a line break in `body`; `fetch_retried` then `feed_captured` in one pass, with `status` 200 and the retry's `latency_ms` in `feed_captured`. Fields in D4's order, after the common fields.
+2. Add the 6 invalid cases, one rule each: `headers` holds `set-cookie`; `headers` with 51 entries; `body` of 1,001 bytes; a header value of 1,001 bytes; `status` 500; `headers` missing.
+3. Run the contract test.
 
 #### Check
 
-<!-- command/s or verification with a yes/no result. -->
+- `npm test --prefix capture -- test/contract/capture-logs.test.js` passes, and its output lists the 5 new valid cases.
+- The case with quotes and a line break in `body` builds exactly one JSON line (R9).
+
+### Step 2 — `retryOn403` per source
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d006.s2 - state per source whether a 403 is retried`
+- **R:** R2
+- **Model:** sonnet · low
+
+#### Scope
+
+`capture/src/sources.js`: the `Source` typedef gains `retryOn403`, `true` for `bicing` and `false` for `ambici` ([sources.js](#sourcesjs), ADR-0039). `capture/test/unit/sources.test.js`: one test that only Bicing retries a 403 (Test plan R2, unit). Nothing reads the property yet; Step 8 does.
+
+#### Reads
+
+- d006 › [Components › sources.js](#sourcesjs): the property's JSDoc.
+- `capture/src/sources.js`, the `Source` typedef and `SOURCES`: where the property goes.
+- `capture/test/unit/sources.test.js`, whole: the style of the existing tests.
+
+#### Do
+
+1. Write the test `only Bicing retries a 403`, tagged `// Verifies d006 R2`, and run it red.
+2. Add `retryOn403` to the typedef and to both sources in `SOURCES`.
+3. Run the test file.
+
+#### Check
+
+- `npm test --prefix capture -- test/unit/sources.test.js` passes.
+
+### Step 3 — `User-Agent` in every source request
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d006.s3 - identify the project in every source request`
+- **R:** R8
+- **Model:** sonnet · medium
+
+#### Scope
+
+`capture/src/fetch.js` exports `USER_AGENT` and sends it in every `fetchFeed` request, next to `Accept-Encoding: gzip` ([Components › fetch.js](#fetchjs), D5). `capture/vitest.config.js` adds the `user-agent` route, which answers 200 with the request's `User-Agent` as its body ([Test plan](#25-test-plan)). `capture/test/unit/fetch.test.js`: one test that a source request sends `USER_AGENT` (Test plan R8, first half). Feeds and indexes are both fetched through `fetchFeed`, so one test covers both.
+
+#### Reads
+
+- d006 › [Components › fetch.js](#fetchjs): `USER_AGENT` and its JSDoc.
+- `capture/src/fetch.js`, `fetchFeed`: where the request headers are set.
+- `capture/vitest.config.js`, the `outboundService` routes: how a route is declared.
+- `capture/test/unit/fetch.test.js`, the first tests: how a route is reached.
+
+#### Do
+
+1. Add the `user-agent` route.
+2. Write the test `sends the capture User-Agent to a source`, tagged `// Verifies d006 R8`, and run it red.
+3. Add `USER_AGENT` and send it in `fetchFeed`.
+4. Run the test file.
+
+#### Check
+
+- `npm test --prefix capture -- test/unit/fetch.test.js` passes.
+- `grep -rn "bikesharing-capture (+" capture/src` finds only `fetch.js`.
+
+### Step 4 — The heartbeat sends no capture `User-Agent`
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `test: d006.s4 - check that the heartbeat sends no capture User-Agent`
+- **R:** R8
+- **Model:** sonnet · low
+
+#### Scope
+
+`capture/test/unit/heartbeat.test.js`: one test that the heartbeat request does not carry `USER_AGENT` (Test plan R8, second half). `heartbeat.js` does not change ([What does not change](#26-what-does-not-change)), so the test passes at once: it guards against a later change that sends the heartbeat through `fetchFeed`.
+
+#### Reads
+
+- `capture/test/unit/heartbeat.test.js`, whole: how the existing tests observe the heartbeat request; the new test asserts on that same request.
+
+#### Do
+
+1. Write the test `does not send the capture User-Agent with the heartbeat`, tagged `// Verifies d006 R8`, comparing the request's `User-Agent` with the imported `USER_AGENT`.
+2. Run the test file.
+
+#### Check
+
+- `npm test --prefix capture -- test/unit/heartbeat.test.js` passes.
+
+### Step 5 — `retryWait` and the retry limits
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d006.s5 - add the random wait before a 403 retry`
+- **R:** R3
+- **Model:** sonnet · low
+
+#### Scope
+
+`capture/src/fetch.js`: `LIMITS` gains `retry403MinMs: 3_000` and `retry403MaxMs: 5_000`, and the pure function `retryWait` is exported ([Components › fetch.js](#fetchjs), [Retry wait](#retry-wait)). `capture/vitest.config.js`: `TEST_LIMITS` gains `retry403MinMs: 1` and `retry403MaxMs: 2`. `capture/test/unit/fetch.test.js`: the three `retryWait` tests of Test plan R3. Nothing calls `retryWait` yet; Step 6 does.
+
+#### Reads
+
+- d006 › [Components › fetch.js](#fetchjs): `LIMITS` and `retryWait`, contract and JSDoc.
+- `capture/src/fetch.js`, `LIMITS`: where the new limits go.
+- `capture/vitest.config.js`, `TEST_LIMITS`: where the test limits go.
+
+#### Do
+
+1. Write the tests `waits the minimum when random is 0`, `waits the midpoint when random is 0.5` and `waits less than the maximum when random is just below 1`, tagged `// Verifies d006 R3`, and run them red.
+2. Add the limits and `retryWait` to `fetch.js`, and the test limits to `TEST_LIMITS`.
+3. Run the test file.
+
+#### Check
+
+- `npm test --prefix capture -- test/unit/fetch.test.js` passes.
+
+### Step 6 — Retry of a 403 within one deadline
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d006.s6 - retry a 403 once within the request deadline`
+- **R:** R1, R2, R4
+- **Model:** opus · high
+
+#### Scope
+
+`capture/src/fetch.js`: `fetchFeed` takes `options` (`retryOn403`, `onRetry`, `random`). One `AbortSignal.timeout(timeoutMs)` covers the first attempt, the wait and the retry. The wait listens to that signal, and the result is the last attempt's ([Source fetch](#source-fetch), [Components › fetch.js](#fetchjs)). In this step `onRetry` receives `status` and `latencyMs`, with `headers: {}` and `body: null` marked `TODO(T059): headers and body of the 403, built in d006 Step 7`. `capture/vitest.config.js` adds the routes `forbidden` (always 403, with a `set-cookie`, more than 50 headers and a gzip body over 1,000 bytes) and `forbidden-once` (403 on a path's first request, the fixture on the next, by the existing request counts). `capture/test/unit/fetch.test.js`: the unit tests of Test plan R1, R2 and R4.
+
+#### Reads
+
+- d006 › [Source fetch](#source-fetch) and [Components › fetch.js](#fetchjs): the behaviour and the contract of `fetchFeed` and `Retried`.
+- `capture/src/fetch.js`, `fetchFeed`: the current timeout, the latency measure and the failure results.
+- `capture/vitest.config.js`, the routes and the request counts: how the new routes are declared and how a test reads how many requests a path got.
+
+#### Do
+
+1. Add the routes `forbidden` and `forbidden-once`.
+2. Write the tests, each tagged with the requirement it verifies, and run them red:
+   - R1: with `retryOn403`, a 403 then the fixture makes two requests and returns the fixture's bytes with the second attempt's `status`; `onRetry` is called once, with `status` 403 and a number in `latencyMs`.
+   - R2: one request after an existing 5xx route with `retryOn403`; one request after a 403 without `retryOn403`, returning the 403; two requests after two 403s, returning the second 403.
+   - R4: with `retry403MinMs` and `retry403MaxMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null, after one request, and within `timeoutMs` plus a small margin.
+3. Implement the options, the single deadline and the abortable wait in `fetchFeed`, with the `TODO(T059)` above.
+4. Run the full suite, since `fetchFeed`'s callers keep calling it without options.
+
+#### Check
+
+- `npm test --prefix capture` passes.
+- `grep -rn "TODO(T059)" capture/src` finds exactly the one in `fetch.js`.
+
+### Step 7 — The 403's headers and body for `onRetry`
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d006.s7 - pass the 403's headers and body to the retry log`
+- **R:** R6
+- **Model:** opus · medium
+
+#### Scope
+
+`capture/src/fetch.js`: private functions build `headers` and `body` of `Retried` as set in [The 403's headers and body](#the-403s-headers-and-body), replacing Step 6's `TODO(T059)`. A body cut short by the deadline gives `body` null ([Source fetch](#source-fetch)). `capture/vitest.config.js` adds the route `forbidden-corrupt-gzip` (403 with a body that starts as gzip and is not). `capture/test/unit/fetch.test.js`: the tests of Test plan R6, all through what `fetchFeed` passes to `onRetry`.
+
+#### Reads
+
+- d006 › [The 403's headers and body](#the-403s-headers-and-body): the rules for both fields.
+- `capture/src/fetch.js`, the body reading within `maxBytes` and `gunzipText`: reused to read and decompress the 403's body.
+
+#### Do
+
+1. Add the route `forbidden-corrupt-gzip`.
+2. Write the tests, tagged `// Verifies d006 R6`, and run them red: `headers` has no `set-cookie`; it holds exactly the first 50 names in sorted order; a long value is cut to 1,000 bytes; `body` is the gzip body decompressed and cut to 1,000 bytes, ending in U+FFFD where a character is split; `body` is null for `forbidden-corrupt-gzip`.
+3. Implement the private functions and remove the `TODO(T059)`.
+4. Run the test file.
+
+#### Check
+
+- `npm test --prefix capture -- test/unit/fetch.test.js` passes.
+- `grep -rn "TODO(T059)" .` finds nothing.
+
+### Step 8 — The pass logs `fetch_retried`
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d006.s8 - retry Bicing's 403s in the pass and log them`
+- **R:** R1, R2, R5, R7
+- **Model:** sonnet · medium
+
+#### Scope
+
+`capture/src/pass.js`: `captureFeed` and `refreshIndex` pass the source's `retryOn403` and an `onRetry` that logs `fetch_retried` at `warning` through `pass.log`, fields in D4's order. The outcome events keep their code ([Pass and source setting](#pass-and-source-setting)). `capture/test/integration/pass-failures.test.js`: the integration tests of Test plan R1, R2, R5 and R7. With this step, d006's code is complete.
+
+#### Reads
+
+- d006 › [Pass and source setting](#pass-and-source-setting) and [D4](#d4-a-retry-is-logged-as-its-own-event): the event, its fields and its order.
+- `capture/src/pass.js`, `captureFeed` and `refreshIndex`: where `fetchFeed` is called and the outcome is logged.
+- `capture/test/integration/pass-failures.test.js`, whole: how a source is pointed at a failing route and how the pass log is read.
+
+#### Do
+
+1. Write the tests, each tagged with the requirements it verifies, and run them red:
+   - A Bicing feed whose first request gets a 403 is stored; the log has `fetch_retried` at `warning`, fields in order, before `feed_captured`, which carries 200 and the retry's `latency_ms` (R1, R5, R7).
+   - A Bicing index whose first request gets a 403 is adopted; `fetch_retried` has `feed` null (R1, R5).
+   - A Bicing feed with two 403s logs `fetch_retried` then `feed_failed` with `status` 403 (R2, R7).
+   - An AMBici feed with a 403 logs `feed_failed` and no `fetch_retried` (R2).
+2. Implement the options and `onRetry` in `captureFeed` and `refreshIndex`.
+3. Run the full suite.
+
+#### Check
+
+- `npm test --prefix capture` passes.
+
+### Step 9 — Merge and deploy
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **R:** —
+- **Model:** —
+
+#### Scope
+
+Production capture running d006's code from `main`, deployed as in [d004 › Deployment](d004-bronze-data-capture.md#deployment). The PR with Steps 1–8 carries `Refs` to T059's issue, so the task stays open for the 48 h check of Step 10, which reaches `main` in a second PR that closes it.
+
+#### Reads
+
+- d004 › [Deployment](d004-bronze-data-capture.md#deployment), the deploy and smoke test paragraphs: the deploy command, the token and the smoke test.
+
+#### Do
+
+1. Push the branch, open the PR `T059: Capture retry on 403` with `Refs` to T059's issue, wait for the checks to pass, and merge it by rebase.
+2. Update `main` locally and delete the local branch with `-D`.
+3. From `capture/` on `main`, run `npm ci`, load the root `.env` with `set -a; source ../.env; set +a`, and run `npx wrangler deploy`.
+4. Run the smoke test of d004 › Deployment on the first passes.
+5. Note the deploy time in UTC, for Step 10.
+6. Create the branch `t059-bicing-403-retry` again from the updated `main`, for Step 10's PR.
+
+#### Check
+
+- The PR merged with every check green.
+- Each dynamic feed has a new object under `raw/` that passes `gunzip -t`, and the pass's log has `recompressed: false` and, in `version`, the active version shown by `npx wrangler deployments list`.
+
+### Step 10 — 48 h check in production
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** `docs: d006.s10 - record the 48 h check of the 403 retry`, in Close
+- **R:** —
+- **Model:** —
+
+#### Scope
+
+The check of [Done when](#14-done-when) over the first 48 full hours after Step 9's deploy. The result is recorded in [Close](#4-close), and the PR that closes T059 carries it.
+
+#### Reads
+
+- d006 › [Done when](#14-done-when): the threshold and the owner check.
+
+#### Do
+
+1. After the 48 h, list the bucket with `rclone lsf -R --fast-list r2:bikesharing-bronze/raw > spikes/cloudflare-capture-spike/analysis/output/prod-progress.txt`.
+2. Run `duckdb -f scratch/capture-progress.sql` and count the minutes without a Bicing `station_status` object in the window.
+3. If the count divided by 48 is above 0.1, split it by the `fetch_retried` and `feed_failed` events of those passes' logs, and propose a new task with `/task` to revisit the wait or the approach.
+4. Have Claude record the count, the rate per hour and, if needed, the new task, in Close.
+5. Push and open the PR `T059: Capture retry on 403`, with `Closes` for T059's issue; once the checks pass, merge it by rebase.
+
+#### Check
+
+- The rate of minutes without a Bicing `station_status` object is at or below 0.1 per hour over the 48 h, or a new task exists for the gap and is named in Known gaps at close.
 
 ## 4. Close
 
