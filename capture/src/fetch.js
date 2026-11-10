@@ -22,6 +22,10 @@ export const USER_AGENT = "bikesharing-capture (+https://github.com/markciano/bi
 /** The gzip magic number (RFC 1952): a body is gzip by its bytes, not by its headers. */
 const GZIP_MAGIC = [0x1f, 0x8b];
 
+/** Limits on a retried 403's event: headers kept, and bytes per header value and body (d006 D4, A retry is logged as its own event). */
+const RETRIED_MAX_HEADERS = 50;
+const RETRIED_MAX_BYTES = 1_000;
+
 /**
  * @typedef {{ ok: true, status: number, latencyMs: number,
  *             body: Uint8Array, recompressed: boolean }} FetchOk
@@ -60,28 +64,33 @@ export async function fetchFeed(url, limits, options = {}) {
   // lasts no longer than one that is not (d006 D3, One 60 s limit covers the retry).
   const signal = AbortSignal.timeout(limits.timeoutMs);
 
-  const first = await attempt(url, limits, signal);
-  if (!retryOn403 || first.ok || first.status !== 403) return first;
+  const first = await attempt(url, limits, signal, retryOn403);
+  if (!("forbidden" in first)) return first;
 
-  // TODO(T059): headers and body of the 403, built in d006 Step 7
-  onRetry({ status: 403, latencyMs: /** @type {number} */ (first.latencyMs), headers: {}, body: null });
+  const { response, latencyMs } = first.forbidden;
+  const headers = retriedHeaders(response.headers);
+  const body = await retriedBody(response, limits.maxBytes, signal);
+  onRetry({ status: 403, latencyMs, headers, body });
+  // A deadline spent while reading the 403's body rejects the wait at once: a timeout.
   try {
     await wait(retryWait(limits, random), signal);
   } catch (err) {
     return failed("timeout", null, null, err);
   }
-  return attempt(url, limits, signal);
+  return /** @type {FetchOk | FetchFailed} */ (await attempt(url, limits, signal));
 }
 
 /**
  * One request under the caller's deadline, aborted once the body read exceeds
- * `maxBytes`. `latencyMs` is this attempt's own. Never throws.
+ * `maxBytes`. `latencyMs` is this attempt's own. With `keep403`, a 403 comes back with
+ * its body unread, for the retry's event. Never throws.
  * @param {string} url
  * @param {{ maxBytes: number }} limits
  * @param {AbortSignal} signal
- * @returns {Promise<FetchOk | FetchFailed>}
+ * @param {boolean} [keep403]
+ * @returns {Promise<FetchOk | FetchFailed | { forbidden: { response: Response, latencyMs: number } }>}
  */
-async function attempt(url, limits, signal) {
+async function attempt(url, limits, signal, keep403 = false) {
   const started = Date.now();
 
   let response;
@@ -98,6 +107,7 @@ async function attempt(url, limits, signal) {
   }
 
   const { status } = response;
+  if (status === 403 && keep403) return { forbidden: { response, latencyMs: Date.now() - started } };
   if (status < 200 || status > 299) {
     await response.body?.cancel().catch(() => {});
     return failed("http", status, Date.now() - started, new Error(`HTTP ${status}`));
@@ -185,6 +195,59 @@ function abortPromise(signal) {
     if (signal.aborted) abort();
     else signal.addEventListener("abort", abort, { once: true });
   });
+}
+
+/**
+ * The 403's headers for its event: names in lowercase and sorted, as the Fetch API
+ * iterates them, without `set-cookie`, since it can carry a session token; the first
+ * `RETRIED_MAX_HEADERS`, each value cut to `RETRIED_MAX_BYTES` (d006 D4, A retry is
+ * logged as its own event).
+ * @param {Headers} headers
+ * @returns {Record<string, string>}
+ */
+function retriedHeaders(headers) {
+  const kept = [...headers]
+    .filter(([name]) => name !== "set-cookie")
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .slice(0, RETRIED_MAX_HEADERS);
+  return Object.fromEntries(kept.map(([name, value]) => [name, cutUtf8(value, RETRIED_MAX_BYTES)]));
+}
+
+/**
+ * The 403's body for its event: read within `maxBytes` and the deadline, decompressed
+ * if gzip, decoded as UTF-8 and cut to `RETRIED_MAX_BYTES`; null if it cannot be read
+ * or decompressed, or the deadline cuts it short. Never throws.
+ * @param {Response} response
+ * @param {number} maxBytes
+ * @param {AbortSignal} signal
+ * @returns {Promise<string | null>}
+ */
+async function retriedBody(response, maxBytes, signal) {
+  let bytes;
+  try {
+    bytes = await readLimited(response.body, maxBytes, signal);
+  } catch {
+    return null;
+  }
+  if (!isGzip(bytes)) return cutUtf8(new TextDecoder().decode(bytes), RETRIED_MAX_BYTES);
+  const unzipped = await gunzipText(bytes, maxBytes);
+  return unzipped.ok ? cutUtf8(unzipped.text, RETRIED_MAX_BYTES) : null;
+}
+
+/**
+ * `text` cut to at most `maxBytes` of UTF-8, at the last whole character, so the cut
+ * never splits one and the event stays within its limit (d006, The 403's headers and body).
+ * @param {string} text
+ * @param {number} maxBytes
+ * @returns {string}
+ */
+function cutUtf8(text, maxBytes) {
+  const bytes = new TextEncoder().encode(text);
+  if (bytes.length <= maxBytes) return text;
+  let end = maxBytes;
+  // A byte 10xxxxxx continues a character, so the cut moves back to where one starts.
+  while (end > 0 && (bytes[end] & 0xc0) === 0x80) end -= 1;
+  return new TextDecoder().decode(bytes.subarray(0, end));
 }
 
 /**
