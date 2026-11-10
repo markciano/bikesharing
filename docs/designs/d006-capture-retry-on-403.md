@@ -18,7 +18,7 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 8
+- Current step: Step 9
 
 ## 1. Spec — what and why
 
@@ -618,7 +618,7 @@ None.
 
 ### Step 9 — Merge and deploy
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **R:** —
@@ -681,6 +681,8 @@ The check of [Done when](#14-done-when) over the first 48 full hours after Step 
 ### 4.1 Implemented
 
 <!-- Component — what was delivered; tests passing. -->
+
+- Capture — retry of Bicing's 403s, `fetch_retried` and the `User-Agent` of every source request; 155 tests passing. Deployed on 2026-11-10 at 13:52 UTC as version `002cf8bf-7c5b-44d7-bdb0-1d71bc6d6d8e`, the start of Step 10's 48 h window; the post-deploy smoke test passed.
 
 ### 4.2 Known gaps at close
 
