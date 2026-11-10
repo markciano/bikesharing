@@ -47,7 +47,7 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 
 #### D1. A 403 from Bicing is retried once
 
-Capture retries a Bicing request once when Bicing answers HTTP 403, for feeds and indexes alike; every other failure, and any failure on another source, keeps the no-retry rule of [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour), which this decision refines. With production alone, Bicing answers 403 to about 1.26 `station_status` requests per hour, never in two consecutive minutes, and a request a few seconds after a 403 usually gets through ([s014 › F1–F3](../spikes/s014-bicing-403.md#4-findings)): Bicing's 403 behaves as a transient rejection, unlike a source that is down. A 403 is otherwise a final rejection ([RFC 9110 › 403](https://www.rfc-editor.org/rfc/rfc9110#name-403-forbidden)), so the retry stays on the source where that behaviour has been observed; each source states in its configuration whether it retries a 403.
+Capture retries a Bicing request once when Bicing answers HTTP 403, for feeds and indexes alike; every other failure, and any failure on another source, keeps the no-retry rule of [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour), which this decision refines. With production alone, Bicing answers 403 to about 1.26 `station_status` requests per hour, never in two consecutive minutes, and a request a few seconds after a 403 usually gets through ([s014 › F1–F3](../spikes/s014-bicing-403.md#4-findings)): Bicing's 403 behaves as a transient rejection, unlike a source that is down. A 403 is otherwise a final rejection ([RFC 9110 › 403](https://www.rfc-editor.org/rfc/rfc9110#name-403-forbidden)), so the retry stays on the source where that behaviour has been observed; each source states in its configuration whether it retries a 403. **refines [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)**
 
 If the retries logged in production recover fewer 403s than Done when requires, the wait or the approach is revisited. If another source starts answering 403 (its `feed_failed` or `index_rejected` events with `status` 403), a new task checks whether its 403s follow Bicing's pattern before that source retries them.
 
@@ -71,7 +71,7 @@ Rejected:
 
 #### D3. One 60 s limit covers the retry
 
-The 60 s limit of [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour) covers the whole request: first attempt, wait and retry (an overall deadline). No request lasts longer than it does today, and the retry still has about 54 s, against about 1 s for a successful response (p90 935 ms, [s014 › 5.5](../spikes/s014-bicing-403.md#55-production-inputs)).
+The 60 s limit of [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour) covers the whole request: first attempt, wait and retry (an overall deadline). No request lasts longer than it does today, and the retry still has about 54 s, against about 1 s for a successful response (p90 935 ms, [s014 › 5.5](../spikes/s014-bicing-403.md#55-production-inputs)). **refines [d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)**
 
 Rejected:
 
@@ -79,7 +79,7 @@ Rejected:
 
 #### D4. A retry is logged as its own event
 
-Each 403 that capture retries writes a `fetch_retried` event, at level `warning`, before the wait, with `source`, `feed` (null for an index), `status` and `latency_ms` of the first attempt, plus `headers`, the response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of the response body as text, or null if the body cannot be read. The request's outcome is then logged as today, by `feed_captured`, `feed_failed`, `index_refreshed` or `index_rejected`, whose `status` and `latency_ms` are those of the last attempt; the existing events keep their fields and meaning ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)). It extends D9's event table, and `warning` matches D9's level for a failure that does not affect the data.
+Each 403 that capture retries writes a `fetch_retried` event, at level `warning`, before the wait, with `source`, `feed` (null for an index), `status` and `latency_ms` of the first attempt, plus `headers`, the response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of the response body as text, or null if the body cannot be read. The request's outcome is then logged as today, by `feed_captured`, `feed_failed`, `index_refreshed` or `index_rejected`, whose `status` and `latency_ms` are those of the last attempt; the existing events keep their fields and meaning ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)). It extends D9's event table, and `warning` matches D9's level for a failure that does not affect the data. **extends [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)**
 
 The pass log then answers how many 403s each source gets per hour (the `fetch_retried` events) and how many the retry recovers (those followed in the same pass by `feed_captured` or `index_refreshed` for the same feed), which Done when measures. Who sends the 403 and what it keys on is unknown ([s014 › 5.4](../spikes/s014-bicing-403.md#54-not-verified)): `headers` and `body` can name the limiter or the wait it asks for (`Retry-After`), which the next step needs if the retry falls short, and a 403 that arrives in tens of milliseconds points to a limiter at the network edge, one of hundreds to the origin server. `Set-Cookie` is left out because it can carry a session token (OWASP Logging Cheat Sheet). At typically about 3 KB per event and about 940 403s per month, they add about 3 MB per month to D9's 30–35 MB.
 
@@ -102,7 +102,7 @@ Rejected:
 
 #### D5. Every source request identifies the project
 
-Every source request, for feeds and indexes alike, sends `User-Agent: bikesharing-capture (+https://github.com/markciano/bikesharing)`: a product name and a contact link, as usual for automated clients of public APIs ([RFC 9110 › User-Agent](https://www.rfc-editor.org/rfc/rfc9110#name-user-agent)), so a source operator can identify the traffic and reach the project instead of blocking it. The link is the public repository; no email address is sent.
+Every source request, for feeds and indexes alike, sends `User-Agent: bikesharing-capture (+https://github.com/markciano/bikesharing)`: a product name and a contact link, as usual for automated clients of public APIs ([RFC 9110 › User-Agent](https://www.rfc-editor.org/rfc/rfc9110#name-user-agent)), so a source operator can identify the traffic and reach the project instead of blocking it. The link is the public repository; no email address is sent. **extends [d004 › Source fetch](d004-bronze-data-capture.md#source-fetch)**
 
 It ships in the same deploy as D1. It may change the 403 rate in either direction ([s014 › 5.4](../spikes/s014-bicing-403.md#54-not-verified)); Done when measures the 403s the retry does not recover, which does not depend on telling the two effects apart, and D4 logs any change.
 
@@ -209,7 +209,7 @@ The retry lives in the source fetch, which already owns the 60 s limit; the pass
 
 #### Documents
 
-- d004 is rewritten to the current state where d006 changes it (#3): D8's rows for the 60 s limit and for a failing source, D9's event table, and R7, R8, R14 and R16, each ending with a bold link to the d006 decision; its Plan sections Source fetch and `fetch.js` end with a bold link to this Approach.
+- d004 is rewritten to the current state where d006 changes it (#3), following the change links across documents of `.claude/rules/docs/decision-log.md`: D8, D9, R7, R8, R14 and R16 in its Spec; Source fetch, `sources.js` and `fetch.js` in its Plan, whose contract of `fetchFeed` and `LIMITS` moves to [`fetch.js`](#fetchjs).
 - `.claude/rules/docs/decision-log.md` extends change links across documents (#3).
 - `contracts/capture-logs.json` takes `fetch_retried` (#2).
 
@@ -255,7 +255,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
     ├── decisions/
     │   └── 0039-retry-a-403-only-where-shown-transient.md (new)  Per-source 403 retry (#1)
     └── designs/
-        └── d004-bronze-data-capture.md (modified)  D8, D9, R7, R8, R14, R16 rewritten; Source fetch and fetch.js link to d006 (#3)
+        └── d004-bronze-data-capture.md (modified)  D8, D9, R7, R8, R14, R16, Source fetch, sources.js and fetch.js rewritten, linking to d006 (#3)
 ```
 
 ### 2.4 Components
