@@ -17,7 +17,7 @@ Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
 - State: Draft 📝
-- Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
 
 ## 1. Spec — what and why
@@ -28,7 +28,7 @@ Current step: the step being implemented, or —. -->
 
 <!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
 
-Bicing answers HTTP 403 to about 1.3 per hour of the production Capture Worker's `station_status` requests, and the Worker retries no failure ([d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)), so each 403 costs that minute's object. That leaves about 2% of the feed's minutes missing, against the 99.5% target of [d004 › D6](d004-bronze-data-capture.md#d6-capture-completeness-target); AMBici is at 100%. Spike s014 showed that the 403s go on with production alone, that each one costs a single minute, and that a request a few seconds later usually gets through ([s014 › Conclusion](../spikes/s014-bicing-403.md#5-conclusion)). This design changes the capture built in d004 accordingly.
+Bicing answers HTTP 403 to about 1.3 per hour of the production Capture Worker's `station_status` requests, and the Worker retries no source failure ([d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)), so each 403 costs that minute's object. That leaves about 2% of the feed's minutes missing, against the 99.5% target of [d004 › D6](d004-bronze-data-capture.md#d6-capture-completeness-target); AMBici is at 100%. Spike s014 showed that the 403s go on with production alone, that each one costs a single minute, and that a request a few seconds later usually gets through ([s014 › Conclusion](../spikes/s014-bicing-403.md#5-conclusion)). This design changes the capture built in d004 accordingly.
 
 ### 1.2 Decided at framing
 
@@ -54,7 +54,7 @@ If the retries logged in production recover fewer 403s than Done when requires, 
 Rejected:
 
 - Retrying only Bicing `station_status`: a per-source special case that misses the same 403 on another feed.
-- Also retrying 429, 5xx and network errors: at most about 0.2% of minutes (57 source failures in 22 days, d004 › D8), with no evidence that they recover within seconds; a timeout leaves no time to retry anyway.
+- Also retrying 429, 5xx and network errors: at most about 0.2% of minutes (57 source failures in the spike's 22 days of logs, before the 403s began, d004 › D8), with no evidence that they recover within seconds; a timeout leaves no time to retry anyway.
 - Checking the retry with a probe before the deploy: only a Cloudflare Worker reproduces production's conditions, so it would deploy the same change twice; the retry is checked in production instead (Done when).
 
 #### D2. The retry waits 3–5 s at random
@@ -80,7 +80,7 @@ Rejected:
 
 Each 403 that capture retries writes a `fetch_retried` event, at level `warning`, before the wait, with `source`, `feed` (null for an index), `status` and `latency_ms` of the first attempt, plus `headers`, the response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of the response body as text. The request's outcome is then logged as today, by `feed_captured`, `feed_failed`, `index_refreshed` or `index_rejected`, whose `status` and `latency_ms` are those of the last attempt; the existing events keep their fields and meaning ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)). It extends D9's event table, and `warning` matches D9's level for a failure that does not affect the data.
 
-The pass log then answers how many 403s each source gets per hour (the `fetch_retried` events) and how many the retry recovers (those followed in the same pass by `feed_captured` or `index_refreshed` for the same feed), which Done when measures. Who sends the 403 and what it keys on is unknown ([s014 › 5.4](../spikes/s014-bicing-403.md#54-not-verified)): `headers` and `body` can name the limiter or the wait it asks for (`Retry-After`), which the next step needs if the retry falls short, and a 403 that arrives in tens of milliseconds points to a limiter at the network edge, one of hundreds to the origin server. `Set-Cookie` is left out because it can carry a session token (OWASP Logging Cheat Sheet). At about 3 KB per event and about 940 403s per month, they add about 3 MB per month to D9's 30–35 MB.
+The pass log then answers how many 403s each source gets per hour (the `fetch_retried` events) and how many the retry recovers (those followed in the same pass by `feed_captured` or `index_refreshed` for the same feed), which Done when measures. Who sends the 403 and what it keys on is unknown ([s014 › 5.4](../spikes/s014-bicing-403.md#54-not-verified)): `headers` and `body` can name the limiter or the wait it asks for (`Retry-After`), which the next step needs if the retry falls short, and a 403 that arrives in tens of milliseconds points to a limiter at the network edge, one of hundreds to the origin server. `Set-Cookie` is left out because it can carry a session token (OWASP Logging Cheat Sheet). At typically about 3 KB per event and about 940 403s per month, they add about 3 MB per month to D9's 30–35 MB.
 
 A retry that succeeds:
 
@@ -94,13 +94,14 @@ The common fields `component`, `version` and `run_id` are left out, and the valu
 Rejected:
 
 - Counting fetch attempts in `attempts`: D9 defines it as write attempts, so one field would carry two meanings.
+- Renaming `attempts` to say it counts writes: production logs already use the name, so the pipeline would accept both names for good; D9 states its meaning.
 - Two new fields in the four source events (fetch attempts and the first attempt's status): it changes four existing events with fields that are almost always empty.
 - A fixed list of headers and no body: it needs to guess which headers name the limiter, which is what is unknown.
 - Headers and body on every HTTP failure: it changes `feed_failed` and `index_rejected` with no open question to answer.
 
 #### D5. Every source request identifies the project
 
-Every source request, for feeds and indexes alike, sends `User-Agent: bikesharing-capture (+https://github.com/markciano/bikesharing)`: a product name and a contact link, as usual for automated clients of public APIs ([RFC 9110 › User-Agent](https://www.rfc-editor.org/rfc/rfc9110#name-user-agent)), so a source operator can identify the traffic and reach the project instead of blocking it. The link is the public repository; no personal contact is sent.
+Every source request, for feeds and indexes alike, sends `User-Agent: bikesharing-capture (+https://github.com/markciano/bikesharing)`: a product name and a contact link, as usual for automated clients of public APIs ([RFC 9110 › User-Agent](https://www.rfc-editor.org/rfc/rfc9110#name-user-agent)), so a source operator can identify the traffic and reach the project instead of blocking it. The link is the public repository; no email address is sent.
 
 It ships in the same deploy as D1. It may change the 403 rate in either direction ([s014 › 5.4](../spikes/s014-bicing-403.md#54-not-verified)); Done when measures the 403s the retry does not recover, which does not depend on telling the two effects apart, and D4 logs any change.
 
@@ -124,21 +125,21 @@ The rest of d004's requirements hold, including where the retry comes close:
 - R4, at most one extra fetch per pass: a retry repeats the same fetch and is not an extra one.
 - R1 and write-once: at most one object per feed and pass. The retry happens before the write, so the key comes from the pass as today.
 - Pass duration: no request lasts longer than 60 s, so the longest pass does not change.
-- R17–R20, heartbeat: the heartbeat is not a source request, so it is not retried and does not send D5's `User-Agent`; a retry can only delay its signal by a few seconds.
+- R17–R20, heartbeat: the heartbeat is not a source request, so it is not retried and does not send D5's `User-Agent`; a retry can delay its signal, by no more than the 60 s limit allows today.
 - R22, 10 MB limit: it applies to the retry's response too.
 - R23, heartbeat URL kept out of logs: `headers` and `body` come from a source's response, never from the heartbeat.
 - R2, R3, R5, R6, R9–R13, R15, R21 and R24: D1–D5 do not touch them.
 
 #### D7. Security of the retry
 
-D1–D5 add two things that cross the capture's boundary: data from a source's 403 response written to the pass log (D4), and a header sent to every source (D5). The log is written as JSON Lines through JSON serialisation, which escapes quotes, line breaks and control characters, so a response's content stays inside a string value and cannot forge a line or a field (OWASP, CWE-117). Its readers, the pipeline (T042) and any analysis, parse it as JSON and treat `headers` and `body` as untrusted text: never evaluated, rendered as HTML or followed as instructions. Spoofing, repudiation and elevation of privilege are not affected: D1–D5 change no authentication, permission or Worker surface, and d004's R21 and R23 hold (D6).
+D1–D5 add two things that cross the capture's boundary: data from a source's 403 response written to the pass log (D4), and a header sent to every source (D5). The log is written as JSON Lines through JSON serialisation, which escapes quotes, line breaks and control characters, so a response's content stays inside a string value and cannot forge a line or a field (OWASP, CWE-117). Its readers, the pipeline (T042) and any analysis, parse it as JSON and treat `headers` and `body` as untrusted text: never evaluated, rendered as HTML or followed as instructions. The pass logs stay under the bucket lock ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)), so whatever a response puts in `headers` or `body` cannot be deleted. The residual risk is accepted: capture sends no secret to a source, whose APIs are public and unauthenticated, so no secret of the project can come back in a response, and a source's own session cookie is left out. Spoofing, repudiation and elevation of privilege are not affected: D1–D5 change no authentication, permission or Worker surface, and d004's R21 and R23 hold (D6).
 
 | # | Threat (STRIDE) | Impact | Control | Requirement |
 |---|---|---|---|---|
-| TH1 | Tampering: a source writes `headers` and `body` into the pass log | Forged log lines, or oversized events | JSON serialisation; `body` cut to 1,000 bytes; at most 50 headers, each value cut to 1,000 bytes (D4); readers treat both as untrusted text | |
-| TH2 | Information disclosure: a 403 response carries a session cookie | A source's session token stored in the logs | `Set-Cookie` is left out (D4) | |
-| TH3 | Information disclosure: the `User-Agent` identifies the project | Sources know who requests | Intended (D5): only the public repository's URL, no personal contact | |
-| TH4 | Denial of service against a source: retries multiply requests | More load on a source that already limits | At most one retry per request, after 3–5 s (D1, D2): never more than twice today's requests | |
+| TH1 | Tampering: a source writes `headers` and `body` into the pass log | Forged log lines, or oversized events | JSON serialisation; `body` cut to 1,000 bytes; at most 50 headers, each value cut to 1,000 bytes (D4); readers treat both as untrusted text (T042) | R6, R9 |
+| TH2 | Information disclosure: a 403 response carries a session cookie | A source's session token stored for good in the locked logs | `Set-Cookie` is left out (D4) | R6 |
+| TH3 | Information disclosure: the `User-Agent` identifies the project | Sources know who requests | Intended (D5): only the public repository's URL, no personal contact | R8 |
+| TH4 | Denial of service against a source: retries multiply requests | More load on a source that already limits | At most one retry per request, after 3–5 s (D1, D2): never more than twice today's requests | R1, R2, R3 |
 
 ### 1.3 Requirements
 
@@ -151,26 +152,21 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 - Optional: Where <feature is included>, the <system> shall <response>.
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
-- **R1** `<EARS statement>` (D`<N>`)
+- **R1** If a source answers a feed or index request with HTTP 403, then the capture shall retry the request once in the same pass. (D1, TH4)
+- **R2** If a source request fails in any other way, or its retry fails, then the capture shall make no further attempt in the same pass. (D1, D6)
+- **R3** When the capture retries a request, it shall wait a uniform random time between 3 and 5 s before the retry. (D2)
+- **R4** If a source request, retry included, takes longer than 60 s, then the capture shall abandon it and log it as a failure. (D3, D6)
+- **R5** When the capture retries a request, it shall log a `fetch_retried` event at level `warning`, before the wait, with `source`, `feed` (null for an index), and the first attempt's `status` and `latency_ms`. (D4, D6)
+- **R6** The `fetch_retried` event shall carry `headers`, the first attempt's response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of its response body as text. (D4, TH1, TH2)
+- **R7** When a retried request ends, the capture shall log its outcome in the event d004 › D9 lists for it, with the last attempt's `status` and `latency_ms`. (D4, D6)
+- **R8** The capture shall send `User-Agent: bikesharing-capture (+https://github.com/markciano/bikesharing)` in every source request, and not in the heartbeat signal. (D5, D6, TH3)
+- **R9** The capture shall serialise every log event as JSON, so that a response's content cannot add a line or a field to the pass log. (D7, TH1)
 
 ### 1.4 Done when
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
 - Over 48 h of production pass logs after the deploy, Bicing `station_status` requests whose retry also fails stay at or below 0.1 per hour, the hard cut of [s014 › Q1](../spikes/s014-bicing-403.md#13-questions). If not, the wait or the approach is revisited in a new task.
-
-### 1.5 Out of scope
-
-<!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
-
-- `<item>` — TNNN
-
-### 1.6 Open questions
-
-<!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
-
-| OQ | Question | Depends on | Notes |
-|---|---|---|---|
 
 ## 2. Plan — how
 
