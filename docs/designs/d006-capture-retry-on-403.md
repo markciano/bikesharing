@@ -179,6 +179,9 @@ Block `3. Steps` is written using this plan.
 If some block contains `options considered`, include them with pros and cons.
 -->
 
+- TODO(T059): decide the ADR for retrying a 403, a deviation from retrying by status code (D1).
+- TODO(T059): decide how d004 takes the change: which sections are rewritten, how they link to d006, and whether `.claude/rules/docs/decision-log.md` needs a rule for change links across documents.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
