@@ -18,7 +18,7 @@ Current step: the step being implemented, or —. -->
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current step: Step 2
+- Current step: Step 3
 
 ## 1. Spec — what and why
 
@@ -435,7 +435,7 @@ None.
 
 ### Step 3 — `User-Agent` in every source request
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d006.s3 - identify the project in every source request`
 - **R:** R8

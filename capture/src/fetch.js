@@ -13,6 +13,9 @@ export const LIMITS = Object.freeze({
   heartbeatTimeoutMs: 10_000,
 });
 
+/** Sent in every source request; the heartbeat does not use it (d006 D5, Every source request identifies the project). */
+export const USER_AGENT = "bikesharing-capture (+https://github.com/markciano/bikesharing)";
+
 /** The gzip magic number (RFC 1952): a body is gzip by its bytes, not by its headers. */
 const GZIP_MAGIC = [0x1f, 0x8b];
 
@@ -32,7 +35,8 @@ const GZIP_MAGIC = [0x1f, 0x8b];
 class TooLarge extends Error {}
 
 /**
- * GET with `Accept-Encoding: gzip` and `encodeResponseBody: "manual"`, aborted by
+ * GET with `Accept-Encoding: gzip`, `User-Agent: USER_AGENT` and
+ * `encodeResponseBody: "manual"`, aborted by
  * `AbortSignal.timeout(timeoutMs)` and once the body read exceeds `maxBytes`. Never throws.
  * @param {string} url
  * @param {{ timeoutMs: number, maxBytes: number }} limits
@@ -47,7 +51,7 @@ export async function fetchFeed(url, limits) {
     // `manual` keeps the source's gzip bytes undecoded, so they are stored with no
     // compression work (d004, Source fetch).
     response = await fetch(url, {
-      headers: { "Accept-Encoding": "gzip" },
+      headers: { "Accept-Encoding": "gzip", "User-Agent": USER_AGENT },
       encodeResponseBody: "manual",
       signal,
     });

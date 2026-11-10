@@ -97,7 +97,8 @@ function streamPast(bytes, limit) {
  * The simulated routes on https://sim.test/, by first path segment. Each handler gets
  * the segments that follow; a trailing `/<id>` of the test's own is ignored by the
  * handler and only keeps the request counts of one test apart from another's.
- * @type {Record<string, (args: string[], url: string) => Response | typeof NETWORK_ERROR>}
+ * @type {Record<string, (args: string[], url: string, headers: import("node:http").IncomingHttpHeaders)
+ *   => Response | typeof NETWORK_ERROR>}
  */
 const ROUTES = {
   // HTTP 500 with a short body: a source that answers with an error (errorType `http`).
@@ -126,6 +127,9 @@ const ROUTES = {
     gzipResponse(gzipSync(fixture(source, "gbfs").text + " ".repeat(TEST_LIMITS.maxBytes))),
   // A fixture's gzip bytes at a URL other than its own: a feed the index moved (R6).
   moved: ([source, feed]) => gzipResponse(fixture(source, feed).gzip),
+  // 200 with the request's User-Agent as its body: what capture sends to identify
+  // the project (d006 D5, Every source request identifies the project).
+  "user-agent": (_args, _url, headers) => new Response(String(headers["user-agent"] ?? "")),
   // The heartbeat endpoint answering OK.
   heartbeat: () => new Response("OK"),
   // The heartbeat request throws: no response at all.
@@ -138,9 +142,10 @@ const counts = new Map();
 /**
  * The simulated response to a URL: a fixture at its own URL, or a route on sim.test.
  * @param {string} href
+ * @param {import("node:http").IncomingHttpHeaders} headers The request's headers
  * @returns {Response | typeof NETWORK_ERROR}
  */
-function simulate(href) {
+function simulate(href, headers) {
   const fixtureBytes = byUrl.get(href);
   if (fixtureBytes) return gzipResponse(fixtureBytes);
 
@@ -152,7 +157,7 @@ function simulate(href) {
     const handler = ROUTES[route];
     if (handler) {
       counts.set(url.pathname, (counts.get(url.pathname) ?? 0) + 1);
-      return handler(args, href);
+      return handler(args, href, headers);
     }
   }
   throw new Error(`request outside the simulated sources: ${href}`);
@@ -167,7 +172,7 @@ function simulate(href) {
  * @param {import("node:http").ServerResponse} res
  */
 async function outboundService(req, res) {
-  const response = simulate(`https://${req.headers.host}${req.url}`);
+  const response = simulate(`https://${req.headers.host}${req.url}`, req.headers);
   if (response === NETWORK_ERROR) {
     req.socket.destroy();
     return;
