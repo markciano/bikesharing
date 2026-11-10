@@ -19,9 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
 - Current step: Step 19
-- Next: Step 19 (`/implement d004`); first pass in production 2026-11-07 10:20 UTC; bronze locked 2026-11-09 08:09 UTC; `capture-v4` stopped 2026-11-09 08:17 UTC. The R2 token `bikesharing-t039-completeness` already exists and is set in the rclone remote `r2`. Pending:
-  - Bicing 403s (4.1): 4 in 2026-11-09 12:00–15:00 UTC, so `bicing/station_status` is likely to miss D6 in the window; covered by T059.
-  - Step 19: the completeness window ends 2026-11-11 12:00 UTC (DI10); CPU is recorded in Close (DI12); completeness is pending.
+- Next: Step 19 Do 5, delete the R2 token `bikesharing-t039-completeness`; then the review (`/implement d004 review`). CPU and completeness are recorded in Close (DI12, DI13).
 
 ## 1. Spec — what and why
 
@@ -110,7 +108,7 @@ Rejected:
 
 #### D6. Capture completeness target
 
-Each dynamic feed has a clean capture in at least 99.5% of the minutes of each calendar month, which allows 216 minutes of failures in a 30-day month. A minute is clean for a feed when an object of that feed is stored under `raw/` for that minute (D9). The first 48 h of production on its own, from 2026-11-09 12:00 to 2026-11-11 12:00 UTC, are checked against the same threshold; the monthly follow-up belongs to the data quality task (D7). **DI10** Over 21 full days of the spike's capture (2026-10-15 to 2026-11-04), each feed reached 99.81–99.82%, or about 78 minutes per month, and fell below 99.5% on a single day. The target follows the SRE practice of an indicator with an objective and an error budget. Static feeds have no percentage, because one failure in a daily feed is a whole day without data; a failure there is handled as an individual event.
+Each dynamic feed has a clean capture in at least 99.5% of the minutes of each calendar month, which allows 216 minutes of failures in a 30-day month. A minute is clean for a feed when an object of that feed is stored under `raw/` for that minute (D9). The first 33 h of production on its own, from 2026-11-09 12:00 to 2026-11-10 21:00 UTC, are checked against the same threshold; the monthly follow-up belongs to the data quality task (D7). **DI10** **DI13** Over 21 full days of the spike's capture (2026-10-15 to 2026-11-04), each feed reached 99.81–99.82%, or about 78 minutes per month, and fell below 99.5% on a single day. The target follows the SRE practice of an indicator with an objective and an error budget. Static feeds have no percentage, because one failure in a daily feed is a whole day without data; a failure there is handled as an individual event.
 
 A missed month leads to reviewing its cause, with no automatic action. If capture stays well above the target for several months, raise the target.
 
@@ -1763,7 +1761,7 @@ The two Done when checks on production data: CPU over days 1–3, and completene
 
 1. On each of days 2, 3 and 4, open the Query Builder for `bikesharing-capture` over the previous full UTC day. Read the max of `$workers.cpuTimeMs` with the time of that invocation, and the count of invocations with outcome `exceededCpu`.
 2. Once the window of D6 has ended, create the token `bikesharing-t039-completeness`, and set it as the credentials of the rclone remote `r2`.
-3. Save `rclone lsf -R r2:bikesharing-bronze/raw > spikes/cloudflare-capture-spike/analysis/output/prod-completeness.txt`.
+3. Save `rclone lsf -R --fast-list r2:bikesharing-bronze/raw > spikes/cloudflare-capture-spike/analysis/output/prod-progress.txt`. **DI13**
 4. Run `capture-completeness.sql` with that listing and the window of D6, and give Claude its output and the figures of Do 1.
 5. Delete the token `bikesharing-t039-completeness`.
 
@@ -1815,11 +1813,20 @@ The queries of D2 (`spikes/cloudflare-capture-spike/analysis/spike-log-queries.s
 
 From 2026-11-08 00:00 UTC to 2026-11-10, the Workers Logs Query Builder holds 6,173 invocations of `bikesharing-capture`, all with the outcome `ok`. The max of `$workers.cpuTimeMs` is 28 ms, and 850 invocations (13.8%) are above 10 ms. One pass per minute gives about 4,200 invocations in that period; the difference is not explained.
 
+Completeness over the window of D6, 2026-11-09 12:00 to 2026-11-10 21:00 UTC (1,980 minutes), by `capture-completeness.sql`:
+
+| Feed | Minutes | % | Below 99.5% |
+|---|---|---|---|
+| `ambici/free_bike_status` | 1,977 | 99.85 | no |
+| `ambici/station_status` | 1,977 | 99.85 | no |
+| `bicing/station_status` | 1,939 | 97.93 | yes |
+
 ### 4.2 Known gaps at close
 
 <!-- What the task leaves undone or imperfect, each with the task that covers it: requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
 
 - 13.8% of passes are above the 10 ms CPU limit of D4, with a max of 28 ms, and none has the outcome `exceededCpu` ([Production checks](#production-checks)). Passes with an extra fetch are 9.2% of the total (D4), so passes with only the dynamic feeds also exceed it, and the cause is not known. Accepted, with no task. **DI12**
+- `bicing/station_status` has a clean capture in 97.93% of the window of D6, against 99.5%: 41 of 1,980 minutes are missed ([Production checks](#production-checks)), from Bicing's 403s ([d006 › Known gaps at close](d006-capture-retry-on-403.md#42-known-gaps-at-close)). Accepted, with no task. **DI11**
 
 ### 4.3 Decisions taken during implementation
 
@@ -1836,6 +1843,7 @@ From 2026-11-08 00:00 UTC to 2026-11-10, the Workers Logs Query Builder holds 6,
 | DI7 | [Switch tooling](#switch-tooling) | `spike_raw_switch.py keys` writes neither the cutoffs file nor the keys file while a feed under `V4/raw/` has no object in production | The cutoffs file is never rewritten, so writing it then would leave that feed without a cutoff until the file is deleted by hand | Step 15 |
 | DI8 | [Deployment](#deployment), TH6 | The deployment token has the Workers Editor role on the account's Workers, not on this Worker only ([ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md)) **replaces DL10** (scope) | The account's token form offers the Workers roles only at account level | Step 16 |
 | DI9 | [Switch tooling](#switch-tooling) | Close records the total of objects copied and the result of `count`, not the counts per day and feed | The table per day and feed runs to hundreds of rows, and `count` already compares each of them | Step 17 |
-| DI10 | D6, [Switch tooling](#switch-tooling), `capture-completeness.sql` | The first check of D6 covers 48 h from 2026-11-09 12:00 UTC, not the 7 full UTC days after production's first day; the query takes the window's start and end | Production and `capture-v4` overlapped until 2026-11-09 08:17 UTC, and Bicing's 403s began with the overlap (4.1), so the window starts after it with a margin; a shorter window closes the task sooner, and the monthly follow-up stays with D7 | Step 19 |
+| DI10 | D6, [Switch tooling](#switch-tooling), `capture-completeness.sql` | The first check of D6 covers 48 h from 2026-11-09 12:00 UTC, not the 7 full UTC days after production's first day; the query takes the window's start and end **→ DI13** | Production and `capture-v4` overlapped until 2026-11-09 08:17 UTC, and Bicing's 403s began with the overlap (4.1), so the window starts after it with a margin; a shorter window closes the task sooner, and the monthly follow-up stays with D7 | Step 19 |
 | DI11 | [Done when](#14-done-when), [Step 19](#step-19--production-checks) | Bicing `station_status` below 99.5% over the window of D6 is accepted as a known gap with no task; the other dynamic feeds must meet it | Bicing's 403s are not recovered by the retry and miss about 1.5% of minutes ([d006 › Known gaps at close](d006-capture-retry-on-403.md#42-known-gaps-at-close)) | Step 19 |
+| DI13 | D6, [Step 19](#step-19--production-checks), `spikes/cloudflare-capture-spike/` | The first check of D6 ends 2026-11-10 21:00 UTC (33 h), over the listing saved for d006's production check **refines DI10** | Bicing's gap is accepted (DI11) and AMBici's feeds are above the target, so 15 h more would not change the outcome | Step 19 |
 | DI12 | [Done when](#14-done-when), [Deployment](#deployment), [Step 19](#step-19--production-checks) | CPU passes with no `exceededCpu` outcome; passes above 10 ms are accepted as a known gap with no task | Cloudflare ends no pass, and with the cause unknown a task has no likely fix to aim at | Step 19 |
