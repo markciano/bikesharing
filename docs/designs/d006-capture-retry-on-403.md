@@ -78,7 +78,7 @@ Rejected:
 
 #### D4. A retry is logged as its own event
 
-Each 403 that capture retries writes a `fetch_retried` event, at level `warning`, before the wait, with `source`, `feed` (null for an index), `status` and `latency_ms` of the first attempt, plus `headers`, every response header except `Set-Cookie`, and `body`, the first 1,000 bytes of the response body as text. The request's outcome is then logged as today, by `feed_captured`, `feed_failed`, `index_refreshed` or `index_rejected`, whose `status` and `latency_ms` are those of the last attempt; the existing events keep their fields and meaning ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)). It extends D9's event table, and `warning` matches D9's level for a failure that does not affect the data.
+Each 403 that capture retries writes a `fetch_retried` event, at level `warning`, before the wait, with `source`, `feed` (null for an index), `status` and `latency_ms` of the first attempt, plus `headers`, the response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of the response body as text. The request's outcome is then logged as today, by `feed_captured`, `feed_failed`, `index_refreshed` or `index_rejected`, whose `status` and `latency_ms` are those of the last attempt; the existing events keep their fields and meaning ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)). It extends D9's event table, and `warning` matches D9's level for a failure that does not affect the data.
 
 The pass log then answers how many 403s each source gets per hour (the `fetch_retried` events) and how many the retry recovers (those followed in the same pass by `feed_captured` or `index_refreshed` for the same feed), which Done when measures. Who sends the 403 and what it keys on is unknown ([s014 › 5.4](../spikes/s014-bicing-403.md#54-not-verified)): `headers` and `body` can name the limiter or the wait it asks for (`Retry-After`), which the next step needs if the retry falls short, and a 403 that arrives in tens of milliseconds points to a limiter at the network edge, one of hundreds to the origin server. `Set-Cookie` is left out because it can carry a session token (OWASP Logging Cheat Sheet). At about 3 KB per event and about 940 403s per month, they add about 3 MB per month to D9's 30–35 MB.
 
@@ -107,6 +107,38 @@ It ships in the same deploy as D1. It may change the 403 rate in either directio
 Rejected:
 
 - Sending it in a later deploy to measure each change's effect apart: a second deploy and measurement window for a result Done when does not need.
+
+#### D6. What changes in d004's requirements, and what does not
+
+D1–D5 change four requirements of [d004 › Requirements](d004-bronze-data-capture.md#13-requirements):
+
+| d004 | Today | With this design |
+|---|---|---|
+| R7 | A source that takes longer than 60 s is abandoned | The 60 s limit covers the whole request, retry included (D3) |
+| R8 | No source failure is retried | Unchanged, except a 403, which is retried once (D1) |
+| R14 | `latency_ms` of the source's response | Unchanged, for the last attempt's response; the first attempt's goes in `fetch_retried` (D4) |
+| R16 | The events and fields of D9 | Plus `fetch_retried` (D4) |
+
+The rest of d004's requirements hold, including where the retry comes close:
+
+- R4, at most one extra fetch per pass: a retry repeats the same fetch and is not an extra one.
+- R1 and write-once: at most one object per feed and pass. The retry happens before the write, so the key comes from the pass as today.
+- Pass duration: no request lasts longer than 60 s, so the longest pass does not change.
+- R17–R20, heartbeat: the heartbeat is not a source request, so it is not retried and does not send D5's `User-Agent`; a retry can only delay its signal by a few seconds.
+- R22, 10 MB limit: it applies to the retry's response too.
+- R23, heartbeat URL kept out of logs: `headers` and `body` come from a source's response, never from the heartbeat.
+- R2, R3, R5, R6, R9–R13, R15, R21 and R24: D1–D5 do not touch them.
+
+#### D7. Security of the retry
+
+D1–D5 add two things that cross the capture's boundary: data from a source's 403 response written to the pass log (D4), and a header sent to every source (D5). The log is written as JSON Lines through JSON serialisation, which escapes quotes, line breaks and control characters, so a response's content stays inside a string value and cannot forge a line or a field (OWASP, CWE-117). Its readers, the pipeline (T042) and any analysis, parse it as JSON and treat `headers` and `body` as untrusted text: never evaluated, rendered as HTML or followed as instructions. Spoofing, repudiation and elevation of privilege are not affected: D1–D5 change no authentication, permission or Worker surface, and d004's R21 and R23 hold (D6).
+
+| # | Threat (STRIDE) | Impact | Control | Requirement |
+|---|---|---|---|---|
+| TH1 | Tampering: a source writes `headers` and `body` into the pass log | Forged log lines, or oversized events | JSON serialisation; `body` cut to 1,000 bytes; at most 50 headers, each value cut to 1,000 bytes (D4); readers treat both as untrusted text | |
+| TH2 | Information disclosure: a 403 response carries a session cookie | A source's session token stored in the logs | `Set-Cookie` is left out (D4) | |
+| TH3 | Information disclosure: the `User-Agent` identifies the project | Sources know who requests | Intended (D5): only the public repository's URL, no personal contact | |
+| TH4 | Denial of service against a source: retries multiply requests | More load on a source that already limits | At most one retry per request, after 3–5 s (D1, D2): never more than twice today's requests | |
 
 ### 1.3 Requirements
 
@@ -139,7 +171,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ6 | What must not break | D1–D5 | d004 › D8 for other failures, the pass within its minute, write-once, d004's requirements |
 
 ## 2. Plan — how
 
