@@ -79,7 +79,7 @@ Rejected:
 
 #### D4. A retry is logged as its own event
 
-Each 403 that capture retries writes a `fetch_retried` event, at level `warning`, before the wait, with `source`, `feed` (null for an index), `status` and `latency_ms` of the first attempt, plus `headers`, the response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of the response body as text. The request's outcome is then logged as today, by `feed_captured`, `feed_failed`, `index_refreshed` or `index_rejected`, whose `status` and `latency_ms` are those of the last attempt; the existing events keep their fields and meaning ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)). It extends D9's event table, and `warning` matches D9's level for a failure that does not affect the data.
+Each 403 that capture retries writes a `fetch_retried` event, at level `warning`, before the wait, with `source`, `feed` (null for an index), `status` and `latency_ms` of the first attempt, plus `headers`, the response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of the response body as text, or null if the body cannot be read. The request's outcome is then logged as today, by `feed_captured`, `feed_failed`, `index_refreshed` or `index_rejected`, whose `status` and `latency_ms` are those of the last attempt; the existing events keep their fields and meaning ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)). It extends D9's event table, and `warning` matches D9's level for a failure that does not affect the data.
 
 The pass log then answers how many 403s each source gets per hour (the `fetch_retried` events) and how many the retry recovers (those followed in the same pass by `feed_captured` or `index_refreshed` for the same feed), which Done when measures. Who sends the 403 and what it keys on is unknown ([s014 › 5.4](../spikes/s014-bicing-403.md#54-not-verified)): `headers` and `body` can name the limiter or the wait it asks for (`Retry-After`), which the next step needs if the retry falls short, and a 403 that arrives in tens of milliseconds points to a limiter at the network edge, one of hundreds to the origin server. `Set-Cookie` is left out because it can carry a session token (OWASP Logging Cheat Sheet). At typically about 3 KB per event and about 940 403s per month, they add about 3 MB per month to D9's 30–35 MB.
 
@@ -158,7 +158,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R3** When the capture retries a request, it shall wait a uniform random time between 3 and 5 s before the retry. (D2)
 - **R4** If a source request, retry included, takes longer than 60 s, then the capture shall abandon it and log it as a failure. (D3, D6)
 - **R5** When the capture retries a request, it shall log a `fetch_retried` event at level `warning`, before the wait, with `source`, `feed` (null for an index), and the first attempt's `status` and `latency_ms`. (D4, D6)
-- **R6** The `fetch_retried` event shall carry `headers`, the first attempt's response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of its response body as text. (D4, TH1, TH2)
+- **R6** The `fetch_retried` event shall carry `headers`, the first attempt's response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of its response body as text, or null if the body cannot be read. (D4, TH1, TH2)
 - **R7** When a retried request ends, the capture shall log its outcome in the event d004 › D9 lists for it, with the last attempt's `status` and `latency_ms`. (D4, D6)
 - **R8** The capture shall send `User-Agent: bikesharing-capture (+https://github.com/markciano/bikesharing)` in every source request, and not in the heartbeat signal. (D5, D6, TH3)
 - **R9** The capture shall serialise every log event as JSON, so that a response's content cannot add a line or a field to the pass log. (D7, TH1)
@@ -180,6 +180,39 @@ Block `3. Steps` is written using this plan.
 If some block contains `options considered`, include them with pros and cons.
 -->
 
+The retry lives in the source fetch, which already owns the 60 s limit; the pass decides per source whether it applies and logs it. d004 is rewritten where its behaviour changes.
+
+#### Source fetch
+
+- `fetchFeed` owns the whole request: one `AbortSignal.timeout(timeoutMs)` covers the first attempt, the wait and the retry (D3). The result is the last attempt's, with that attempt's `status` and `latencyMs` (R7).
+- When the first attempt answers 403 and the caller passes `retryOn403`, it reads the 403's headers and body, hands them to the caller's `onRetry`, waits `retryWait(limits, random)` and fetches again. A 403 without `retryOn403`, any other failure and a failed retry return as today (R2).
+- `latencyMs` of a 403 is measured when its headers arrive, as for every HTTP failure; reading its body does not count.
+- If the deadline runs out during the wait or the retry, the result is a `timeout` with `status` and `latencyMs` null (D4).
+- Every source request sends `USER_AGENT` (D5). The heartbeat keeps its own fetch in `heartbeat.js`, so it never sends it (R8).
+
+#### The 403's headers and body
+
+- `headers`: the response headers as the Fetch API iterates them, names in lowercase and in sorted order, without `set-cookie`; the first 50, each value cut to its first 1,000 bytes (R6).
+- `body`: read within `maxBytes` and the deadline, like any body; decompressed if it arrives as gzip, then cut to its first 1,000 bytes and decoded as UTF-8, with a character split at the cut replaced by U+FFFD. If the body cannot be read or decompressed, `body` is null.
+- Bytes are cut, not characters, since the limit bounds the event's size (TH1).
+
+#### Retry wait
+
+- `retryWait(limits, random)` returns `retry403MinMs + random() × (retry403MaxMs − retry403MinMs)`, with `random` defaulting to `Math.random`: uniform over 3,000–5,000 ms in production (D2, R3).
+- Tests pass small limits and a fixed `random`, as every limit of capture (`.claude/rules/code/testing.md`).
+
+#### Pass and source setting
+
+- Each source in `sources.js` has `retryOn403`: true for Bicing, false for AMBici ([ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md)).
+- `captureFeed` and `refreshIndex` in `pass.js` pass the source's `retryOn403` and an `onRetry` that logs `fetch_retried` at `warning` through `pass.log`, so its `ts` is the time before the wait (R5). Its fields go in the order `source`, `feed` (null for an index), `status`, `latency_ms`, `headers`, `body`.
+- The outcome events keep their code and take `status` and `latency_ms` from the result, which is the last attempt's (R7).
+
+#### Documents
+
+- d004 is rewritten to the current state where d006 changes it (#3): D8's rows for the 60 s limit and for a failing source, D9's event table, and R7, R8, R14 and R16, each ending with a bold link to the d006 decision; its Plan sections Source fetch and `fetch.js` end with a bold link to this Approach.
+- `.claude/rules/docs/decision-log.md` extends change links across documents (#3).
+- `contracts/capture-logs.json` takes `fetch_retried` (#2).
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -192,48 +225,153 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | 1 | [D1](#d1-a-403-from-bicing-is-retried-once), [ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md) | A 403 is retried per source, turned on by evidence; Bicing only (ADR-0039, deviation from RFC 9110 › 403) | The deviation stays where a transient 403 has been measured; a real refusal gets no extra requests | R1, R2 | Plan |
-| 2 | [File layout](#24-file-layout), [Test plan](#26-test-plan) | `fetch_retried` joins the capture log contract `contracts/capture-logs.json`, with valid cases and one invalid case per rule of D4 (one file per contract, `.claude/rules/code/testing.md`) | Same log lines, format and object as the other events; the invalid cases make TH1 and TH2 tests | R5, R6 | Plan |
+| 2 | [File layout](#23-file-layout), [Test plan](#25-test-plan) | `fetch_retried` joins the capture log contract `contracts/capture-logs.json`, with valid cases and one invalid case per rule of D4 (one file per contract, `.claude/rules/code/testing.md`) | Same log lines, format and object as the other events; the invalid cases give the pipeline's consumer tests the rules of TH1 and TH2 | R5, R6 | Plan |
 | 3 | [d004 › D8, D9, Requirements](d004-bronze-data-capture.md#d8-capture-failure-behaviour), `.claude/rules/docs/decision-log.md` | d004 is rewritten to the current state where d006 changes it, each changed section ending with a bold link to the d006 decision; change links extend across documents | d004 stays the source of truth for capture's behaviour (CLAUDE.md › Working rules); the rule extends the in-document change links | R1–R9 | Plan |
 
-### 2.3 Architecture
-
-<!-- Optional. One diagram and 2–3 sentences. -->
-
-### 2.4 File layout
+### 2.3 File layout
 
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
 ```text
-<path>/
-└── <file>      (new)        <purpose>
+.
+├── .claude/rules/docs/
+│   └── decision-log.md          (modified)  Change links across documents (#3)
+├── capture/
+│   ├── src/
+│   │   ├── fetch.js             (modified)  Retry on 403 within one deadline, User-Agent, the 403's headers and body
+│   │   ├── pass.js              (modified)  Passes each source's retryOn403 and logs fetch_retried
+│   │   └── sources.js           (modified)  retryOn403 per source: Bicing only
+│   ├── test/
+│   │   ├── integration/
+│   │   │   └── pass-failures.test.js (modified)  Passes with a 403 then a 200, two 403s, a 403 on AMBici
+│   │   └── unit/
+│   │       ├── fetch.test.js    (modified)  Retry, wait, deadline, headers and body for the log, User-Agent
+│   │       ├── heartbeat.test.js (modified) The heartbeat sends no User-Agent of capture
+│   │       └── sources.test.js  (modified)  Only Bicing retries a 403
+│   └── vitest.config.js         (modified)  Routes for a 403 and an echo of the User-Agent; retry limits in TEST_LIMITS
+├── contracts/
+│   └── capture-logs.json        (modified)  fetch_retried cases (#2)
+└── docs/
+    ├── decisions/
+    │   └── 0039-retry-a-403-only-where-shown-transient.md (new)  Per-source 403 retry (#1)
+    └── designs/
+        └── d004-bronze-data-capture.md (modified)  D8, D9, R7, R8, R14, R16 rewritten; Source fetch and fetch.js link to d006 (#3)
 ```
 
-### 2.5 Components
+### 2.4 Components
 
 <!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
-#### `<ComponentName>`
+#### `fetch.js`
 
-- **Responsibility:** `<one sentence>`
-- **Location:** `path/to/file`
-- **Contract:**
+- **Responsibility:** fetches one source response within one deadline, retrying a 403 once when the caller asks, and returns the bytes to store or the failure to log.
+- **Location:** `capture/src/fetch.js`
+- **Contract:** `gunzipText` and the `FetchOk` and `FetchFailed` typedefs keep their contract.
 
-```python
+```js
+/** Sent in every source request; the heartbeat does not use it (d006 D5, Every source request identifies the project). */
+export const USER_AGENT = "bikesharing-capture (+https://github.com/markciano/bikesharing)";
+
+/** @type {Readonly<{ timeoutMs: number, maxBytes: number, retryDelayMs: number,
+ *   heartbeatTimeoutMs: number, retry403MinMs: number, retry403MaxMs: number }>} */
+export const LIMITS = Object.freeze({
+  timeoutMs: 60_000,
+  maxBytes: 10_000_000,
+  retryDelayMs: 250,
+  heartbeatTimeoutMs: 10_000,
+  retry403MinMs: 3_000,
+  retry403MaxMs: 5_000,
+});
+
+/**
+ * @typedef {{ status: 403, latencyMs: number, headers: Record<string, string>,
+ *             body: string | null }} Retried
+ * The first attempt of a request about to be retried, for `fetch_retried`.
+ */
+
+/**
+ * GET with `Accept-Encoding: gzip`, `User-Agent: USER_AGENT` and
+ * `encodeResponseBody: "manual"`. One `AbortSignal.timeout(timeoutMs)` covers every
+ * attempt and the wait. With `retryOn403`, a 403 calls `onRetry`, waits
+ * `retryWait(limits, random)` and fetches once more. Never throws.
+ * @param {string} url
+ * @param {{ timeoutMs: number, maxBytes: number, retry403MinMs: number, retry403MaxMs: number }} limits
+ * @param {{ retryOn403?: boolean, onRetry?: (retried: Retried) => void, random?: () => number }} [options]
+ *   Defaults: `false`, a no-op, `Math.random`
+ * @returns {Promise<FetchOk | FetchFailed>} The last attempt's result
+ */
+export async function fetchFeed(url, limits, options = {}) {}
+
+/**
+ * Uniform wait before a retry: `retry403MinMs + random() * (retry403MaxMs - retry403MinMs)`. Pure.
+ * @param {{ retry403MinMs: number, retry403MaxMs: number }} limits
+ * @param {() => number} [random] Default `Math.random`
+ * @returns {number} Milliseconds
+ */
+export function retryWait(limits, random = Math.random) {}
+
+/**
+ * A 403's headers for the log: lowercase names in sorted order, without `set-cookie`,
+ * the first 50, each value cut to its first 1,000 bytes. Pure.
+ * @param {Headers} headers
+ * @returns {Record<string, string>}
+ */
+export function headersForLog(headers) {}
+
+/**
+ * A 403's body for the log: decompressed if it is gzip, cut to its first 1,000 bytes,
+ * decoded as UTF-8 with a split character as U+FFFD. Never throws.
+ * @param {Uint8Array} bytes As received, already within `maxBytes`
+ * @param {number} maxBytes Limit on the decompressed size
+ * @returns {Promise<string | null>} Null if the bytes cannot be decompressed
+ */
+export async function bodyForLog(bytes, maxBytes) {}
 ```
 
-### 2.6 Test plan
+#### `sources.js`
+
+- **Responsibility:** unchanged; each source also states whether it retries a 403.
+- **Location:** `capture/src/sources.js`
+- **Contract:** `Source` gains one property; `SOURCES` sets it to `true` for `bicing` and `false` for `ambici`.
+
+```js
+/**
+ * @property {boolean} retryOn403 Whether a 403 from this source is retried once
+ *   (ADR-0039, Retry a 403 only on sources where it is shown to be transient)
+ */
+```
+
+### 2.5 Test plan
 
 <!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
 
 | R | Method | What is verified | Level |
 |---|---|---|---|
-| R1 | Test / Inspection / Analysis / Demonstration | | unit / integration / e2e; — for other methods |
+| R1 | Test | `fetchFeed` with `retryOn403` makes a second request after a 403 and returns its result; a pass stores a Bicing feed and adopts a Bicing index whose first request got a 403 | unit, integration |
+| R2 | Test | One request only after a 500, or after a 403 without `retryOn403`; two requests only after two 403s; only Bicing has `retryOn403`; a 403 on AMBici in a pass logs `feed_failed` with no retry | unit, integration |
+| R3 | Test | `retryWait` returns `retry403MinMs` for `random` 0, the midpoint for 0.5, and stays below `retry403MaxMs` for a value just under 1 | unit |
+| R4 | Test | With `retry403MinMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null and no second request | unit |
+| R5 | Test | A pass with a retried 403 logs `fetch_retried` at `warning` before the outcome event, with the fields in order and `feed` null for an index; the contract's valid cases build their JSON Lines | integration, contract |
+| R6 | Test | `headersForLog` drops `set-cookie`, keeps the first 50 and cuts a value to 1,000 bytes; `bodyForLog` decompresses gzip, cuts to 1,000 bytes with U+FFFD on a split character, and returns null for corrupt gzip | unit |
+| R7 | Test | After a 403 then a 200, `feed_captured` carries 200 and the retry's latency; after two 403s, `feed_failed` carries 403 | integration |
+| R8 | Test | A source request sends `USER_AGENT`; the heartbeat request does not | unit |
+| R9 | Test | The contract's valid case with quotes and a line break in `body` builds one line | contract |
 
-### 2.7 What does not change
+The new routes in `vitest.config.js`: `forbidden` (always 403, with a `set-cookie`, more than 50 headers and a gzip body over 1,000 bytes), `forbidden-once` (403 on a path's first request, the fixture on the next, by the existing request counts), and `user-agent` (200 with the request's `User-Agent` as its body). `TEST_LIMITS` adds `retry403MinMs: 1` and `retry403MaxMs: 2`.
+
+The cases added to `contracts/capture-logs.json` (#2):
+
+- Valid: `fetch_retried` of a feed; `fetch_retried` of an index, `feed` null; `fetch_retried` with `body` null; `fetch_retried` whose `body` holds quotes and a line break; `fetch_retried` then `feed_captured` in one pass.
+- Invalid, one rule each: `headers` holds `set-cookie`; `body` over 1,000 bytes; a header value over 1,000 bytes; `status` other than 403; `headers` missing.
+
+### 2.6 What does not change
 
 <!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
 
--
+- `capture/src/log.js`: events are already serialised with `JSON.stringify` (R9).
+- `capture/src/heartbeat.js` and `capture/src/storage.js`: the heartbeat and the write retries keep their behaviour.
+- `capture/test/contract/capture-logs.test.js`: it builds every valid case of the contract, so the new cases need no change to it.
+- The existing events of d004 › D9: their fields and meaning.
 
 ## 3. Steps
 
