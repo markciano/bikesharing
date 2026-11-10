@@ -1,9 +1,3 @@
-<!--
-Spike doc template. A spike is a time-boxed investigation of one task: it reaches the decisions a task needs, by analysis where possible and with evidence only where an unknown would change the choice. Its output is knowledge (decisions, answers, a verdict, inputs for designs and ADRs); its code is throwaway and lives in spikes/<name>/.
-Blocks: Questions (what we need to know), Method (how we find out), Steps, Findings (filled during execution), Conclusion (filled after the last step).
-Sections marked Optional are kept only when they apply.
--->
-
 # Spike: Bicing 403s on station_status
 
 - **Task:** T059
@@ -12,14 +6,9 @@ Sections marked Optional are kept only when they apply.
 
 ## Status
 
-<!-- State: Draft 📝 · Ready 🎬 · Running 🔄 · Concluded ✅.
-Phase: the blocks and the review completed.
-Started / Finished: UTC dates of the first step executed and of the Conclusion.
-Current step: the step being executed, or —. -->
-
-- State: Running 🔄
-- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review · [ ] Conclusion
-- Started: 2026-11-10 · Finished: —
+- State: Concluded ✅
+- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review · [x] Conclusion
+- Started: 2026-11-10 · Finished: 2026-11-10
 - Current step: —
 
 ## 1. Questions — what we need to know
@@ -138,8 +127,6 @@ The pass count matches one pass per minute over the measured span, and the 403 c
 
 ## 4. Findings
 
-<!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
-
 ### F1. Production alone gets 403s at the overlap's rate
 
 Step 2 · 2026-11-10 · production pass logs, 2026-11-09 12:00:40 to 2026-11-10 07:48:39 UTC
@@ -173,35 +160,37 @@ Step 2 · 2026-11-10 · spike Worker and production logs of the overlap, 2026-11
 
 ## 5. Conclusion
 
-<!-- Filled after the last step. Covers only the observed window. -->
-
-Observed window: `<from–to, UTC; what it does not cover>`
+Observed window: production alone from 2026-11-09 12:00:40 to 2026-11-10 07:48:39 UTC (19.8 h), and the overlap of both Workers from 2026-11-07 10:19 to 2026-11-09 08:16 UTC. It does not cover the last 28 h of D6's window (**#1**), nor whether the rate changes over weeks.
 
 ### 5.1 Answers
 
-- **Q1.** `<answer>` (FN)
+- **Q1. 403 rate with production alone** 1.26 per hour, the overlap's rate, with no downward trend; each 403 costs a single minute (F1, F2).
 
 ### 5.2 Exit criteria
 
-<!-- One result per criterion and variant. -->
-
 | Criterion | Kind | Result | Findings |
 |---|---|---|---|
+| Bicing `station_status` 403s with production alone at most 0.1 per hour | Hard cut | Fails: 1.26 per hour; even with no further 403 the window would end at 0.52 per hour | F1 |
 
 ### 5.3 Verdict
 
-<!-- The answer to the main question in 2–3 sentences. -->
+The 403s do not stop with production alone, so capture handles them. Every request identifies the project in its `User-Agent`, and a 403 is retried once after a random wait of 3–5 s, within the request's single 60 s timeout; the retry is logged even when it succeeds. From F3, this should leave about 0.08 403s per hour, below the 0.1 that Q1 set.
 
 ### 5.4 Not verified
 
-<!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
+- A retry from the same Worker invocation behaves like a request from a second Worker (F3) — the retry recovers fewer 403s than expected — the logged retries show its success rate; if it falls short, revisit the wait.
+- Waits below 3 s — none; they are not used.
+- Who sends the 403 and what it keys on — a `User-Agent` may change the rate in either direction — the logged retries and 403s show any change after the deploy.
 
-- `<item>` — `<risk>` — `<mitigation>`
+### 5.5 Production inputs
+
+| P | Input | Origin | Destination |
+|---|---|---|---|
+| P1 | Every source request sends `User-Agent: bikesharing-capture (+https://github.com/markciano/bikesharing)` | Verdict | d006 (T059) |
+| P2 | An HTTP 403 from any source, on a feed or an index, is retried once after a uniform random wait of 3–5 s (backoff with jitter); other failures keep D8's no-retry rule. The wait starts at 3 s because 3–4 s is the only delay measured (F3), and a limiter counting requests over a window of a few seconds could reject a shorter one; a longer wait costs little, since it happens about 1.3 times per hour and waiting uses no Worker CPU | F1, F2, F3 | d006 (T059) |
+| P3 | One 60 s timeout covers the whole request, retry included (an overall deadline above the attempts), so no request lasts more than D8's 60 s; the retry still has about 54 s, against about 1 s for a 200 (p90 935 ms) | Verdict | d006 (T059) |
+| P4 | A retried request is logged with `attempts: 1` and the first attempt's status, even when the retry succeeds, so the 403 rate stays measurable | Verdict | d006 (T059) |
 
 ### 5.6 Records
 
-<!-- Documents this spike updates before it closes: ADRs from Decided at framing (each in its own commit), architecture, requirements, source cards and new tasks agreed with the owner. A decision that updates no document has no row. Commit: "Done", or "Pending" until delivered; the spike closes when every row is Done. Production inputs are not repeated here. -->
-
-| Output | From | Destination | Commit |
-|---|---|---|---|
-| `<ADR, requirement, source card or task>` | `<e.g. D1, F3>` | `<document and section>` | `<Done, or Pending>` |
+None.
