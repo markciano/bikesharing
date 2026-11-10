@@ -194,6 +194,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | 1 | [D1](#d1-a-403-from-bicing-is-retried-once), [ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md) | A 403 is retried per source, turned on by evidence; Bicing only (ADR-0039, deviation from RFC 9110 › 403) | The deviation stays where a transient 403 has been measured; a real refusal gets no extra requests | R1, R2 | Plan |
+| 2 | [File layout](#24-file-layout), [Test plan](#26-test-plan) | `fetch_retried` joins the capture log contract `contracts/capture-logs.json`, with valid cases and one invalid case per rule of D4 (one file per contract, `.claude/rules/code/testing.md`) | Same log lines, format and object as the other events; the invalid cases make TH1 and TH2 tests | R5, R6 | Plan |
 
 ### 2.3 Architecture
 
@@ -229,15 +230,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 |---|---|---|---|
 | R1 | Test / Inspection / Analysis / Demonstration | | unit / integration / e2e; — for other methods |
 
-### 2.7 Breaking changes
-
-<!-- Optional. Shared models or interfaces this design changes, and how their dependants are handled. -->
-
-| File | Why it breaks | Strategy |
-|---|---|---|
-| | | |
-
-### 2.8 What does not change
+### 2.7 What does not change
 
 <!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
 
