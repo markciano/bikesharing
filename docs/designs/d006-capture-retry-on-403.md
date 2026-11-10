@@ -8,7 +8,7 @@ Sections marked Optional are kept only when they apply.
 
 - **Task:** T059
 - **ADRs:** `<ADRs this design must respect, or "none">`
-- **New ADRs from this doc:** `<ADRs created during this design, or "none">`
+- **New ADRs from this doc:** [ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md)
 
 ## Status
 
@@ -180,7 +180,6 @@ Block `3. Steps` is written using this plan.
 If some block contains `options considered`, include them with pros and cons.
 -->
 
-- TODO(T059): decide the ADR for retrying a 403, a deviation from retrying by status code (D1).
 - TODO(T059): decide how d004 takes the change: which sections are rewritten, how they link to d006, and whether `.claude/rules/docs/decision-log.md` needs a rule for change links across documents.
 
 ### 2.2 Decision summary
@@ -194,7 +193,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| | | | | | |
+| 1 | [D1](#d1-a-403-from-bicing-is-retried-once), [ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md) | A 403 is retried per source, turned on by evidence; Bicing only (ADR-0039, deviation from RFC 9110 › 403) | The deviation stays where a transient 403 has been measured; a real refusal gets no extra requests | R1, R2 | Plan |
 
 ### 2.3 Architecture
 
