@@ -129,14 +129,14 @@ Capture retries only what cannot be recovered in another way, using bounded retr
 
 | Event | Behaviour |
 |---|---|
-| A source takes longer than 60 s | The fetch is abandoned and logged as a failure. This keeps a hung request from losing the whole pass, and it would have dropped 11 valid responses in 22 days. |
-| A source fails | No retry in the pass. The failure is logged and the next scheduled capture applies, so a change in a daily feed can be recorded up to 48 h late. |
+| A source request takes longer than 60 s, retry included | The request is abandoned and logged as a failure. This keeps a hung request from losing the whole pass, and it would have dropped 11 valid responses in 22 days. |
+| A source fails | No retry in the pass, except a 403 from a source that retries it, Bicing only, which is retried once after 3–5 s. The failure is logged and the next scheduled capture applies, so a change in a daily feed can be recorded up to 48 h late. |
 | A data write fails | Up to 2 retries with a short wait. A key that already exists counts as written, not as a failure. |
 | A log write fails | Up to 2 retries with a short wait. If it still fails, the error goes to the Workers logs. |
 | An index refresh fails or returns an invalid index | Capture keeps the last valid index and logs the error. An index is valid when every entry has `name` and `url`, and it includes every feed listed in D3. |
 | A source has no valid index yet, as on the first pass | Capture refreshes that source's index on every pass and fetches none of its feeds until the index is valid, an exception to D4. |
 
-Each key is written once. Duplicate passes start at different seconds, so their keys differ; both objects are kept and the pipeline deduplicates them ([d002 › R13](d002-requirements.md#requirements)). In the unobserved case of two passes in the same second, the existing-key rule applies. `latency_ms` is recorded whenever the source responds, and is null only when no response arrives.
+Each key is written once. Duplicate passes start at different seconds, so their keys differ; both objects are kept and the pipeline deduplicates them ([d002 › R13](d002-requirements.md#requirements)). In the unobserved case of two passes in the same second, the existing-key rule applies. `latency_ms` is that of the request's last attempt, recorded whenever the source responds, and is null only when no response arrives.
 
 Rejected:
 
@@ -144,6 +144,8 @@ Rejected:
 - Retrying source failures in the pass: it lengthens passes for little gain, since a source that is down usually stays down during the retries.
 - Retrying failed static feeds in later passes: it adds state and logic for about 5 lost days per year across the daily feeds, which rarely change.
 - Ignoring only the invalid index entry: the feed would stop being captured even with a known URL. Merging valid entries per feed would avoid that, but only helps when two index problems coincide, which was not observed.
+
+**[d006 › D1](d006-capture-retry-on-403.md#d1-a-403-from-bicing-is-retried-once)** **[d006 › D3](d006-capture-retry-on-403.md#d3-one-60-s-limit-covers-the-retry)** **[d006 › D4](d006-capture-retry-on-403.md#d4-a-retry-is-logged-as-its-own-event)**
 
 #### D9. Capture logs
 
@@ -157,10 +159,11 @@ In capture, `component` is `capture` and `version` is the Worker's version ID.
 | `feed_failed` | `error` | `source`, `feed`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
 | `index_refreshed` | `info` | `source`, `status`, `latency_ms`, `bytes`, `attempts`, `recompressed`, `unknown_feeds` |
 | `index_rejected` | `error` | `source`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
+| `fetch_retried` | `warning` | `source`, `feed`, `status`, `latency_ms`, `headers`, `body` |
 | `heartbeat_sent` | `info` | `status`, `latency_ms` |
 | `heartbeat_failed` | `warning` | `status`, `latency_ms`, `error_type`, `error` |
 
-`attempts` counts write attempts, and is 0 when the source fails. `error_type` is one of `http`, `timeout`, `network`, `too_large`, `write` or `invalid_index`; the event tells whether it came from a feed, an index or the heartbeat. `level` is `info`, `warning` for a failure that does not affect the data, such as the heartbeat's, or `error`. `unknown_feeds` lists the feeds in the index that are not listed in D3, and is usually empty; a feed that the source removes makes the index invalid (D8). `recompressed` is true when the response did not arrive as gzip and capture compressed it before storing; capture relies on an undocumented option to keep the source's gzip ([s006](../spikes/s006-cloudflare-capture.md), F9), so this flags a change in the source or the runtime.
+`attempts` counts write attempts, and is 0 when the source fails. `status` and `latency_ms` are those of the request's last attempt; `fetch_retried` records a 403 about to be retried, with the first attempt's `status`, `latency_ms`, response `headers` and `body`, and `feed` null for an index. `error_type` is one of `http`, `timeout`, `network`, `too_large`, `write` or `invalid_index`; the event tells whether it came from a feed, an index or the heartbeat. `level` is `info`, `warning` for a failure that does not affect the data, such as the heartbeat's, or `error`. `unknown_feeds` lists the feeds in the index that are not listed in D3, and is usually empty; a feed that the source removes makes the index invalid (D8). `recompressed` is true when the response did not arrive as gzip and capture compressed it before storing; capture relies on an undocumented option to keep the source's gzip ([s006](../spikes/s006-cloudflare-capture.md), F9), so this flags a change in the source or the runtime.
 
 These fields answer the following capture questions, the starting point for T042:
 
@@ -171,6 +174,7 @@ These fields answer the following capture questions, the starting point for T042
 - Which deployed code produced this data?
 - Has a source added or removed a feed?
 - Do responses still arrive as gzip, or is capture compressing them?
+- How many 403s does a source get, and how many does the retry recover?
 
 The objects under `raw/` are the record of what was captured, and the logs explain failures: a log write can fail after its data was stored (D8).
 
@@ -182,7 +186,7 @@ Rejected:
 
 - Daily compaction in capture: reading 1,440 objects does not fit the 10 ms CPU limit.
 - Logging failures only: it loses the latency and sizes of clean captures, which revealed the latency shifts and set the timeout in D8.
-- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **DL4** **DL7** **DL14**
+- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **DL4** **DL7** **DL14** **[d006 › D4](d006-capture-retry-on-403.md#d4-a-retry-is-logged-as-its-own-event)**
 
 #### D10. Capture heartbeat
 
@@ -246,16 +250,16 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R4** The capture shall make at most one extra fetch per pass (a static feed, an index refresh or the heartbeat), at fixed and distinct minutes, except as R13 allows. (D4, D5, D10)
 - **R5** The capture shall refresh each source's index once per hour, at a different minute for each source, except as R13 allows. (D5)
 - **R6** The capture shall fetch each feed from the URL in its source's last valid index. (D5)
-- **R7** If a source takes longer than 60 s to return its complete response, then the capture shall abandon the fetch and log it as a failure. (D8)
-- **R8** If a source fails, then the capture shall log the failure without retrying in the same pass. (D8)
+- **R7** If a source request, retry included, takes longer than 60 s to return its complete response, then the capture shall abandon it and log it as a failure. (D8, [d006 › D3](d006-capture-retry-on-403.md#d3-one-60-s-limit-covers-the-retry))
+- **R8** If a source fails, other than with a 403 from a source that retries it, then the capture shall log the failure without retrying in the same pass. (D8, [d006 › D1](d006-capture-retry-on-403.md#d1-a-403-from-bicing-is-retried-once))
 - **R9** If a data or log write fails, then the capture shall retry it up to 2 times with a short wait. (D8)
 - **R10** If a write finds its key already stored, then the capture shall count it as written. (D8)
 - **R11** If a log write still fails after its retries, then the capture shall write the error to the Workers logs. (D8)
 - **R12** If an index refresh fails or returns an invalid index, because an entry lacks `name` or `url` or a feed listed in D3 is missing, then the capture shall keep the source's last valid index and log the rejection. (D8)
 - **R13** While a source has no valid index, the capture shall refresh that source's index on every pass and fetch none of its feeds. (D4, D8)
-- **R14** The capture shall record `latency_ms` whenever the source responds, and leave it null only when no response arrives. (D8)
+- **R14** The capture shall record the last attempt's `latency_ms` whenever the source responds, and leave it null only when no response arrives. (D8, [d006 › D4](d006-capture-retry-on-403.md#d4-a-retry-is-logged-as-its-own-event))
 - **R15** The capture shall write one log object per pass under `logs/date=<YYYY-MM-DD>/<run_id>.jsonl`, whose events carry `ts`, `level`, `component`, `version`, `run_id` and `event`. (D9)
-- **R16** The capture shall log the events and fields listed in D9, including `unknown_feeds`. (D7, D9)
+- **R16** The capture shall log the events and fields listed in D9, including `unknown_feeds` and `fetch_retried`. (D7, D9, [d006 › D4](d006-capture-retry-on-403.md#d4-a-retry-is-logged-as-its-own-event))
 - **R17** When the heartbeat pass has stored all three dynamic feeds listed in D3, the capture shall send the heartbeat signal. (D10)
 - **R18** If the heartbeat pass has not stored all three dynamic feeds listed in D3, then the capture shall not send the heartbeat signal. (D10)
 - **R19** If no signal arrives within 1 h plus 1 h of grace, then the monitor shall email the owner. (D10)
@@ -438,11 +442,14 @@ The schedule uses `scheduledTime` and the keys use the actual start; the two dif
 
 `fetch.js` requests every response with `Accept-Encoding: gzip` and `encodeResponseBody: "manual"`, which keeps the source's gzip bytes undecoded ([s006](../spikes/s006-cloudflare-capture.md), F9); those bytes are stored as received, with no compression work. The fetches of a pass run in parallel, since waiting uses no CPU.
 
-- **Timeout:** `AbortSignal.timeout()` covers the whole response, body included (R7); its expiry is `timeout`. The duration is a parameter, 60 s in production, so tests use milliseconds. **DL9**
+- **Timeout:** `AbortSignal.timeout()` covers the whole request, body included and, for a retried 403, both attempts and the wait (R7); its expiry is `timeout`. The duration is a parameter, 60 s in production, so tests use milliseconds. **DL9**
 - **Size limit:** the body is read as a stream and the fetch is aborted once it exceeds 10 MB, measured on the bytes as received (R22); this is `too_large`. Bicing sends no `content-length`, so the header cannot be trusted for this.
 - **A response that is not gzip:** a body whose first two bytes are not the gzip magic number `1f 8b` (RFC 1952) is compressed with `CompressionStream` before storing, and logged with `recompressed: true` (D9). The check reads the bytes, not `Content-Encoding`, so a runtime that stopped honouring `encodeResponseBody` would cost CPU instead of storing plain JSON under a `.json.gz` key (ADR-0012) under the lock. **DL7**
 - **Index:** fetched like any feed, stored under `raw/` (R24), then decompressed in memory and validated by its adapter; the decompressed size has the same 10 MB limit.
-- **`latency_ms`:** from the request to the end of reading the body, success or failure, once headers have arrived; `null` when none arrive (R14).
+- **`latency_ms`:** of the last attempt, from its request to the end of reading the body, success or failure, once headers have arrived; `null` when none arrive (R14).
+- **403 and `User-Agent`:** a 403 from a source with `retryOn403` is retried once within the same timeout, and every source request sends capture's `User-Agent`.
+
+**[d006 › Source fetch](d006-capture-retry-on-403.md#source-fetch)**
 
 #### Tests and contracts
 
@@ -695,6 +702,7 @@ The modules of `capture/src/`, as in [Component layout](#component-layout). Cont
  * @property {readonly string[]} hourly  Feeds captured hourly (D3); the index is not a feed
  *                                       here: `indexUrl` names it and `schedule.js` its refresh
  * @property {readonly string[]} daily   Feeds captured daily (D3)
+ * @property {boolean} retryOn403        Whether a 403 from this source is retried once (ADR-0039)
  */
 
 /** @type {readonly Source[]} */
@@ -708,6 +716,8 @@ export const SOURCES;
  */
 export function requiredFeeds(source);
 ```
+
+**[d006 › `sources.js`](d006-capture-retry-on-403.md#sourcesjs)**
 
 #### `adapters/gbfs.js`
 
@@ -760,14 +770,9 @@ export function extraFetch(scheduledTime);
 
 - **Responsibility:** Fetches one source response and returns its gzip bytes as stored, or the failure ([Source fetch](#source-fetch)).
 - **Location:** `capture/src/fetch.js`
-- **Contract:**
+- **Contract:** `LIMITS`, `USER_AGENT`, `fetchFeed` and `retryWait` are in [d006 › `fetch.js`](d006-capture-retry-on-403.md#fetchjs).
 
 ```js
-/** Production limits; tests pass their own (DL9). */
-export const LIMITS = {
-  timeoutMs: 60_000, maxBytes: 10_000_000, retryDelayMs: 250, heartbeatTimeoutMs: 10_000,
-};
-
 /**
  * @typedef {{ ok: true, status: number, latencyMs: number,
  *             body: Uint8Array, recompressed: boolean }} FetchOk
@@ -779,15 +784,6 @@ export const LIMITS = {
  * `status`: null when no response arrived. `latencyMs`: null when no headers arrived (R14).
  * `http`: a status outside 200–299; its body is not stored.
  */
-
-/**
- * GET with `Accept-Encoding: gzip` and `encodeResponseBody: "manual"`, aborted by
- * `AbortSignal.timeout(timeoutMs)` and once the body read exceeds `maxBytes`. Never throws.
- * @param {string} url
- * @param {{ timeoutMs: number, maxBytes: number }} limits
- * @returns {Promise<FetchOk | FetchFailed>}
- */
-export async function fetchFeed(url, limits);
 
 /**
  * Decompresses an index body for its adapter. Never throws.
