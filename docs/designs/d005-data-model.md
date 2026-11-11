@@ -72,7 +72,7 @@ What would change it: a new question that needs a discarded feed; the feed then 
 | `station_information` | Enters | Enters | Station dimension; Q8, and Bicing's `post_code` for Q4 |
 | `vehicle_types` | Enters | Enters | Bikes by type in Q1, through `vehicle_type_id` in `vehicle_types_available` |
 | `system_regions` | Enters | Discarded: empty | AMBici's regions are municipalities, linked by `region_id` in `station_information`: the municipality of Q4 |
-| `free_bike_status` | Discarded: adds nothing to `station_status` | Not published | Over 17,870 passes (2026-10-14 to 10-26), every bike has a `station_id`, none is disabled, a mean of 0.6 are reserved, and 99.1% of the station counts match `num_bikes_available`, with the rest off by about one bike. Its battery fields (`current_fuel_percent`, `current_range_meters`) answer no question yet. Check in [spikes/d005-processing-pipeline](../../spikes/d005-processing-pipeline/README.md) |
+| `free_bike_status` | Discarded: adds nothing to `station_status` | Not published | Over 17,870 passes (2026-10-14 to 10-26), every bike has a `station_id`, none is disabled, a mean of 0.6 are reserved, and 99.1% of the station counts match `num_bikes_available`, with the rest off by about one bike. Its battery fields (`current_fuel_percent`, `current_range_meters`) answer no question yet. Check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md) |
 | `geofencing_zones` | Discarded: empty | Discarded: empty | — |
 | `system_pricing_plans` | Discarded | Discarded | No question uses prices |
 | `system_hours` | Discarded | Not published | No question uses opening hours |
@@ -110,7 +110,7 @@ Rejected: system as an attribute of the station, since capture passes could not 
 
 #### D6. AMBici's post code
 
-Bicing publishes each station's `post_code`; AMBici does not. AMBici's post code comes from ICGC's reverse geocoder (`eines.icgc.cat/geocodificador/invers`), as the post code of the address nearest to the station. The owner checks by hand only the stations with a doubt flag, set when the 5 nearest addresses ICGC returns do not share one post code, each time a station first appears or its coordinates change. No open post-code polygons exist ([BOE-A-2023-11522](https://www.boe.es/diario_boe/txt.php?id=BOE-A-2023-11522)), so every public source returns the code of the nearest address, and a station on a street that divides two codes may get the other side's. On 84 Bicing stations, 2 per published code, ICGC gave Bicing's code for 95.2%; in the 4 misses the owner confirmed Bicing right. The doubt flag marked 7 of the 84 and caught 2 of the 4 misses, so about 2.5% of AMBici's stations, some 5 or 6 of 237, may keep a wrong code unnoticed. ICGC's data may be reused freely under Law 37/2007, citing ICGC and the date of the data, and it asks for no API key. Check in [spikes/d005-processing-pipeline](../../spikes/d005-processing-pipeline/README.md).
+Bicing publishes each station's `post_code`; AMBici does not. AMBici's post code comes from ICGC's reverse geocoder (`eines.icgc.cat/geocodificador/invers`), as the post code of the address nearest to the station. The owner checks by hand only the stations with a doubt flag, set when the 5 nearest addresses ICGC returns do not share one post code, each time a station first appears or its coordinates change. No open post-code polygons exist ([BOE-A-2023-11522](https://www.boe.es/diario_boe/txt.php?id=BOE-A-2023-11522)), so every public source returns the code of the nearest address, and a station on a street that divides two codes may get the other side's. On 84 Bicing stations, 2 per published code, ICGC gave Bicing's code for 95.2%; in the 4 misses the owner confirmed Bicing right. The doubt flag marked 7 of the 84 and caught 2 of the 4 misses, so about 2.5% of AMBici's stations, some 5 or 6 of 237, may keep a wrong code unnoticed. ICGC's data may be reused freely under Law 37/2007, citing ICGC and the date of the data, and it asks for no API key. Check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md).
 
 What would change it: AMBici publishing `post_code`; its own value then replaces ICGC's.
 
@@ -132,7 +132,7 @@ Both sources follow these definitions. Over about 17,870 passes per source (2026
 - Stations out of service: 8 in AMBici, apparently for the whole period; 121 in Bicing, about 5 per pass.
 - An out-of-service station still reports its bikes in AMBici, as 2.3 allows (`num_bikes_available` counts the bikes that would be available). In Bicing it always reports 0 vehicles, while 3.0 counts those physically at the station: either Bicing empties its closed stations or it departs from 3.0, and the data cannot tell which.
 
-Check in [spikes/d005-processing-pipeline](../../spikes/d005-processing-pipeline/README.md).
+Check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md).
 
 What would change it: a source whose flags stop matching these definitions, found by running that check again; the model then maps that source's values to the GBFS meaning.
 

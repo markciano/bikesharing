@@ -1,6 +1,6 @@
 # Data model
 
-The dimensional model of silver and gold, which answers the guiding questions of [d002](designs/d002-requirements.md#guiding-questions) for AMBici and Bicing. It is designed whole and built one business process at a time, following Kimball's bus architecture ([d005 › D1](designs/d005-processing-pipeline.md#d1-vertical-slices-over-one-bus-matrix)).
+The dimensional model of silver and gold, which answers the guiding questions of [d002](designs/d002-requirements.md#guiding-questions) for AMBici and Bicing. It is designed whole and built one business process at a time, following Kimball's bus architecture ([d005 › D1](designs/d005-data-model.md#d1-vertical-slices-over-one-bus-matrix)).
 
 ## Method
 
@@ -39,7 +39,7 @@ Movements can be derived from the stock, but they are a fact of their own becaus
 | Stock movements | One row per station and pair of consecutive captures with a change | Station stock |
 | Capture passes | One row per source, feed and capture pass | Capture's logs |
 
-The stock is a periodic snapshot: every capture is a row, even when the station has not changed. Rows are only appended, a gap in capture shows as missing rows, and the archive's 5-minute snapshots fit the same grain. Repeated values compress well in columnar storage, so unchanged rows cost little space. The alternative, one row per station state with `valid_from` and `valid_to`, stores fewer rows but rewrites the open row on every change and cannot tell an unchanged state from a gap in capture ([d005 › D4](designs/d005-processing-pipeline.md#d4-business-processes-and-the-grain-of-the-stock)).
+The stock is a periodic snapshot: every capture is a row, even when the station has not changed. Rows are only appended, a gap in capture shows as missing rows, and the archive's 5-minute snapshots fit the same grain. Repeated values compress well in columnar storage, so unchanged rows cost little space. The alternative, one row per station state with `valid_from` and `valid_to`, stores fewer rows but rewrites the open row on every change and cannot tell an unchanged state from a gap in capture ([d005 › D4](designs/d005-data-model.md#d4-business-processes-and-the-grain-of-the-stock)).
 
 ## Dimensions
 
@@ -161,4 +161,4 @@ erDiagram
     class FEED feed
 ```
 
-Columns of each table are fixed by the slice that builds it ([d005 › D1](designs/d005-processing-pipeline.md#d1-vertical-slices-over-one-bus-matrix)).
+Columns of each table are fixed by the slice that builds it ([d005 › D1](designs/d005-data-model.md#d1-vertical-slices-over-one-bus-matrix)).
