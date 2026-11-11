@@ -116,6 +116,28 @@ What would change it: AMBici publishing `post_code`; its own value then replaces
 
 Rejected: the nearest GeoNames post-code point, right for 71.4% of 539 Bicing stations; CartoCiudad (IGN), whose post codes are subject to the agreement with Correos (BOE 2023); checking all 237 stations by hand, too much manual work for about 11 wrong codes.
 
+#### D7. Station status flags
+
+`is_installed`, `is_renting` and `is_returning` mean in both sources what GBFS defines: whether a station is on the street and in service, not whether it has bikes or free docks, which `num_*_available` give. The model keeps the three as published. AMBici publishes GBFS 2.3 and Bicing 3.0, and both versions define the flags alike ([v2.3](https://raw.githubusercontent.com/MobilityData/gbfs/v2.3/gbfs.md), [v3.0](https://raw.githubusercontent.com/MobilityData/gbfs/v3.0/gbfs.md), `station_status.json`):
+
+- `is_installed`: "Is the station currently on the street?"
+- `is_renting`: "Even if the station is empty, if it would otherwise allow rentals, this value MUST be `true`." It MUST be `false` while the station is temporarily out of service.
+- `is_returning`: "Even if the station is full, if it would otherwise allow vehicle returns, this value MUST be `true`." It MUST be `false` while the station is temporarily out of service.
+
+Both sources follow these definitions. Over about 17,870 passes per source (2026-10-14 to 10-26):
+
+- `is_renting` and `is_returning` never disagree, in any row of either source.
+- Empty stations keep `is_renting = true` in 96.5% of AMBici's rows and 93.2% of Bicing's; full stations keep `is_returning = true` in 95.9% and 85.3%.
+- `is_installed` is always `true` in AMBici; in Bicing it is `false` for 1 station, in every pass.
+- Stations out of service: 8 in AMBici, apparently for the whole period; 121 in Bicing, about 5 per pass.
+- An out-of-service station still reports its bikes in AMBici, as 2.3 allows (`num_bikes_available` counts the bikes that would be available). In Bicing it always reports 0 vehicles, while 3.0 counts those physically at the station: either Bicing empties its closed stations or it departs from 3.0, and the data cannot tell which.
+
+Check in [spikes/d005-processing-pipeline](../../spikes/d005-processing-pipeline/README.md).
+
+What would change it: a source whose flags stop matching these definitions, found by running that check again; the model then maps that source's values to the GBFS meaning.
+
+Rejected: merging `is_renting` and `is_returning` into one in-service flag. They never disagree in these sources, but GBFS keeps them apart and a station may accept returns while not renting.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
