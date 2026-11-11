@@ -1,0 +1,11 @@
+column_name,column_type,min,max,approx_unique,avg,std,q25,q50,q75,count,null_percentage
+last_updated,TIMESTAMP WITH TIME ZONE,2026-10-14 13:17:48+02,2026-10-27 00:17:35+01,305,2026-10-20 23:18:05.79539+02,,2026-10-17 19:08:17.781338+02,2026-10-21 02:27:36.494805+02,2026-10-24 03:18:07.428572+02,2820,0.00
+ttl,BIGINT,0,0,1,0.0,0.0,0,0,0,2820,0.00
+version,VARCHAR,3.0,3.0,1,,,,,,2820,0.00
+vehicle_type_id,VARCHAR,ASTRO,TRAILER,11,,,,,,2820,0.00
+form_factor,VARCHAR,bicycle,scooter_standing,3,,,,,,2820,0.00
+propulsion_type,VARCHAR,electric,human,3,,,,,,2820,0.00
+max_range_meters,DOUBLE,0.0,70000.0,3,13829.787234042553,26706.651382189135,0.0,0.0,0.0,2820,0.00
+name,"STRUCT(""text"" VARCHAR, ""language"" VARCHAR)[]","[{'text': ASTRO, 'language': ca}, {'text': ASTRO, 'language': en}, {'text': ASTRO, 'language': fr}, {'text': ASTRO, 'language': nl}, {'text': ASTRO, 'language': es}]","[{'text': TRAILER, 'language': ca}, {'text': TRAILER, 'language': en}, {'text': TRAILER, 'language': fr}, {'text': TRAILER, 'language': nl}, {'text': TRAILER, 'language': es}]",11,,,,,,2820,0.00
+default_pricing_plan_id,VARCHAR,"",8-4,3,,,,,,2820,0.00
+pricing_plan_ids,VARCHAR[],"[1-4, 1-5, 2-2, 2-3, 6-2, 6-3, 8-4, 8-5, 9-2, 9-3, 11-4, 11-5, 12-2, 12-3, 13-1, 13-4, 13-5, 14-1, 14-2, 14-3]","[8-4, 8-5, 9-2, 9-3, 11-4, 11-5, 12-2, 12-3, 13-1, 13-4, 13-5, 14-1, 14-2, 14-3]",2,,,,,,2820,14.89

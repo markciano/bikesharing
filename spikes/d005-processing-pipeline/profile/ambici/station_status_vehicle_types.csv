@@ -1,0 +1,4 @@
+column_name,column_type,min,max,approx_unique,avg,std,q25,q50,q75,count,null_percentage
+station_id,VARCHAR,135338958,653024597,238,,,,,,4109622,0.00
+vehicle_type_id,VARCHAR,196,204,2,,,,,,4109622,0.00
+count,BIGINT,1,70,70,9.250279709423397,5.938058050007904,5,8,13,4109622,0.00
