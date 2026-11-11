@@ -21,7 +21,7 @@ The platform answers the guiding questions below, each comparable across service
 | Could | Q7 | Which stations and zones act as sources or sinks by time band? | Hour | 12 months | 1 hour | [d002 › Q7](designs/d002-requirements.md#guiding-questions) |
 | Could | Q8 | How has the station network changed over time? | Change event | Since the earliest archive loaded | 1 day | [d002 › Q8](designs/d002-requirements.md#guiding-questions) |
 
-**Won't (now):** rebalancing, outages, trend since 2019, correlation at border stations, spatial clusters, 300 m coverage, anomalies, estimated origin-destination matrix (AMBici's battery levels could narrow it). [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions); [d005 › D3](designs/d005-processing-pipeline.md#d3-feeds-that-enter-the-model).
+**Won't (now):** rebalancing, outages, trend since 2019, correlation at border stations, spatial clusters, 300 m coverage, anomalies, estimated origin-destination matrix (AMBici's battery levels could narrow it). [d002 › Guiding questions](designs/d002-requirements.md#guiding-questions); [d005 › D3](designs/d005-data-model.md#d3-feeds-that-enter-the-model).
 
 Functional requirements:
 

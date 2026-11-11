@@ -38,8 +38,8 @@ FROM (
     FROM read_json('spikes/cloudflare-capture-spike/data/V4/raw/ambici/system_regions/*/*.json.gz')
 );
 
-COPY (FROM (SUMMARIZE station_status)) TO 'spikes/d005-processing-pipeline/profile/ambici/station_status.csv' (HEADER);
-COPY (FROM (SUMMARIZE station_status_vehicle_types)) TO 'spikes/d005-processing-pipeline/profile/ambici/station_status_vehicle_types.csv' (HEADER);
-COPY (FROM (SUMMARIZE station_information)) TO 'spikes/d005-processing-pipeline/profile/ambici/station_information.csv' (HEADER);
-COPY (FROM (SUMMARIZE vehicle_types)) TO 'spikes/d005-processing-pipeline/profile/ambici/vehicle_types.csv' (HEADER);
-COPY (FROM (SUMMARIZE system_regions)) TO 'spikes/d005-processing-pipeline/profile/ambici/system_regions.csv' (HEADER);
+COPY (FROM (SUMMARIZE station_status)) TO 'spikes/d005-data-model/profile/ambici/station_status.csv' (HEADER);
+COPY (FROM (SUMMARIZE station_status_vehicle_types)) TO 'spikes/d005-data-model/profile/ambici/station_status_vehicle_types.csv' (HEADER);
+COPY (FROM (SUMMARIZE station_information)) TO 'spikes/d005-data-model/profile/ambici/station_information.csv' (HEADER);
+COPY (FROM (SUMMARIZE vehicle_types)) TO 'spikes/d005-data-model/profile/ambici/vehicle_types.csv' (HEADER);
+COPY (FROM (SUMMARIZE system_regions)) TO 'spikes/d005-data-model/profile/ambici/system_regions.csv' (HEADER);

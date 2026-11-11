@@ -32,7 +32,7 @@ FROM (
     FROM read_json('spikes/cloudflare-capture-spike/data/V4/raw/bicing/vehicle_types/*/*.json.gz')
 );
 
-COPY (FROM (SUMMARIZE station_status)) TO 'spikes/d005-processing-pipeline/profile/bicing/station_status.csv' (HEADER);
-COPY (FROM (SUMMARIZE station_status_vehicle_types)) TO 'spikes/d005-processing-pipeline/profile/bicing/station_status_vehicle_types.csv' (HEADER);
-COPY (FROM (SUMMARIZE station_information)) TO 'spikes/d005-processing-pipeline/profile/bicing/station_information.csv' (HEADER);
-COPY (FROM (SUMMARIZE vehicle_types)) TO 'spikes/d005-processing-pipeline/profile/bicing/vehicle_types.csv' (HEADER);
+COPY (FROM (SUMMARIZE station_status)) TO 'spikes/d005-data-model/profile/bicing/station_status.csv' (HEADER);
+COPY (FROM (SUMMARIZE station_status_vehicle_types)) TO 'spikes/d005-data-model/profile/bicing/station_status_vehicle_types.csv' (HEADER);
+COPY (FROM (SUMMARIZE station_information)) TO 'spikes/d005-data-model/profile/bicing/station_information.csv' (HEADER);
+COPY (FROM (SUMMARIZE vehicle_types)) TO 'spikes/d005-data-model/profile/bicing/vehicle_types.csv' (HEADER);
