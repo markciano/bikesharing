@@ -1,0 +1,20 @@
+column_name,column_type,min,max,approx_unique,avg,std,q25,q50,q75,count,null_percentage
+last_updated,TIMESTAMP WITH TIME ZONE,2026-10-14 13:17:48+02,2026-10-27 00:17:34+01,308,2026-10-20 19:05:00.057379+02,,2026-10-17 15:53:37.017394+02,2026-10-20 19:00:11.201252+02,2026-10-23 22:10:00.943945+02,163108,0.00
+ttl,BIGINT,0,0,1,0.0,0.0,0,0,0,163108,0.00
+version,VARCHAR,3.0,3.0,1,,,,,,163108,0.00
+vehicle_types_capacity,JSON[],[],[],1,,,,,,163108,0.00
+vehicle_docks_capacity,"STRUCT(vehicle_type_ids VARCHAR[], count BIGINT)[]","[{'vehicle_type_ids': [ASTRO, BOOST, CHLOE, COSMO, EFIT, FIT, ICONIC, METRO, METRO_CONNECTED], 'count': 0}]","[{'vehicle_type_ids': [ASTRO, BOOST, CHLOE, COSMO, EFIT, FIT, ICONIC, METRO_BASE, METRO_CONNECTED, TRAILER], 'count': 54}]",79,,,,,,163108,0.00
+station_id,VARCHAR,1,99,547,,,,,,163108,0.00
+external_id,UUID,4a58d0ca-aa16-4ecf-8c42-943b48a086c2,fc599dd5-eb2f-11ef-896d-0a9e2ea61361,564,,,,,,163108,0.00
+name,"STRUCT(""text"" VARCHAR, ""language"" VARCHAR)[]","[{'text': ' AV. MARTÍ CODOLAR, 2 | COLL I ALENTORN', 'language': ca}, {'text': ' AV. MARTÍ CODOLAR, 2 | COLL I ALENTORN', 'language': en}, {'text': ' AV. MARTÍ CODOLAR, 2 | COLL I ALENTORN', 'language': fr}, {'text': ' AV. MARTÍ CODOLAR, 2 | COLL I ALENTORN', 'language': nl}, {'text': ' AV. MARTÍ CODOLAR, 2 | COLL I ALENTORN', 'language': es}]","[{'text': WORLD TRADE CENTER, 'language': ca}, {'text': WORLD TRADE CENTER, 'language': en}, {'text': WORLD TRADE CENTER, 'language': fr}, {'text': WORLD TRADE CENTER, 'language': nl}, {'text': WORLD TRADE CENTER, 'language': es}]",518,,,,,,163108,0.00
+lat,DOUBLE,41.3467746,41.462095,529,41.3994036657272,0.02102373755794813,41.383799197546054,41.39597603245683,41.41196211296023,163108,0.00
+lon,DOUBLE,2.1091535,2.2206913,565,2.1677245114462877,0.024489587233604292,2.148466254644544,2.1698696212997177,2.18672335982769,163108,0.00
+address,VARCHAR," AV. DIAGONAL, 650",WORLD TRADE CENTER,538,,,,,,163108,0.00
+cross_street,VARCHAR,01-CiutatVella/01-el Raval,10-SantMartí/73-la Verneda i la Pau,71,,,,,,163108,0.00
+post_code,VARCHAR,08001,8001,45,,,,,,163108,0.37
+capacity,BIGINT,0,54,40,27.096077445618853,6.937995697840068,23,27,30,163108,0.00
+is_charging_station,BOOLEAN,true,true,1,,,,,,163108,0.00
+rental_methods,VARCHAR[],"[key, transitcard, creditcard, phone]","[key, transitcard, creditcard, phone]",1,,,,,,163108,0.00
+is_virtual_station,BOOLEAN,false,false,1,,,,,,163108,0.00
+short_name,"STRUCT(""text"" VARCHAR, ""language"" VARCHAR)[]","[{'text': 1, 'language': ca}, {'text': 1, 'language': en}, {'text': 1, 'language': fr}, {'text': 1, 'language': nl}, {'text': 1, 'language': es}]","[{'text': 99, 'language': ca}, {'text': 99, 'language': en}, {'text': 99, 'language': fr}, {'text': 99, 'language': nl}, {'text': 99, 'language': es}]",524,,,,,,163108,0.00
+rental_uris,"MAP(VARCHAR, JSON)",{},{},1,,,,,,163108,0.00

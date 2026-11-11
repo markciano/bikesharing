@@ -1,0 +1,6 @@
+column_name,column_type,min,max,approx_unique,avg,std,q25,q50,q75,count,null_percentage
+last_updated,BIGINT,1791976612,1793056629,295,1792516626.1362126,312839.2112958568,1792245724,1792516618,1792787442,4816,0.00
+ttl,BIGINT,60,60,1,60.0,0.0,60,60,60,4816,0.00
+version,VARCHAR,2.3,2.3,1,,,,,,4816,0.00
+region_id,VARCHAR,833,856,16,,,,,,4816,0.00
+name,VARCHAR,AMB,Viladecans,16,,,,,,4816,0.00

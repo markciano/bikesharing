@@ -1,0 +1,15 @@
+column_name,column_type,min,max,approx_unique,avg,std,q25,q50,q75,count,null_percentage
+last_updated,TIMESTAMP WITH TIME ZONE,2026-10-14 12:51:48+02,2026-10-27 00:46:33+01,17282,2026-10-20 19:17:04.871247+02,,2026-10-17 16:01:50.255121+02,2026-10-20 18:42:50.584752+02,2026-10-23 22:28:37.014506+02,9681888,0.00
+ttl,BIGINT,0,0,1,0.0,0.0,0,0,0,9681888,0.00
+version,VARCHAR,3.0,3.0,1,,,,,,9681888,0.00
+station_id,VARCHAR,1,99,547,,,,,,9681888,0.00
+num_vehicles_available,BIGINT,0,54,55,7.537844891409609,7.428055859703519,1,5,12,9681888,0.00
+num_vehicles_disabled,BIGINT,0,50,51,2.9273408244342427,2.516289696194384,1,2,4,9681888,0.00
+num_docks_available,BIGINT,0,54,55,16.401294974699148,8.805032522665792,10,17,22,9681888,0.00
+num_docks_disabled,BIGINT,0,44,40,0.15335159836593854,0.6471645485665148,0,0,0,9681888,0.00
+last_reported,TIMESTAMP WITH TIME ZONE,2025-06-12 10:54:16.043+02,2026-10-27 00:46:31.359+01,3140143,2026-10-19 02:51:08.048517+02,,2026-10-17 14:56:41.809716+02,2026-10-20 18:45:29.474698+02,2026-10-23 22:01:17.373701+02,9681888,0.00
+is_installed,BOOLEAN,false,true,2,,,,,,9681888,0.00
+is_renting,BOOLEAN,false,true,2,,,,,,9681888,0.00
+is_returning,BOOLEAN,false,true,2,,,,,,9681888,0.00
+vehicle_docks_available,"STRUCT(vehicle_type_ids VARCHAR[], count BIGINT)[]","[{'vehicle_type_ids': [ICONIC, BOOST, FIT, EFIT], 'count': 0}]","[{'vehicle_type_ids': [ICONIC, BOOST, FIT, EFIT], 'count': 54}]",55,,,,,,9681888,0.00
+vehicle_types_available,"STRUCT(vehicle_type_id VARCHAR, count BIGINT)[]","[{'vehicle_type_id': FIT, 'count': 0}, {'vehicle_type_id': BOOST, 'count': 0}, {'vehicle_type_id': ICONIC, 'count': 0}, {'vehicle_type_id': EFIT, 'count': 0}]","[{'vehicle_type_id': FIT, 'count': 0}, {'vehicle_type_id': BOOST, 'count': 50}, {'vehicle_type_id': ICONIC, 'count': 2}, {'vehicle_type_id': EFIT, 'count': 0}]",1376,,,,,,9681888,0.00

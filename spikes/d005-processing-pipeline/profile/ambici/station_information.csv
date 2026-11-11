@@ -1,0 +1,13 @@
+column_name,column_type,min,max,approx_unique,avg,std,q25,q50,q75,count,null_percentage
+last_updated,BIGINT,1791976612,1793056629,295,1792516375.4004574,312746.45912977634,1792245525,1792516291,1792787002,71291,0.00
+ttl,BIGINT,60,60,1,60.0,0.0,60,60,60,71291,0.00
+version,VARCHAR,2.3,2.3,1,,,,,,71291,0.00
+station_id,VARCHAR,135338958,653024597,238,,,,,,71291,0.00
+name,VARCHAR, FGC Cornellà - Riera,Zona Esportiva Ricard Ginebreda,241,,,,,,71291,0.00
+short_name,VARCHAR,34701,34948,239,,,,,,71291,0.00
+lat,DOUBLE,41.265438,41.482205,239,41.37108972992609,0.05413450199890494,41.32766682495394,41.36835150534006,41.41295716495342,71291,0.00
+lon,DOUBLE,1.943849,2.267271,233,2.098433788641091,0.08331414704437433,2.031686183691928,2.0864637177738885,2.1306817534480826,71291,0.00
+region_id,VARCHAR,833,856,16,,,,,,71291,0.00
+rental_uris,"STRUCT(android VARCHAR, ios VARCHAR, web VARCHAR)","{'android': 'https://ambici.nextbike.app/station?id=135338958', 'ios': 'https://ambici.nextbike.app/station?id=135338958', 'web': 'https://nxtb.it/p/135338958'}","{'android': 'https://ambici.nextbike.app/station?id=653024597', 'ios': 'https://ambici.nextbike.app/station?id=653024597', 'web': 'https://nxtb.it/p/653024597'}",226,,,,,,71291,0.00
+is_virtual_station,BOOLEAN,false,false,1,,,,,,71291,0.00
+capacity,BIGINT,12,28,14,19.981849041253454,2.79129187281636,18,20,22,71291,0.00
