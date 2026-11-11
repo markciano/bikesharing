@@ -21,3 +21,13 @@ Question: how accurately does ICGC's reverse geocoder give a station's post code
 ```text
 python3 -I spikes/d005-processing-pipeline/post-code/icgc_check.py spikes/cloudflare-capture-spike/data/V4/raw <output.csv>
 ```
+
+## `station-flags/`
+
+Question: what do the station status flags `is_installed`, `is_renting` and `is_returning` carry in each source? Evidence for d005 › Open questions, OQ4.
+
+- `flags_check.py` counts, per source and flag, the values seen in `station_status` and how many stations were ever false; the value of `is_renting` on empty stations and of `is_returning` on full ones; and the rows where those two flags disagree. About 35 s.
+
+```text
+python3 -I spikes/d005-processing-pipeline/station-flags/flags_check.py spikes/cloudflare-capture-spike/data/V4/raw
+```
