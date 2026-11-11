@@ -1,6 +1,6 @@
 # Data model
 
-The dimensional model of silver and gold, which answers the guiding questions of [d002](designs/d002-requirements.md#guiding-questions) for AMBici and Bicing. It is designed whole and built one business process at a time, following Kimball's bus architecture ([d005 › D1](designs/d005-data-model.md#d1-vertical-slices-over-one-bus-matrix)).
+The dimensional model of silver and gold, which answers the guiding questions of [d002](designs/d002-requirements.md#guiding-questions) for AMBici and Bicing. It is designed whole and built one business process at a time, following Kimball's bus architecture ([d005 › D1](designs/d005-data-model.md#d1-one-model-over-one-bus-matrix), [d007 › D1](designs/d007-pipeline-design.md#d1-build-by-vertical-slice)).
 
 ## Method
 
@@ -161,4 +161,4 @@ erDiagram
     class FEED feed
 ```
 
-Columns of each table are fixed by the slice that builds it ([d005 › D1](designs/d005-data-model.md#d1-vertical-slices-over-one-bus-matrix)).
+Columns of each table are fixed by the slice that builds it ([d007 › D1](designs/d007-pipeline-design.md#d1-build-by-vertical-slice)).

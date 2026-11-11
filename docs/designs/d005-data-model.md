@@ -4,11 +4,11 @@ It is detailed enough that Code can implement it without making design decisions
 Sections marked Optional are kept only when they apply.
 -->
 
-# Design: Processing pipeline
+# Design: Data model
 
 - **Task:** T040
-- **ADRs:** `<ADRs this design must respect, or "none">`
-- **New ADRs from this doc:** `<ADRs created during this design, or "none">`
+- **ADRs:** [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md)
+- **New ADRs from this doc:** none
 
 ## Status
 
@@ -19,7 +19,6 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Parked: —
 
 ## 1. Spec — what and why
 
@@ -29,7 +28,7 @@ Current step: the step being implemented, or —. -->
 
 <!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
 
-Capture runs in production and writes the raw feeds of AMBici and Bicing to the bronze layer on R2 ([d004](d004-bronze-data-capture.md)). Nothing reads bronze yet: the silver and gold layers do not exist, so the questions of [d002](d002-requirements.md) have no answer and the public visualization (T041) has no data to show. This task builds the processing pipeline from bronze to silver and gold on the stack chosen by s010–s013, within the project's budget. It also covers how the owner inspects the operation of capture and the pipeline, which today means downloading hundreds of capture log files.
+The questions of [d002](d002-requirements.md) compare AMBici and Bicing, two systems that publish different GBFS versions, each with its own names and values for the same facts. Capture writes both systems' raw feeds to the bronze layer on R2 ([d004](d004-bronze-data-capture.md)), but no model defines yet what silver and gold hold, so the pipeline that builds them ([d007](d007-pipeline-design.md)) and the public visualization (T041) have nothing to build on.
 
 ### 1.2 Decided at framing
 
@@ -46,11 +45,9 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 | `TH1` | | | | |
 -->
 
-#### D1. Vertical slices over one bus matrix
+#### D1. One model over one bus matrix
 
-T040 is split into child tasks by vertical slice, following Kimball's bus architecture: the whole model is designed once and built one business process at a time. This design fixes what crosses slices: the feeds that enter, the bus matrix (business processes, the grain of each fact, the conformed dimensions) and the cross-cutting concerns. Each child builds one business process from bronze to silver and gold, runs it on Modal, and its own design fixes the columns, its gold tables and the code. Observability is a child of its own. The first slice measures real run time and memory, which several carried-over inputs depend on.
-
-Rejected: a split by layer (silver, then gold), since silver would be built with no consumer to validate it, and real runs would be measured late.
+The whole model is designed once, here, following Kimball's bus architecture, so that every business process shares the same dimensions and both sources compare on the same terms. This design fixes the feeds that enter, the bus matrix (business processes, the grain of each fact, the conformed dimensions), how the two sources' terms and values are made comparable, and which questions gold answers. The pipeline builds the model one business process at a time ([d007 › D1](d007-pipeline-design.md#d1-build-by-vertical-slice)), and each slice's design fixes its columns and gold tables within this model.
 
 #### D2. Capture's fixtures as the feed sample
 
@@ -76,7 +73,7 @@ What would change it: a new question that needs a discarded feed; the feed then 
 | `geofencing_zones` | Discarded: empty | Discarded: empty | — |
 | `system_pricing_plans` | Discarded | Discarded | No question uses prices |
 | `system_hours` | Discarded | Not published | No question uses opening hours |
-| `system_information` | Discarded | Discarded | One row per system with nothing to measure; the system dimension's few static attributes are fixed in OQ3 |
+| `system_information` | Discarded | Discarded | One row per system with nothing to measure; the system dimension's few static attributes are fixed in [D5](#d5-conformed-dimensions) |
 | `gbfs.json`, `gbfs_versions` | Discarded | Discarded | Discovery index, used only by capture |
 
 #### D4. Business processes and the grain of the stock
@@ -169,15 +166,9 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ4 | Normalization of terms and values across AMBici and Bicing | D5 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. AMBici publishes GBFS 2.3 and Bicing 3.0, which renamed `num_bikes_available` to `num_vehicles_available` ([GBFS PR #354](https://github.com/MobilityData/gbfs/pull/354)). To find out: what Bicing's four vehicle types (`ICONIC`, `BOOST`, `FIT`, `EFIT`) are, against its two known kinds, mechanical and electric; and AMBici's region "AMB", which is not a municipality. AMBici's 237 stations sit in 16 regions, 15 of them municipalities; "AMB" groups 10 stations, most of them in Barcelona or on a boundary. Municipal boundaries are open (ICGC, CC BY 4.0) |
-| OQ5 | Which d002 questions gold answers, and which Must question the first slice builds | D5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md) |
-| OQ6 | The pipeline's mode (24/7 or on demand) and refresh cadence, reviewed together with [d002 › R3](d002-requirements.md#requirements) and the freshness of d002's Q1, Q2 and Q5 | OQ5 | The visitor sees cadence plus run time (about 2 min, not measured): a 5–10 minute cadence gives about 7–12 minutes of age, above R3's 5 minutes ([s013 › D3](../spikes/s013-visualization-tool.md#d3-static-web-page-with-javascript)). Running 24/7, R2's Class B quota allows commits every 10 minutes or more ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)) |
-| OQ7 | How the historical archives reach R2 and are loaded, and the check of the Bicing archive against the real-time capture | D5 | Bicing's archive is not on R2 yet. The check is handed to T040 by [d002 › Out of scope](d002-requirements.md) |
-| OQ8 | Data quality rules and indicators: what T040 does and what T042 does | D5 | [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) leaves where rules live and their format to T042 |
-| OQ9 | Metadata and lineage: how a silver or gold row is traced back to bronze and to its run; how each silver or gold column is traced back to the raw fields and the calculation it comes from; and a dictionary of the source fields, with the official GBFS definition and how each source behaves | D5 | Standards to weigh: the data dictionary with data profiling, and Kimball's source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date |
-| OQ10 | How the owner queries the logs of capture, the pipeline and the web page, together | — | Today, querying capture's logs means downloading hundreds of files. The capture passes fact ([D4](#d4-business-processes-and-the-grain-of-the-stock)) already turns capture's logs into a table |
-| OQ11 | A script with the common health queries for the owner, and whether it can run from a phone | OQ10 | [s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel). Option from [s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs): a manual GitHub Actions run, with no server, but its summary is public if the repository is, and GitHub holds one more read-only key; not verified |
-| OQ12 | The child tasks `T040.M`: one per business process, plus observability, in build order | OQ4–OQ11 | [D1](#d1-vertical-slices-over-one-bus-matrix) |
+| OQ1 | How the terms and values of AMBici and Bicing are made comparable | D5 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. AMBici publishes GBFS 2.3 and Bicing 3.0, which renamed `num_bikes_available` to `num_vehicles_available` ([GBFS PR #354](https://github.com/MobilityData/gbfs/pull/354)). Vehicle types: AMBici publishes 3 (`196` human; `204` and `420` electric assist); Bicing publishes 11, bicycles with human or electric-assist propulsion plus a standing scooter (`CHLOE`) and a trailer (`TRAILER`), and on 2026-10-22 `METRO` became `METRO_BASE` ([spikes/d005-data-model](../../spikes/d005-data-model/README.md)). Regions: AMBici's 237 stations sit in 16 regions, 15 of them municipalities; "AMB" groups 10 stations, most of them in Barcelona or on a boundary; municipal boundaries are open (ICGC, CC BY 4.0). To decide: how each source's vehicle types map to the propulsion level of D5, and the municipality of the stations in "AMB" |
+| OQ2 | Which d002 questions gold answers, and with which measures | D5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md) |
+| OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves | OQ1, OQ2 | Standards to weigh: the data dictionary with data profiling, and Kimball's source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md) |
 
 ## 2. Plan — how
 
@@ -189,17 +180,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 Block `3. Steps` is written using this plan.
 If some block contains `options considered`, include them with pros and cons.
 -->
-
-#### Carried-over inputs
-
-Inputs about the how, left to this design by earlier spikes; each becomes a Plan concern or part of one.
-
-- **Execution platform check:** if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, or OQ6 chooses the on-demand mode, the decision of [ADR-0027](../decisions/0027-modal-as-execution-platform.md) is reopened with Cloud Run and Fly.io as candidates. The run's final log event carries `duration_s` and `peak_memory_mb`, the latter from `ru_maxrss` ([s012 › D1, P1](../spikes/s012-execution-target.md#d1-execution-platform)).
-- **Memory:** set DuckDB's memory limit below the container's; decide on a hard container limit (`memory=(request, limit)`; without one, usage above the request is billed, as Modal charges the higher of the two); cap what one run processes and leave the rest to the next; do not retry memory errors, since they are permanent; check in the first slice how Modal treats a memory kill of a scheduled function ([s012 › D3, TH12](../spikes/s012-execution-target.md#d3-pipeline-security), [d002 › R23](d002-requirements.md#requirements)).
-- **Platform separation:** CI checks for rules 1, 2 and 4 of [ADR-0029](../decisions/0029-pipeline-code-architecture.md), and where the platform module lives in the repository ([s012 › D4](../spikes/s012-execution-target.md#d4-processing-logic-separated-from-the-platform)).
-- **Run operation** ([s012 › Out of scope](../spikes/s012-execution-target.md#15-out-of-scope)): which events the pipeline logs; preventing two runs from overlapping; the region (`eu` costs 1.15x); runs safe to run again after an interruption; Modal's usage and spend limits; the size of catch-up batches and where the one-off history load runs; the end-to-end and post-deploy smoke tests.
-- **Publishing:** the pipeline generates the prepared files from an explicit list and deploys them at the end of a run, with the token from the secret store; a failed deployment does not fail the run's data ([s013 › P8](../spikes/s013-visualization-tool.md#55-production-inputs)). Before building it, try a few deployments with the token limited to one Worker and read Cloudflare's terms ([s013 › Not verified](../spikes/s013-visualization-tool.md#54-not-verified)).
-- **R2 operation classes:** confirm with R2's per-operation metrics (GraphQL Analytics) the class of conditional PutObject, ListObjectsV2 and DeleteObjects, which the pricing page does not name; s010 confirmed only class totals ([s010 › F14](../spikes/s010-storage-table-format.md#4-findings)).
 
 ### 2.2 Decision summary
 
