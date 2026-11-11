@@ -10,6 +10,7 @@ Spike and analysis code is throwaway but readable, in any language. The comment 
 ## Folder
 
 - Each spike folder has a short `README.md`: the question, how to run it, what each script does, its approximate run time, and a link to its report in `docs/spikes/`.
+- A spike folder holds one subfolder per check, named after its question, with that check's scripts only; validation scripts and trial runs of a check stay in its subfolder.
 - No component imports from `spikes/`. Code worth keeping is rewritten in its component through a design.
 
 ## Code
