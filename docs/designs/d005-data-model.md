@@ -19,11 +19,12 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: review the data profile ([spikes/d005-data-model › profile](../../spikes/d005-data-model/README.md#profile)), Kimball's data realities, before the open questions, which follow Kimball's four-step design: dimensions (OQ1), facts (OQ2), detailed design (OQ3).
-  - Outputs: profile findings go to the source cards (`docs/sources/ambici.md`, `bicing.md`), which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
-  - Before adding findings, decide how the source cards are organized so that they hold no redundant facts.
+- Next: OQ1. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: dimensions (OQ1), facts (OQ2), detailed design (OQ3).
+  - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
-  - Whether `spikes/d005-data-model/vehicle-types/vehicle_types_check.py` stays is pending; it is the only evidence that `METRO` became `METRO_BASE` (OQ1).
+  - For OQ1: Bicing's `cross_street` holds district and neighbourhood, and its `post_code` comes with and without the leading zero; whether `spikes/d005-data-model/vehicle-types/vehicle_types_check.py` stays, the only evidence that `METRO` became `METRO_BASE`.
+  - For OQ2: AMBici's available bikes exceed `capacity` (+P parking), so occupancy can pass 100%; during a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand.
+  - For D3: the Bicing history archives as a source of the model.
 
 ## 1. Spec — what and why
 
