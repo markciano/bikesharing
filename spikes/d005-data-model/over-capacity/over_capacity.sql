@@ -34,4 +34,4 @@ COPY (
     WHERE num_bikes_available > capacity
     GROUP BY ALL
     ORDER BY passes_over DESC
-) TO 'spikes/d005-data-model/profile/ambici/over_capacity.csv' (HEADER);
+) TO 'spikes/d005-data-model/over-capacity/over_capacity.csv' (HEADER);
