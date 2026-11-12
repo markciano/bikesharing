@@ -74,7 +74,11 @@ None published: only the real-time feed exists ([s003](../spikes/s003-ambici-his
 
 ### `system_regions`
 
-- **Content:** 16 regions, IDs 833–856, named after municipalities except "AMB" ([profile › system_regions](../../spikes/d005-data-model/profile/ambici/system_regions.csv), 2026-10-14 to 2026-10-26; [d005 › OQ1](../designs/d005-data-model.md#16-open-questions)).
+- **Content:** 16 regions, IDs 833–856, named after municipalities except "AMB" ([profile › system_regions](../../spikes/d005-data-model/profile/ambici/system_regions.csv), 2026-10-14 to 2026-10-26).
+  - "AMB" holds the 10 stations in or at the edge of Barcelona: 8 inside it, 150 to 1,067 m from its boundary, at university campuses, metro stations and a shopping centre; 1 in Sant Adrià de Besòs, 37 m from it, and 1 in L'Hospitalet de Llobregat, 8 m from it ([municipality.csv](../../spikes/d005-data-model/municipality/municipality.csv), stations of 2026-10-26, ICGC boundaries v2r2).
+  - Region names drop the leading article ICGC's municipality names keep, e.g. "Hospitalet de Llobregat" ([municipality.csv](../../spikes/d005-data-model/municipality/municipality.csv), 2026-10-26).
+- **Quality:**
+  - Accuracy: the region of 226 of the 227 stations outside "AMB" is the municipality that contains them; the exception, `135349994` (TRAM Sant Feliu - Consell Comarcal, region Sant Feliu de Llobregat), falls in Sant Just Desvern, 4 m from the boundary ([municipality.csv](../../spikes/d005-data-model/municipality/municipality.csv), stations of 2026-10-26, ICGC boundaries v2r2).
 
 ### `free_bike_status`
 
