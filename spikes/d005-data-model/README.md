@@ -72,6 +72,16 @@ Question: which Barcelona district and neighbourhood contains each station, and 
 python3 -I spikes/d005-data-model/neighbourhood/neighbourhood_check.py spikes/cloudflare-capture-spike/data/V4/raw spikes/d005-data-model/neighbourhood/neighbourhood.csv spikes/d005-data-model/neighbourhood/data/BarcelonaCiutat_Barris.json
 ```
 
+## `station-names/`
+
+Question: do Bicing's station names differ between the 5 languages it publishes, and do they carry stray spaces? Evidence for [d005 › D12](../../docs/designs/d005-data-model.md#d12-station-names).
+
+- `names_check.py` reads every Bicing `station_information` file and counts, for `name` and `short_name`, the stations whose texts differ between languages and those with leading or trailing spaces. About 1 s.
+
+```text
+python3 -I spikes/d005-data-model/station-names/names_check.py spikes/cloudflare-capture-spike/data/V4/raw
+```
+
 ## `over-capacity/`
 
 Question: why do AMBici's available bikes exceed a station's `capacity`? Evidence for [AMBici's source card › `station_status`](../../docs/sources/ambici.md#station_status).
