@@ -187,6 +187,24 @@ What would change it: the City Council redrawing its neighbourhoods; the model t
 
 Rejected: Bicing's published neighbourhood where it exists, since 23 of its 541 stations disagree with the official boundaries, 7 of them with an impossible pair; district and neighbourhood for Bicing only, since AMBici's stations in Barcelona would be missing from their neighbourhood; and leaving `cross_street` out of the model, since the neighbourhood is the level residents look for.
 
+#### D11. Place names
+
+Municipalities, districts and neighbourhoods keep one name each: their official form, as the authority that defines them publishes it, ICGC for municipalities ([D9](#d9-station-municipality)) and the City Council for districts and neighbourhoods ([D10](#d10-barcelona-district-and-neighbourhood)). The official form of a place name in Catalonia is the Catalan one (Llei 1/1998 de política lingüística, art. 18), the endonym the UN Group of Experts on Geographical Names (UNGEGN) recommends. A leading article is part of the name and stays lower case, e.g. "l'Hospitalet de Llobregat", "el Raval"; capitalising it at the start of a label is left to presentation.
+
+Each place also keeps a sorting form, with the leading article moved to the end, e.g. "Hospitalet de Llobregat, l'": ICGC's `NOMMUNIIND` for municipalities, and the same rule applied to districts and neighbourhoods, whose source publishes none.
+
+Rejected: translations into Spanish or English, since no source publishes them, Barcelona's neighbourhoods have no official Spanish names, and they would be kept by hand.
+
+#### D12. Station names
+
+A station's name is a datum of its operator, not a place name with an official form, so the model keeps it as published, only trimmed of leading and trailing spaces. Each system keeps its own style: Bicing's names are addresses in capitals, e.g. `C/ NÀPOLS, 82`, and AMBici's carry a prefix, e.g. `AMB - Diagonal I`.
+
+Bicing localises `name` in 5 languages (`ca`, `es`, `en`, `fr`, `nl`), always with the same text, and 7 of its stations have names with stray spaces ([Bicing › `station_information`](../sources/bicing.md#station_information)). The model takes the `ca` entry, the language of [D11](#d11-place-names); AMBici publishes one plain string.
+
+What would change it: Bicing's languages starting to differ; the `ca` entry is still the one kept.
+
+Rejected: rewriting names into one common style, since it changes the operator's data with casing rules for Catalan that fail on edge cases, and the name would no longer match the one at the station and in the operator's app.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.

@@ -88,7 +88,7 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 
 - **Content:** station name, coordinates, address, post code and capacity; 543 stations ([s002 › 6a](../spikes/s002-bicing-realtime-capture.md#6-identity), 2026-10-05).
 - **Fields:**
-  - `name` and `short_name` are localised in 5 languages ([s002 › 1d](../spikes/s002-bicing-realtime-capture.md#1-schema), 2026-10-05).
+  - `name` and `short_name` are localised in 5 languages ([s002 › 1d](../spikes/s002-bicing-realtime-capture.md#1-schema), 2026-10-05), always with the same text in all 5; 7 stations have a `name` with leading or trailing spaces ([`names_check.py`](../../spikes/d005-data-model/station-names/names_check.py), 2026-10-14 to 2026-10-26).
   - `capacity` equals the `count` of the single `vehicle_docks_capacity` group and can change: 13 changes in two days, and station `77` went from 24 to 0 ([s002 › 6c, 8a](../spikes/s002-bicing-realtime-capture.md#6-identity), 2026-10-05).
   - `cross_street` holds the district and neighbourhood, not a street, with the City Council's two-digit codes, e.g. `01-CiutatVella/01-el Raval` ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
   - `is_charging_station` is always true, `is_virtual_station` always false, and `rental_methods` always `key`, `transitcard`, `creditcard` and `phone` ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
