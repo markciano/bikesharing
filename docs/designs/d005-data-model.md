@@ -19,7 +19,8 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ2.2b. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14) and the disabled measures (D15) are decided; facts (OQ2.2b–OQ2.6) and detailed design (OQ3) remain.
+- Next: OQ2.2c. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14) and the stock's measures from the feed (D15, D16) are decided; facts (OQ2.2c–OQ2.6) and detailed design (OQ3) remain.
+  - For failure cases: the behaviours observed over 2026-10-14 to 10-26 that each decision relies on; first known gap: Bicing's `num_docks_available` at a closed station.
   - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
@@ -133,8 +134,8 @@ Both sources follow these definitions. Over about 17,870 passes per source (2026
 - `is_renting` and `is_returning` never disagree, in any row of either source.
 - Empty stations keep `is_renting = true` in 96.5% of AMBici's rows and 93.2% of Bicing's; full stations keep `is_returning = true` in 95.9% and 85.3%.
 - `is_installed` is always `true` in AMBici; in Bicing it is `false` for 1 station, in every pass.
-- Stations out of service: 8 in AMBici, apparently for the whole period; 121 in Bicing, about 5 per pass.
-- An out-of-service station still reports its bikes in AMBici, as 2.3 allows (`num_bikes_available` counts the bikes that would be available). In Bicing it always reports 0 vehicles, while 3.0 counts those physically at the station: either Bicing empties its closed stations or it departs from 3.0, and the data cannot tell which.
+- Stations out of service: 8 in AMBici, for the whole period; 121 in Bicing, about 5 per pass.
+- An out-of-service station still reports its bikes in AMBici, as 2.3 allows (`num_bikes_available` counts the bikes that would be available). In Bicing it reports 0 vehicles while its bikes stay at the station, which departs from 3.0 ([D16](#d16-vehicles-at-an-out-of-service-station)).
 
 Check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md).
 
@@ -228,6 +229,16 @@ What would change it: AMBici publishing either field; the model then takes its v
 
 Rejected: 0 for AMBici, since Q5 would compare a measured value with an invented one; leaving both measures out of the model, since Bicing's disabled vehicles, a mean of 2.9 per station against 7.5 available ([Bicing › `station_status`](../sources/bicing.md#station_status)), would then count as in use.
 
+#### D16. Vehicles at an out-of-service station
+
+GBFS 3.0 defines `num_vehicles_available` as the vehicles physically at the station, whether or not it is renting. AMBici's out-of-service stations meet it: they keep reporting their bikes, and the model keeps them as published. Bicing's do not: a station that goes out of service (`is_renting` and `is_returning` false) reports 0 vehicles while its bikes stay there ([Bicing › `station_status`](../sources/bicing.md#station_status)). The model therefore stores null as Bicing's `num_vehicles_available` while a station is out of service ([D14](#d14-vocabulary-of-the-measures)): the count is not known, and a 0 would count those bikes as in use in [d002 › Q5](d002-requirements.md#guiding-questions) and as departures in the stock movements.
+
+Over 2026-10-14 to 10-26, only three combinations of the flags occurred: all true; installed but out of service; and, at one Bicing station, all false. AMBici's 8 out-of-service stations stayed so the whole period, so how AMBici reports a closing is not observed. Check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md).
+
+What would change it: Bicing reporting bikes while out of service, or AMBici reporting 0 at a closing, found by running that check again; the rule then follows each source's values.
+
+Rejected: keeping Bicing's 0 and leaving each query to filter by `is_renting`, since every query would have to remember it and each closing would enter the stock movements as departures.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -260,11 +271,10 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ2.2b | The station stock: the available vehicles of an out-of-service station | D14 | AMBici reports its bikes and Bicing 0 ([D7](#d7-station-status-flags)) |
-| OQ2.2c | The station stock: the denominator of occupancy | OQ2.2b | AMBici's available bikes exceed `capacity` at 141 of 237 stations, and +P parking explains it at up to 57 ([AMBici › `station_status`](../sources/ambici.md#station_status)), so occupancy on `capacity` can pass 100% |
+| OQ2.2c | The station stock: the denominator of occupancy | D16 | AMBici's available bikes exceed `capacity` at 141 of 237 stations, and +P parking explains it at up to 57 ([AMBici › `station_status`](../sources/ambici.md#station_status)), so occupancy on `capacity` can pass 100% |
 | OQ2.2d | The station stock: `last_reported` in the fact | D14 | A real time per station in Bicing, the feed time in AMBici. Closing it also writes the stock's additivity, set by [D4](#d4-business-processes-and-the-grain-of-the-stock) |
-| OQ2.3 | The facts of the stock by vehicle type | OQ2.2b–OQ2.2d, D8 | The Bicing archive splits stock only into mechanical and electric |
-| OQ2.4 | The facts of the stock movements: departures, arrivals, and how they relate to gaps in capture | OQ2.2b–OQ2.2d | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand. A Bicing station that goes out of service drops to 0 vehicles, which would read as departures, and as arrivals when it reopens |
+| OQ2.3 | The facts of the stock by vehicle type | OQ2.2c, OQ2.2d, D8 | The Bicing archive splits stock only into mechanical and electric |
+| OQ2.4 | The facts of the stock movements: departures, arrivals, and how they relate to gaps in capture | OQ2.2c, OQ2.2d | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand. How the null count of a Bicing station out of service ([D16](#d16-vehicles-at-an-out-of-service-station)) enters the movements, before and after it |
 | OQ2.5 | The facts of the capture passes: lateness and completeness | D4 | — |
 | OQ2.6 | Which d002 question gold answers, and with which table | OQ2.2–OQ2.5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md). How gold and the visualization show a measure known for one source only, such as disabled vehicles ([D15](#d15-disabled-vehicles-and-docks)) |
 | OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ2.6 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md) |
