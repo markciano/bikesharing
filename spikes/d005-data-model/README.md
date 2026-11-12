@@ -128,3 +128,15 @@ python3 -I spikes/d005-data-model/neighbourhood/neighbourhood_check.py spikes/cl
 ```text
 python3 -I spikes/d005-data-model/station-names/names_check.py spikes/cloudflare-capture-spike/data/V4/raw
 ```
+
+## 10. `out-of-service/`
+
+- **Question:** which combinations of the status flags occur, and does a station that goes out of service report the bikes it holds?
+- **Evidence for:** [d005 › D16](../../docs/designs/d005-data-model.md#d16-vehicles-at-an-out-of-service-station), and the out-of-service fact in [Bicing's source card › `station_status`](../../docs/sources/bicing.md#station_status).
+- **Script:** `out_of_service_check.py` counts the rows and stations of each combination of `is_installed`, `is_renting` and `is_returning`, per source. For each change into or out of service (`is_renting` and `is_returning` both false), it records the vehicles available 15 passes before, the pass before and at the change, and the vehicles disabled. A station emptied before closing is already at 0 the pass before; a feed that only reports 0 drops at the change.
+- **Output:** `out_of_service.csv`, next to the script, one row per change, and a summary per source on stdout.
+- **Run time:** about 35 s.
+
+```text
+python3 -I spikes/d005-data-model/out-of-service/out_of_service_check.py spikes/cloudflare-capture-spike/data/V4/raw spikes/d005-data-model/out-of-service/out_of_service.csv
+```
