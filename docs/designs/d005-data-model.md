@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ2.2. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13) and the vocabulary of the measures (D14) are decided; facts (OQ2.2–OQ2.6) and detailed design (OQ3) remain.
+- Next: OQ2.2b. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14) and the disabled measures (D15) are decided; facts (OQ2.2b–OQ2.6) and detailed design (OQ3) remain.
   - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
@@ -220,6 +220,14 @@ What would change it: a GBFS version after 3.0 that renames or redefines a measu
 
 Rejected: business names of the model's own, such as `bikes_available` or `free_docks`, since every definition would be written and kept by the project with no external standard behind it.
 
+#### D15. Disabled vehicles and docks
+
+Bicing publishes `num_vehicles_disabled` and `num_docks_disabled`; AMBici publishes neither, since both are optional in GBFS 2.3. The model keeps Bicing's values as published and null for AMBici: a null is a value that is not known, while 0 would state that AMBici has none. Aggregates ignore nulls, so a total across both sources is not lowered by false zeros. AMBici's share of the fleet in use ([d002 › Q5](d002-requirements.md#guiding-questions)) is therefore an upper bound, since its disabled bikes cannot be subtracted.
+
+What would change it: AMBici publishing either field; the model then takes its value.
+
+Rejected: 0 for AMBici, since Q5 would compare a measured value with an invented one; leaving both measures out of the model, since Bicing's disabled vehicles, a mean of 2.9 per station against 7.5 available ([Bicing › `station_status`](../sources/bicing.md#station_status)), would then count as in use.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -252,11 +260,13 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ2.2 | The facts of the station stock: measures, additivity and occupancy | D14 | AMBici's available bikes exceed `capacity` (+P parking), so occupancy can pass 100%; an out-of-service station reports its bikes in AMBici and 0 in Bicing ([D7](#d7-station-status-flags)) |
-| OQ2.3 | The facts of the stock by vehicle type | OQ2.2, D8 | The Bicing archive splits stock only into mechanical and electric |
-| OQ2.4 | The facts of the stock movements: departures, arrivals, and how they relate to gaps in capture | OQ2.2 | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand |
+| OQ2.2b | The station stock: the available vehicles of an out-of-service station | D14 | AMBici reports its bikes and Bicing 0 ([D7](#d7-station-status-flags)) |
+| OQ2.2c | The station stock: the denominator of occupancy | OQ2.2b | AMBici's available bikes exceed `capacity` at 141 of 237 stations, and +P parking explains it at up to 57 ([AMBici › `station_status`](../sources/ambici.md#station_status)), so occupancy on `capacity` can pass 100% |
+| OQ2.2d | The station stock: `last_reported` in the fact | D14 | A real time per station in Bicing, the feed time in AMBici. Closing it also writes the stock's additivity, set by [D4](#d4-business-processes-and-the-grain-of-the-stock) |
+| OQ2.3 | The facts of the stock by vehicle type | OQ2.2b–OQ2.2d, D8 | The Bicing archive splits stock only into mechanical and electric |
+| OQ2.4 | The facts of the stock movements: departures, arrivals, and how they relate to gaps in capture | OQ2.2b–OQ2.2d | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand. A Bicing station that goes out of service drops to 0 vehicles, which would read as departures, and as arrivals when it reopens |
 | OQ2.5 | The facts of the capture passes: lateness and completeness | D4 | — |
-| OQ2.6 | Which d002 question gold answers, and with which table | OQ2.2–OQ2.5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md) |
+| OQ2.6 | Which d002 question gold answers, and with which table | OQ2.2–OQ2.5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md). How gold and the visualization show a measure known for one source only, such as disabled vehicles ([D15](#d15-disabled-vehicles-and-docks)) |
 | OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ2.6 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md) |
 
 ## 2. Plan — how
