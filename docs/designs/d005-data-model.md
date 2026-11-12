@@ -19,7 +19,8 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ2.1. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values are decided (D8–D13); facts (OQ2.1–OQ2.6) and detailed design (OQ3) remain.
+- Next: OQ2.2. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13) and the vocabulary of the measures (D14) are decided; facts (OQ2.2–OQ2.6) and detailed design (OQ3) remain.
+  - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
   - For D3: the Bicing history archives as a source of the model.
@@ -209,6 +210,16 @@ The values the model defines itself are in English, the project's language, and 
 
 Rejected: labels in Catalan, since the project defines everything in English and proper names in their own language do not make the data multilingual; translated label columns in gold, since a closed set of a few values is translated with the interface texts.
 
+#### D14. Vocabulary of the measures
+
+A measure that comes from a GBFS field takes its name and definition from GBFS 3.0 ([v3.0](https://raw.githubusercontent.com/MobilityData/gbfs/v3.0/gbfs.md)), the standard both sources publish, so that a measure with one name means the same in AMBici and Bicing (Kimball's conformed facts): e.g. `num_vehicles_available`, `num_docks_available`. A source takes the name only if its values meet the 3.0 definition; otherwise they are mapped to it, as with the status flags ([D7](#d7-station-status-flags)). AMBici's 2.3 fields map to 3.0 field by field ([s002 › 2](../spikes/s002-bicing-realtime-capture.md#2-common-model)); among the measures, only `num_bikes_available` is renamed, to `num_vehicles_available`.
+
+A measure the model derives, such as occupancy, departures or arrivals, takes a name of its own in the same style, defined in [data-model.md](../data-model.md). The tables take the shape of the dimensional model, with native types: a timestamp in UTC, a name as plain text ([D12](#d12-station-names)).
+
+What would change it: a GBFS version after 3.0 that renames or redefines a measure; whether the model follows it is then a new decision.
+
+Rejected: business names of the model's own, such as `bikes_available` or `free_docks`, since every definition would be written and kept by the project with no external standard behind it.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -241,8 +252,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ2.1 | The vocabulary of the measures: one name and one definition for both sources (Kimball step 4) | D4 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. Expected: the facts match in both sources (same service, near-identical schema). To check: GBFS 3.0 renamed `num_bikes_available` to `num_vehicles_available` ([GBFS PR #354](https://github.com/MobilityData/gbfs/pull/354)), and the field-by-field mapping of 2.3 to 3.0 in [s002 › 2](../spikes/s002-bicing-realtime-capture.md#2-common-model) |
-| OQ2.2 | The facts of the station stock: measures, additivity and occupancy | OQ2.1 | AMBici's available bikes exceed `capacity` (+P parking), so occupancy can pass 100%; an out-of-service station reports its bikes in AMBici and 0 in Bicing ([D7](#d7-station-status-flags)) |
+| OQ2.2 | The facts of the station stock: measures, additivity and occupancy | D14 | AMBici's available bikes exceed `capacity` (+P parking), so occupancy can pass 100%; an out-of-service station reports its bikes in AMBici and 0 in Bicing ([D7](#d7-station-status-flags)) |
 | OQ2.3 | The facts of the stock by vehicle type | OQ2.2, D8 | The Bicing archive splits stock only into mechanical and electric |
 | OQ2.4 | The facts of the stock movements: departures, arrivals, and how they relate to gaps in capture | OQ2.2 | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand |
 | OQ2.5 | The facts of the capture passes: lateness and completeness | D4 | — |
