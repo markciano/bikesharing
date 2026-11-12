@@ -56,6 +56,22 @@ Question: which municipality contains each station, and does it match the region
 python3 -I spikes/d005-data-model/municipality/municipality_check.py spikes/cloudflare-capture-spike/data/V4/raw spikes/d005-data-model/municipality/municipality.csv spikes/d005-data-model/municipality/data/municipis_5000.gml
 ```
 
+## `neighbourhood/`
+
+Question: which Barcelona district and neighbourhood contains each station, and does it match the one Bicing publishes in `cross_street`? Evidence for [d005 › D10](../../docs/designs/d005-data-model.md#d10-barcelona-district-and-neighbourhood).
+
+- Boundaries: the City Council's "Unitats administratives" (dataset `20170706-districtes-barris` on Open Data BCN, last modified 2024-11-12), file `BarcelonaCiutat_Barris.json`: one record per neighbourhood with its district's code and name, and its polygon as WKT in ETRS89 and in WGS84. CC BY 4.0, Ajuntament de Barcelona. Download it into `data/` (ignored by Git) before the run:
+
+  ```text
+  curl -s -o spikes/d005-data-model/neighbourhood/data/BarcelonaCiutat_Barris.json https://opendata-ajuntament.barcelona.cat/resources/bcn/EstadisticaUnitatsAdministratives/BarcelonaCiutat_Barris.json
+  ```
+
+- `neighbourhood_check.py` reads the latest `station_information` of both sources and splits Bicing's `cross_street` into district and neighbourhood codes. It checks that Rambla del Raval falls in Ciutat Vella / el Raval, places each station by the even-odd rule on the WGS84 polygons, and measures its distance to that neighbourhood's boundary. It writes `neighbourhood.csv` (one row per station in Barcelona: published and computed codes, match, distance in metres) and prints Bicing's mismatches and AMBici's stations in Barcelona. Under 1 s.
+
+```text
+python3 -I spikes/d005-data-model/neighbourhood/neighbourhood_check.py spikes/cloudflare-capture-spike/data/V4/raw spikes/d005-data-model/neighbourhood/neighbourhood.csv spikes/d005-data-model/neighbourhood/data/BarcelonaCiutat_Barris.json
+```
+
 ## `over-capacity/`
 
 Question: why do AMBici's available bikes exceed a station's `capacity`? Evidence for [AMBici's source card › `station_status`](../../docs/sources/ambici.md#station_status).
