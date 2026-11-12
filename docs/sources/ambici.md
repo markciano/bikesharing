@@ -55,7 +55,7 @@ None published: only the real-time feed exists ([s003](../spikes/s003-ambici-his
 - **Change:** content changes every 60 s; 3.3 MB per day as gzip ([s001 › 3a, 7b](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-04).
 - **Quality:**
   - Consistency: available bikes + available docks exceed `capacity` in 3% of station items, at 43 stations ([s001 › 8a](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
-  - Consistency: `num_bikes_available` exceeds `capacity` at 141 of 237 stations, at some for more than half the passes, and reaches 70 at station `135340017` (capacity 24); at each station's peak there are no free docks. +P parking explains it at up to 57 stations, not at 141 ([over_capacity.csv](../../spikes/d005-data-model/profile/ambici/over_capacity.csv), 2026-10-14 to 2026-10-26).
+  - Consistency: `num_bikes_available` exceeds `capacity` at 141 of 237 stations, at some for more than half the passes, and reaches 70 at station `135340017` (capacity 24); at each station's peak there are no free docks. +P parking explains it at up to 57 stations, not at 141 ([over_capacity.csv](../../spikes/d005-data-model/over-capacity/over_capacity.csv), 2026-10-14 to 2026-10-26).
 
 ### `station_information`
 
