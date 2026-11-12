@@ -19,10 +19,9 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ2. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values are decided (D8–D13); facts (OQ2) and detailed design (OQ3) remain.
+- Next: OQ2.1. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values are decided (D8–D13); facts (OQ2.1–OQ2.6) and detailed design (OQ3) remain.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
-  - For OQ2: AMBici's available bikes exceed `capacity` (+P parking), so occupancy can pass 100%; during a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand.
   - For D3: the Bicing history archives as a source of the model.
 
 ## 1. Spec — what and why
@@ -242,8 +241,13 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ2 | The facts of each business process (Kimball step 4): their measures, one definition and name for both sources, their additivity, and which d002 question each answers in gold | D4, D8 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. Which questions gold answers is handed to T040 by [d002 › Out of scope](d002-requirements.md). Expected: the facts match in both sources (same service, near-identical schema). To check: GBFS 3.0 renamed `num_bikes_available` to `num_vehicles_available` ([GBFS PR #354](https://github.com/MobilityData/gbfs/pull/354)), and the field-by-field mapping of 2.3 to 3.0 in [s002 › 2](../spikes/s002-bicing-realtime-capture.md#2-common-model); an out-of-service station reports its bikes in AMBici and 0 in Bicing ([D7](#d7-station-status-flags)); the Bicing archive splits stock only into mechanical and electric |
-| OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ2 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md) |
+| OQ2.1 | The vocabulary of the measures: one name and one definition for both sources (Kimball step 4) | D4 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. Expected: the facts match in both sources (same service, near-identical schema). To check: GBFS 3.0 renamed `num_bikes_available` to `num_vehicles_available` ([GBFS PR #354](https://github.com/MobilityData/gbfs/pull/354)), and the field-by-field mapping of 2.3 to 3.0 in [s002 › 2](../spikes/s002-bicing-realtime-capture.md#2-common-model) |
+| OQ2.2 | The facts of the station stock: measures, additivity and occupancy | OQ2.1 | AMBici's available bikes exceed `capacity` (+P parking), so occupancy can pass 100%; an out-of-service station reports its bikes in AMBici and 0 in Bicing ([D7](#d7-station-status-flags)) |
+| OQ2.3 | The facts of the stock by vehicle type | OQ2.2, D8 | The Bicing archive splits stock only into mechanical and electric |
+| OQ2.4 | The facts of the stock movements: departures, arrivals, and how they relate to gaps in capture | OQ2.2 | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand |
+| OQ2.5 | The facts of the capture passes: lateness and completeness | D4 | — |
+| OQ2.6 | Which d002 question gold answers, and with which table | OQ2.2–OQ2.5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md) |
+| OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ2.6 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md) |
 
 ## 2. Plan — how
 
