@@ -22,7 +22,6 @@ Current step: the step being implemented, or —. -->
 - Next: OQ2. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values are decided (D8–D13); facts (OQ2) and detailed design (OQ3) remain.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
-  - Housekeeping in the spike's README: a section for `vehicle-types/`, whose script stays as the evidence that `METRO` became `METRO_BASE`, and its stale references to "OQ4".
   - For OQ2: AMBici's available bikes exceed `capacity` (+P parking), so occupancy can pass 100%; during a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand.
   - For D3: the Bicing history archives as a source of the model.
 
@@ -155,7 +154,7 @@ The bikes of both systems are either mechanical or electrically assisted; none i
 The rule reads only what each type publishes, so a new or renamed type, such as Bicing's `METRO`, which became `METRO_BASE` on 2026-10-22, is classified with no change to the model. The dimension keeps one row per published type, with its `vehicle_type_id`, name and `form_factor`, so stock is still counted per type; propulsion is the level above it, used to compare systems.
 
 - AMBici: `196` is `human`; `204` and `420` are `electric_assist`.
-- Bicing: of its 11 types, only `FIT`, `EFIT`, `BOOST` and `ICONIC` appear in `vehicle_types_available`; `ICONIC` and `FIT` are `human` and `BOOST` is `electric_assist` (fixture of 2026-11-07). The standing scooter (`CHLOE`) and the trailer (`TRAILER`) are published but not rented, and never have stock.
+- Bicing: of its 11 types, only `FIT`, `EFIT`, `BOOST` and `ICONIC` appear in `vehicle_types_available`; `ICONIC` and `FIT` are `human`, and `BOOST` and `EFIT` are `electric_assist`. Check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md). The standing scooter (`CHLOE`) and the trailer (`TRAILER`) are published but not rented, and never have stock.
 
 Rejected: a hand-kept table of propulsion per `vehicle_type_id`, since type IDs are local to each system and change, and every new type would wait for an edit to be classified.
 
