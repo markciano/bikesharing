@@ -19,10 +19,10 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ1. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: dimensions (OQ1), facts (OQ2), detailed design (OQ3).
+- Next: OQ2. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values are decided (D8–D13); facts (OQ2) and detailed design (OQ3) remain.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
-  - For OQ1: D8, D9 and D10 taken. Left: the names and languages of places. Housekeeping in the spike's README: a section for `vehicle-types/`, whose script stays as the evidence that `METRO` became `METRO_BASE`, and its stale references to "OQ4".
+  - Housekeeping in the spike's README: a section for `vehicle-types/`, whose script stays as the evidence that `METRO` became `METRO_BASE`, and its stale references to "OQ4".
   - For OQ2: AMBici's available bikes exceed `capacity` (+P parking), so occupancy can pass 100%; during a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand.
   - For D3: the Bicing history archives as a source of the model.
 
@@ -205,6 +205,12 @@ What would change it: Bicing's languages starting to differ; the `ca` entry is s
 
 Rejected: rewriting names into one common style, since it changes the operator's data with casing rules for Catalan that fail on edge cases, and the name would no longer match the one at the station and in the operator's app.
 
+#### D13. Model labels
+
+The values the model defines itself are in English, the project's language, and form a closed, documented domain: `Mechanical` and `Electric` for propulsion ([D8](#d8-vehicle-propulsion)), and `Not applicable` for district and neighbourhood outside Barcelona ([D10](#d10-barcelona-district-and-neighbourhood)). The public visualization shows them in Catalan, Spanish and English, translated with its interface texts; a closed domain lets it translate every value the model can produce. Place and station names are proper names and are never translated ([D11](#d11-place-names), [D12](#d12-station-names)).
+
+Rejected: labels in Catalan, since the project defines everything in English and proper names in their own language do not make the data multilingual; translated label columns in gold, since a closed set of a few values is translated with the interface texts.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -229,6 +235,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
 - Capturing less often, or no longer capturing, the feeds that do not enter the model ([D3](#d3-feeds-that-enter-the-model)), except `free_bike_status`, kept for future questions on AMBici's battery levels — task assigned at the end of this design
+- A language selector in the public visualization (Catalan, Spanish, English) for its interface texts and the model's labels ([D13](#d13-model-labels)) — T041
 
 ### 1.6 Open questions
 
@@ -236,9 +243,8 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ1 | How the dimension values of AMBici and Bicing are conformed (Kimball step 3: same names and domain values) | D5 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. Left to decide: the names and languages of places the model keeps (GBFS names in several languages, ICGC's names in Catalan, AMBici's regions without the leading article), which the public visualization can only show if gold holds them |
-| OQ2 | The facts of each business process (Kimball step 4): their measures, one definition and name for both sources, their additivity, and which d002 question each answers in gold | D4, OQ1 | Which questions gold answers is handed to T040 by [d002 › Out of scope](d002-requirements.md). Expected: the facts match in both sources (same service, near-identical schema). To check: GBFS 3.0 renamed `num_bikes_available` to `num_vehicles_available` ([GBFS PR #354](https://github.com/MobilityData/gbfs/pull/354)), and the field-by-field mapping of 2.3 to 3.0 in [s002 › 2](../spikes/s002-bicing-realtime-capture.md#2-common-model); an out-of-service station reports its bikes in AMBici and 0 in Bicing ([D7](#d7-station-status-flags)); the Bicing archive splits stock only into mechanical and electric |
-| OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ1, OQ2 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md) |
+| OQ2 | The facts of each business process (Kimball step 4): their measures, one definition and name for both sources, their additivity, and which d002 question each answers in gold | D4, D8 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. Which questions gold answers is handed to T040 by [d002 › Out of scope](d002-requirements.md). Expected: the facts match in both sources (same service, near-identical schema). To check: GBFS 3.0 renamed `num_bikes_available` to `num_vehicles_available` ([GBFS PR #354](https://github.com/MobilityData/gbfs/pull/354)), and the field-by-field mapping of 2.3 to 3.0 in [s002 › 2](../spikes/s002-bicing-realtime-capture.md#2-common-model); an out-of-service station reports its bikes in AMBici and 0 in Bicing ([D7](#d7-station-status-flags)); the Bicing archive splits stock only into mechanical and electric |
+| OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ2 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md) |
 
 ## 2. Plan — how
 
