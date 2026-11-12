@@ -90,7 +90,7 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 - **Fields:**
   - `name` and `short_name` are localised in 5 languages ([s002 › 1d](../spikes/s002-bicing-realtime-capture.md#1-schema), 2026-10-05).
   - `capacity` equals the `count` of the single `vehicle_docks_capacity` group and can change: 13 changes in two days, and station `77` went from 24 to 0 ([s002 › 6c, 8a](../spikes/s002-bicing-realtime-capture.md#6-identity), 2026-10-05).
-  - `cross_street` holds the district and neighbourhood, not a street, e.g. `01-CiutatVella/01-el Raval` ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
+  - `cross_street` holds the district and neighbourhood, not a street, with the City Council's two-digit codes, e.g. `01-CiutatVella/01-el Raval` ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
   - `is_charging_station` is always true, `is_virtual_station` always false, and `rental_methods` always `key`, `transitcard`, `creditcard` and `phone` ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
   - `rental_uris` is always an empty object and `vehicle_types_capacity` an empty list ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), [`keys_check.py`](../../spikes/d005-data-model/profile/keys_check.py), 2026-10-14 to 2026-10-26).
 - **Change:** 68 changes in 12.5 days (see Service); 4.4 MB per day as gzip ([s002 › 7b](../spikes/s002-bicing-realtime-capture.md#7-volume), 2026-10-04).
@@ -98,6 +98,8 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
   - Validity: `external_id` is not a GBFS 3.0 field ([s002 › 2a](../spikes/s002-bicing-realtime-capture.md#2-common-model), 2026-10-05).
   - Validity: `post_code` comes both with and without its leading zero (`08001`, `8001`) ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
   - Completeness: `post_code` is missing in 0.37% of station items ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
+  - Validity: in 7 of 541 stations, `cross_street` pairs a neighbourhood with a district it does not belong to, e.g. `01/67`, where neighbourhood 67 is in district 10 ([neighbourhood.csv](../../spikes/d005-data-model/neighbourhood/neighbourhood.csv), stations of 2026-10-26, City Council boundaries of 2024-11-12).
+  - Accuracy: the neighbourhood in `cross_street` is the one that contains the station in 522 of 541 stations; the other 19 name a neighbouring one, 0 to 82 m from the boundary, most on streets that form it, such as Gran Via or Paral·lel ([neighbourhood.csv](../../spikes/d005-data-model/neighbourhood/neighbourhood.csv), stations of 2026-10-26, City Council boundaries of 2024-11-12).
   - Validity: some `name` and `address` values start with a space ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
 
 ### `vehicle_types`

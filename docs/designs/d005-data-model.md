@@ -22,7 +22,7 @@ Current step: the step being implemented, or —. -->
 - Next: OQ1. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: dimensions (OQ1), facts (OQ2), detailed design (OQ3).
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
-  - For OQ1: D8, D9 and D10 taken. Left: a spike check for D10 on Barcelona's official district and neighbourhood boundaries (source to find; AMBici's stations in Barcelona, and Bicing's published codes against the polygons), whose results D10 then cites; the names and languages of places. Housekeeping in the spike's README: a section for `vehicle-types/`, whose script stays as the evidence that `METRO` became `METRO_BASE`, and its stale references to "OQ4".
+  - For OQ1: D8, D9 and D10 taken. Left: the names and languages of places. Housekeeping in the spike's README: a section for `vehicle-types/`, whose script stays as the evidence that `METRO` became `METRO_BASE`, and its stale references to "OQ4".
   - For OQ2: AMBici's available bikes exceed `capacity` (+P parking), so occupancy can pass 100%; during a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand.
   - For D3: the Bicing history archives as a source of the model.
 
@@ -175,16 +175,17 @@ Rejected: the containing municipality for every station, since at a boundary the
 
 Every station in Barcelona gets its district and neighbourhood, whichever system operates it, so a neighbourhood counts all its stations. They are the geography residents identify with, finer than the municipality and clearer than the post code, and their official codes link the model to the City Council's open data, such as population per neighbourhood. They answer [d002 › Q4](d002-requirements.md#guiding-questions), by district and neighbourhood within Barcelona.
 
-The rule is D9's: the value the operator publishes, when it publishes one; otherwise the one that contains the station's coordinates, on the City Council's official boundaries.
+Every station in Barcelona takes the neighbourhood that contains its coordinates, on the City Council's official boundaries ("Unitats administratives", 73 neighbourhoods in 10 districts, CC BY 4.0), and the district that neighbourhood belongs to in the official hierarchy. The City Council defines both the codes and the polygons, so the computed value is the authoritative one, and the hierarchy rules out a neighbourhood paired with the wrong district.
 
-- Bicing publishes both in `cross_street`, with the official codes, e.g. `01-CiutatVella/01-el Raval` ([Bicing › `station_information`](../sources/bicing.md#station_information)); the model splits it into a code and a name for each level.
-- AMBici publishes neither: its stations in Barcelona ([D9](#d9-station-municipality)) take the containing district and neighbourhood.
+- Bicing publishes district and neighbourhood in `cross_street`, with the official codes, e.g. `01-CiutatVella/01-el Raval`. It is kept as published, split into codes, and a station where it differs from the computed value is flagged for review. On 541 stations it gives a neighbourhood outside its own district in 7, and a neighbouring one in 19, 0 to 82 m from the boundary, most on streets that form it ([Bicing › `station_information`](../sources/bicing.md#station_information)).
+- AMBici publishes neither. Its 8 stations in Barcelona ([D9](#d9-station-municipality)) fall in 4 districts and 6 neighbourhoods.
 - A station outside Barcelona takes "Not applicable" in both, not null, so every group in a query has a label.
-- The containing district and neighbourhood are computed for every station in Barcelona and kept with the published ones; a station where they differ is flagged for review.
 
-What would change it: AMBici publishing district and neighbourhood; its own values then replace the computed ones.
+Check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md).
 
-Rejected: district and neighbourhood for Bicing only, since AMBici's stations in Barcelona would be missing from their neighbourhood; and leaving `cross_street` out of the model, since the neighbourhood is the level residents look for.
+What would change it: the City Council redrawing its neighbourhoods; the model then takes the new boundaries, with the station dimension's history keeping the earlier ones.
+
+Rejected: Bicing's published neighbourhood where it exists, since 23 of its 541 stations disagree with the official boundaries, 7 of them with an impossible pair; district and neighbourhood for Bicing only, since AMBici's stations in Barcelona would be missing from their neighbourhood; and leaving `cross_street` out of the model, since the neighbourhood is the level residents look for.
 
 ### 1.3 Requirements
 
