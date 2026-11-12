@@ -19,6 +19,9 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
+- Next: before any open question, review Kimball's dimensional design steps (verified with `web-researcher`), apply them to this design and reorder the open questions as they require.
+  - The data profile ([spikes/d005-data-model › profile](../../spikes/d005-data-model/README.md#profile)) is not reviewed yet.
+  - Whether `spikes/d005-data-model/vehicle-types/vehicle_types_check.py` stays is pending; it is the only evidence that `METRO` became `METRO_BASE` (OQ1).
 
 ## 1. Spec — what and why
 
