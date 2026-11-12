@@ -32,6 +32,7 @@ None published: only the real-time feed exists ([s003](../spikes/s003-ambici-his
 
 ### Service
 
+- **Stable schema:** every key path appears in every file of `station_status`, `station_information`, `vehicle_types` and `system_regions` ([`keys_check.py`](../../spikes/d005-data-model/profile/keys_check.py), 2026-10-14 to 2026-10-26).
 - **Snapshots, not events:** no trips are published; rentals, returns and rebalancing are inferred from changes between consecutive snapshots ([s001 › 3a](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
 - **`ttl` does not reflect changes:** the static feeds keep their declared `ttl` however often they change ([d004 › D3](../designs/d004-bronze-data-capture.md#d3-feed-cadence), [spike-log-queries.sql › 6](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql), 2026-11-05).
 - **Static feeds rarely change:** over 12.5 days of hourly captures, `station_information` changed 4 times and the other static feeds never did ([d004 › D3](../designs/d004-bronze-data-capture.md#d3-feed-cadence), [spike-log-queries.sql › 6](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql), 2026-10-14 to 2026-10-26).
@@ -45,28 +46,35 @@ None published: only the real-time feed exists ([s003](../spikes/s003-ambici-his
 
 - **Content:** bikes and free docks per station, the status flags and `last_reported`.
 - **Fields:**
+  - No field has nulls, and `is_installed` is always true ([profile › station_status](../../spikes/d005-data-model/profile/ambici/station_status.csv), 2026-10-14 to 2026-10-26).
   - `last_reported` is the feed time, not the time of a station's last change: it equals the file's `last_updated` for 99.92% of station items, so changes are detected by comparing content ([s001 › 3b](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
-  - `vehicle_types_available` omits types with count 0, and the list is empty when a station has no bikes ([s001 › 8c](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
-  - Vehicle types `204` (e-bike) and `196` (classic) appear, `204` with almost all the activity; `420` never appears ([s001 › 4a](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
+  - `vehicle_types_available` omits types with count 0, and the list is empty when a station has no bikes ([s001 › 8c](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05; [profile › station_status_vehicle_types](../../spikes/d005-data-model/profile/ambici/station_status_vehicle_types.csv), 2026-10-14 to 2026-10-26).
+  - `num_bikes_available` also counts bikes parked outside the docks in +P spaces: when all docks are taken, a bike may be left in the orange-marked +P spaces, and only there, so it can exceed `capacity`. +P had 280 places at 14 stations in July 2024 ([AMB](https://www.amb.cat/es/web/amb/actualitat/sala-de-premsa/notes-de-premsa/detall/-/notapremsa/entren-en-funcionament-280-aparcaments--p-a-les-estacions-d-ambici-per/18364152/11696), 2024-07-10) and 1,146 places at 57 stations later ([AMBici FAQ](https://www.ambici.cat/es/faq/), undated, read 2026-11-12). The feed does not say which bikes are in +P.
+  - Only vehicle types `204` (e-bike) and `196` (classic) appear; `420` never does ([profile › station_status_vehicle_types](../../spikes/d005-data-model/profile/ambici/station_status_vehicle_types.csv), 2026-10-14 to 2026-10-26). `204` has almost all the activity ([s001 › 4a](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
   - `is_renting` and `is_returning` are false at 8 stations in every response, while they hold bikes; an empty station keeps `is_renting` true ([s001 › 8f, 8j](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
 - **Change:** content changes every 60 s; 3.3 MB per day as gzip ([s001 › 3a, 7b](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-04).
 - **Quality:**
   - Consistency: available bikes + available docks exceed `capacity` in 3% of station items, at 43 stations ([s001 › 8a](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
+  - Consistency: `num_bikes_available` exceeds `capacity` at 141 of 237 stations, at some for more than half the passes, and reaches 70 at station `135340017` (capacity 24); at each station's peak there are no free docks. +P parking explains it at up to 57 stations, not at 141 ([over_capacity.csv](../../spikes/d005-data-model/profile/ambici/over_capacity.csv), 2026-10-14 to 2026-10-26).
 
 ### `station_information`
 
-- **Content:** station name, coordinates, capacity and region; 237 stations ([s001 › 6a](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05), capacities 12–28 docks.
+- **Content:** station name, coordinates, capacity and region; 237 stations ([s001 › 6a](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
+- **Fields:**
+  - No field has nulls; `capacity` ranges from 12 to 28 docks, `region_id` from 833 to 856, and `is_virtual_station` is always false ([profile › station_information](../../spikes/d005-data-model/profile/ambici/station_information.csv), 2026-10-14 to 2026-10-26).
 - **Change:** 4 changes in 12.5 days (see Service); 1.0 MB per day as gzip ([s001 › 7b](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-04).
 
 ### `vehicle_types`
 
-- **Content:** 3 bike types: `196`, `204` and `420` ([s001 › 2c](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
+- **Content:** 3 bike types, all `form_factor` `bicycle` with `rider_capacity` 1: `196` "Classic Bike" (`human`), and `204` and `420`, both "E-Bike" (`electric_assist`) ([profile › vehicle_types](../../spikes/d005-data-model/profile/ambici/vehicle_types.csv), 2026-10-14 to 2026-10-26).
+- **Fields:**
+  - `max_range_meters` is 60,000 for the electric types and absent for the human one ([profile › vehicle_types](../../spikes/d005-data-model/profile/ambici/vehicle_types.csv), 2026-10-14 to 2026-10-26; [s002 › 2a](../spikes/s002-bicing-realtime-capture.md#2-common-model)).
 - **Quality:**
   - Validity: carries a non-standard `_description` field ([s001 › 10b](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
 
 ### `system_regions`
 
-- **Content:** 16 regions (municipalities), IDs 833–856.
+- **Content:** 16 regions, IDs 833–856, named after municipalities except "AMB" ([profile › system_regions](../../spikes/d005-data-model/profile/ambici/system_regions.csv), 2026-10-14 to 2026-10-26; [d005 › OQ1](../designs/d005-data-model.md#16-open-questions)).
 
 ### `free_bike_status`
 
@@ -100,3 +108,4 @@ None published: only the real-time feed exists ([s003](../spikes/s003-ambici-his
 ## Open questions
 
 - Whether nextbike publishes other cities with the same structure.
+- Why available bikes exceed `capacity` at 141 stations, more than the 57 with +P parking: more +P stations than the FAQ lists, or another cause.

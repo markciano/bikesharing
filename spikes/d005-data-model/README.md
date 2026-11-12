@@ -37,10 +37,12 @@ python3 -I spikes/d005-data-model/station-flags/flags_check.py spikes/cloudflare
 Question: what does each column of the feeds that enter the model hold, per source? A data profile of the feeds of [d005 › D3](../../docs/designs/d005-data-model.md#d3-feeds-that-enter-the-model), as evidence for its decisions.
 
 - `<source>/profile.sql` runs DuckDB's `SUMMARIZE` over each feed of that source (type, min, max, approximate distinct values, quartiles, null percentage) and writes one CSV per feed next to it; `vehicle_types_available` is unnested into `station_status_vehicle_types.csv`. About 2 s for AMBici and 5 s for Bicing.
+- `ambici/over_capacity.sql` lists, per AMBici station, the passes where available bikes exceed its capacity, with the largest count and the first and last time (UTC), into `over_capacity.csv`. A few seconds.
 - `keys_check.py` lists every key path of each feed and the number of files that contain it, marking those missing from some files. It covers what `profile.sql` cannot: its schema detection samples only a few files, since sampling them all runs out of memory in DuckDB 2.0.0 ([duckdb#27806](https://github.com/duckdb/duckdb/issues/27806)). About 80 s.
 
 ```text
 duckdb -f spikes/d005-data-model/profile/ambici/profile.sql
 duckdb -f spikes/d005-data-model/profile/bicing/profile.sql
+duckdb -f spikes/d005-data-model/profile/ambici/over_capacity.sql
 python3 -I spikes/d005-data-model/profile/keys_check.py spikes/cloudflare-capture-spike/data/V4/raw
 ```
