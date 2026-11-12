@@ -1,0 +1,238 @@
+uid,in_gbfs,nextbike_name,gbfs_name,place_type,bike_racks,capacity,passes_over,max_excess
+150867939,True,AMB - Diagonal I,AMB - Diagonal I,33,18,18,2610,15
+189004148,True,AMB - METRO La Pau,AMB - METRO La Pau,27,20,20,990,8
+196048973,True,AMB - Campus Diagonal - Besòs,AMB - Campus Diagonal - Besòs,33,24,24,2041,16
+219235987,True,AMB - METRO Baró de Viver,AMB - METRO Baró de Viver,33,20,20,251,2
+375498561,True,AMB - Riera Blanca Nord,AMB - Riera Blanca Nord,14,22,22,0,0
+444880309,True,AMB - Diagonal II,AMB - Diagonal II,33,16,16,3568,32
+563557347,True,AMB - METRO Besòs Mar,AMB - METRO Besòs Mar,27,20,20,464,6
+563558358,True,AMB - Av. Dr. Marañón,AMB - Av. Dr. Marañón,27,20,20,528,7
+595511385,True,AMB - Campus Nord,AMB - Campus Nord,27,20,20,1041,7
+653024597,True,AMB - CC La Maquinista,AMB - CC La Maquinista,27,20,20,0,0
+186597078,True,METRO Gorg,METRO Gorg,14,22,22,111,1
+186597838,True,Morera,Morera,16,16,16,0,0
+186599035,True,Platja de’n Botifarreta,Platja de’n Botifarreta,27,16,16,4851,21
+186599595,True,METRO Artigues | Sant Adrià,METRO Artigues | Sant Adrià,14,24,24,515,4
+186600383,True,La Mora,La Mora,33,22,22,2865,7
+186600965,True,Canyadó,Canyadó,14,22,22,899,7
+186601321,True,Pomar,Pomar,16,18,18,0,0
+186602111,True,Molí de la Torre - Joan Junceda,Molí de la Torre - Joan Junceda,14,18,18,0,0
+186602587,True,La Ciència,La Ciència,16,18,18,141,3
+186602877,True,RENFE Badalona,RENFE Badalona,33,24,24,990,11
+186603165,True,Martí Pujol - Torrents Lladó,Martí Pujol - Torrents Lladó,14,14,14,0,0
+186603428,True,METRO Pep Ventura,METRO Pep Ventura,14,24,24,245,8
+186603744,True,Martí Pujol - Pau Rodon,Martí Pujol - Pau Rodon,16,18,18,0,0
+186603970,True,Antiga de València - Joan Valera,Antiga de València - Joan Valera,16,18,18,0,0
+186604648,True,Plaça Trafalgar,Plaça Trafalgar,14,22,22,0,0
+186605176,True,Hospital de l’Esperit Sant,Hospital de l’Esperit Sant,16,18,18,0,0
+186605496,True,METRO Sant Roc,METRO Sant Roc,16,16,16,557,3
+186605752,True,Platja del Coco,Platja del Coco,33,20,20,1166,9
+186606215,True,METRO Badalona Pompeu Fabra,METRO Badalona Pompeu Fabra,27,28,28,424,15
+186606451,True,Anna Tugas,Anna Tugas,14,24,24,0,0
+186606738,True,Estadi Municipal,Estadi Municipal,14,22,22,0,0
+186607255,True,Can Cabanyes,Can Cabanyes,14,20,20,266,6
+186607500,True,Can Ruti,Can Ruti,16,16,16,0,0
+186607782,True,Platja del Manresà,Platja del Manresà,16,16,16,399,6
+186608041,True,Martí Pujol - Bufalà,Martí Pujol - Bufalà,16,16,16,29,1
+186608729,True,METRO La Salut,METRO La Salut,14,22,22,0,0
+186609017,True,METRO Llefià,METRO Llefià,14,22,22,0,0
+186609233,True,Plaça Assemblea de Catalunya,Plaça Assemblea de Catalunya,14,22,22,221,3
+186609489,True,Plaça Alcalde Manent,Plaça Alcalde Manent,16,18,18,577,2
+186609925,True,Palau Municipal d’Esports,Palau Municipal d’Esports,33,22,22,1915,15
+186610307,True,Platja del Cristall,Platja del Cristall,16,18,18,0,0
+603553113,True,Bonavista,Bonavista,16,22,22,0,0
+603554979,True,Av. del President Companys,Av. del President Companys,16,22,22,0,0
+603555230,True,Carrer de la Seu d’Urgell ,Carrer de la Seu d’Urgell ,16,16,16,0,0
+342732499,True,RENFE - METRO Rambla Just Oliveres,RENFE - METRO Rambla Just Oliveres,33,26,26,1083,7
+342750511,True,Ajuntament,Ajuntament,27,18,18,3180,15
+342752077,True,METRO Av. Carrilet,METRO Av. Carrilet,14,20,20,517,3
+342753170,True,Plaça Mestre Clavè,Plaça Mestre Clavè,33,22,22,7390,22
+342754906,True,FGC Sant Josep,FGC Sant Josep,16,20,20,1494,7
+342756231,True,Poliesportiu Sergio Manzano,Poliesportiu Sergio Manzano,14,20,20,618,5
+342756795,True,METRO Hospital de Bellvitge,METRO Hospital de Bellvitge,27,20,20,561,3
+342758992,True,METRO Provençana,METRO Provençana,16,18,18,156,2
+342760854,True,METRO Bellvitge,METRO Bellvitge,14,20,20,0,0
+342761491,True,RENFE - FGC Gornal,RENFE - FGC Gornal,14,20,20,0,0
+342762402,True,METRO Can Tries | Gornal,METRO Can Tries | Gornal,16,16,16,1041,6
+342771890,True,FGC Ildefons Cerdà,FGC Ildefons Cerdà,16,16,16,0,0
+342772438,True,METRO Europa | Fira,METRO Europa | Fira,14,22,22,70,2
+342772924,True,Ciutat de la Justícia Nord,Ciutat de la Justícia Nord,14,24,24,0,0
+342773701,True,Ciutat de la Justícia Sud,Ciutat de la Justícia Sud,16,24,24,580,4
+342774219,True,Plaça de l'UNICEF,Plaça de l'UNICEF,16,18,18,248,2
+342778368,True,Riera Blanca Sud,Riera Blanca Sud,14,20,20,0,0
+342778752,True,METRO Santa Eulàlia,METRO Santa Eulàlia,14,24,24,0,0
+342779050,True,METRO Torrassa,METRO Torrassa,16,22,22,97,2
+342779493,True,Plaça Espanyola,Plaça Espanyola,16,18,18,616,1
+342779829,True,Plaça Guernica,Plaça Guernica,14,22,22,0,0
+342780142,True,METRO Collblanc,METRO Collblanc,33,20,20,90,5
+342780590,True,Plaça Sènia,Plaça Sènia,14,22,22,0,0
+342781410,True,Parc dels Ocellets,Parc dels Ocellets,16,18,18,23,1
+342781822,True,METRO Florida,METRO Florida,16,16,16,0,0
+342782223,True,Mercat la Florida,Mercat la Florida,14,20,20,0,0
+342783401,True,Plaça Eivissa,Plaça Eivissa,14,22,22,0,0
+342783919,True,METRO Pubilla Cases,METRO Pubilla Cases,14,20,20,0,0
+342784339,True,Plaça de la Carpa,Plaça de la Carpa,16,16,16,8,1
+342785195,True,METRO Can Serra,METRO Can Serra,16,18,18,0,0
+342785769,True,METRO Can Boixeres,METRO Can Boixeres,14,20,20,0,0
+541817337,True,La Remunta,La Remunta,16,20,20,345,4
+541817682,True,Ctra. del Mig - Fabregada,Ctra. del Mig - Fabregada,16,20,20,383,4
+135338958,True,METRO Cornellà Centre,METRO Cornellà Centre,16,20,20,0,0
+135339155,True,Plaça de l'Església,Plaça de l'Església,14,22,22,0,0
+135339493,True, FGC Cornellà - Riera, FGC Cornellà - Riera,33,22,22,2053,33
+135339669,True,FGC Almeda,FGC Almeda,33,20,20,3494,15
+135340017,True,CC SPLAU,CC SPLAU,33,24,24,1741,46
+135344348,True,TRAM Fontsanta Fatjó,TRAM Fontsanta Fatjó,27,16,16,5111,23
+135349271,True,TRAM El Pedró,TRAM El Pedró,14,20,20,0,0
+135349477,True,METRO Gavarra,METRO Gavarra,16,20,20,0,0
+135349611,True,Plaça Catalunya,Plaça Catalunya,14,22,22,305,1
+135349737,True,METRO Sant Ildefons,METRO Sant Ildefons,14,22,22,31,2
+135349848,True,Parc de Can Mercader,Parc de Can Mercader,14,24,24,648,5
+135354427,True,Piscina Municipal Can Millars,Piscina Municipal Can Millars,16,18,18,498,6
+135354552,True,Pavelló Espai Esportiu Sant Ildefons,Pavelló Espai Esportiu Sant Ildefons,16,16,16,111,4
+135354661,True,Biblioteca Sant Ildefons,Biblioteca Sant Ildefons,16,18,18,0,0
+135354769,True,CityPARK,CityPARK,27,16,16,9513,21
+186612691,True,Plaça de la Vila,Plaça de la Vila,14,22,22,71,2
+186613007,True,Rambla Sant Sebastià,Rambla Sant Sebastià,16,20,20,0,0
+186613345,True,METRO Església Major,METRO Església Major,14,20,20,0,0
+186614624,True,Mercat Sagarra,Mercat Sagarra,14,22,22,0,0
+186614910,True,Torribera,Torribera,16,16,16,0,0
+186615826,True,METRO Singuerlín,METRO Singuerlín,16,18,18,0,0
+186616102,True,METRO Can Zam,METRO Can Zam,14,22,22,0,0
+186616416,True,Plaça del Barri Llatí,Plaça del Barri Llatí,16,14,14,229,3
+186616682,True,Pg. de la Salzereda,Pg. de la Salzereda,16,20,20,0,0
+186616998,True,La CIBA,La CIBA,14,22,22,0,0
+186617286,True,Av. Pallaresa,Av. Pallaresa,14,18,18,931,7
+186617641,True,METRO Santa Rosa,METRO Santa Rosa,16,22,22,0,0
+186617930,True,METRO Can Peixauet,METRO Can Peixauet,14,22,22,26,1
+186618240,True,Plaça de les Cultures,Plaça de les Cultures,16,18,18,0,0
+186618728,True,METRO Fondo,METRO Fondo,33,22,22,0,0
+142166951,True,CC Palmira Domènech,CC Palmira Domènech,14,20,20,0,0
+142167394,True,L’Artesà,L’Artesà,16,18,18,506,3
+142167513,True,METRO El Prat estació,METRO El Prat estació,27,22,22,577,6
+142167638,True,METRO Les Moreres,METRO Les Moreres,16,20,20,111,2
+142167735,True,Carretera de la Marina,Carretera de la Marina,16,15,15,0,0
+142167858,True,Av. Onze de setembre - Remolar,Av. Onze de setembre - Remolar,14,20,20,10,1
+142168006,True,METRO Cèntric,METRO Cèntric,33,20,20,0,0
+142168118,True,Jardins de Mon Racó,Jardins de Mon Racó,16,18,18,131,2
+146696174,True,Plaça Louis Braille,Plaça Louis Braille,14,24,24,0,0
+146696391,True,Plaça Blanes,Plaça Blanes,14,24,24,7,1
+146696648,True,Plaça Pau Casals,Plaça Pau Casals,14,19,19,0,0
+146696865,True,Verge de Montserrat - Remolar,Verge de Montserrat - Remolar,14,22,22,0,0
+146696979,True,Pompeu Fabra - Dolores Ibárruri,Pompeu Fabra - Dolores Ibárruri,14,20,20,0,0
+146697261,True,CAP Pujol i Capsada,CAP Pujol i Capsada,16,18,18,705,4
+556334521,True,Platja del Prat,Platja del Prat,27,20,20,0,0
+162850331,True,Plaça de Joan XXIII,Plaça de Joan XXIII,14,24,24,0,0
+162850680,True,Camp de futbol Canyars,Camp de futbol Canyars,16,24,24,719,12
+162852840,True,Camps esportius Can Vinader,Camps esportius Can Vinader,16,16,16,3479,11
+162853266,True,RENFE Castelldefels,RENFE Castelldefels,27,24,24,604,9
+162853796,True,Poliesportiu Can Roca,Poliesportiu Can Roca,16,16,16,51,3
+162854346,True,Plaça de l'Ajuntament,Plaça de l'Ajuntament,14,20,20,0,0
+162855657,True,Platja de la Pineda,Platja de la Pineda,33,20,20,16,2
+162856145,True,RENFE Platja Castelldefels,RENFE Platja Castelldefels,14,20,20,1879,8
+162856505,True,Plaça del Mar,Plaça del Mar,33,20,20,5783,22
+162856908,True,Plaça de les Palmeres,Plaça de les Palmeres,33,24,24,545,6
+162857299,True,Plaça Colom,Plaça Colom,16,20,20,529,8
+162857657,True,Equipaments Pitort,Equipaments Pitort,14,20,20,1083,9
+162858020,True,CAP Can Bou,CAP Can Bou,16,16,16,80,1
+522308936,True,Montmar,Montmar,16,16,16,3493,5
+522309537,True,Poal,Poal,16,20,20,0,0
+522577659,True,Bellamar,Bellamar,14,20,20,5036,14
+522578148,True,Centre Cívic Vista Alegre,Centre Cívic Vista Alegre,14,20,20,0,0
+164426778,True,Ca n'Alemany - Jocelyn Bell,Ca n'Alemany - Jocelyn Bell,16,18,18,0,0
+164426934,True,RENFE Parc de la Marina,RENFE Parc de la Marina,33,22,22,432,5
+164427108,True,Viladecans Business Park - Tecnologia,Viladecans Business Park - Tecnologia,16,18,18,0,0
+164427241,True,Can Calderon - Plaça Espanya,Can Calderon - Plaça Espanya,16,18,18,78,3
+164427363,True,Podium - Torre-roja,Podium - Torre-roja,14,22,22,2219,35
+164427523,True,Av. Dels Jocs Olímpics - Parc Torre-roja,Av. Dels Jocs Olímpics - Parc Torre-roja,14,20,20,1547,5
+164427665,True,Plaça Constitució - Av. Roureda,Plaça Constitució - Av. Roureda,33,20,20,4409,12
+164427791,True,CAP Maria Bernades,CAP Maria Bernades,33,22,22,4340,13
+164427923,True,Torrent Ballester - Atrium,Torrent Ballester - Atrium,14,20,20,817,13
+164428048,True,Plaça de les Palmeres,Plaça de les Palmeres,16,18,18,0,0
+164428185,True,Riera de Sant Llorenç - Can Guardiola,Riera de Sant Llorenç - Can Guardiola,16,18,18,3094,14
+164428298,True,Av. Generalitat - Roca,Av. Generalitat - Roca,14,20,20,0,0
+164428400,True,Av. Generalitat - Plaça de la Vila,Av. Generalitat - Plaça de la Vila,33,24,24,53,2
+517511642,True,Antonio Machado - IES Sales,Antonio Machado - IES Sales,14,20,20,0,0
+517511908,True,Hospital de Viladecans - Av. Gavà,Hospital de Viladecans - Av. Gavà,16,20,20,179,3
+517512111,True,Av. Miramar - IES Miramar,Av. Miramar - IES Miramar,14,20,20,18,1
+517512443,True,Can Palmer - Av. Mil·lenari,Can Palmer - Av. Mil·lenari,16,20,20,0,0
+135349994,True,TRAM Sant Feliu - Consell Comarcal,TRAM Sant Feliu - Consell Comarcal,33,20,20,232,3
+135350101,True,Can Calders - Rambla,Can Calders - Rambla,14,20,20,77,2
+135350197,True,Can Nadal - Rectoria,Can Nadal - Rectoria,14,26,26,0,0
+135350366,True,Mas Lluí - Vilardaga,Mas Lluí - Vilardaga,14,28,28,155,3
+135350489,True,Falguera - Rafael Alberti,Falguera - Rafael Alberti,14,21,21,855,22
+135350604,True,Plaça Catalunya - Jutjats,Plaça Catalunya - Jutjats,14,18,18,200,3
+135350711,True,La Salut - Bombers,La Salut - Bombers,33,20,20,7846,21
+135354948,True,Les Grases - Escoles,Les Grases - Escoles,16,18,18,0,0
+135355081,True,RENFE Sant Feliu de Llobregat,RENFE Sant Feliu de Llobregat,27,16,16,0,0
+135355400,True,Plaça Vuit de març,Plaça Vuit de març,16,18,18,81,1
+135355501,True,Can Maginàs,Can Maginàs,27,18,18,886,5
+135355700,True,Biblioteca - Complex,Biblioteca - Complex,16,17,17,0,0
+517510787,True,Institut Olorda,Institut Olorda,16,20,20,288,3
+142142417,True,Plaça de la Constitució,Plaça de la Constitució,14,20,20,262,9
+142142598,True,Av. dels Països Catalans - Residència Blume,Av. dels Països Catalans - Residència Blume,33,18,18,2470,24
+142143849,True,TRAM Pont d'Esplugues,TRAM Pont d'Esplugues,27,24,24,0,0
+142144210,True,Biblioteca Pare Miquel d'Esplugues,Biblioteca Pare Miquel d'Esplugues,14,20,20,0,0
+142144382,True,Plaça dels Records - Polígon El Gall,Plaça dels Records - Polígon El Gall,16,16,16,41,1
+142144579,True,TRAM La Sardana,TRAM La Sardana,16,22,22,0,0
+142144827,True,Camp Municipal d'Esports Salt del Pí,Camp Municipal d'Esports Salt del Pí,14,20,20,0,0
+142144985,True,Can Clota - Pont Nou,Can Clota - Pont Nou,14,22,22,0,0
+142145101,True,METRO Can Vidalet,METRO Can Vidalet,16,20,20,0,0
+142145334,True,TRAM Ca n'Oliveres,TRAM Ca n'Oliveres,27,20,20,1166,10
+142145509,True,Hospital Sant Joan de Déu,Hospital Sant Joan de Déu,33,22,22,2431,18
+607646812,True,C/ Església - CEM Les Moreres,C/ Església - CEM Les Moreres,16,16,16,106,2
+179651003,True,RENFE Gavà,RENFE Gavà,33,27,27,1602,23
+179656178,True,Passeig Maragall,Passeig Maragall,14,22,22,0,0
+179676307,True,Rambla Gavà,Rambla Gavà,14,21,21,235,8
+179686634,True,Can Tries,Can Tries,16,12,12,134,2
+179692156,True,IES Calamot,IES Calamot,14,20,20,314,6
+179736885,True,Ajuntament de Gavà,Ajuntament de Gavà,14,20,20,966,5
+179800533,True,Plaça Catalunya,Plaça Catalunya,27,16,16,662,11
+180826977,True,La Vela,La Vela,33,22,22,4350,15
+224439004,True,C-245 - Colomeres,C-245 - Colomeres,14,20,20,325,3
+234346798,True,Av. Eramprunyà - Joan I,Av. Eramprunyà - Joan I,16,18,18,0,0
+238236114,True,La Font Groga,La Font Groga,16,22,22,0,0
+520176345,True,Les Bòbiles,Les Bòbiles,16,20,20,238,3
+520176542,True,Parc empresarial de Gavà,Parc empresarial de Gavà,16,20,20,371,5
+520176745,True,Carrer Premià,Carrer Premià,16,20,20,0,0
+375505548,True,Plaça de la Vila - Av. de Catalunya,Plaça de la Vila - Av. de Catalunya,14,20,20,2228,4
+375509209,True,RENFE Sant Adrià de Besòs,RENFE Sant Adrià de Besòs,33,20,20,1348,10
+522306197,True,TRAM La Catalana,TRAM La Catalana,16,20,20,0,0
+135350797,True,Av. Barcelona - Goytisolo,Av. Barcelona - Goytisolo,14,26,26,0,0
+135350904,True,Plaça del Pi,Plaça del Pi,33,14,14,6333,24
+135351007,True,Centre Miquel Martí i Pol,Centre Miquel Martí i Pol,14,22,22,0,0
+135351108,True,Centre Cívic Torreblanca,Centre Cívic Torreblanca,14,24,24,0,0
+135354121,True,Ciutat esportiva Joan Gamper,Ciutat esportiva Joan Gamper,14,22,22,657,8
+135354249,True,Centre Mercè Rodoreda,Centre Mercè Rodoreda,33,20,20,4341,20
+135355812,True,Plaça del Mercat,Plaça del Mercat,27,12,12,1603,10
+135355918,True,Centre Cívic Antoni Gaudí,Centre Cívic Antoni Gaudí,16,22,22,429,7
+135356035,True,Av. Lluís Companys - Av. de la Generalitat,Av. Lluís Companys - Av. de la Generalitat,16,18,18,0,0
+162830923,True,RENFE Molins de Rei,RENFE Molins de Rei,27,20,20,483,8
+162831541,True,Zona Esportiva Ricard Ginebreda,Zona Esportiva Ricard Ginebreda,14,20,20,146,4
+162832459,True,Les Guardioles,Les Guardioles,14,24,24,0,0
+162832849,True,Biblioteca el Molí,Biblioteca el Molí,14,22,22,1266,4
+162833253,True,La Granja,La Granja,14,20,20,1579,6
+162833691,True,Piscina Municipal,Piscina Municipal,16,16,16,0,0
+531170493,True,Riera Nova,Riera Nova,16,16,16,81,3
+531170778,True,Plaça de la Pau,Plaça de la Pau,16,22,22,0,0
+142141158,True,Mas Lluí - Parc Iulia Quieta,Mas Lluí - Parc Iulia Quieta,33,28,28,3423,15
+142141545,True,TRAM Walden,TRAM Walden,33,22,22,242,5
+142141673,True,El Parador,El Parador,14,22,22,0,0
+142141797,True,TRAM Rambla de Sant Just,TRAM Rambla de Sant Just,14,18,18,0,0
+142142075,True,La Miranda - Canigó,La Miranda - Canigó,16,14,14,927,4
+142142205,True,Plaça Maragall,Plaça Maragall,16,18,18,587,3
+514223993,True,Can Ginestar,Can Ginestar,16,20,20,0,0
+514248105,True,INS Sant Just - CEM La Bonaigua,INS Sant Just - CEM La Bonaigua,16,22,22,22,1
+514248539,True,Parc Plana Padrosa,Parc Plana Padrosa,16,16,16,157,7
+142153778,True,FGC Molí Nou - Ciutat Cooperativa,FGC Molí Nou - Ciutat Cooperativa,16,14,14,0,0
+142153915,True,CEM Pau Gasol,CEM Pau Gasol,14,20,20,0,0
+142154091,True,Institut Marianao,Institut Marianao,16,18,18,1069,2
+142154216,True,L'Olivera,L'Olivera,14,24,24,0,0
+142154767,True,FGC Sant Boi,FGC Sant Boi,33,24,24,514,5
+142154898,True,Parc de la Muntanyeta,Parc de la Muntanyeta,33,20,20,1179,5
+142155014,True,Mercat de la Muntanyeta,Mercat de la Muntanyeta,16,18,18,12,1
+142166589,True,Institut Camps Blancs,Institut Camps Blancs,16,18,18,990,5
+142166697,True,Ronda de Sant Ramon - Eusebi Güell,Ronda de Sant Ramon - Eusebi Güell,14,18,18,141,3
+142166803,True,Plaça del Llobregat,Plaça del Llobregat,14,22,22,104,3
+525749099,True,C-245 - Sant Joan Bosco,C-245 - Sant Joan Bosco,16,22,22,84,2
+529241906,True,CC Sant Boi,CC Sant Boi,16,20,20,267,6
+529243519,True,Pl. Catalunya,Pl. Catalunya,16,22,22,0,0

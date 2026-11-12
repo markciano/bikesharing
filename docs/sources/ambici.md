@@ -24,6 +24,15 @@ Facts about the AMBici data source, confirmed against captured data.
 | Languages | `en`, `ca`, `es`: same structure; only vehicle type names and descriptions differ, and `ca` is identical to `es` (Spanish). One language (`en`) is enough ([s001 › 10](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05) |
 | Declared refresh | `ttl` 60 s on every feed, 86,400 s on `geofencing_zones` and `system_pricing_plans` |
 
+### nextbike live
+
+| | |
+|---|---|
+| Endpoint | `https://maps.nextbike.net/maps/nextbike-live.json?domains=bs`, the data behind the map at `https://www.ambici.cat/ca/mapa/` |
+| Format | JSON, nextbike's own schema, not GBFS: country → cities (one per municipality) → places (stations) → bikes |
+| Auth | Public, no token |
+| Licence | Not stated in the feed |
+
 ### History
 
 None published: only the real-time feed exists ([s003](../spikes/s003-ambici-historical-data.md)).
@@ -55,7 +64,7 @@ None published: only the real-time feed exists ([s003](../spikes/s003-ambici-his
 - **Change:** content changes every 60 s; 3.3 MB per day as gzip ([s001 › 3a, 7b](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-04).
 - **Quality:**
   - Consistency: available bikes + available docks exceed `capacity` in 3% of station items, at 43 stations ([s001 › 8a](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
-  - Consistency: `num_bikes_available` exceeds `capacity` at 141 of 237 stations, at some for more than half the passes, and reaches 70 at station `135340017` (capacity 24); at each station's peak there are no free docks. +P parking explains it at up to 57 stations, not at 141 ([over_capacity.csv](../../spikes/d005-data-model/over-capacity/over_capacity.csv), 2026-10-14 to 2026-10-26).
+  - Consistency: `num_bikes_available` exceeds `capacity` at 141 of 237 stations, at some for more than half the passes, and reaches 70 at station `135340017` (capacity 24); at each station's peak there are no free docks. It happens at 51 of the 57 stations with +P ([`nextbike-live.json`](#nextbike-livejson)), and at 90 of the 180 without, less often: a median of 886 and 1,978 passes over at the two +P place types, against 258 and 310 at the others ([over_capacity.csv](../../spikes/d005-data-model/over-capacity/over_capacity.csv), 2026-10-14 to 2026-10-26; [plus_p.csv](../../spikes/d005-data-model/plus-p/plus_p.csv), 2026-11-12).
 
 ### `station_information`
 
@@ -109,7 +118,15 @@ None published: only the real-time feed exists ([s003](../spikes/s003-ambici-his
 
 - **Content:** polygons where riding or parking is allowed; empty ([d005 › D3](../designs/d005-data-model.md#d3-feeds-that-enter-the-model)).
 
+### `nextbike-live.json`
+
+- **Content:** the same 237 stations as GBFS, with their bikes one by one ([fields.txt](../../spikes/d005-data-model/plus-p/fields.txt), 2026-11-12).
+- **Fields:**
+  - A place's `uid` is the GBFS `station_id`, with the same name, at all 237 stations ([plus_p.csv](../../spikes/d005-data-model/plus-p/plus_p.csv), 2026-11-12).
+  - `place_type` 27 or 33 marks a station with +P parking, blue on the map; 14 and 16 are regular stations, red. 21 and 36 stations, 57 in all, as the [AMBici FAQ](https://www.ambici.cat/es/faq/) states; checked by eye on 4 stations of each type ([plus_p.csv](../../spikes/d005-data-model/plus-p/plus_p.csv), 2026-11-12).
+  - `bike_racks` equals the GBFS `capacity` at every station, so it counts docks only; `special_racks` and `free_special_racks` are 0 everywhere, so no field gives a station's +P places ([fields.txt](../../spikes/d005-data-model/plus-p/fields.txt), [plus_p.csv](../../spikes/d005-data-model/plus-p/plus_p.csv), 2026-11-12).
+
 ## Open questions
 
 - Whether nextbike publishes other cities with the same structure.
-- Why available bikes exceed `capacity` at 141 stations, more than the 57 with +P parking: more +P stations than the FAQ lists, or another cause.
+- Why available bikes exceed `capacity` at 90 stations without +P parking.
