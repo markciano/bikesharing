@@ -141,6 +141,22 @@ What would change it: a source whose flags stop matching these definitions, foun
 
 Rejected: merging `is_renting` and `is_returning` into one in-service flag. They never disagree in these sources, but GBFS keeps them apart and a station may accept returns while not renting.
 
+#### D8. Vehicle propulsion
+
+The bikes of both systems are either mechanical or electrically assisted; none is fully electric. The vehicle type's propulsion, the level that compares across systems ([D5](#d5-conformed-dimensions)), therefore takes two values, derived from the `propulsion_type` each source publishes in `vehicle_types`, a vocabulary GBFS 2.3 and 3.0 share:
+
+| `propulsion_type` | Propulsion |
+|---|---|
+| `human` | Mechanical |
+| `electric_assist` | Electric |
+
+The rule reads only what each type publishes, so a new or renamed type, such as Bicing's `METRO`, which became `METRO_BASE` on 2026-10-22, is classified with no change to the model. The dimension keeps one row per published type, with its `vehicle_type_id`, name and `form_factor`, so stock is still counted per type; propulsion is the level above it, used to compare systems.
+
+- AMBici: `196` is `human`; `204` and `420` are `electric_assist`.
+- Bicing: of its 11 types, only `FIT`, `EFIT`, `BOOST` and `ICONIC` appear in `vehicle_types_available`; `ICONIC` and `FIT` are `human` and `BOOST` is `electric_assist` (fixture of 2026-11-07). The standing scooter (`CHLOE`) and the trailer (`TRAILER`) are published but not rented, and never have stock.
+
+Rejected: a hand-kept table of propulsion per `vehicle_type_id`, since type IDs are local to each system and change, and every new type would wait for an edit to be classified.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -172,7 +188,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ1 | How the dimension values of AMBici and Bicing are conformed (Kimball step 3: same names and domain values) | D5 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. Vehicle types: AMBici publishes 3 (`196` human; `204` and `420` electric assist); Bicing publishes 11, bicycles with human or electric-assist propulsion plus a standing scooter (`CHLOE`) and a trailer (`TRAILER`), and on 2026-10-22 `METRO` became `METRO_BASE` ([spikes/d005-data-model](../../spikes/d005-data-model/README.md)). Regions: AMBici's 237 stations sit in 16 regions, 15 of them municipalities; "AMB" groups 10 stations, most of them in Barcelona or on a boundary; municipal boundaries are open (ICGC, CC BY 4.0). To decide: how each source's vehicle types map to the propulsion level of D5, and the municipality of the stations in "AMB" |
+| OQ1 | How the dimension values of AMBici and Bicing are conformed (Kimball step 3: same names and domain values) | D5 | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) reviewed critically: GBFS 3.0 as vocabulary rather than shape. Vehicle types: AMBici publishes 3 (`196` human; `204` and `420` electric assist); Bicing publishes 11, bicycles with human or electric-assist propulsion plus a standing scooter (`CHLOE`) and a trailer (`TRAILER`), and on 2026-10-22 `METRO` became `METRO_BASE` ([spikes/d005-data-model](../../spikes/d005-data-model/README.md)). Regions: AMBici's 237 stations sit in 16 regions, 15 of them municipalities; "AMB" groups 10 stations, most of them in Barcelona or on a boundary; municipal boundaries are open (ICGC, CC BY 4.0). Vehicle propulsion decided in [D8](#d8-vehicle-propulsion). To decide: the municipality of the stations in "AMB" |
 | OQ2 | The facts of each business process (Kimball step 4): their measures, one definition and name for both sources, their additivity, and which d002 question each answers in gold | D4, OQ1 | Which questions gold answers is handed to T040 by [d002 › Out of scope](d002-requirements.md). Expected: the facts match in both sources (same service, near-identical schema). To check: GBFS 3.0 renamed `num_bikes_available` to `num_vehicles_available` ([GBFS PR #354](https://github.com/MobilityData/gbfs/pull/354)), and the field-by-field mapping of 2.3 to 3.0 in [s002 › 2](../spikes/s002-bicing-realtime-capture.md#2-common-model); an out-of-service station reports its bikes in AMBici and 0 in Bicing ([D7](#d7-station-status-flags)); the Bicing archive splits stock only into mechanical and electric |
 | OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ1, OQ2 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md) |
 
