@@ -45,6 +45,17 @@ duckdb -f spikes/d005-data-model/profile/bicing/profile.sql
 python3 -I spikes/d005-data-model/profile/keys_check.py spikes/cloudflare-capture-spike/data/V4/raw
 ```
 
+## `municipality/`
+
+Question: which municipality contains each station, and does it match the region AMBici publishes? Evidence for d005 › Open questions, OQ1.
+
+- Boundaries: ICGC's "Divisions administratives" (v2r2, 2026-01-20), layer `divisions_administratives_municipis_5000` (1:5,000), from its WFS (`https://geoserveis.icgc.cat/servei/catalunya/divisions-administratives/wfs`), which returns GML 3.2 only. CC BY 4.0, "Geoinformació de l'Institut Cartogràfic i Geològic de Catalunya". The WFS serves the current version, so a later run may use newer boundaries.
+- `municipality_check.py` reads the latest `station_information` of both sources and AMBici's `system_regions`, requests the municipalities in the stations' bounding box (EPSG:4326) once, and caches the response in `data/` (ignored by Git; delete it to fetch again). It checks that Plaça de Catalunya falls in Barcelona, places each station by the even-odd rule over all rings of each municipality, and measures its distance to that municipality's boundary. It writes `municipality.csv` (one row per station: published region, computed municipality, match, distance in metres) and prints a summary per source. About 2 s, plus the first request.
+
+```text
+python3 -I spikes/d005-data-model/municipality/municipality_check.py spikes/cloudflare-capture-spike/data/V4/raw spikes/d005-data-model/municipality/municipality.csv spikes/d005-data-model/municipality/data/municipis_5000.gml
+```
+
 ## `over-capacity/`
 
 Question: why do AMBici's available bikes exceed a station's `capacity`? Evidence for [AMBici's source card › `station_status`](../../docs/sources/ambici.md#station_status).
