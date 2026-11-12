@@ -55,6 +55,7 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 
 ### Service
 
+- **Stable schema:** every key path appears in every file of `station_status`, `station_information`, `vehicle_types` and `system_regions` ([`keys_check.py`](../../spikes/d005-data-model/profile/keys_check.py), 2026-10-14 to 2026-10-26).
 - **`last_updated`:** the time the response was generated, equal to the request time, not data freshness; it can be up to 15 s ahead of the client clock and never went backwards ([s002 › 3c](../spikes/s002-bicing-realtime-capture.md#3-freshness), 2026-10-05).
 - **Timestamps:** RFC 3339 in UTC (`Z`) ([s002 › 1f](../spikes/s002-bicing-realtime-capture.md#1-schema), 2026-10-05).
 - **`ttl` gives no cadence:** every feed declares `ttl` 0 ([d004 › D3](../designs/d004-bronze-data-capture.md#d3-feed-cadence), [spike-log-queries.sql › 6](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql), 2026-10-14 to 2026-11-05).
@@ -70,7 +71,9 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 - **Fields:**
   - Observed: `station_id`, `num_vehicles_available`, `num_vehicles_disabled`, `num_docks_available`, `num_docks_disabled`, `last_reported`, `is_installed`, `is_renting`, `is_returning`, `vehicle_docks_available`, `vehicle_types_available` ([s002 › 2a](../spikes/s002-bicing-realtime-capture.md#2-common-model), 2026-10-05).
   - `last_reported` is a real per-station time, about every 3 min, but counts often change without it (71,699 silent changes in two days): changes are detected by content ([s002 › 3b](../spikes/s002-bicing-realtime-capture.md#3-freshness), 2026-10-05).
-  - `vehicle_types_available` uses only `FIT`, `EFIT`, `BOOST` and `ICONIC`; `FIT` and `EFIT` showed no activity ([s002 › 4a](../spikes/s002-bicing-realtime-capture.md#4-sampling), 2026-10-05).
+  - No field has nulls ([profile › station_status](../../spikes/d005-data-model/profile/bicing/station_status.csv), 2026-10-14 to 2026-10-26).
+  - `vehicle_types_available` always lists `FIT`, `EFIT`, `BOOST` and `ICONIC`, with count 0 when there are none, and no other type ([profile › station_status_vehicle_types](../../spikes/d005-data-model/profile/bicing/station_status_vehicle_types.csv), 2026-10-14 to 2026-10-26); `FIT` and `EFIT` showed no activity ([s002 › 4a](../spikes/s002-bicing-realtime-capture.md#4-sampling), 2026-10-05).
+  - `num_vehicles_disabled` averages 2.9 per station, against 7.5 available, and reaches 50 ([profile › station_status](../../spikes/d005-data-model/profile/bicing/station_status.csv), 2026-10-14 to 2026-10-26).
   - `is_renting` and `is_returning` follow their GBFS meaning: false only while a station is out of service, about 5 stations per pass and 121 in all, and the two never disagree ([d005 › D7](../designs/d005-data-model.md#d7-station-status-flags), 2026-10-14 to 2026-10-26).
   - `is_renting` alone also marks a suspension of rentals: from 2026-10-03T18:14Z to 10-04T09:49Z it was false at 90–99% of stations while `is_returning` stayed true, and stations reopened gradually until 10-04T18:27Z; it matches the torrential rain episode in Catalonia of 3 and 4 October ([AEMET](https://aemetblog.es/2026/10/21/analisis-del-episodio-de-lluvias-torrenciales-en-cataluna-del-3-y-4-de-octubre-de-2026/)). Outside it, about 5 stations per pass were out of service, as later ([s002 › 8f, 8j](../spikes/s002-bicing-realtime-capture.md#8-quality), 2026-11-12).
   - `is_installed` is false at 1 station ([s002 › 8f](../spikes/s002-bicing-realtime-capture.md#8-quality), 2026-10-05).
@@ -79,7 +82,7 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
   - Consistency: the per-type counts do not add up to `num_vehicles_available` in 2.7% of station items, at 521 stations ([s002 › 8c](../spikes/s002-bicing-realtime-capture.md#8-quality), 2026-10-05).
   - Consistency: available + disabled vehicles and docks exceed `capacity` in 5% of station items, at 52 stations ([s002 › 8a](../spikes/s002-bicing-realtime-capture.md#8-quality), 2026-10-05).
   - Consistency: a new station can appear in `station_status` before `station_information` (station `309`, in 11 status responses) ([s002 › 6b](../spikes/s002-bicing-realtime-capture.md#6-identity), 2026-10-05).
-  - Timeliness: 15 installed stations had not reported for more than 24 h in every response ([s002 › 8d](../spikes/s002-bicing-realtime-capture.md#8-quality), 2026-10-05).
+  - Timeliness: 15 installed stations had not reported for more than 24 h in every response ([s002 › 8d](../spikes/s002-bicing-realtime-capture.md#8-quality), 2026-10-05); the oldest `last_reported` is still 2025-06-12 ([profile › station_status](../../spikes/d005-data-model/profile/bicing/station_status.csv), 2026-10-14 to 2026-10-26).
 
 ### `station_information`
 
@@ -87,16 +90,24 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 - **Fields:**
   - `name` and `short_name` are localised in 5 languages ([s002 › 1d](../spikes/s002-bicing-realtime-capture.md#1-schema), 2026-10-05).
   - `capacity` equals the `count` of the single `vehicle_docks_capacity` group and can change: 13 changes in two days, and station `77` went from 24 to 0 ([s002 › 6c, 8a](../spikes/s002-bicing-realtime-capture.md#6-identity), 2026-10-05).
-  - `rental_uris` is always an empty object ([s002 › 2a](../spikes/s002-bicing-realtime-capture.md#2-common-model), 2026-10-05).
+  - `cross_street` holds the district and neighbourhood, not a street, e.g. `01-CiutatVella/01-el Raval` ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
+  - `is_charging_station` is always true, `is_virtual_station` always false, and `rental_methods` always `key`, `transitcard`, `creditcard` and `phone` ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
+  - `rental_uris` is always an empty object and `vehicle_types_capacity` an empty list ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), [`keys_check.py`](../../spikes/d005-data-model/profile/keys_check.py), 2026-10-14 to 2026-10-26).
 - **Change:** 68 changes in 12.5 days (see Service); 4.4 MB per day as gzip ([s002 › 7b](../spikes/s002-bicing-realtime-capture.md#7-volume), 2026-10-04).
 - **Quality:**
   - Validity: `external_id` is not a GBFS 3.0 field ([s002 › 2a](../spikes/s002-bicing-realtime-capture.md#2-common-model), 2026-10-05).
+  - Validity: `post_code` comes both with and without its leading zero (`08001`, `8001`) ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
+  - Completeness: `post_code` is missing in 0.37% of station items ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
+  - Validity: some `name` and `address` values start with a space ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
 
 ### `vehicle_types`
 
-- **Content:** 11 types: bicycles with human or electric-assist propulsion, a standing scooter (`CHLOE`) and a trailer (`TRAILER`); `METRO` became `METRO_BASE` on 2026-10-22 ([`vehicle_types_check.py`](../../spikes/d005-data-model/vehicle-types/vehicle_types_check.py)).
+- **Content:** 11 type IDs over the window, 9 or 10 per response: bicycles, a standing scooter (`CHLOE`) and a trailer (`TRAILER`), with 3 values of `form_factor` and 3 of `propulsion_type` ([profile › vehicle_types](../../spikes/d005-data-model/profile/bicing/vehicle_types.csv), 2026-10-14 to 2026-10-26); `METRO` became `METRO_BASE` on 2026-10-22 ([`vehicle_types_check.py`](../../spikes/d005-data-model/vehicle-types/vehicle_types_check.py)).
+- **Fields:**
+  - `max_range_meters` ranges from 0 to 70,000, and is 0 for most types ([profile › vehicle_types](../../spikes/d005-data-model/profile/bicing/vehicle_types.csv), 2026-10-14 to 2026-10-26).
 - **Quality:**
   - Validity: `default_pricing_plan_id` is sometimes an empty string ([s002 › 2a](../spikes/s002-bicing-realtime-capture.md#2-common-model), 2026-10-05).
+  - Completeness: `pricing_plan_ids` is missing in 14.89% of type items ([profile › vehicle_types](../../spikes/d005-data-model/profile/bicing/vehicle_types.csv), 2026-10-14 to 2026-10-26).
 
 ### `system_information`
 
@@ -109,7 +120,7 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 
 ### `system_regions`
 
-- **Content:** essentially empty, 85 B ([s002 › 7a](../spikes/s002-bicing-realtime-capture.md#7-volume), 2026-10-05).
+- **Content:** empty: no region in any response ([`keys_check.py`](../../spikes/d005-data-model/profile/keys_check.py), 2026-10-14 to 2026-10-26).
 
 ### `geofencing_zones`
 
