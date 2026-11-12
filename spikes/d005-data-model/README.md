@@ -140,3 +140,24 @@ python3 -I spikes/d005-data-model/station-names/names_check.py spikes/cloudflare
 ```text
 python3 -I spikes/d005-data-model/out-of-service/out_of_service_check.py spikes/cloudflare-capture-spike/data/V4/raw spikes/d005-data-model/out-of-service/out_of_service.csv
 ```
+
+## 11. `plus-p/`
+
+- **Question:** which AMBici stations have +P parking, and does it explain why their bikes exceed `capacity`?
+- **Evidence for:** [d005 › D17](../../docs/designs/d005-data-model.md#d17-occupancy), and the facts of [AMBici's source card › `nextbike-live.json`](../../docs/sources/ambici.md#nextbike-livejson).
+- **Inputs:** nextbike's live feed for AMBici, the data behind the map at `https://www.ambici.cat/ca/mapa/` (public, no key; downloaded 2026-11-12), and `over-capacity/over_capacity.csv` (check 2). Download the feed into `data/` before the run:
+
+  ```text
+  curl -s -o spikes/d005-data-model/plus-p/data/nextbike-live.json "https://maps.nextbike.net/maps/nextbike-live.json?domains=bs"
+  ```
+
+- **Scripts:**
+  - `fields_check.py` profiles every field of the feed: occurrences, types, distinct values, range and most common values.
+  - `plus_p_check.py` matches each nextbike place to the GBFS station with the same ID (`uid` = `station_id`) in the latest `station_information`, and per `place_type` counts the stations, those ever over capacity, how often and by how much, and how `bike_racks` compares with `capacity`. The map shows `place_type` 27 and 33 as +P stations (blue) and 14 and 16 as regular ones (red), checked by eye on 4 stations of each.
+- **Output:** `fields.txt`, one line per field path; `plus_p.csv`, one row per station; and a summary per `place_type` on stdout.
+- **Run time:** under 1 s each.
+
+```text
+python3 -I spikes/d005-data-model/plus-p/fields_check.py spikes/d005-data-model/plus-p/data/nextbike-live.json spikes/d005-data-model/plus-p/fields.txt
+python3 -I spikes/d005-data-model/plus-p/plus_p_check.py spikes/d005-data-model/plus-p/data/nextbike-live.json spikes/cloudflare-capture-spike/data/V4/raw spikes/d005-data-model/over-capacity/over_capacity.csv spikes/d005-data-model/plus-p/plus_p.csv
+```
