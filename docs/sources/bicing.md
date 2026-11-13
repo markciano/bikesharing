@@ -64,6 +64,7 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 - **Latency shifts:** median response latency moved from about 158 ms to 37 ms on 2026-10-29 and to about 139 ms on 2026-11-03, with no change on the capture side ([d004 › D4](../designs/d004-bronze-data-capture.md#d4-static-feeds-spread-across-passes), [spike-log-queries.sql › 5](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql), 2026-11-05).
 - **No `content-length`:** the origin sends none, also when serving gzip, so a response's size is known only by reading its body ([s006 › F7](../spikes/s006-cloudflare-capture.md#findings), [d004 › Source fetch](../designs/d004-bronze-data-capture.md#source-fetch), 2026-10-12).
 - **Volume:** about 19 MB per day as gzip, with static feeds every 15 min ([s002 › 7b](../spikes/s002-bicing-realtime-capture.md#7-volume), 2026-10-04).
+- **Reservations:** the app reserves a bike at a given station up to 5 min before picking it up (Bicing app, 2026-11-13).
 
 ### `station_status`
 
@@ -134,3 +135,4 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 - Whether the monthly archives are dumps of this feed, and whether they keep the GBFS 2.x fields (`num_bikes_available`, `num_bikes_available_types` with `mechanical` and `ebike`, `is_charging_station`, `status`) (T005).
 - Content and schema changes inside the archives, 2019–2026 (T005).
 - Whether the suspected wrong uploads are really wrong (T005).
+- Whether a reserved bike still counts in `num_vehicles_available`: `station_status` has no count of reserved vehicles.
