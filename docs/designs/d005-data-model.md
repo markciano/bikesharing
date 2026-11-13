@@ -307,9 +307,14 @@ Rejected: no movement beyond a fixed interval length, since the change across th
 
 #### D24. Movements at an out-of-service station
 
-A movement pairs two consecutive counts only if the station is in service in both. A count taken while the station is out of service, with `is_renting` and `is_returning` false ([D16](#d16-vehicles-at-an-out-of-service-station)), pairs with neither neighbour, so the last count before a closing and the first after the reopening make no movement either. The rule reads the status flags, not the count, so it applies alike to Bicing, whose count is then null, and to AMBici, which keeps publishing its count. An out-of-service station allows neither rentals nor returns ([D7](#d7-station-status-flags)), so any change while it is closed is the operator's, not a trip. The counts before and after a closing stay in the station stock.
+A movement counts only what the station allowed in both of its counts: a drop is departures only if `is_renting` is true in both, and a rise is arrivals only if `is_returning` is true in both. GBFS defines the two flags apart ([D7](#d7-station-status-flags)), and a change the station did not allow is the operator's, not a trip. The rule reads the status flags, not the count, so it applies alike to both sources; the counts stay in the station stock.
 
-Rejected: treating a closing as a gap in capture ([D23](#d23-movements-across-gaps-in-capture)), pairing the last count before it with the first after it, since the change, which cannot be a trip, would enter the movements as departures or arrivals at the reopening.
+- **Out of service**, with both flags false ([D16](#d16-vehicles-at-an-out-of-service-station)): no movement with either neighbour, so the last count before a closing and the first after the reopening make none either. This holds for Bicing, whose count is then null, and for AMBici, which keeps publishing its count.
+- **Rentals suspended, returns allowed:** returns still enter as arrivals, and the operator's removals do not enter as departures. Bicing suspended rentals at 90–99% of its stations from 2026-10-03T18:14Z to 10-04T09:49Z, reopening them gradually until 10-04T18:27Z, with `is_returning` true throughout ([Bicing › `station_status`](../sources/bicing.md#station_status)).
+
+The interval in which a flag changes is left out for the change it no longer allows, at most a minute at each closing at the usual cadence, longer only across a gap in capture ([D23](#d23-movements-across-gaps-in-capture)). Within an interval, only the net change is seen ([D22](#d22-departures-and-arrivals)), so a return and an operator's removal cancel out.
+
+Rejected: treating a closing as a gap in capture, pairing the last count before it with the first after it, since the change, which cannot be a trip, would enter the movements at the reopening; applying the rule only when both flags are false, since during a suspension of rentals the operator's removals would count as departures.
 
 ### 1.3 Requirements
 
