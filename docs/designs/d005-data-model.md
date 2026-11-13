@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ2.4b. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19–D21), occupancy (D17), AMBici's +P stations (D18) and departures and arrivals (D22) are decided; facts (OQ2.4b–OQ2.6) and detailed design (OQ3) remain.
+- Next: OQ2.4c. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19–D21), occupancy (D17), AMBici's +P stations (D18) and departures and arrivals (D22, D23) are decided; facts (OQ2.4c–OQ2.6) and detailed design (OQ3) remain.
   - For failure cases: the behaviours observed over 2026-10-14 to 10-26 that each decision relies on; first known gap: Bicing's `num_docks_available` at a closed station. For [D16](#d16-vehicles-at-an-out-of-service-station): GBFS 2.x counts the bikes of a station with `is_renting` false as disabled ([NABSA/gbfs#195](https://github.com/NABSA/gbfs/pull/195)), while Bicing reports 0. For [D19](#d19-last-reported-time-in-the-stock): the counts of a Bicing station in service that has not reported for a long time, and from what age they stop being current. For [D20](#d20-zero-counts-in-the-stock-by-vehicle-type): a capture where no station of a system lists a type that has stock in others.
   - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
@@ -297,6 +297,14 @@ The change is taken on the station's total, not per vehicle type, so one method 
 
 Rejected: the change per propulsion, summing each one's drops and rises, which also counts a mechanical bike leaving and an electric one arriving within one interval, since it rests on per-type counts that do not always add up to the station's ([D21](#d21-per-type-counts-that-do-not-add-up-to-the-stations)) and no question asks for movements by type; the change in `num_vehicles_available` alone, since in Bicing a vehicle becoming disabled would count as a departure, and one returned as disabled would not count as an arrival.
 
+#### D23. Movements across gaps in capture
+
+Two counts are consecutive when no count of the station lies between them in the station stock, however far apart they are: a movement spans any gap in capture. Each row of the stock movements keeps the capture time of both counts, so the length of its interval is known, and it falls on the date and time of day of the later count, when the change is seen. Every change in a station's count therefore enters the movements, and a day's departures and arrivals match the change in the station's count, as in [D22](#d22-departures-and-arrivals). How a query treats long intervals is its own criterion, applied when the data is read.
+
+Capture takes `station_status` every minute ([d004 › D3](d004-bronze-data-capture.md#d3-feed-cadence)), and Bicing misses about 2% of the minutes ([d004 › Known gaps at close](d004-bronze-data-capture.md#42-known-gaps-at-close)); the Bicing archive's counts are 5 minutes apart. The longer the interval, the more pick-ups and returns cancel out within it ([D22](#d22-departures-and-arrivals)).
+
+Rejected: no movement beyond a fixed interval length, since the change across the gap would be lost from silver, a day's movements would no longer match its stock, and one threshold would bind every query.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -329,11 +337,10 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ2.4b | Gaps in capture: what consecutive means when passes are missing | D22 | Whether a movement spans the gap and is flagged, or is not computed beyond a set length |
 | OQ2.4c | How the null count of a Bicing station out of service ([D16](#d16-vehicles-at-an-out-of-service-station)) enters the movements, at its closing and its reopening | D22, D16 | — |
-| OQ2.4d | Lack of service versus lack of demand: suspensions and frozen counts | D22, OQ2.4b, OQ2.4c | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand; likewise a frozen count ([D19](#d19-last-reported-time-in-the-stock)). Whether the model marks it or gold handles it (OQ2.6) |
+| OQ2.4d | Lack of service versus lack of demand: suspensions and frozen counts | D22, D23, OQ2.4c | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand; likewise a frozen count ([D19](#d19-last-reported-time-in-the-stock)). Whether the model marks it or gold handles it (OQ2.6) |
 | OQ2.5 | The facts of the capture passes: lateness and completeness | D4 | — |
-| OQ2.6 | Which d002 question gold answers, and with which table | OQ2.2–OQ2.5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md). How gold and the visualization show a measure known for one source only, such as disabled vehicles ([D15](#d15-disabled-vehicles-and-docks)) |
+| OQ2.6 | Which d002 question gold answers, and with which table | OQ2.2–OQ2.5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md). How gold and the visualization show a measure known for one source only, such as disabled vehicles ([D15](#d15-disabled-vehicles-and-docks)). Whether gold leaves out or flags movements over long intervals, and from what length ([D23](#d23-movements-across-gaps-in-capture)) |
 | OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ2.6 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md). A count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided |
 
 ## 2. Plan — how
