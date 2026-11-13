@@ -67,6 +67,7 @@ None published: only the real-time feed exists ([s003](../spikes/s003-ambici-his
 - **Quality:**
   - Consistency: available bikes + available docks exceed `capacity` in 3% of station items, at 43 stations ([s001 › 8a](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-05).
   - Consistency: `num_bikes_available` exceeds `capacity` at 141 of 237 stations, at some for more than half the passes, and reaches 70 at station `135340017` (capacity 24); at each station's peak there are no free docks. It happens at 51 of the 57 stations with +P ([`nextbike-live.json`](#nextbike-livejson)), and at 90 of the 180 without, less often: a median of 886 and 1,978 passes over at the two +P place types, against 258 and 310 at the others ([over_capacity.csv](../../spikes/d005-data-model/over-capacity/over_capacity.csv), 2026-10-14 to 2026-10-26; [plus_p.csv](../../spikes/d005-data-model/plus-p/plus_p.csv), 2026-11-12).
+  - Accuracy: `capacity` matches the docks on Google Street View at 5 stations without +P that exceed it (Bellamar, Montmar, Riera de Sant Llorenç - Can Guardiola, Plaça de la Vila - Av. de Catalunya, Podium - Torre-roja; imagery of July 2024 to March 2026), so a stale `capacity` does not explain the excess (checked 2026-11-13).
 
 ### `station_information`
 
