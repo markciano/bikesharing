@@ -50,6 +50,8 @@ None published: only the real-time feed exists ([s003](../spikes/s003-ambici-his
 - **Stable index:** the `gbfs` index was 3,124 B in every hourly read ([d004 › D5](../designs/d004-bronze-data-capture.md#d5-hourly-index-refresh), [spike-log-queries.sql › 5](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql), 2026-10-14 to 2026-11-05).
 - **Latency shifts:** median response latency moved from about 760 ms to 39 ms on 2026-10-29 and to about 317 ms on 2026-11-03, with no change on the capture side ([d004 › D4](../designs/d004-bronze-data-capture.md#d4-static-feeds-spread-across-passes), [spike-log-queries.sql › 5](../../spikes/cloudflare-capture-spike/analysis/spike-log-queries.sql), 2026-11-05).
 - **Volume:** about 75 MB per day as gzip, with static feeds every 15 min; `free_bike_status` is 94% of it ([s001 › 7b](../spikes/s001-ambici-realtime-capture.md#capture-findings), 2026-10-04).
+- **Frame lock:** each bike has a lock on its rear wheel. It pauses a rental anywhere, and ends one outside the docks only at a +P station with no free dock; a return at a dock needs both the dock and the lock ([AMBici FAQ](https://www.ambici.cat/ca/faq/), undated, read 2026-11-13).
+- **Reservations:** the app reserves a bike at a given station up to 10 min before picking it up (AMBici app, 2026-11-13).
 
 ### `station_status`
 
@@ -130,3 +132,4 @@ None published: only the real-time feed exists ([s003](../spikes/s003-ambici-his
 
 - Whether nextbike publishes other cities with the same structure.
 - Why available bikes exceed `capacity` at 90 stations without +P parking.
+- Whether a reserved bike still counts in `num_bikes_available`: `station_status` has no count of reserved bikes, and only `free_bike_status` flags `is_reserved`, per bike.
