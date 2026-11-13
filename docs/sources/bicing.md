@@ -89,6 +89,7 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
   - Accuracy: station `7` (Pg. Pujades, 1) has 27 docks on Google Street View (imagery of August 2024) against a `capacity` of 25; at 4 other stations over `capacity` the docks match it (checked 2026-11-13).
   - Consistency: a new station can appear in `station_status` before `station_information` (station `309`, in 11 status responses) ([s002 › 6b](../spikes/s002-bicing-realtime-capture.md#6-identity), 2026-10-05).
   - Timeliness: 15 installed stations had not reported for more than 24 h in every response ([s002 › 8d](../spikes/s002-bicing-realtime-capture.md#8-quality), 2026-10-05); the oldest `last_reported` is still 2025-06-12 ([profile › station_status](../../spikes/d005-data-model/profile/bicing/station_status.csv), 2026-10-14 to 2026-10-26).
+  - Timeliness: a station stops sending counts while its `last_reported` is old. With `last_reported` 24 h old or more, the counts differ from the station's previous pass in 0.02% of station items (9 of 59,994), against 16.1% when it is under 10 min. 5 of the 11 stations with such items were in service (`is_renting` true) during them, station `346` for 1,883 passes ([last_reported_by_age.csv](../../spikes/d005-data-model/last-reported/last_reported_by_age.csv), [last_reported_stale.csv](../../spikes/d005-data-model/last-reported/last_reported_stale.csv), 2026-10-14 to 2026-10-26).
 
 ### `station_information`
 
