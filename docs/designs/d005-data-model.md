@@ -19,8 +19,8 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ2.3. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19), occupancy (D17) and AMBici's +P stations (D18) are decided; facts (OQ2.3–OQ2.6) and detailed design (OQ3) remain.
-  - For failure cases: the behaviours observed over 2026-10-14 to 10-26 that each decision relies on; first known gap: Bicing's `num_docks_available` at a closed station. For [D16](#d16-vehicles-at-an-out-of-service-station): GBFS 2.x counts the bikes of a station with `is_renting` false as disabled ([NABSA/gbfs#195](https://github.com/NABSA/gbfs/pull/195)), while Bicing reports 0. For [D19](#d19-last-reported-time-in-the-stock): the counts of a Bicing station in service that has not reported for a long time, and from what age they stop being current.
+- Next: OQ2.3. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19–D21), occupancy (D17) and AMBici's +P stations (D18) are decided; facts (OQ2.3–OQ2.6) and detailed design (OQ3) remain.
+  - For failure cases: the behaviours observed over 2026-10-14 to 10-26 that each decision relies on; first known gap: Bicing's `num_docks_available` at a closed station. For [D16](#d16-vehicles-at-an-out-of-service-station): GBFS 2.x counts the bikes of a station with `is_renting` false as disabled ([NABSA/gbfs#195](https://github.com/NABSA/gbfs/pull/195)), while Bicing reports 0. For [D19](#d19-last-reported-time-in-the-stock): the counts of a Bicing station in service that has not reported for a long time, and from what age they stop being current. For [D20](#d20-zero-counts-in-the-stock-by-vehicle-type): a capture where no station of a system lists a type that has stock in others.
   - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
@@ -272,6 +272,23 @@ What would change it: AMBici publishing a real time per station; the model takes
 
 Rejected: keeping only the capture time, since a frozen Bicing station would read as a station with no movement, and recovering it would mean reading bronze again.
 
+#### D20. Zero counts in the stock by vehicle type
+
+The stock by vehicle type is a dense periodic snapshot: in each capture, every station has a row for every vehicle type that any station of its system lists in `vehicle_types_available`, with `num_vehicles_available` 0 when it has none of that type. The measure is the `count` of each entry, under its GBFS 3.0 name ([D14](#d14-vocabulary-of-the-measures)). An average over time or an empty run per type then reads the table with no filling.
+
+- **Bicing** lists its 4 types with stock at every station, with count 0 when there are none ([Bicing › `station_status`](../sources/bicing.md#station_status)).
+- **AMBici** omits the types with count 0, and its list is empty at a station with no bikes ([AMBici › `station_status`](../sources/ambici.md#station_status)); the missing types get a row with 0. Only `196` and `204` ever appear ([profile › station_status_vehicle_types](../../spikes/d005-data-model/profile/ambici/station_status_vehicle_types.csv)).
+
+A type that no station lists, such as AMBici's `420` or Bicing's `CHLOE` and `TRAILER` ([D8](#d8-vehicle-propulsion)), has no rows.
+
+Rejected: a row only for counts above 0, since every average over time or empty run would have to fill the missing rows from the station stock, and a missed fill inflates the result.
+
+#### D21. Per-type counts that do not add up to the station's
+
+The station stock keeps the station's `num_vehicles_available` and the stock by vehicle type keeps each type's count, both as the source publishes them, even when the types do not add up to the station's count, as in 2.7% of Bicing's station items ([Bicing › `station_status`](../sources/bicing.md#station_status)). The data model states that the two may differ, and the share of station items where they do is a data quality indicator (DAMA's consistency).
+
+Rejected: making them add up, by taking the station's count from the types or adjusting a type, since the model would publish a count no source gives and hide the source's inconsistency.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -304,7 +321,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ2.3 | The facts of the stock by vehicle type | D19, D8 | The Bicing archive splits stock only into mechanical and electric |
+| OQ2.3 | The facts of the stock by vehicle type, beyond [D20](#d20-zero-counts-in-the-stock-by-vehicle-type) and [D21](#d21-per-type-counts-that-do-not-add-up-to-the-stations): per-type counts at a Bicing station out of service ([D16](#d16-vehicles-at-an-out-of-service-station)) | D19, D8, D20 | The Bicing archive splits stock only into mechanical and electric |
 | OQ2.4 | The facts of the stock movements: departures, arrivals, and how they relate to gaps in capture | D19 | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand. How the null count of a Bicing station out of service ([D16](#d16-vehicles-at-an-out-of-service-station)) enters the movements, before and after it |
 | OQ2.5 | The facts of the capture passes: lateness and completeness | D4 | — |
 | OQ2.6 | Which d002 question gold answers, and with which table | OQ2.2–OQ2.5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md). How gold and the visualization show a measure known for one source only, such as disabled vehicles ([D15](#d15-disabled-vehicles-and-docks)) |
