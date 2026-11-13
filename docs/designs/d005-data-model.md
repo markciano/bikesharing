@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ2.6. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19–D21), occupancy (D17), AMBici's +P stations (D18) and the stock movements (D22–D25) and the feeds' timeliness and completeness (D26) are decided; gold (OQ2.6) and detailed design (OQ3) remain.
+- Next: OQ3. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19–D21), occupancy (D17), AMBici's +P stations (D18), the stock movements (D22–D25), the feeds' timeliness and completeness (D26) and gold per question (D27) are decided; detailed design (OQ3) remains.
   - For failure cases: the behaviours observed over 2026-10-14 to 10-26 that each decision relies on; first known gap: Bicing's `num_docks_available` at a closed station. For [D16](#d16-vehicles-at-an-out-of-service-station): GBFS 2.x counts the bikes of a station with `is_renting` false as disabled ([NABSA/gbfs#195](https://github.com/NABSA/gbfs/pull/195)), while Bicing reports 0. For [D19](#d19-last-reported-time-in-the-stock): the counts of a Bicing station in service that has not reported for a long time, and from what age they stop being current. For [D20](#d20-zero-counts-in-the-stock-by-vehicle-type): a capture where no station of a system lists a type that has stock in others.
   - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
@@ -332,6 +332,10 @@ Q2's records that break invariants and frozen stations ([D25](#d25-lack-of-servi
 
 Rejected: a capture passes fact, one row per source, feed and pass from capture's logs, since the model would depend on the logs' format and mix the operation of the system with the quality of its data. **refines [d004 › D7, D9](d004-bronze-data-capture.md#d7-quality-questions-answered-from-the-pipeline)**
 
+#### D27. Gold per question
+
+The model maps each question of [d002 › Guiding questions](d002-requirements.md#guiding-questions) to the business process that answers it ([data-model.md › Business processes](../data-model.md#business-processes)). Gold's tables, formulas and thresholds are fixed by the design of the slice that builds each process ([D1](#d1-one-model-over-one-bus-matrix)), as d002 sets for formulas and thresholds.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -364,8 +368,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ2.6 | Which d002 question gold answers, and with which table | D14–D26 | Handed to T040 by [d002 › Out of scope](d002-requirements.md). How gold and the visualization show a measure known for one source only, such as disabled vehicles ([D15](#d15-disabled-vehicles-and-docks)). Whether gold leaves out or flags movements over long intervals, and from what length ([D23](#d23-movements-across-gaps-in-capture)). How gold shows service availability beside trips, and from what age of `last_reported` a station counts as frozen ([D25](#d25-lack-of-service-and-frozen-counts)) |
-| OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ2.6 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md). A count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided |
+| OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | D27 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md). A count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided |
 
 ## 2. Plan — how
 
