@@ -19,8 +19,9 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ2.2d. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16), occupancy (D17) and AMBici's +P stations (D18) are decided; facts (OQ2.2d–OQ2.6) and detailed design (OQ3) remain.
-  - For failure cases: the behaviours observed over 2026-10-14 to 10-26 that each decision relies on; first known gap: Bicing's `num_docks_available` at a closed station. For [D16](#d16-vehicles-at-an-out-of-service-station): GBFS 2.x counts the bikes of a station with `is_renting` false as disabled ([NABSA/gbfs#195](https://github.com/NABSA/gbfs/pull/195)), while Bicing reports 0.  - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
+- Next: OQ2.3. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19), occupancy (D17) and AMBici's +P stations (D18) are decided; facts (OQ2.3–OQ2.6) and detailed design (OQ3) remain.
+  - For failure cases: the behaviours observed over 2026-10-14 to 10-26 that each decision relies on; first known gap: Bicing's `num_docks_available` at a closed station. For [D16](#d16-vehicles-at-an-out-of-service-station): GBFS 2.x counts the bikes of a station with `is_renting` false as disabled ([NABSA/gbfs#195](https://github.com/NABSA/gbfs/pull/195)), while Bicing reports 0. For [D19](#d19-last-reported-time-in-the-stock): the counts of a Bicing station in service that has not reported for a long time, and from what age they stop being current.
+  - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
   - For D3: the Bicing history archives as a source of the model.
@@ -258,6 +259,19 @@ What would change it: AMBici publishing +P in its GBFS feed; the model then take
 
 Rejected: capturing nextbike's feed in the pipeline, since it adds a non-GBFS feed with no stated licence for a list that rarely changes; editing the list by hand, since the script also finds the stations that stop being +P.
 
+#### D19. Last reported time in the stock
+
+Each row of the station stock keeps the station's `last_reported`, with its GBFS 3.0 name and definition ([D14](#d14-vocabulary-of-the-measures)): the last time the station reported its status to the operator's backend. The sources differ in what it carries:
+
+- **Bicing:** a real time per station, whose age tells a frozen count from a current one. With `last_reported` 24 h old or more, a station's counts almost never change, even at stations in service ([Bicing › `station_status`](../sources/bicing.md#station_status)).
+- **AMBici:** the feed time ([AMBici › `station_status`](../sources/ambici.md#station_status)), so it carries no information per station, and a frozen AMBici station cannot be told from one with no movement.
+
+The stock's counts (`num_vehicles_available`, `num_vehicles_disabled`, `num_docks_available`, `num_docks_disabled`) are semi-additive, as set in [D4](#d4-business-processes-and-the-grain-of-the-stock): they are summed across stations, not over time. `last_reported` is non-additive.
+
+What would change it: AMBici publishing a real time per station; the model takes it with no change.
+
+Rejected: keeping only the capture time, since a frozen Bicing station would read as a station with no movement, and recovering it would mean reading bronze again.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -290,9 +304,8 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ2.2d | The station stock: `last_reported` in the fact | D14 | A real time per station in Bicing, the feed time in AMBici. Closing it also writes the stock's additivity, set by [D4](#d4-business-processes-and-the-grain-of-the-stock) |
-| OQ2.3 | The facts of the stock by vehicle type | OQ2.2d, D8 | The Bicing archive splits stock only into mechanical and electric |
-| OQ2.4 | The facts of the stock movements: departures, arrivals, and how they relate to gaps in capture | OQ2.2d | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand. How the null count of a Bicing station out of service ([D16](#d16-vehicles-at-an-out-of-service-station)) enters the movements, before and after it |
+| OQ2.3 | The facts of the stock by vehicle type | D19, D8 | The Bicing archive splits stock only into mechanical and electric |
+| OQ2.4 | The facts of the stock movements: departures, arrivals, and how they relate to gaps in capture | D19 | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand. How the null count of a Bicing station out of service ([D16](#d16-vehicles-at-an-out-of-service-station)) enters the movements, before and after it |
 | OQ2.5 | The facts of the capture passes: lateness and completeness | D4 | — |
 | OQ2.6 | Which d002 question gold answers, and with which table | OQ2.2–OQ2.5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md). How gold and the visualization show a measure known for one source only, such as disabled vehicles ([D15](#d15-disabled-vehicles-and-docks)) |
 | OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ2.6 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md). A count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided |

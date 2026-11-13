@@ -173,3 +173,15 @@ python3 -I spikes/d005-data-model/plus-p/plus_p_check.py spikes/d005-data-model/
 ```text
 duckdb -f spikes/d005-data-model/capacity-arithmetic/capacity_arithmetic.sql
 ```
+
+## 13. `last-reported/`
+
+- **Question:** does a Bicing station whose `last_reported` is old still send new counts?
+- **Evidence for:** [d005 › D19](../../docs/designs/d005-data-model.md#d19-last-reported-time-in-the-stock), and the timeliness facts of [Bicing's source card › `station_status`](../../docs/sources/bicing.md#station_status).
+- **Script:** `last_reported.sql` computes, per station item, the age of `last_reported` (the response's `last_updated` minus `last_reported`) and whether any of the four counts differs from the station's previous pass. It groups the items by age band, and lists the stations with any item 24 h old or more, with their count changes and status flags in those items.
+- **Output:** `last_reported_by_age.csv`, one row per age band; `last_reported_stale.csv`, one row per station; both next to the script.
+- **Run time:** about 3 s.
+
+```text
+duckdb -f spikes/d005-data-model/last-reported/last_reported.sql
+```
