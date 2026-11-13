@@ -20,7 +20,7 @@ Each question is answered by these processes:
 | Question | What it needs | Process |
 |---|---|---|
 | Q1 Bikes and free docks per station, now, by type | The latest count of each station | Station stock; stock by vehicle type for the split |
-| Q2 Feeds on time and complete | Whether each pass captured each feed and how late; records that break invariants; frozen stations | Capture passes; station stock for invariants and frozen stations |
+| Q2 Feeds on time and complete | The minutes with a capture and the age of its data; records that break invariants; frozen stations | Station stock |
 | Q3 When a station is full or empty, and for how long | Occupancy in each count; runs of consecutive counts with no bikes or no docks | Station stock |
 | Q4 Trips per day | Each drop in bikes between two consecutive counts is a departure, a lower bound on trips | Stock movements |
 | Q5 Share of the fleet in use | Fleet minus bikes at stations minus disabled bikes, at the latest count | Station stock |
@@ -37,7 +37,6 @@ Movements can be derived from the stock, but they are a fact of their own becaus
 | Station stock | One row per station and capture | `station_status`; Bicing's historical archive |
 | Stock by vehicle type | One row per station, capture and vehicle type | `vehicle_types_available` in `station_status`; the archive has no per-type counts |
 | Stock movements | One row per station and pair of consecutive captures with a change | Station stock |
-| Capture passes | One row per source, feed and capture pass | Capture's logs |
 
 The stock is a periodic snapshot: every capture is a row, even when the station has not changed. Rows are only appended, a gap in capture shows as missing rows, and the archive's 5-minute snapshots fit the same grain. Repeated values compress well in columnar storage, so unchanged rows cost little space. The alternative, one row per station state with `valid_from` and `valid_to`, stores fewer rows but rewrites the open row on every change and cannot tell an unchanged state from a gap in capture ([d005 › D4](designs/d005-data-model.md#d4-business-processes-and-the-grain-of-the-stock)).
 
@@ -52,23 +51,22 @@ A dimension answers what describes a fact row: when, where, whose and what. Aski
 | Whose? | AMBici or Bicing | System, since every question compares the two |
 | In what state? | `is_installed`, `is_renting`, `is_returning` | None: flags of the row itself, kept in the fact |
 
-Stock by vehicle type adds *what*: the vehicle type. Stock movements share the stock's dimensions. Capture passes add *which feed* and have no station.
+Stock by vehicle type adds *what*: the vehicle type. Stock movements share the stock's dimensions.
 
 Four choices follow from the questions:
 
-- **System is a dimension of its own,** not an attribute of the station: capture passes have no station, and Q2 compares systems as Q1 does. It is conformed: every fact shares it.
+- **System is a dimension of its own,** not an attribute of the station: every question compares the two, and a capture's completeness and lateness (Q2) belong to the system's response, not to a station. It is conformed: every fact shares it.
 - **Station keeps its history** as a slowly changing dimension of type 2: a change of name, capacity or location adds a new version with its validity period. Q8 asks for that history, and occupancy in the past needs the capacity of its time.
 - **Post code and municipality are flattened into the station,** the usual dimensional form for a small hierarchy, rather than tables of their own linked to it (a snowflake).
 - **Vehicle types compare by propulsion.** Type IDs are local to each system, while propulsion, mechanical or electric, is shared by both and is the only split of the Bicing archive.
 
 ### Bus matrix
 
-| Process | Date | Time of day | System | Station | Vehicle type | Feed |
-|---|---|---|---|---|---|---|
-| Station stock | ✓ | ✓ | ✓ | ✓ | | |
-| Stock by vehicle type | ✓ | ✓ | ✓ | ✓ | ✓ | |
-| Stock movements | ✓ | ✓ | ✓ | ✓ | | |
-| Capture passes | ✓ | ✓ | ✓ | | | ✓ |
+| Process | Date | Time of day | System | Station | Vehicle type |
+|---|---|---|---|---|---|
+| Station stock | ✓ | ✓ | ✓ | ✓ | |
+| Stock by vehicle type | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Stock movements | ✓ | ✓ | ✓ | ✓ | |
 
 ### Star schemas
 
@@ -138,27 +136,6 @@ erDiagram
     class TIME_OF_DAY time
     class SYSTEM system
     class STATION station
-```
-
-#### Capture passes
-
-```mermaid
-%%{init: {"themeVariables": {"relationLabelBackground": "#f5f5f5", "relationLabelColor": "#000000"}}}%%
-erDiagram
-    DATE ||--o{ CAPTURE_PASSES : "day of"
-    TIME_OF_DAY ||--o{ CAPTURE_PASSES : "minute of"
-    SYSTEM ||--o{ CAPTURE_PASSES : "captured from"
-    FEED ||--o{ CAPTURE_PASSES : "of feed"
-    classDef fact fill:#ffffff,stroke:#424242,color:#000
-    classDef date fill:#bbdefb,stroke:#1565c0,color:#000
-    classDef time fill:#c8e6c9,stroke:#2e7d32,color:#000
-    classDef system fill:#e1bee7,stroke:#6a1b9a,color:#000
-    classDef feed fill:#cfd8dc,stroke:#455a64,color:#000
-    class CAPTURE_PASSES fact
-    class DATE date
-    class TIME_OF_DAY time
-    class SYSTEM system
-    class FEED feed
 ```
 
 Columns of each table are fixed by the slice that builds it ([d007 › D1](designs/d007-pipeline-design.md#d1-build-by-vertical-slice)).

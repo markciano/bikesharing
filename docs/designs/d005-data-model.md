@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ2.5. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19–D21), occupancy (D17), AMBici's +P stations (D18) and the stock movements (D22–D25) are decided; facts (OQ2.5, OQ2.6) and detailed design (OQ3) remain.
+- Next: OQ2.6. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19–D21), occupancy (D17), AMBici's +P stations (D18) and the stock movements (D22–D25) and the feeds' timeliness and completeness (D26) are decided; gold (OQ2.6) and detailed design (OQ3) remain.
   - For failure cases: the behaviours observed over 2026-10-14 to 10-26 that each decision relies on; first known gap: Bicing's `num_docks_available` at a closed station. For [D16](#d16-vehicles-at-an-out-of-service-station): GBFS 2.x counts the bikes of a station with `is_renting` false as disabled ([NABSA/gbfs#195](https://github.com/NABSA/gbfs/pull/195)), while Bicing reports 0. For [D19](#d19-last-reported-time-in-the-stock): the counts of a Bicing station in service that has not reported for a long time, and from what age they stop being current. For [D20](#d20-zero-counts-in-the-stock-by-vehicle-type): a capture where no station of a system lists a type that has stock in others.
   - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
@@ -84,12 +84,11 @@ What would change it: a new question that needs a discarded feed; the feed then 
 
 #### D4. Business processes and the grain of the stock
 
-The model follows Kimball's inventory case, as framed in [d002 › Guiding questions](d002-requirements.md#guiding-questions): each capture is a stock count per station, and trips are stock movements derived from consecutive counts. Four business processes answer Q1–Q7; Q8 is answered by the history of the station dimension, not by a fact. The model, with how each question maps to a process, lives in [data-model.md](../data-model.md).
+The model follows Kimball's inventory case, as framed in [d002 › Guiding questions](d002-requirements.md#guiding-questions): each capture is a stock count per station, and trips are stock movements derived from consecutive counts. Three business processes answer Q1–Q7; Q8 is answered by the history of the station dimension, not by a fact. The model, with how each question maps to a process, lives in [data-model.md](../data-model.md).
 
 - **Station stock:** one row per station and capture, a periodic snapshot. Semi-additive: it is not summed over time.
 - **Stock by vehicle type:** one row per station, capture and vehicle type, from the real-time feeds only, since the Bicing archive has no per-type counts.
 - **Stock movements:** one row per station and pair of consecutive captures with a change, derived from the stock. Additive: departures and arrivals are summed over time.
-- **Capture passes:** one row per source, feed and capture pass, from capture's logs.
 
 Every capture is kept as a row, even when the station has not changed: rows are only appended, a gap in capture is visible as missing rows, and the Bicing archive's 5-minute snapshots fit the same grain. Rows that repeat values compress well in columnar storage, and small files are compacted by the pipeline.
 
@@ -102,14 +101,13 @@ Rejected: one row per station state with `valid_from` and `valid_to` (a timespan
 Each dimension answers what describes a fact row: when, where, whose and what. The bus matrix and the reasons for each dimension live in [data-model.md › Dimensions](../data-model.md#dimensions).
 
 - **Date** and **time of day**, apart, since questions group by day and by hour or time band; the exact UTC instant stays in the fact.
-- **System**, its own dimension, since capture passes have no station and every question compares AMBici with Bicing.
+- **System**, its own dimension, since every question compares AMBici with Bicing, and a capture's completeness and lateness belong to the system's response, not to a station ([D26](#d26-timeliness-and-completeness-of-the-feeds)).
 - **Station**, with its history (SCD type 2), since Q8 asks for it and past occupancy needs the capacity of its time; post code and municipality flattened into it.
 - **Vehicle type**, with its propulsion as the level that compares across systems and with the Bicing archive, whose only split is mechanical and electric.
-- **Feed**, for capture passes.
 
 The status flags `is_installed`, `is_renting` and `is_returning` stay in the stock fact, not in a dimension.
 
-Rejected: system as an attribute of the station, since capture passes could not be compared by system; municipality as a dimension of its own linked to the station (a snowflake), since it adds a join for a small hierarchy.
+Rejected: system as an attribute of the station, since a capture's completeness and lateness could then only be reached through a station; municipality as a dimension of its own linked to the station (a snowflake), since it adds a join for a small hierarchy.
 
 #### D6. AMBici's post code
 
@@ -323,6 +321,17 @@ Few departures may mean low demand, no service or a station that stopped reporti
 - **Lack of service:** `is_renting` and `is_returning` ([D7](#d7-station-status-flags)) give the share of a station's counts in which it allowed rentals or returns, for either source and any suspension, whole or partial.
 - **Frozen counts:** `last_reported` ([D19](#d19-last-reported-time-in-the-stock)) gives the age of each Bicing count, so a station whose counts stopped changing because it stopped reporting is found, even while in service. AMBici's `last_reported` is the feed time, so its frozen stations cannot be found.
 
+#### D26. Timeliness and completeness of the feeds
+
+[d002 › Q2](d002-requirements.md#guiding-questions) asks whether the feeds arrive on time and complete, a question about the data, so the model measures it on the data, not on capture's logs. What was captured is what reached bronze, as [d004 › D6](d004-bronze-data-capture.md#d6-capture-completeness-target) counts a clean minute by its stored object, and the age of the data is in the response. The only dynamic feed the model reads is `station_status` ([D3](#d3-feeds-that-enter-the-model)), so both measures come from the station stock, per system:
+
+- **Completeness:** the share of the minutes of the time-of-day dimension with a capture in the station stock. A minute with no capture has no rows ([D4](#d4-business-processes-and-the-grain-of-the-stock)), and two captures in one minute ([d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)) count it once.
+- **Lateness:** each capture keeps its response's `last_updated`, the time GBFS gives to the feed's data, and the age of the data is the capture time minus it.
+
+Q2's records that break invariants and frozen stations ([D25](#d25-lack-of-service-and-frozen-counts)) also read the station stock. Capture's logs, which explain why a capture failed, stay logs: how they are queried, together with the pipeline's, is decided in [d007](d007-pipeline-design.md) (OQ5).
+
+Rejected: a capture passes fact, one row per source, feed and pass from capture's logs, since the model would depend on the logs' format and mix the operation of the system with the quality of its data. **refines [d004 › D7, D9](d004-bronze-data-capture.md#d7-quality-questions-answered-from-the-pipeline)**
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -355,8 +364,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ2.5 | The facts of the capture passes: lateness and completeness | D4 | — |
-| OQ2.6 | Which d002 question gold answers, and with which table | OQ2.2–OQ2.5 | Handed to T040 by [d002 › Out of scope](d002-requirements.md). How gold and the visualization show a measure known for one source only, such as disabled vehicles ([D15](#d15-disabled-vehicles-and-docks)). Whether gold leaves out or flags movements over long intervals, and from what length ([D23](#d23-movements-across-gaps-in-capture)). How gold shows service availability beside trips, and from what age of `last_reported` a station counts as frozen ([D25](#d25-lack-of-service-and-frozen-counts)) |
+| OQ2.6 | Which d002 question gold answers, and with which table | D14–D26 | Handed to T040 by [d002 › Out of scope](d002-requirements.md). How gold and the visualization show a measure known for one source only, such as disabled vehicles ([D15](#d15-disabled-vehicles-and-docks)). Whether gold leaves out or flags movements over long intervals, and from what length ([D23](#d23-movements-across-gaps-in-capture)). How gold shows service availability beside trips, and from what age of `last_reported` a station counts as frozen ([D25](#d25-lack-of-service-and-frozen-counts)) |
 | OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | OQ2.6 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md). A count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided |
 
 ## 2. Plan — how

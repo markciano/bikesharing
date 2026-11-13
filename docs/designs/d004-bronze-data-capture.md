@@ -93,7 +93,7 @@ Rejected:
 
 #### D7. Quality questions answered from the pipeline
 
-The pipeline answers quality questions, including completeness (D6), and capture only provides the data to answer them, because a derived figure can be rebuilt from the logs and calculating it in capture would add CPU. Capture's logs must allow an efficient answer, in Worker CPU, R2 storage and operations, and pipeline compute on Modal. Building the calculation and its storage belongs to the data quality task.
+The pipeline answers quality questions, including completeness (D6), and capture only provides the data to answer them, because a derived figure can be rebuilt from the logs and calculating it in capture would add CPU. Capture's logs must allow an efficient answer, in Worker CPU, R2 storage and operations, and pipeline compute on Modal. Completeness and lateness are measured on the captured data, in the data model, and capture's logs are queried as [d007](d007-pipeline-design.md) decides (OQ5). **[d005 › D26](d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)**
 
 #### D8. Capture failure behaviour
 
@@ -137,7 +137,7 @@ In capture, `component` is `capture` and `version` is the Worker's version ID.
 
 `attempts` counts write attempts, and is 0 when the source fails. `status` and `latency_ms` are those of the request's last attempt; `fetch_retried` records a 403 about to be retried, with the first attempt's `status`, `latency_ms`, response `headers` and `body`, and `feed` null for an index. `error_type` is one of `http`, `timeout`, `network`, `too_large`, `write` or `invalid_index`; the event tells whether it came from a feed, an index or the heartbeat. `level` is `info`, `warning` for a failure that does not affect the data, such as the heartbeat's, or `error`. `unknown_feeds` lists the feeds in the index that are not listed in D3, and is usually empty; a feed that the source removes makes the index invalid (D8). `recompressed` is true when the response did not arrive as gzip and capture compressed it before storing; capture relies on an undocumented option to keep the source's gzip ([s006](../spikes/s006-cloudflare-capture.md), F9), so this flags a change in the source or the runtime.
 
-These fields answer the following capture questions, the starting point for T042:
+These fields answer the following capture questions, the starting point for querying the logs ([d007](d007-pipeline-design.md), OQ5):
 
 - Is the completeness target (D6) met, and which minutes are missing?
 - Is a source degrading, or is a response size unusual?
@@ -152,13 +152,13 @@ The objects under `raw/` are the record of what was captured, and the logs expla
 
 Questions that need the response's content, such as whether a source keeps returning HTTP 200 with frozen data, belong to the pipeline.
 
-One object per pass meets D7's criteria. It costs about 30–35 MB per month and 43,200 writes (4.3% of R2's free Class A quota), and it adds no CPU beyond the write already measured. The pipeline reads only new objects once and consolidates them in the data quality table (T042); the originals stay under the bucket lock. Pipeline compute is unmeasured, so T042 validates it.
+One object per pass meets D7's criteria. It costs about 30–35 MB per month and 43,200 writes (4.3% of R2's free Class A quota), and it adds no CPU beyond the write already measured. The pipeline reads only new objects once, as [d007](d007-pipeline-design.md) decides (OQ5); the originals stay under the bucket lock. Pipeline compute is unmeasured, so d007 validates it.
 
 Rejected:
 
 - Daily compaction in capture: reading 1,440 objects does not fit the 10 ms CPU limit.
 - Logging failures only: it loses the latency and sizes of clean captures, which revealed the latency shifts and set the timeout in D8.
-- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **DL4** **DL7** **DL14** **[d006 › D4](d006-capture-retry-on-403.md#d4-a-retry-is-logged-as-its-own-event)**
+- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **DL4** **DL7** **DL14** **[d006 › D4](d006-capture-retry-on-403.md#d4-a-retry-is-logged-as-its-own-event)** **[d005 › D26](d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)**
 
 #### D10. Capture heartbeat
 
