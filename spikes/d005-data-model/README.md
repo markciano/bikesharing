@@ -161,3 +161,15 @@ python3 -I spikes/d005-data-model/out-of-service/out_of_service_check.py spikes/
 python3 -I spikes/d005-data-model/plus-p/fields_check.py spikes/d005-data-model/plus-p/data/nextbike-live.json spikes/d005-data-model/plus-p/fields.txt
 python3 -I spikes/d005-data-model/plus-p/plus_p_check.py spikes/d005-data-model/plus-p/data/nextbike-live.json spikes/cloudflare-capture-spike/data/V4/raw spikes/d005-data-model/over-capacity/over_capacity.csv spikes/d005-data-model/plus-p/plus_p.csv
 ```
+
+## 12. `capacity-arithmetic/`
+
+- **Question:** do Bicing's available and disabled vehicles and docks add up to a station's `capacity`, and which hypotheses fit the items where they do not?
+- **Evidence for:** the consistency facts of [Bicing's source card › `station_status`](../../docs/sources/bicing.md#station_status).
+- **Script:** `capacity_arithmetic.sql` computes, per in-service station item, the four counts minus the station's `capacity`. Over `capacity`, it tests two hypotheses: a disabled vehicle in a disabled dock counted twice (excess at most the lesser of `num_vehicles_disabled` and `num_docks_disabled`), and a vehicle counted as both available and disabled (excess at most the lesser of `num_vehicles_available` and `num_vehicles_disabled`). Under `capacity`, it groups consecutive deficit passes per station into runs and splits them by duration: runs of at most 6 min fit a reservation, longer ones docks counted in no term.
+- **Output:** tables on stdout.
+- **Run time:** about 10 s.
+
+```text
+duckdb -f spikes/d005-data-model/capacity-arithmetic/capacity_arithmetic.sql
+```
