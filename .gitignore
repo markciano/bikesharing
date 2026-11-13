@@ -50,3 +50,6 @@ derby.log
 # Operating system and editors
 .DS_Store
 .idea/
+
+# Images
+docs/images/
