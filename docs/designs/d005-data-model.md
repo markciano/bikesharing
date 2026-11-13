@@ -19,7 +19,8 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ2.2e. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16) and occupancy (D17) are decided; facts (OQ2.2e–OQ2.6) and detailed design (OQ3) remain.
+- Next: the stock over `capacity` in both sources, before OQ2.2d. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16), occupancy (D17) and AMBici's +P stations (D18) are decided; facts (OQ2.2d–OQ2.6) and detailed design (OQ3) remain.
+  - Stock over `capacity`: find its cause or accept it, in both sources. AMBici's 90 stations without +P exceed it, although its FAQ forbids leaving a bike outside the docks except at +P ([AMBici › Open questions](../sources/ambici.md#open-questions)); for Bicing (5% of items), whether `num_vehicles_disabled` is counted within `num_vehicles_available` ([D15](#d15-disabled-vehicles-and-docks), [D17](#d17-occupancy)).
   - For failure cases: the behaviours observed over 2026-10-14 to 10-26 that each decision relies on; first known gap: Bicing's `num_docks_available` at a closed station.
   - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
@@ -249,6 +250,16 @@ What would change it: AMBici publishing each station's +P places; they then join
 
 Rejected: vehicles over `capacity`, since AMBici's bikes exceed it at 141 of 237 stations, 90 of them without +P ([AMBici › `station_status`](../sources/ambici.md#station_status)), and it would count Bicing's disabled docks as free; `capacity` plus +P places estimated from the FAQ's mean, about 20 per station, since it presents an assumption as a measure and leaves the stations without +P above 100%.
 
+#### D18. AMBici's +P stations
+
+The station dimension marks whether a station has +P parking, where a bike can be left beside the docks when they are full ([D17](#d17-occupancy)). Only nextbike's feed gives it, as `place_type` 27 or 33 ([AMBici › `nextbike-live.json`](../sources/ambici.md#nextbike-livejson)), and +P stations are added rarely, so that feed stays out of the pipeline. The list of +P stations is reference data: a CSV under version control that the pipeline loads as a table (a seed, in dbt's terms). It holds one row per +P station, sorted by `station_id`, with the station's name from `station_information` so a reader can check it. A station absent from the list has no +P, a new station of either source included, so the attribute is never null.
+
+A script rebuilds the list on demand: it reads nextbike's feed once, matches it to AMBici's stations by station id, rewrites the CSV and prints the stations added and removed. The change enters by pull request, where Git's diff shows the same stations. The file holds no check date, so a run with no change leaves no diff.
+
+What would change it: AMBici publishing +P in its GBFS feed; the model then takes it from there.
+
+Rejected: capturing nextbike's feed in the pipeline, since it adds a non-GBFS feed with no stated licence for a list that rarely changes; editing the list by hand, since the script also finds the stations that stop being +P.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -281,7 +292,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ2.2e | The station dimension: whether +P parking is an attribute of the station, and how nextbike's feed, the only source of it, enters the model | D17 | Not GBFS, and its licence is not stated ([AMBici › nextbike live](../sources/ambici.md#nextbike-live)). It also carries each bike's battery, which [D3](#d3-feeds-that-enter-the-model) left out with `free_bike_status` |
 | OQ2.2d | The station stock: `last_reported` in the fact | D14 | A real time per station in Bicing, the feed time in AMBici. Closing it also writes the stock's additivity, set by [D4](#d4-business-processes-and-the-grain-of-the-stock) |
 | OQ2.3 | The facts of the stock by vehicle type | OQ2.2d, D8 | The Bicing archive splits stock only into mechanical and electric |
 | OQ2.4 | The facts of the stock movements: departures, arrivals, and how they relate to gaps in capture | OQ2.2d | During a suspension of rentals, such as Bicing's of 3 and 4 October, departures drop for lack of service, not of demand. How the null count of a Bicing station out of service ([D16](#d16-vehicles-at-an-out-of-service-station)) enters the movements, before and after it |
