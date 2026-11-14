@@ -142,7 +142,7 @@ Columns of each table are fixed by the slice that builds it ([d007 › D1](desig
 
 ## Data contract
 
-The quality rules of silver and gold: the uniqueness of each grain, nullability, accepted values, referential integrity with the conformed dimensions, and invariants across columns or tables ([d005 › D29](designs/d005-data-model.md#d29-data-contract-of-the-model)). Each rule cites the decision it applies, and the test that checks it cites the rule's ID. IDs are flat and never reused, and a rule keeps its ID when it moves. A column rule carries a pending marker for T060 until the slice that creates its table's worksheet moves it there.
+The quality rules of silver and gold: the uniqueness of each grain, nullability, accepted values, referential integrity with the conformed dimensions, and invariants across columns or tables ([d005 › D29](designs/d005-data-model.md#d29-data-contract-of-the-model)). Each rule cites the decision it applies, and the test that checks it cites the rule's ID. IDs are flat and never reused, and a rule keeps its ID when it moves. Each rule states one behaviour, so it is either a table rule or a column rule; a rule split in two keeps its ID in its table part, and its column part takes the next free ID. A column rule carries a pending marker for T060 until the slice that creates its table's worksheet moves it there.
 
 ### Station stock
 

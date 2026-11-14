@@ -373,9 +373,11 @@ The quality rules of silver and gold are the model's data contract: the uniquene
 - **Table and cross-table rules** (grain, invariants, drill-across): stay in data-model.md.
 - **Column rules** (type, nullability, accepted values): marked `TODO(T060):` until the slice that creates their table's worksheet ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) moves them there with their ID. That slice adds rules for the columns no rule covers.
 
+Each rule states one behaviour (singular, as ISO/IEC/IEEE 29148 asks of a requirement), so it is either a table rule or a column rule. A rule that holds both is split: the table part keeps its ID and the column part takes the next free one.
+
 What would change it: [d007](d007-pipeline-design.md) choosing a test tool with an executable contract; that contract then becomes the rules' place, recorded as an ADR.
 
-Rejected: an executable contract per table now (dbt `schema.yml`, SodaCL, Open Data Contract Standard), since its format depends on the test tool, which d007 decides; requirements in this design copied into data-model.md later, since the deliverable is the document itself and the copy would be written and approved twice; IDs per table (`RDM-STK-1`), since a cross-table rule has no table and renaming or splitting a table would change the ID that tests cite.
+Rejected: an executable contract per table now (dbt `schema.yml`, SodaCL, Open Data Contract Standard), since its format depends on the test tool, which d007 decides; requirements in this design copied into data-model.md later, since the deliverable is the document itself and the copy would be written and approved twice; IDs per table (`RDM-STK-1`), since a cross-table rule has no table and renaming or splitting a table would change the ID that tests cite; rules that hold a table and a column part kept whole in data-model.md, since their column part would live outside its table's worksheet.
 
 #### D30. Archive stations with no attributes
 
