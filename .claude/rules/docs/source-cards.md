@@ -18,7 +18,7 @@ A source card holds the facts about one data source. Source and Access follow W3
       - **Quality:** each issue led by its dimension (accuracy, completeness, consistency, timeliness, validity, uniqueness).
     - Below the list, in a feed the data model reads, its field dictionary (see Field dictionary).
   - `## Open questions`.
-- **Field dictionary:** one table per feed, one row per field the data model reads, with these columns; a cell that does not apply holds `—`:
+- **Field dictionary:** one table per feed, one row per field of a feed the data model reads, with these columns; a cell that does not apply holds `—`:
   - **Field:** its path in the response (e.g. `data.stations[].vehicle_types_available[].count`).
   - **Description:** its meaning in one sentence, in the project's words, linked to its definition in the GBFS version the source publishes.
   - **Type:** as published (integer, string, boolean, timestamp…).
