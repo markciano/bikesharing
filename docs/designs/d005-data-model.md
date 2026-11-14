@@ -302,9 +302,9 @@ Rejected: the types listed in the same capture, since a capture where no AMBici 
 
 #### D21. Per-type counts that do not add up to the station's
 
-The station stock keeps the station's `num_vehicles_available` and the stock by vehicle type keeps each type's count, both as the source publishes them, even when the types do not add up to the station's count, as in 2.7% of Bicing's station items ([Bicing › `station_status`](../sources/bicing.md#station_status)). The data model states that the two may differ, and the share of station items where they do is a data quality indicator (DAMA's consistency).
+The station stock keeps the station's `num_vehicles_available` and the stock by vehicle type keeps each type's count, both as the source publishes them, even when the types do not add up to the station's count, as in 2.7% of Bicing's station items ([Bicing › `station_status`](../sources/bicing.md#station_status)). The data model states that the two may differ, and the share of station items where they do is a data quality indicator (DAMA's consistency). It is measured over the station items whose `num_vehicles_available` is known: the items of a Bicing station out of service, null by [D16](#d16-vehicles-at-an-out-of-service-station), are left out of both terms, since a count the model does not know is neither consistent nor inconsistent.
 
-Rejected: making them add up, by taking the station's count from the types or adjusting a type, since the model would publish a count no source gives and hide the source's inconsistency.
+Rejected: making them add up, by taking the station's count from the types or adjusting a type, since the model would publish a count no source gives and hide the source's inconsistency; counting the null items as consistent, since the share would then include items that were never checked.
 
 #### D22. Departures and arrivals
 
