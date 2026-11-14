@@ -19,13 +19,13 @@ A source card holds the facts about one data source. Source and Access follow W3
   - `## Open questions`.
 - **Provider cards:** a card of a service provider, which publishes no feeds, has `## Facts` in place of `## General facts` and `## Feeds`. It opens with one line saying what it holds, then one `###` per topic when there are several.
 - **Field dictionary:** one table per feed, one row per field of a feed the data model reads, under `#### Field dictionary`, after one line that names the feed, the source, the GBFS version and the profile's dates (e.g. "Every field of `station_status` as AMBici publishes it: its meaning, its definition in GBFS 2.3 and the values profiled from 2026-10-14 to 2026-10-26."). Its columns follow; a cell that does not apply holds `—`:
-  - **Field:** its path in the response (e.g. `data.stations[].vehicle_types_available[].count`).
-  - **Description:** its meaning in this source, as observed, in one sentence and in the project's words, linked to its definition in the GBFS version the source publishes. How the model interprets it belongs to the worksheet that maps it, not here.
-  - **Type:** as published (integer, string, boolean, timestamp…).
+  - **Field:** its path in the response (e.g. `data.stations[].vehicle_types_available[].count`). The header fields (`last_updated`, `ttl`, `version`) have a row in every feed's table.
+  - **Description:** its meaning in this source, as observed, in one sentence and in the project's words, linked to its definition in the GBFS version the source publishes, as a reference link defined at the end of the card. How the model interprets it belongs to the worksheet that maps it, not here.
+  - **Type:** its JSON type as published (integer, number, string, boolean, array, object); a format such as POSIX time goes in Unit or format.
   - **Required:** as GBFS sets it (required, optional, conditionally required).
   - **Unit or format:** e.g. metres, seconds, POSIX time, ISO 8601.
   - **Domain:** the values GBFS allows, only for a closed set.
-  - **Observed:** share of nulls, distinct values, minimum and maximum, or the set of values seen.
+  - **Observed:** share of nulls, distinct values, minimum and maximum, or the set of values seen. A count of distinct values that the profile estimates is marked `≈`.
   - **Example:** one real value.
   - **Notes:** a deviation from GBFS, led by `Differs from GBFS:`, or a quality issue, in one sentence, linking to its field note or its Quality item when it has one.
   - Below the table, in this order:
