@@ -19,12 +19,12 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: session 2 below, from deciding [D3](#d3-feeds-that-enter-the-model) with the archives as a source; their profile is done, with its findings in the [Bicing](../sources/bicing.md#history) source card. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions followed Kimball's four-step design and are all decided, detailed design included ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)).
-  - Input for D3 from the profile: the archive takes AMBici's rule of [D22](#d22-departures-and-arrivals) (available vehicles only, no disabled), and over the overlap a day's departures and arrivals from 1-minute real-time counts are about 55% higher than from 5-minute counts, while the rule changes them by about 6% ([p7_movements.csv](../../spikes/d005-data-model/profile/bicing-historical/p7_movements.csv)). The history is a portfolio addition: it enters if it fits without forcing, and the real-time capture gets the effort.
+- Next: session 3 below. [D3](#d3-feeds-that-enter-the-model) decides the Bicing archive: the status series from December 2025 to 13 October 2026 into the stock, no movements or split by propulsion from it, no information series; D4, D5, D22, D23 and `docs/data-model.md` are adjusted. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions followed Kimball's four-step design and are all decided, detailed design included ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)).
   - Parked for the Requirements (session 3): a count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided.
+  - Parked as failure cases of D3 (session 3, before the STRIDE pass): the archive's stock of a station with no attributes (an unknown member of the station dimension); the archive's duplicate rows and per-type counts that do not add up ([Bicing › History](../sources/bicing.md#history)); D5 says past occupancy needs the capacity of its time, which [D17](#d17-occupancy) no longer uses.
   - Closing plan, to unblock T060 soon; this task delivers documents only. One session each, in this order:
     1. Done: the place of the source field dictionary and the worksheets ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), and the failure cases [D16](#d16-vehicles-at-an-out-of-service-station) and [D20](#d20-zero-counts-in-the-stock-by-vehicle-type). [D19](#d19-last-reported-time-in-the-stock) is not a failure case: the age from which a Bicing count stops being current is a threshold, fixed by the slice that answers Q2 ([D27](#d27-gold-per-question)).
-    2. Profile of the Bicing history archives over one year (done: December 2025 to October 2026, check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md) › `profile/bicing-historical/`, findings in the [Bicing](../sources/bicing.md#history) source card); then [D3](#d3-feeds-that-enter-the-model) decides the archives as a source, and D4, D5, D22 and D23 are adjusted if they do not fit.
+    2. Profile of the Bicing history archives over one year (done: December 2025 to October 2026, check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md) › `profile/bicing-historical/`, findings in the [Bicing](../sources/bicing.md#history) source card); [D3](#d3-feeds-that-enter-the-model) decides the archive as a source (done).
     3. Starts by deciding what the requirements state and how the slices of T060 reference the model, `docs/data-model.md` or this design's requirements. Then a short STRIDE pass, Requirements and the Spec approval.
     4. Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model; File layout; the template of the mapping and the dictionary.
     5. `review-plan`.
@@ -74,7 +74,16 @@ Rejected: a new sample from R2 in a folder ignored by Git, since it shows the sa
 
 A feed enters silver only if it answers a question of [d002 › Guiding questions](d002-requirements.md#guiding-questions). The rest stay in bronze untouched ([ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md)) and the model does not read them. Prices and opening hours answer no question, and no feed ties a trip to a pricing plan, since trips are estimated from stock changes; if a measure ever needs them, they enter as parameters.
 
-What would change it: a new question that needs a discarded feed; the feed then enters, and its history is already in bronze.
+The Bicing history archive ([Bicing › History](../sources/bicing.md#history)) enters once, for one purpose: filling Q3's 12-month window before real-time capture began. With November 2025 not published, the window is complete from December 2026; real-time capture alone would complete it in October 2027.
+
+- **What enters:** the status series, `..._ESTACIONS.7z`, from December 2025 to 13 October 2026, the day before real-time capture began. Its station totals go to the station stock ([D4](#d4-business-processes-and-the-grain-of-the-stock)), and each stock row keeps whether it comes from the archive or from real-time capture. From 14 October 2026 the stock comes from real-time capture only.
+- **No movements from it:** its counts are 5 minutes apart and see about two thirds of the movements that 1-minute counts see ([p7_movements.csv](../../spikes/d005-data-model/profile/bicing-historical/p7_movements.csv)).
+- **No split by propulsion from it:** its mechanical and electric counts answer no question, since Q1 asks for the latest stock only.
+- **No information series:** `..._INFORMACIO.7z` does not enter. Occupancy needs no capacity ([D17](#d17-occupancy)), and the station dimension comes from real-time `station_information`, so a station retired before real-time capture began has no attributes.
+
+What would change it: a new question that needs a discarded feed; the feed then enters, and its history is already in bronze. For the archive, a question that compares years, or Q8 asking for the network before real-time capture; the earlier status months or the information series then enter, profiled first.
+
+Rejected for the archive: the status series since March 2019, since it answers only the trend since 2019, which d002 marks Won't, with about 80 months not profiled and every station retired since then without attributes; both series over the 12 months, since the information series adds only Q8's last year, a Could; no archive, since Q3 would reach its window only in October 2027.
 
 | Feed | AMBici | Bicing | Use in the model |
 |---|---|---|---|
@@ -94,8 +103,8 @@ What would change it: a new question that needs a discarded feed; the feed then 
 The model follows Kimball's inventory case, as framed in [d002 › Guiding questions](d002-requirements.md#guiding-questions): each capture is a stock count per station, and trips are stock movements derived from consecutive counts. Three business processes answer Q1–Q7; Q8 is answered by the history of the station dimension, not by a fact. The model, with how each question maps to a process, lives in [data-model.md](../data-model.md).
 
 - **Station stock:** one row per station and capture, a periodic snapshot. Semi-additive: it is not summed over time.
-- **Stock by vehicle type:** one row per station, capture and vehicle type, from the real-time feeds only, since the Bicing archive has no per-type counts.
-- **Stock movements:** one row per station and pair of consecutive captures with a change, derived from the stock. Additive: departures and arrivals are summed over time.
+- **Stock by vehicle type:** one row per station, capture and vehicle type, from the real-time feeds only ([D3](#d3-feeds-that-enter-the-model)).
+- **Stock movements:** one row per station and pair of consecutive captures with a change, derived from the stock's real-time counts only ([D3](#d3-feeds-that-enter-the-model)). Additive: departures and arrivals are summed over time.
 
 Every capture is kept as a row, even when the station has not changed: rows are only appended, a gap in capture is visible as missing rows, and the Bicing archive's 5-minute snapshots fit the same grain. Rows that repeat values compress well in columnar storage, and small files are compacted by the pipeline.
 
@@ -110,7 +119,7 @@ Each dimension answers what describes a fact row: when, where, whose and what. T
 - **Date** and **time of day**, apart, since questions group by day and by hour or time band; the exact UTC instant stays in the fact.
 - **System**, its own dimension, since every question compares AMBici with Bicing, and a capture's completeness and lateness belong to the system's response, not to a station ([D26](#d26-timeliness-and-completeness-of-the-feeds)).
 - **Station**, with its history (SCD type 2), since Q8 asks for it and past occupancy needs the capacity of its time; post code and municipality flattened into it.
-- **Vehicle type**, with its propulsion as the level that compares across systems and with the Bicing archive, whose only split is mechanical and electric.
+- **Vehicle type**, with its propulsion as the level that compares across systems.
 
 The status flags `is_installed`, `is_renting` and `is_returning` stay in the stock fact, not in a dimension.
 
@@ -300,15 +309,15 @@ Rejected: making them add up, by taking the station's count from the types or ad
 
 A stock movement is the change in the vehicles at a station between two consecutive counts of the station stock ([D4](#d4-business-processes-and-the-grain-of-the-stock)): a drop is `departures`, a rise is `arrivals`, both additive, in the naming style of [D14](#d14-vocabulary-of-the-measures). The vehicles at a station are those GBFS 3.0 counts as physically there: `num_vehicles_available` plus `num_vehicles_disabled` in Bicing, and `num_vehicles_available` alone in AMBici, which does not publish disabled vehicles ([D15](#d15-disabled-vehicles-and-docks)). A vehicle that becomes disabled or is repaired without leaving the station is therefore no movement, and a vehicle returned as disabled is an arrival.
 
-The change is taken on the station's total, not per vehicle type, so one method serves the real-time feeds and the Bicing archive, and a day's departures and arrivals match the change in the station's count outside its closings ([D24](#d24-movements-at-an-out-of-service-station)). Within one interval only the net change is seen, so a row holds departures or arrivals, never both. As a count of trips ([d002 › Q4](d002-requirements.md#guiding-questions)), departures miss a pick-up and a return at one station within one interval, and include the operator's moves, such as rebalancing and taking disabled vehicles away for repair.
+The change is taken on the station's total, not per vehicle type, so one method serves both systems, and a day's departures and arrivals match the change in the station's count outside its closings ([D24](#d24-movements-at-an-out-of-service-station)). Within one interval only the net change is seen, so a row holds departures or arrivals, never both. As a count of trips ([d002 › Q4](d002-requirements.md#guiding-questions)), departures miss a pick-up and a return at one station within one interval, and include the operator's moves, such as rebalancing and taking disabled vehicles away for repair.
 
 Rejected: the change per propulsion, summing each one's drops and rises, which also counts a mechanical bike leaving and an electric one arriving within one interval, since it rests on per-type counts that do not always add up to the station's ([D21](#d21-per-type-counts-that-do-not-add-up-to-the-stations)) and no question asks for movements by type; the change in `num_vehicles_available` alone, since in Bicing a vehicle becoming disabled would count as a departure, and one returned as disabled would not count as an arrival.
 
 #### D23. Movements across gaps in capture
 
-Two counts are consecutive when no count of the station lies between them in the station stock, however far apart they are: a movement spans any gap in capture. Each row of the stock movements keeps the capture time of both counts, so the length of its interval is known, and it falls on the date and time of day of the later count, when the change is seen. Every change in a station's count while it is in service therefore enters the movements, and a day's departures and arrivals match the change in the station's count outside its closings ([D24](#d24-movements-at-an-out-of-service-station)), as in [D22](#d22-departures-and-arrivals). How a query treats long intervals is its own criterion, applied when the data is read.
+Only real-time counts pair into movements ([D3](#d3-feeds-that-enter-the-model)). Two real-time counts are consecutive when no other real-time count of the station lies between them, however far apart they are: a movement spans any gap in capture. Each row of the stock movements keeps the capture time of both counts, so the length of its interval is known, and it falls on the date and time of day of the later count, when the change is seen. Every change in a station's count while it is in service therefore enters the movements, and a day's departures and arrivals match the change in the station's count outside its closings ([D24](#d24-movements-at-an-out-of-service-station)), as in [D22](#d22-departures-and-arrivals). How a query treats long intervals is its own criterion, applied when the data is read.
 
-Capture takes `station_status` every minute ([d004 › D3](d004-bronze-data-capture.md#d3-feed-cadence)), and Bicing misses about 2% of the minutes ([d004 › Known gaps at close](d004-bronze-data-capture.md#42-known-gaps-at-close)); the Bicing archive's counts are 5 minutes apart. The longer the interval, the more pick-ups and returns cancel out within it ([D22](#d22-departures-and-arrivals)).
+Capture takes `station_status` every minute ([d004 › D3](d004-bronze-data-capture.md#d3-feed-cadence)), and Bicing misses about 2% of the minutes ([d004 › Known gaps at close](d004-bronze-data-capture.md#42-known-gaps-at-close)). The longer the interval, the more pick-ups and returns cancel out within it ([D22](#d22-departures-and-arrivals)).
 
 Rejected: no movement beyond a fixed interval length, since the change across the gap would be lost from silver, a day's movements would no longer match its stock, and one threshold would bind every query.
 
@@ -382,6 +391,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - Capturing less often, or no longer capturing, the feeds that do not enter the model ([D3](#d3-feeds-that-enter-the-model)), except `free_bike_status`, kept for future questions on AMBici's battery levels — task assigned at the end of this design
 - The code that derives station attributes: AMBici's post code from ICGC with its doubt flag ([D6](#d6-ambicis-post-code)), the containing municipality, district and neighbourhood ([D9](#d9-station-municipality), [D10](#d10-barcelona-district-and-neighbourhood)), and the script that rebuilds the list of +P stations ([D18](#d18-ambicis-p-stations)) — T060, in the slice that builds the station dimension
 - A language selector in the public visualization (Catalan, Spanish, English) for its interface texts and the model's labels ([D13](#d13-model-labels)) — T041
+- One or two more years of the Bicing status archive before December 2025, to compare occupancy across years, profiled first ([D3](#d3-feeds-that-enter-the-model)) — task assigned at the end of this design
 
 ### 1.6 Open questions
 
