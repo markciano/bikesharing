@@ -7,7 +7,8 @@ Output:
   service, how many vehicles the station reported around it;
 - a CSV (argv[2]) with one row per change: source, station, direction, pass
   timestamp, vehicles available 15 passes before, the pass before and at the
-  change, and the vehicles disabled the pass before and at the change.
+  change, the vehicles disabled, and the docks available and disabled, the
+  pass before and at the change.
 
 Out of service means is_renting and is_returning both false (d005 D7). A station
 that is emptied before closing reaches 0 while still in service; a feed that only
@@ -40,6 +41,11 @@ def disabled(station):
     return station.get("num_vehicles_disabled", station.get("num_bikes_disabled"))
 
 
+def docks(station):
+    # (available, disabled); AMBici (2.3) publishes no disabled docks
+    return station.get("num_docks_available"), station.get("num_docks_disabled")
+
+
 def summary(values):
     if not values:
         return "none"
@@ -56,7 +62,7 @@ for source_dir in sorted(p for p in root.iterdir() if p.is_dir()):
     print(f"\n{source}: {len(files)} passes", flush=True)
     combo_rows = collections.Counter()
     combo_stations = collections.defaultdict(set)
-    previous = {}  # station_id -> (out_of_service, available, disabled) at its previous pass
+    previous = {}  # station_id -> (out_of_service, available, disabled, docks) at its previous pass
     history = collections.defaultdict(lambda: collections.deque(maxlen=LOOKBACK))
     day = None
     for path in files:
@@ -72,7 +78,7 @@ for source_dir in sorted(p for p in root.iterdir() if p.is_dir()):
             combo_rows[combo] += 1
             combo_stations[combo].add(sid)
             out = not station["is_renting"] and not station["is_returning"]
-            now = (out, available(station), disabled(station))
+            now = (out, available(station), disabled(station), docks(station))
             if sid in previous and previous[sid][0] != out:
                 past = history[sid]
                 changes.append({
@@ -85,6 +91,10 @@ for source_dir in sorted(p for p in root.iterdir() if p.is_dir()):
                     "available_at": now[1],
                     "disabled_before": previous[sid][2],
                     "disabled_at": now[2],
+                    "docks_available_before": previous[sid][3][0],
+                    "docks_available_at": now[3][0],
+                    "docks_disabled_before": previous[sid][3][1],
+                    "docks_disabled_at": now[3][1],
                 })
             previous[sid] = now
             history[sid].append(now[1])
