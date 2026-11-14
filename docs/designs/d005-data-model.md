@@ -256,7 +256,7 @@ Rejected: keeping Bicing's 0 and leaving each query to filter by `is_renting`, s
 
 #### D17. Occupancy
 
-A station's occupancy is the share of its usable docks taken by vehicles: `num_vehicles_available` over `num_vehicles_available` plus `num_docks_available`. It is what both feeds measure alike: it never exceeds 100%, leaves out Bicing's disabled vehicles and docks ([D15](#d15-disabled-vehicles-and-docks)), which no one can use, and its 0% and 100% are the empty and full runs of [d002 › Q3](d002-requirements.md#guiding-questions). Occupancy is a ratio, so the fact stores its two terms and it is computed at query time (Kimball's non-additive facts): a day's occupancy is the sum of vehicles over the sum of both terms, not the mean of the ratios. While a Bicing station is out of service, its vehicles are null ([D16](#d16-vehicles-at-an-out-of-service-station)), and so is its occupancy.
+A station's occupancy is the share of its usable docks taken by vehicles: `num_vehicles_available` over `num_vehicles_available` plus `num_docks_available`. It is what both feeds measure alike: it never exceeds 100%, leaves out Bicing's disabled vehicles and docks ([D15](#d15-disabled-vehicles-and-docks)), which no one can use, and its 0% and 100% are the empty and full runs of [d002 › Q3](d002-requirements.md#guiding-questions). Occupancy is a ratio, so the fact stores its two terms and it is computed at query time (Kimball's non-additive facts): a day's occupancy is the sum of vehicles over the sum of both terms, not the mean of the ratios. While a Bicing station is out of service, its vehicles are null ([D16](#d16-vehicles-at-an-out-of-service-station)), and so is its occupancy; an occupancy over several counts leaves those counts out of both terms, so a closing does not lower it with docks that have no vehicles counted.
 
 Full means no free dock. At AMBici's 57 stations with +P parking, a bike can still be left beside the docks when they are full, but no source gives a station's +P places ([AMBici › `nextbike-live.json`](../sources/ambici.md#nextbike-livejson)), so occupancy counts docks only. Check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md).
 
@@ -402,7 +402,42 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 - Optional: Where <feature is included>, the <system> shall <response>.
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
-- **R1** `<EARS statement>` (D`<N>`)
+The requirements are the rules of the model's data contract, written once in [data-model.md › Data contract](../data-model.md#data-contract) ([D29](#d29-data-contract-of-the-model)). Each decision reaches these rules; a column rule moves to its table's worksheet with its ID.
+
+| Decision | Rules | Kind |
+|---|---|---|
+| D1 | | |
+| D2 | None: a method of inspection, not a property of the model | — |
+| D3 | RDM4, RDM5 | Table; RDM5 column |
+| D4 | RDM1, RDM2, RDM3 | Table |
+| D5 | | |
+| D6 | | |
+| D7 | RDM8 | Column |
+| D8 | | |
+| D9 | | |
+| D10 | | |
+| D11 | | |
+| D12 | | |
+| D13 | | |
+| D14 | RDM7 | Column |
+| D15 | RDM10 | Column |
+| D16 | RDM11, RDM12 | Table |
+| D17 | RDM13, RDM14 | Table |
+| D18 | | |
+| D19 | RDM9 | Column |
+| D20 | | |
+| D21 | | |
+| D22 | | |
+| D23 | | |
+| D24 | | |
+| D25 | | |
+| D26 | | |
+| D27 | | |
+| D28 | | |
+| D29 | | |
+| D30 | | |
+| D31 | RDM6 | Table |
+| D32 | None: the STRIDE pass finds no threat specific to the model | — |
 
 ### 1.4 Done when
 
