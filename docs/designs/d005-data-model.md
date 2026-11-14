@@ -433,8 +433,8 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D13. Model labels](#d13-model-labels) | RDM49, RDM56 |
 | [D14. Vocabulary of the measures](#d14-vocabulary-of-the-measures) | RDM7, RDM19 |
 | [D15. Disabled vehicles and docks](#d15-disabled-vehicles-and-docks) | RDM10 |
-| [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20 |
-| [D17. Occupancy](#d17-occupancy) | RDM13, RDM14 |
+| [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20, RDM70 |
+| [D17. Occupancy](#d17-occupancy) | RDM13, RDM14, RDM70 |
 | [D18. AMBici's +P stations](#d18-ambicis-p-stations) | RDM52, RDM53; the script that rebuilds the list is code, tested by its slice of T060 ([Out of scope](#15-out-of-scope)) |
 | [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9, RDM61; the additivity of `last_reported` and of the stock's counts goes in their worksheet rows ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
 | [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | RDM17, RDM18, RDM19 |
