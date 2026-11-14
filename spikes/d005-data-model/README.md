@@ -199,9 +199,9 @@ duckdb -f spikes/d005-data-model/last-reported/last_reported.sql
   - **P7.** Over the overlap with the bronze copy (2026-10-14 to 10-26): for one station and `last_updated`, do the archive and the real-time response give the same counts; and how far apart are a day's departures and arrivals from the archive (5 minutes, available bikes only) and from the real-time feeds (1 minute, available plus disabled)? Evidence for [D3](../../docs/designs/d005-data-model.md#d3-feeds-that-enter-the-model), [D22](../../docs/designs/d005-data-model.md#d22-departures-and-arrivals).
 - **Scripts:**
   - `convert.py` extracts one archive at a time, converts its CSV to Parquet in `work/` (every column as text; ignored by Git) and deletes the CSV, so only one CSV of about 1 GB is on disk at once; it resumes an interrupted run. It writes `archives.csv` (one row per archive: bytes, CSV name, columns) and `headers.csv` (one row per archive and column, with its position): P1.
-  - `profile.sql` answers P2–P7 over the Parquet files, reading columns by name, since they are added, removed and moved between months; P7 also reads the bronze copy. The mapping of P1 is done by Chat from `headers.csv` and [`profile/bicing/`](profile/bicing/), not by a script.
-- **Output:** `archives.csv`, `headers.csv` and one CSV per question of `profile.sql`, next to the scripts.
-- **Run time:** TODO(T040): measure on the first run.
+  - `profile.sql` answers P2–P7 over the Parquet files, reading columns by name, since they are added, removed and moved between months; P6 and P7 also read the bronze copy. For P1 it writes the field profile and the raw values of the coded columns; the mapping itself is done by Chat from those, `headers.csv` and [`profile/bicing/`](profile/bicing/), not by a script.
+- **Output:** `archives.csv`, `headers.csv`, and `p<N>_<what>.csv` per question of `profile.sql`, next to the scripts.
+- **Run time:** about 30 s for `convert.py`, about 1 min for `profile.sql`.
 
 ```text
 python3 -I spikes/d005-data-model/profile/bicing-historical/convert.py spikes/bicing-spike/historical-data/raw

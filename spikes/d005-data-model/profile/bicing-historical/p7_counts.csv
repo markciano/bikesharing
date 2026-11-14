@@ -1,0 +1,4 @@
+match_kind,archive_rows,median_lag_s,same_docks,bikes_equal_available,bikes_equal_available_plus_disabled,docks_and_available_equal
+1 exact,543,0.0,534,533,70,532
+2 within 60 s,1943816,18.0,1803550,1789361,252628,1770045
+3 none,5971,174.0,3256,3338,756,2896
