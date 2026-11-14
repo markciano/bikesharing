@@ -22,6 +22,8 @@ Facts about the platform that runs the pipeline ([s012 › D1](../spikes/s012-ex
 
 ## Facts
 
+Facts about Modal's plans, prices and limits that the project relies on.
+
 | Fact | Evidence | Confirmed |
 |---|---|---|
 | Starter costs "$0 + compute" per month, with $30 of monthly credit | [Pricing](https://modal.com/pricing) | 2026-11-02 |
