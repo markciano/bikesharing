@@ -19,8 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: session 3 below. [D3](#d3-feeds-that-enter-the-model) decides the Bicing archive: the status series from December 2025 to 13 October 2026 into the stock, no movements or split by propulsion from it, no information series; D4, D5, D22, D23 and `docs/data-model.md` are adjusted. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions followed Kimball's four-step design and are all decided, detailed design included ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)).
-  - Parked for the Requirements (session 3): a count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided.
+- Next: Requirements, in session 3 below. They state the model's data contract ([D29](#d29-data-contract-of-the-model)) in EARS, grouped by table or process, each citing its decision. The archive's failure cases are decided ([D30](#d30-archive-stations-with-no-attributes), [D31](#d31-duplicate-rows-in-the-archive)), and the STRIDE pass finds no threat specific to the model ([D32](#d32-security-of-the-model)).
   - Closing plan, to unblock T060 soon; this task delivers documents only. One session each, in this order:
     1. Done: the place of the source field dictionary and the worksheets ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), and the failure cases [D16](#d16-vehicles-at-an-out-of-service-station) and [D20](#d20-zero-counts-in-the-stock-by-vehicle-type). [D19](#d19-last-reported-time-in-the-stock) is not a failure case: the age from which a Bicing count stops being current is a threshold, fixed by the slice that answers Q2 ([D27](#d27-gold-per-question)).
     2. Profile of the Bicing history archives over one year (done: December 2025 to October 2026, check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md) › `profile/bicing-historical/`, findings in the [Bicing](../sources/bicing.md#history) source card); [D3](#d3-feeds-that-enter-the-model) decides the archive as a source (done).
@@ -387,6 +386,10 @@ Rejected: a single unknown member (`-1`) for all of them, since two such station
 The Bicing archive repeats station and snapshot rows in May, June and July 2026, with different values in 8 keys only ([Bicing › History](../sources/bicing.md#history)). The station stock keeps one row per station and snapshot (deduplication on the grain's key, DAMA's uniqueness): the one with the latest `last_updated`, and on a tie the first in the archive. One rule covers identical and differing duplicates alike; at 8 keys in 48.3 million rows, which of two differing rows is kept changes no result.
 
 Rejected: excluding the differing keys and counting them as a quality indicator, since it adds a separate path for 8 rows.
+
+#### D32. Security of the model
+
+A STRIDE pass over the model finds no threat it must control: its data is open and holds no personal data, credentials and storage belong to capture ([d004](d004-bronze-data-capture.md)) and the pipeline ([d007](d007-pipeline-design.md)), wrong source values are data quality, checked by the data contract ([D29](#d29-data-contract-of-the-model)), and the +P list ([D18](#d18-ambicis-p-stations)) changes only through a reviewed pull request. Source text such as station names ([D12](#d12-station-names)) is stored as published; escaping it on output belongs to the public visualization (T041).
 
 ### 1.3 Requirements
 
