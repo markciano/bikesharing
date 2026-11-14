@@ -60,9 +60,9 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 - **Uniqueness:** duplicate station and snapshot rows only in May (10,772), June (25,409) and July 2026 (2,164); the duplicates of 8 keys differ ([p2_grain.csv](../../spikes/d005-data-model/profile/bicing-historical/p2_grain.csv), 2026-11-14).
 - **Completeness:** gaps not in the provider's list, December 2025 to October 2026: 13 April 07:25 → 14 April 10:05; 24 April 11:10–16:20; intermittent from 29 July 18:50 to 6 August 08:45; 29 September 20:05 → 6 October 08:00 (UTC) ([p4_gaps.csv](../../spikes/d005-data-model/profile/bicing-historical/p4_gaps.csv), 2026-11-14).
 
-## Facts
+## General facts
 
-### Service
+Facts that hold for the whole source, not for one feed: how it publishes its data and how the system runs.
 
 - **Stable schema:** every key path appears in every file of `station_status`, `station_information`, `vehicle_types` and `system_regions` ([`keys_check.py`](../../spikes/d005-data-model/profile/keys_check.py), 2026-10-14 to 2026-10-26).
 - **`last_updated`:** the time the response was generated, equal to the request time, not data freshness; it can be up to 15 s ahead of the client clock and never went backwards ([s002 › 3c](../spikes/s002-bicing-realtime-capture.md#3-freshness), 2026-10-05).
@@ -74,6 +74,10 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 - **No `content-length`:** the origin sends none, also when serving gzip, so a response's size is known only by reading its body ([s006 › F7](../spikes/s006-cloudflare-capture.md#findings), [d004 › Source fetch](../designs/d004-bronze-data-capture.md#source-fetch), 2026-10-12).
 - **Volume:** about 19 MB per day as gzip, with static feeds every 15 min ([s002 › 7b](../spikes/s002-bicing-realtime-capture.md#7-volume), 2026-10-04).
 - **Reservations:** the app reserves a bike at a given station up to 5 min before picking it up (Bicing app, 2026-11-13).
+
+## Feeds
+
+One section per feed: what it holds, how often it changes and its quality issues; a feed the data model reads adds its field dictionary.
 
 ### `station_status`
 
@@ -110,7 +114,7 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
   - `cross_street` holds the district and neighbourhood, not a street, with the City Council's two-digit codes, e.g. `01-CiutatVella/01-el Raval` ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
   - `is_charging_station` is always true, `is_virtual_station` always false, and `rental_methods` always `key`, `transitcard`, `creditcard` and `phone` ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
   - `rental_uris` is always an empty object and `vehicle_types_capacity` an empty list ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), [`keys_check.py`](../../spikes/d005-data-model/profile/keys_check.py), 2026-10-14 to 2026-10-26).
-- **Change:** 68 changes in 12.5 days (see Service); 4.4 MB per day as gzip ([s002 › 7b](../spikes/s002-bicing-realtime-capture.md#7-volume), 2026-10-04).
+- **Change:** 68 changes in 12.5 days (see [General facts](#general-facts)); 4.4 MB per day as gzip ([s002 › 7b](../spikes/s002-bicing-realtime-capture.md#7-volume), 2026-10-04).
 - **Quality:**
   - Validity: `external_id` is not a GBFS 3.0 field ([s002 › 2a](../spikes/s002-bicing-realtime-capture.md#2-common-model), 2026-10-05).
   - Validity: `post_code` comes both with and without its leading zero (`08001`, `8001`) ([profile › station_information](../../spikes/d005-data-model/profile/bicing/station_information.csv), 2026-10-14 to 2026-10-26).
