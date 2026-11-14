@@ -406,36 +406,36 @@ The requirements are the rules of the model's data contract, written once in [da
 
 | Decision | Rules |
 |---|---|
-| [D1. One model over one bus matrix](#d1-one-model-over-one-bus-matrix) | |
+| [D1. One model over one bus matrix](#d1-one-model-over-one-bus-matrix) | Pending |
 | [D2. Capture's fixtures as the feed sample](#d2-captures-fixtures-as-the-feed-sample) | None: a method of inspection, not a property of the model |
-| [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | RDM4, RDM5, RDM16 |
-| [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | RDM1, RDM2, RDM3, RDM15, RDM16 |
-| [D5. Conformed dimensions](#d5-conformed-dimensions) | |
-| [D6. AMBici's post code](#d6-ambicis-post-code) | |
+| [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | RDM4, RDM5, RDM16, RDM23 |
+| [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | RDM1, RDM2, RDM3, RDM15, RDM16, RDM22 |
+| [D5. Conformed dimensions](#d5-conformed-dimensions) | Pending |
+| [D6. AMBici's post code](#d6-ambicis-post-code) | Pending |
 | [D7. Station status flags](#d7-station-status-flags) | RDM8 |
-| [D8. Vehicle propulsion](#d8-vehicle-propulsion) | |
-| [D9. Station municipality](#d9-station-municipality) | |
-| [D10. Barcelona district and neighbourhood](#d10-barcelona-district-and-neighbourhood) | |
-| [D11. Place names](#d11-place-names) | |
-| [D12. Station names](#d12-station-names) | |
-| [D13. Model labels](#d13-model-labels) | |
+| [D8. Vehicle propulsion](#d8-vehicle-propulsion) | Pending |
+| [D9. Station municipality](#d9-station-municipality) | Pending |
+| [D10. Barcelona district and neighbourhood](#d10-barcelona-district-and-neighbourhood) | Pending |
+| [D11. Place names](#d11-place-names) | Pending |
+| [D12. Station names](#d12-station-names) | Pending |
+| [D13. Model labels](#d13-model-labels) | Pending |
 | [D14. Vocabulary of the measures](#d14-vocabulary-of-the-measures) | RDM7, RDM19 |
 | [D15. Disabled vehicles and docks](#d15-disabled-vehicles-and-docks) | RDM10 |
 | [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20 |
 | [D17. Occupancy](#d17-occupancy) | RDM13, RDM14 |
-| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | |
+| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | Pending |
 | [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9 |
 | [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | RDM17, RDM18, RDM19 |
 | [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21 |
-| [D22. Departures and arrivals](#d22-departures-and-arrivals) | |
-| [D23. Movements across gaps in capture](#d23-movements-across-gaps-in-capture) | |
-| [D24. Movements at an out-of-service station](#d24-movements-at-an-out-of-service-station) | |
-| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | |
-| [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | |
-| [D27. Gold per question](#d27-gold-per-question) | |
-| [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | |
-| [D29. Data contract of the model](#d29-data-contract-of-the-model) | |
-| [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | |
+| [D22. Departures and arrivals](#d22-departures-and-arrivals) | RDM25, RDM26, RDM27, RDM29, RDM32 |
+| [D23. Movements across gaps in capture](#d23-movements-across-gaps-in-capture) | RDM23, RDM24, RDM30, RDM31, RDM32 |
+| [D24. Movements at an out-of-service station](#d24-movements-at-an-out-of-service-station) | RDM26, RDM27, RDM28, RDM32 |
+| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | Pending |
+| [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | Pending |
+| [D27. Gold per question](#d27-gold-per-question) | Pending |
+| [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | Pending |
+| [D29. Data contract of the model](#d29-data-contract-of-the-model) | Pending |
+| [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | Pending |
 | [D31. Duplicate rows in the archive](#d31-duplicate-rows-in-the-archive) | RDM6 |
 | [D32. Security of the model](#d32-security-of-the-model) | None: the STRIDE pass finds no threat specific to the model |
 
