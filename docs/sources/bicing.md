@@ -106,9 +106,9 @@ Every field of `station_status` as Bicing publishes it: its meaning, its definit
 | `data.stations[].num_vehicles_disabled` | [Vehicles at the station that cannot be rented][gbfs-ss] | integer | optional | vehicles | — | No nulls; 0 to 50, mean 2.9, median 2 | `3` | See Field notes |
 | `data.stations[].num_docks_available` | [Free docks at the station][gbfs-ss] | integer | conditionally required: except at a station with unlimited docks | docks | — | No nulls; 0 to 54, median 17 | `32` | See Field notes |
 | `data.stations[].num_docks_disabled` | [Docks at the station that are out of service][gbfs-ss] | integer | optional | docks | — | No nulls; 0 to 44, median 0 | `0` | — |
-| `data.stations[].vehicle_docks_available` | [Free docks by the vehicle types they accept][gbfs-ss] | array | conditionally required: when `vehicle_types` is published | — | — | No nulls; one group of `ICONIC`, `BOOST`, `FIT` and `EFIT` at both ends of the profiled range | `[{"vehicle_type_ids": ["ICONIC", "BOOST", "FIT", "EFIT"], "count": 32}]` | — |
+| `data.stations[].vehicle_docks_available` | [Free docks by the vehicle types they accept][gbfs-ss] | array | conditionally required: when `vehicle_types` is published | — | — | No nulls; one group of `ICONIC`, `BOOST`, `FIT` and `EFIT` in both the lowest and the highest value profiled | `[{"vehicle_type_ids": ["ICONIC", "BOOST", "FIT", "EFIT"], "count": 32}]` | — |
 | `data.stations[].vehicle_docks_available[].vehicle_type_ids` | [The vehicle types those docks accept][gbfs-ss] | array | required | — | — | `ICONIC`, `BOOST`, `FIT`, `EFIT` | `["ICONIC", "BOOST", "FIT", "EFIT"]` | — |
-| `data.stations[].vehicle_docks_available[].count` | [Free docks that accept those types][gbfs-ss] | integer | required | docks | — | 0 to 54 | `32` | — |
+| `data.stations[].vehicle_docks_available[].count` | [Free docks that accept those types][gbfs-ss] | integer | required | docks | — | 0 in the lowest group profiled, 54 in the highest | `32` | — |
 | `data.stations[].is_installed` | [Whether the station is installed on the street][gbfs-ss] | boolean | required | — | — | No nulls; true and false | `true` | See Field notes |
 | `data.stations[].is_renting` | [Whether the station lets vehicles be rented][gbfs-ss] | boolean | required | — | — | No nulls; true and false | `true` | See Field notes |
 | `data.stations[].is_returning` | [Whether the station accepts returned vehicles][gbfs-ss] | boolean | required | — | — | No nulls; true and false | `true` | See Field notes |
@@ -146,12 +146,12 @@ Every field of `station_information` as Bicing publishes it: its meaning, its de
 | `ttl` | [Declared seconds until the file is refreshed][gbfs-output] | integer | required | seconds | — | Always 0 | `0` | — |
 | `version` | [GBFS version of the file][gbfs-output] | string | required | — | — | Always `3.0` | `3.0` | — |
 | `data.stations[].station_id` | [The station's identifier][gbfs-si] | string | required | — | — | No nulls; ≈547 distinct | `1` | — |
-| `data.stations[].external_id` | The station's UUID in the operator's system | string | — | UUID | — | No nulls; ≈564 distinct | `fc540556-eb2f-11ef-896d-0a9e2ea61361` | Validity: not a GBFS 3.0 field (see Quality) |
+| `data.stations[].external_id` | The station's UUID in the operator's system | string | — | UUID | — | No nulls; ≈564 distinct | `fc540556-eb2f-11ef-896d-0a9e2ea61361` | Differs from GBFS: not a GBFS 3.0 field (see Quality) |
 | `data.stations[].name` | [The station's public name, one item per language][gbfs-si] | array | required | — | — | No nulls; 5 items, one per language | `[{"text": "GRAN VIA CORTS CATALANES, 760", "language": "ca"}, …]` | — |
-| `data.stations[].name[].text` | [The name in that language][gbfs-ls] | string | required | — | — | ≈518 distinct; the same text in all 5 languages | `GRAN VIA CORTS CATALANES, 760` | Validity: 7 stations have leading or trailing spaces (see Field notes) |
+| `data.stations[].name[].text` | [The name in that language][gbfs-ls] | string | required | — | — | The same text in all 5 languages, so ≈518 distinct, counted over whole `name` arrays | `GRAN VIA CORTS CATALANES, 760` | Validity: 7 stations have leading or trailing spaces (see Field notes) |
 | `data.stations[].name[].language` | [The language of the name][gbfs-ls] | string | required | IETF BCP 47 | — | `ca`, `en`, `es`, `fr`, `nl` | `ca` | — |
 | `data.stations[].short_name` | [A short station code, one item per language][gbfs-si] | array | optional | — | — | No nulls; 5 items, one per language | `[{"text": "1", "language": "ca"}, …]` | — |
-| `data.stations[].short_name[].text` | [The code in that language][gbfs-ls] | string | required | — | — | ≈524 distinct; the same text in all 5 languages | `1` | — |
+| `data.stations[].short_name[].text` | [The code in that language][gbfs-ls] | string | required | — | — | The same text in all 5 languages, so ≈524 distinct, counted over whole `short_name` arrays | `1` | — |
 | `data.stations[].short_name[].language` | [The language of the code][gbfs-ls] | string | required | IETF BCP 47 | — | `ca`, `en`, `es`, `fr`, `nl` | `ca` | — |
 | `data.stations[].lat` | [The station's latitude][gbfs-si] | number | required | WGS 84 degrees | — | 41.3467746 to 41.462095 | `41.3979779` | — |
 | `data.stations[].lon` | [The station's longitude][gbfs-si] | number | required | WGS 84 degrees | — | 2.1091535 to 2.2206913 | `2.1801069` | — |
@@ -160,9 +160,9 @@ Every field of `station_information` as Bicing publishes it: its meaning, its de
 | `data.stations[].post_code` | [The station's post code][gbfs-si] | string | optional | — | — | 0.37% null; 45 distinct | `08013` | Validity and completeness issues (see Quality) |
 | `data.stations[].capacity` | [Docks at the station, available and unavailable][gbfs-si] | integer | optional | docks | — | 0 to 54, median 27 | `46` | See Field notes and [`station_status`](#station_status) › Quality |
 | `data.stations[].vehicle_types_capacity` | [Vehicles of each type the station can hold][gbfs-si] | array | optional | — | — | Always empty | `[]` | — |
-| `data.stations[].vehicle_docks_capacity` | [Docks by the vehicle types they accept][gbfs-si] | array | optional | — | — | One group at both ends of the profiled range | `[{"vehicle_type_ids": ["ASTRO", "BOOST", …], "count": 46}]` | — |
-| `data.stations[].vehicle_docks_capacity[].vehicle_type_ids` | [The vehicle types those docks accept][gbfs-si] | array | required | — | — | IDs of `vehicle_types`: 9 at the low end of the profiled range (with `METRO`), 10 at the high end (with `METRO_BASE` and `TRAILER`) | `["ASTRO", "BOOST", "CHLOE", …]` | — |
-| `data.stations[].vehicle_docks_capacity[].count` | [Docks that accept those types][gbfs-si] | integer | required | docks | — | 0 to 54 | `46` | Equals `capacity` (see Field notes) |
+| `data.stations[].vehicle_docks_capacity` | [Docks by the vehicle types they accept][gbfs-si] | array | optional | — | — | One group in both the lowest and the highest value profiled | `[{"vehicle_type_ids": ["ASTRO", "BOOST", …], "count": 46}]` | — |
+| `data.stations[].vehicle_docks_capacity[].vehicle_type_ids` | [The vehicle types those docks accept][gbfs-si] | array | required | — | — | IDs of `vehicle_types`: 9 in the lowest value profiled (with `METRO`), 10 in the highest (with `METRO_BASE` and `TRAILER`) | `["ASTRO", "BOOST", "CHLOE", …]` | — |
+| `data.stations[].vehicle_docks_capacity[].count` | [Docks that accept those types][gbfs-si] | integer | required | docks | — | 0 in the lowest group profiled, 54 in the highest | `46` | Equals `capacity` (see Field notes) |
 | `data.stations[].is_charging_station` | [Whether the station charges electric vehicles][gbfs-si] | boolean | optional | — | — | Always true | `true` | — |
 | `data.stations[].rental_methods` | [Payment methods accepted at the station][gbfs-si] | array | optional | — | `key`, `creditcard`, `paypass`, `applepay`, `androidpay`, `transitcard`, `accountnumber`, `phone` | Always `key`, `transitcard`, `creditcard`, `phone` | `["key", "transitcard", "creditcard", "phone"]` | — |
 | `data.stations[].is_virtual_station` | [Whether the station has no physical docks][gbfs-si] | boolean | optional | — | — | Always false | `false` | — |
@@ -236,7 +236,7 @@ Every column of the status archive as Bicing publishes it: its meaning, its defi
 |---|---|---|---|---|---|---|---|---|
 | `last_updated` | [The snapshot's time, shared by all its rows][gbfs23-output] | integer | required | POSIX time | — | No nulls; 2025-12-09T08:35:42Z to 2026-10-31T22:55:04Z | `1765269342` | Timeliness: 5 minutes apart (see Quality) |
 | `ttl` | [Declared seconds until the file is refreshed][gbfs23-output] | integer | required | seconds | — | Always 0 | `0` | — |
-| `station_id` | [The station's identifier, the same as in real time][gbfs23-ss] | integer | required | — | — | No nulls; 1 to 614, ≈551 distinct | `1` | — |
+| `station_id` | [The station's identifier, the same as in real time][gbfs23-ss] | integer | required | — | — | No nulls; 1 to 614, ≈551 distinct | `1` | Differs from GBFS: an integer, not a string |
 | `num_bikes_available` | [Bikes available for rental at the station][gbfs23-ss] | integer | required | bikes | — | No nulls; 0 to 54, median 6 | `6` | Consistency: matches real-time `num_vehicles_available` in 92% of paired rows (see Quality) |
 | `num_bikes_available_types.mechanical` | Mechanical bikes among `num_bikes_available` | integer | — | bikes | — | No nulls; 0 to 51, median 2 | `2` | Differs from GBFS: not a GBFS field; consistency: with `.ebike`, does not always add up (see Quality) |
 | `num_bikes_available_types.ebike` | Electric bikes among `num_bikes_available` | integer | — | bikes | — | No nulls; 0 to 52, median 2 | `2` | Differs from GBFS: not a GBFS field |
@@ -251,7 +251,7 @@ Every column of the status archive as Bicing publishes it: its meaning, its defi
 | `V1` | Holds no value | string | — | — | — | Always `NA`; only in January and March 2026 | `NA` | Differs from GBFS: not a GBFS field; see [History](#history) › Consistency |
 
 - **Field notes:**
-  - `status` is `PLANNED` in exactly the rows with `is_installed = 0` ([p1_values.csv](../../spikes/d005-data-model/profile/bicing-historical/p1_values.csv), 2026-11-14).
+  - `status` `PLANNED` and `is_installed = 0` have the same count, 17,130 rows, in the same months ([p1_values.csv](../../spikes/d005-data-model/profile/bicing-historical/p1_values.csv), 2026-11-14).
   - The archive has no `version` column, and no disabled vehicles or docks ([headers.csv](../../spikes/d005-data-model/profile/bicing-historical/headers.csv), 2026-11-14).
   - No numeric column holds a non-numeric value ([p1_invalid.csv](../../spikes/d005-data-model/profile/bicing-historical/p1_invalid.csv), 2026-11-14).
 - **Evidence:** [p1_fields_estacions.csv](../../spikes/d005-data-model/profile/bicing-historical/p1_fields_estacions.csv) and [p1_values.csv](../../spikes/d005-data-model/profile/bicing-historical/p1_values.csv), 48,290,558 rows from [profile.sql](../../spikes/d005-data-model/profile/bicing-historical/profile.sql), archives of December 2025 to October 2026, profiled 2026-11-14.
