@@ -365,6 +365,17 @@ Each slice of T060 fills the dictionary entries of the fields it reads and the w
 
 Rejected: a dictionary file per source, since it repeats the cards' Fields; each worksheet as a section of `data-model.md`, since every slice would edit one file, which grows with every gold table.
 
+#### D29. Data contract of the model
+
+The quality rules of silver and gold are the model's data contract: the uniqueness of each grain, nullability, accepted values, referential integrity with the conformed dimensions, and invariants across columns or tables. The Requirements of this design state them; once delivered, they live with the model's documentation, each with a stable ID that the T060 test checking it cites:
+
+- **Table and cross-table rules** (grain, invariants, drill-across): in [data-model.md](../data-model.md).
+- **Column rules** (type, nullability, accepted values): in the worksheet of their table ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)).
+
+What would change it: [d007](d007-pipeline-design.md) choosing a test tool with an executable contract; that contract then becomes the rules' place, recorded as an ADR.
+
+Rejected: an executable contract per table now (dbt `schema.yml`, SodaCL, Open Data Contract Standard), since its format depends on the test tool, which d007 decides.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
