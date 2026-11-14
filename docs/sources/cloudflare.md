@@ -23,6 +23,8 @@ Facts about the Cloudflare services this project uses: R2 as the object store fo
 
 ## Facts
 
+Facts about the Cloudflare services the project uses, one section per service or topic.
+
 Facts confirmed on 2026-11-03 come from a tool that summarizes pages, so their wording is not verbatim. "Not stated" means the pages read do not say it, which is not the same as Cloudflare denying it.
 
 ### Account and tokens

@@ -17,6 +17,7 @@ A source card holds the facts about one data source. Source and Access follow W3
     - **Quality:** each issue led by its dimension (accuracy, completeness, consistency, timeliness, validity, uniqueness).
     - Below the list, in a feed the data model reads, `#### Field dictionary` (see Field dictionary).
   - `## Open questions`.
+- **Provider cards:** a card of a service provider, which publishes no feeds, has `## Facts` in place of `## General facts` and `## Feeds`. It opens with one line saying what it holds, then one `###` per topic when there are several.
 - **Field dictionary:** one table per feed, one row per field of a feed the data model reads, under `#### Field dictionary`, after one line that names the feed, the source, the GBFS version and the profile's dates (e.g. "Every field of `station_status` as AMBici publishes it: its meaning, its definition in GBFS 2.3 and the values profiled from 2026-10-14 to 2026-10-26."). Its columns follow; a cell that does not apply holds `—`:
   - **Field:** its path in the response (e.g. `data.stations[].vehicle_types_available[].count`).
   - **Description:** its meaning in this source, as observed, in one sentence and in the project's words, linked to its definition in the GBFS version the source publishes. How the model interprets it belongs to the worksheet that maps it, not here.
