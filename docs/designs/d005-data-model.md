@@ -1,9 +1,3 @@
-<!--
-Design doc template. A design doc is the working document of one task: Spec (what and why), Plan (how), Steps (implementation), Close (what was delivered).
-It is detailed enough that Code can implement it without making design decisions.
-Sections marked Optional are kept only when they apply.
--->
-
 # Design: Data model
 
 - **Task:** T040
@@ -17,40 +11,20 @@ Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
 - State: Draft 📝
-- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Phase: [x] Spec · [x] Plan · [ ] Plan review
 - Current step: —
-- Next: the Plan's optional sections, those that apply written and the rest removed; then Plan approval, checking Plan in Phase. The File layout lists every file this task changes. The field dictionaries of AMBici and Bicing are written and reviewed against their profiles and fixtures, Bicing's status archive as a feed of its own; so are the templates of the dictionary and the worksheet; ADR-0040 supersedes ADR-0008, and ADR-0041 supersedes ADR-0005.
-- Closing plan. This task delivers documents only, so it skips Steps, `review-steps` and `/implement`: every deliverable is written and approved on its diff within the Spec or the Plan. In this order:
-  1. **Plan:** a Decision summary row for each choice asked of the owner; an ADR that supersedes [ADR-0008](../decisions/archive/0008-common-model-on-gbfs-3-0.md) with D14 and one that supersedes [ADR-0005](../decisions/archive/0005-utc-for-all-stored-timestamps.md) with D33, each superseded ADR moved to `archive/` and every link to it updated, CLAUDE.md › Conventions › Time included; the template of the worksheet and of the dictionary ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)); File layout, listing every file this task changes; Plan approval, checking Plan in Phase.
-  2. **Consistency pass:** `grep "TODO(T040)"` finds nothing left; every column rule, and only those, carries `TODO(T060)`; the sections of d002, d004 and d007 that this design refines link back to it; data-model.md and the source cards agree with the decisions they state.
-  3. **Review in a new session,** after `review-plan`: the Plan and every deliverable against the Spec, findings with quote and consequence; the owner picks the fixes, applied on the diff.
-  4. **Close:** 4. Close filled (Implemented, Known gaps at close), State Complete ✅; the owner pushes, opens the PR `T040: Data model` with `Closes` for T040's issue, and merges once the checks pass.
-  - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions, facts and the data contract go to `docs/data-model.md`; the worksheets go to `docs/data-model/` ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), created by T060.
+- Next: the final review, in a new session.
+- Closing plan. This task delivers documents only, so it has no Steps block and skips `review-steps` and `/implement`. Every deliverable of [Approach](#21-approach) is delivered and was approved on its diff, and the Plan records them. Already met: no `TODO(T040)` is left; d002, d004 and d007 link back to the sections this design refines; ADR-0040 and ADR-0041 are accepted; every Out of scope item names its task. What remains, in this order:
+  1. **Final review in a new session,** with `/design d005 review-plan`: each deliverable of Approach against the Spec; that every column rule of data-model.md, and only those, carries `TODO(T060)`; and that data-model.md and the source cards agree with the decisions they state. Findings with quote and consequence; the owner picks the fixes, applied on the diff; Plan review is checked in Phase.
+  2. **Close:** T060's issue (#52) names [data-model.md › Data contract](../data-model.md#data-contract) as the input of its slices, the last [Done when](#14-done-when) item; 3. Close filled (Implemented, Known gaps at close), State Complete ✅; the owner pushes, opens the PR `T040: Data model` with `Closes` for T040's issue, and merges once the checks pass.
 
 ## 1. Spec — what and why
 
-<!-- What the result does seen from outside, not how it is built. The test: if whoever uses the result would notice a change, it belongs here; if not, it belongs to the Plan. External systems and their data (feeds, fields) may be named. -->
-
 ### 1.1 Context
-
-<!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
 
 The questions of [d002](d002-requirements.md) compare AMBici and Bicing, two systems that publish different GBFS versions, each with its own names and values for the same facts. Capture writes both systems' raw feeds to the bronze layer on R2 ([d004](d004-bronze-data-capture.md)), but no model defines yet what silver and gold hold, so the pipeline that builds them ([d007](d007-pipeline-design.md)) and the public visualization (T041) have nothing to build on.
 
 ### 1.2 Decided at framing
-
-<!-- Optional. One heading per decision about what the result does. In this order, so the reader finds what matters first:
-1. The decision and why, in one short paragraph.
-2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
-3. The options rejected.
-4. The artefact that fixes it, in whatever form the decision needs (e.g. a mapping table, a page map, a weighted matrix). An artefact that does not fit here or must outlive the design goes in its own file: the Plan decides where it lives and its format, File layout lists it, and this decision links to it.
-
-A security decision lists its threats in this table, with IDs `TH1`, `TH2`… per document:
-
-| # | Threat (STRIDE) | Impact | Control | Requirement |
-|---|---|---|---|---|
-| `TH1` | | | | |
--->
 
 #### D1. One model over one bus matrix
 
@@ -401,15 +375,6 @@ Rejected: UTC calendar keys, with gold aggregating by UTC hour and the visualiza
 
 ### 1.3 Requirements
 
-<!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
-One behaviour per requirement, verifiable, with a measurable threshold where one applies. Written in EARS:
-- Ubiquitous: The <system> shall <response>.
-- Event: When <trigger>, the <system> shall <response>.
-- State: While <state>, the <system> shall <response>.
-- Unwanted: If <condition>, then the <system> shall <response>.
-- Optional: Where <feature is included>, the <system> shall <response>.
-Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
-
 The requirements are the rules of the model's data contract, written once in [data-model.md › Data contract](../data-model.md#data-contract) ([D29](#d29-data-contract-of-the-model)). Each decision reaches these rules; a column rule moves to its table's worksheet with its ID.
 
 | Decision | Rules |
@@ -450,15 +415,11 @@ The requirements are the rules of the model's data contract, written once in [da
 
 ### 1.4 Done when
 
-<!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
-
 - The owner has accepted the ADRs that supersede [ADR-0005](../decisions/archive/0005-utc-for-all-stored-timestamps.md) and [ADR-0008](../decisions/archive/0008-common-model-on-gbfs-3-0.md).
 - Each Out of scope item names the task that covers it, none left as "assigned at the end of this design".
 - T060's issue names [data-model.md › Data contract](../data-model.md#data-contract) as the input of its slices.
 
 ### 1.5 Out of scope
-
-<!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
 - Capturing less often, or no longer capturing, the feeds that do not enter the model ([D3](#d3-feeds-that-enter-the-model)), except `free_bike_status`, kept for future questions on AMBici's battery levels — T061
 - The code that derives station attributes: AMBici's post code from ICGC with its doubt check ([D6](#d6-ambicis-post-code)), the containing municipality, district and neighbourhood ([D9](#d9-station-municipality), [D10](#d10-barcelona-district-and-neighbourhood)), and the script that rebuilds the list of +P stations ([D18](#d18-ambicis-p-stations)) — T060, in the slice that builds the station dimension
@@ -467,36 +428,38 @@ The requirements are the rules of the model's data contract, written once in [da
 
 ## 2. Plan — how
 
-<!-- 2-3 sentences -->
+This task delivers documents only: the model, its contract and the templates T060 builds the tables with. The decisions are in the Spec; the Approach says where each one lands.
 
 ### 2.1 Approach
 
-<!-- Detailed plan organized by #### blocks.
-Block `3. Steps` is written using this plan.
-If some block contains `options considered`, include them with pros and cons.
--->
+#### Main deliverables
+
+| Deliverable | Where | What it holds | From |
+|---|---|---|---|
+| Dimensional model | [data-model.md](../data-model.md), from Business processes to Star schemas | Business processes, grain, conformed dimensions, bus matrix and star schemas | D1, D4, D5 |
+| Data contract | [data-model.md › Data contract](../data-model.md#data-contract) | One rule per behaviour, with flat RDM IDs, for each fact, the dimensions, data quality and drill-across, and the model as a whole; column rules marked `TODO(T060)` | D29, and the decisions each rule cites |
+| Source field dictionaries | [ambici.md](../sources/ambici.md) and [bicing.md](../sources/bicing.md), Field dictionary of each feed | Every field the model reads: its meaning, its GBFS definition and its profiled values | D28 |
+| Worksheet template | [`.claude/rules/docs/data-model.md`](../../.claude/rules/docs/data-model.md) | The per-table worksheet T060 fills in `docs/data-model/` | D28 |
+| ADRs | [ADR-0040](../decisions/0040-model-vocabulary-from-gbfs-3-0.md), [ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md) | GBFS 3.0 as the measures' vocabulary; UTC storage plus local calendar keys | D14, D33 |
+
+#### Supporting deliverables
+
+| Deliverable | Where | What it holds |
+|---|---|---|
+| Source card structure | [`.claude/rules/docs/source-cards.md`](../../.claude/rules/docs/source-cards.md) and the four source cards | Fixed sections on DCAT and the DAMA quality dimensions; the cards' quality facts |
+| Evidence | `spikes/d005-data-model/` | One check per decision or source card fact |
+| Pipeline design | [d007](d007-pipeline-design.md) | The pipeline concerns split from this design |
+| Linked designs | [d002](d002-requirements.md), [d004](d004-bronze-data-capture.md) | Sections this design refines, linked back |
+| Working rules | `CLAUDE.md`, `.claude/rules/` and `.claude/skills/` | Pending items, the standard of each decision, spike folders, diagrams |
 
 ### 2.2 Decision summary
-
-<!-- It logs decisions about the plan, including changes. Oldest first.
-Entries follow .claude/rules/docs/decision-log.md (log only, change links).
-- Applies to: anchor link(s) to the section where the decision is applied, named in one or two words.
-- Decided at: the Status phase where it was decided (Plan, Steps), or `<phase> review` when decided while reviewing that phase.
-- R: Requirement affected.
--->
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | 1 | [D14](#d14-vocabulary-of-the-measures) | One ADR states what GBFS 3.0 governs in the model: the names and definitions of its measures, not its layout or formats; it supersedes ADR-0008 ([ADR-0040](../decisions/0040-model-vocabulary-from-gbfs-3-0.md)) | Vocabulary and shape are one decision, the scope of the standard; the dimensional shape is already set by D1 | — | Plan |
 | 2 | [D33](#d33-local-calendar-keys) | Stored time stays in UTC and fact rows also carry local calendar keys; it supersedes ADR-0005 ([ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md)) | Kimball's local calendar keys beside a UTC timestamp; local days are built once, not in every view | — | Plan |
 
-### 2.3 Architecture
-
-<!-- Optional. One diagram and 2–3 sentences. -->
-
-### 2.4 File layout
-
-<!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
+### 2.3 File layout
 
 ```text
 .
@@ -558,79 +521,11 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
     └── vehicle-types/                          Bicing's vehicle type IDs over time (D8)
 ```
 
-### 2.5 Components
+### 2.4 What does not change
 
-<!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
+- Code: `capture/`, `src/bikesharing/`, `contracts/` and `tests/`; this task changes documents and spike evidence only.
 
-#### `<ComponentName>`
-
-- **Responsibility:** `<one sentence>`
-- **Location:** `path/to/file`
-- **Contract:**
-
-```python
-```
-
-### 2.6 Test plan
-
-<!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
-
-| R | Method | What is verified | Level |
-|---|---|---|---|
-| R1 | Test / Inspection / Analysis / Demonstration | | unit / integration / e2e; — for other methods |
-
-### 2.7 Breaking changes
-
-<!-- Optional. Shared models or interfaces this design changes, and how their dependants are handled. -->
-
-| File | Why it breaks | Strategy |
-|---|---|---|
-| | | |
-
-### 2.8 What does not change
-
-<!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
-
--
-
-## 3. Steps
-
-<!-- Each step is one reviewable result and one commit, touching at most 2–3 files.
-- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- R: the requirements the step implements or tests, or —.
-- Commit: the proposed message, following the Git conventions in CLAUDE.md.
-- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner. -->
-
-### 3.1 Prerequisites
-
-<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
-
-### Step 1 — `<Title>`
-
-- **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md, including `<dNNN.sN - >` at the begining of the message, for the design and the step number.
-- **R:** R1, R3 (or —)
-- **Model:** `<model · effort>` (or —)
-
-#### Scope
-
-<!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
-
-#### Reads
-
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
-
-#### Do
-
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
-
-#### Check
-
-<!-- command/s or verification with a yes/no result. -->
-
-## 4. Close
+## 3. Close
 
 <!-- The record of what the task delivered, for whoever opens this design later. -->
 
