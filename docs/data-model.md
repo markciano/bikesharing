@@ -56,7 +56,7 @@ Stock by vehicle type adds *what*: the vehicle type. Stock movements share the s
 Four choices follow from the questions:
 
 - **System is a dimension of its own,** not an attribute of the station: every question compares the two, and a capture's completeness and lateness (Q2) belong to the system's response, not to a station. It is conformed: every fact shares it.
-- **Station keeps its history** as a slowly changing dimension of type 2: a change of name, capacity or location adds a new version with its validity period. Q8 asks for that history.
+- **Station keeps its history** as a slowly changing dimension of type 2: a change in any of its attributes adds a new version with its validity period, so each count reads the station as it was at its capture. Q8 asks for the history of its name, capacity and location.
 - **Post code and municipality are flattened into the station,** the usual dimensional form for a small hierarchy, rather than tables of their own linked to it (a snowflake).
 - **Vehicle types compare by propulsion.** Type IDs are local to each system, while propulsion, mechanical or electric, is shared by both.
 
