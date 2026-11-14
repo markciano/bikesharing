@@ -422,7 +422,7 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D2. Capture's fixtures as the feed sample](#d2-captures-fixtures-as-the-feed-sample) | None: a method of inspection, not a property of the model |
 | [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | RDM4, RDM5, RDM16, RDM23, RDM65 |
 | [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | RDM1, RDM2, RDM3, RDM15, RDM16, RDM22; the additivity of each measure goes in its worksheet row ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
-| [D5. Conformed dimensions](#d5-conformed-dimensions) | RDM33, RDM34, RDM35, RDM36, RDM37, RDM38, RDM43, RDM46, RDM73 |
+| [D5. Conformed dimensions](#d5-conformed-dimensions) | RDM33, RDM34, RDM35, RDM36, RDM37, RDM38, RDM43, RDM46, RDM66, RDM73 |
 | [D6. AMBici's post code](#d6-ambicis-post-code) | RDM41, RDM42, RDM43 |
 | [D7. Station status flags](#d7-station-status-flags) | RDM8 |
 | [D8. Vehicle propulsion](#d8-vehicle-propulsion) | RDM54, RDM55, RDM74 |
@@ -435,7 +435,7 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D15. Disabled vehicles and docks](#d15-disabled-vehicles-and-docks) | RDM10 |
 | [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20, RDM58, RDM70 |
 | [D17. Occupancy](#d17-occupancy) | RDM13, RDM14, RDM70 |
-| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | RDM52, RDM53; the script that rebuilds the list is code, tested by its slice of T060 ([Out of scope](#15-out-of-scope)) |
+| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | RDM52, RDM53, RDM66; the script that rebuilds the list is code, tested by its slice of T060 ([Out of scope](#15-out-of-scope)) |
 | [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9, RDM61, RDM75; the additivity of `last_reported` and of the stock's counts goes in their worksheet rows ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
 | [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | RDM17, RDM18, RDM19 |
 | [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21, RDM58 |
@@ -445,7 +445,7 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | RDM59, RDM60, RDM61, RDM75 |
 | [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | RDM62, RDM63, RDM64 |
 | [D27. Gold per question](#d27-gold-per-question) | RDM61, RDM67 |
-| [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | RDM68, RDM69 |
+| [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | RDM66, RDM67, RDM68, RDM69 |
 | [D29. Data contract of the model](#d29-data-contract-of-the-model) | All: it sets the form, place and IDs of every rule |
 | [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | RDM39, RDM47, RDM56, RDM71 |
 | [D31. Duplicate rows in the archive](#d31-duplicate-rows-in-the-archive) | RDM6 |
