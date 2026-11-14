@@ -21,7 +21,7 @@ Data engineering portfolio project on public bike sharing in the Barcelona area 
 ## Conventions
 
 - **Language:** code, comments and documents in English. Conversation in Spanish.
-- **Time:** all stored timestamps in UTC (ADR-0005).
+- **Time:** all stored timestamps in UTC; fact rows also carry local calendar keys (ADR-0041).
 - **Secrets:** in `.env` (ignored by Git); `.env.example` with empty values is committed. Never hard-code or paste secrets.
 - **Raw data:** never committed to Git, except test fixtures (ADR-0037).
 - **Stack versions and dependencies:** each component pins its runtimes and locks its dependencies in its own files (ADR-0016, ADR-0017); how in `.claude/rules/code/dependencies.md`.

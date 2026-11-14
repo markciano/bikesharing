@@ -7,7 +7,7 @@ Sections marked Optional are kept only when they apply.
 # Design: Capture retry on 403
 
 - **Task:** T059
-- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md), [ADR-0036](../decisions/0036-log-convention-across-components.md)
+- **ADRs:** [ADR-0005](../decisions/archive/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md), [ADR-0036](../decisions/0036-log-convention-across-components.md)
 - **New ADRs from this doc:** [ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md)
 
 ## Status

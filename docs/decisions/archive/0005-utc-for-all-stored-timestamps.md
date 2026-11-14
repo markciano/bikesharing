@@ -1,9 +1,12 @@
 ---
-status: accepted
+status: Superseded
 date: 2026-10-03
+superseded-by: 0041
 ---
 
 # UTC for all stored timestamps
+
+Superseded on 2026-11-14 (T040) by [ADR-0041](../0041-utc-timestamps-local-calendar-keys.md): stored time stays in UTC, and fact rows also carry local calendar keys, so local days and hours are no longer left to presentation.
 
 ## Context and Problem Statement
 
