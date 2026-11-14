@@ -49,7 +49,8 @@ Data engineering portfolio project on public bike sharing in the Barcelona area 
 ## Pacing
 
 - **Per message:** one open question or decision; small related changes of one topic (e.g. 2–4 rows of one table) may go together. Never open a new decision inside an unresolved one.
-- **Per decision:** 2 options (3 if really good), with the recommendation marked (👉) and a one-line reason.
+- **Per decision:** 2 options (3 if really good), with the recommendation marked (👉), the standard it follows and a one-line reason.
+  - An option that deviates from the standard says how far (an adaptation of it or a different approach) and what it gains for this project; it departs only as far as that gain requires.
 - **Parking:** any other decision is named in one line in a parking list (🅿️) and picked up in its phase.
 
 ## Repo access
