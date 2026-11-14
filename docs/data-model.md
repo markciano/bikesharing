@@ -34,9 +34,9 @@ Movements can be derived from the stock, but they are a fact of their own becaus
 
 | Process | Grain | Sources |
 |---|---|---|
-| Station stock | One row per station and capture | `station_status`; Bicing's historical archive |
-| Stock by vehicle type | One row per station, capture and vehicle type | `vehicle_types_available` in `station_status`; the archive has no per-type counts |
-| Stock movements | One row per station and pair of consecutive captures with a change | Station stock |
+| Station stock | One row per station and capture | `station_status`; before real-time capture, Bicing's status archive from December 2025 to 13 October 2026 ([d005 › D3](designs/d005-data-model.md#d3-feeds-that-enter-the-model)) |
+| Stock by vehicle type | One row per station, capture and vehicle type | `vehicle_types_available` in `station_status` |
+| Stock movements | One row per station and pair of consecutive captures with a change | Station stock, real-time captures only |
 
 The stock is a periodic snapshot: every capture is a row, even when the station has not changed. Rows are only appended, a gap in capture shows as missing rows, and the archive's 5-minute snapshots fit the same grain. Repeated values compress well in columnar storage, so unchanged rows cost little space. The alternative, one row per station state with `valid_from` and `valid_to`, stores fewer rows but rewrites the open row on every change and cannot tell an unchanged state from a gap in capture ([d005 › D4](designs/d005-data-model.md#d4-business-processes-and-the-grain-of-the-stock)).
 
@@ -58,7 +58,7 @@ Four choices follow from the questions:
 - **System is a dimension of its own,** not an attribute of the station: every question compares the two, and a capture's completeness and lateness (Q2) belong to the system's response, not to a station. It is conformed: every fact shares it.
 - **Station keeps its history** as a slowly changing dimension of type 2: a change of name, capacity or location adds a new version with its validity period. Q8 asks for that history, and occupancy in the past needs the capacity of its time.
 - **Post code and municipality are flattened into the station,** the usual dimensional form for a small hierarchy, rather than tables of their own linked to it (a snowflake).
-- **Vehicle types compare by propulsion.** Type IDs are local to each system, while propulsion, mechanical or electric, is shared by both and is the only split of the Bicing archive.
+- **Vehicle types compare by propulsion.** Type IDs are local to each system, while propulsion, mechanical or electric, is shared by both.
 
 ### Bus matrix
 
