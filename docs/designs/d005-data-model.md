@@ -19,16 +19,16 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Requirements, in session 3 below. They state the table and cross-table rules of the model's data contract ([D29](#d29-data-contract-of-the-model)) in EARS, grouped by table or process, each citing its decision; column rules are written by each T060 slice in its worksheets ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)). The Plan takes this grouping as given: it sets the rule ID scheme, and `/implement` gives each requirement one rule in `docs/data-model.md`, linked to it. The archive's failure cases are decided ([D30](#d30-archive-stations-with-no-attributes), [D31](#d31-duplicate-rows-in-the-archive)), and the STRIDE pass finds no threat specific to the model ([D32](#d32-security-of-the-model)).
+- Next: Requirements, in session 3 below. The model's data contract ([D29](#d29-data-contract-of-the-model)) is written once, in `docs/data-model.md` › Data contract, as EARS rules `RDM1`, `RDM2`…, each citing its decision, in six groups: station stock, stock by vehicle type, stock movements, dimensions, data quality and drill-across, and model documentation. This design's Requirements link to that section and record which rules each decision reaches; D2 and D32 reach none, since one is a method of inspection and the other finds no threat. Coverage is checked both ways: every decision reaches a rule or is recorded without one, and every rule falls in the table, or the drill-across, that its test checks. The archive's failure cases are decided ([D30](#d30-archive-stations-with-no-attributes), [D31](#d31-duplicate-rows-in-the-archive)), and the STRIDE pass finds no threat specific to the model ([D32](#d32-security-of-the-model)).
   - Closing plan, to unblock T060 soon; this task delivers documents only. One session each, in this order:
     1. Done: the place of the source field dictionary and the worksheets ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), and the failure cases [D16](#d16-vehicles-at-an-out-of-service-station) and [D20](#d20-zero-counts-in-the-stock-by-vehicle-type). [D19](#d19-last-reported-time-in-the-stock) is not a failure case: the age from which a Bicing count stops being current is a threshold, fixed by the slice that answers Q2 ([D27](#d27-gold-per-question)).
     2. Profile of the Bicing history archives over one year (done: December 2025 to October 2026, check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md) › `profile/bicing-historical/`, findings in the [Bicing](../sources/bicing.md#history) source card); [D3](#d3-feeds-that-enter-the-model) decides the archive as a source (done).
-    3. Starts by deciding what the requirements state and how the slices of T060 reference the model, `docs/data-model.md` or this design's requirements. Then a short STRIDE pass, Requirements and the Spec approval.
+    3. A short STRIDE pass (done), the data contract in `docs/data-model.md` and the Spec approval.
     4. Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model; File layout; the template of the mapping and the dictionary.
     5. `review-plan`.
     6. Steps.
     7. `review-steps`.
-    8. `/implement`: `docs/data-model.md`, the template and the source cards; PR and merge.
+    8. `/implement`: the rest of `docs/data-model.md`, the template and the source cards; PR and merge.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
 
 ## 1. Spec — what and why
@@ -366,14 +366,14 @@ Rejected: a dictionary file per source, since it repeats the cards' Fields; each
 
 #### D29. Data contract of the model
 
-The quality rules of silver and gold are the model's data contract: the uniqueness of each grain, nullability, accepted values, referential integrity with the conformed dimensions, and invariants across columns or tables. The Requirements of this design state them; once delivered, they live with the model's documentation, each with a stable ID that the T060 test checking it cites:
+The quality rules of silver and gold are the model's data contract: the uniqueness of each grain, nullability, accepted values, referential integrity with the conformed dimensions, and invariants across columns or tables. Each rule is written once, in EARS, in [data-model.md](../data-model.md) › Data contract, and cites the decision it applies. Its ID is `RDM` and a number (`RDM1`, `RDM2`…), flat and opaque: it carries no table, is never reused, and is kept when the rule moves, so the T060 test checking it can cite it from the start.
 
-- **Table and cross-table rules** (grain, invariants, drill-across): in [data-model.md](../data-model.md).
-- **Column rules** (type, nullability, accepted values): in the worksheet of their table ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)).
+- **Table and cross-table rules** (grain, invariants, drill-across): stay in data-model.md.
+- **Column rules** (type, nullability, accepted values): marked `TODO(T060):` until the slice that creates their table's worksheet ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) moves them there with their ID. That slice adds rules for the columns no rule covers.
 
 What would change it: [d007](d007-pipeline-design.md) choosing a test tool with an executable contract; that contract then becomes the rules' place, recorded as an ADR.
 
-Rejected: an executable contract per table now (dbt `schema.yml`, SodaCL, Open Data Contract Standard), since its format depends on the test tool, which d007 decides.
+Rejected: an executable contract per table now (dbt `schema.yml`, SodaCL, Open Data Contract Standard), since its format depends on the test tool, which d007 decides; requirements in this design copied into data-model.md later, since the deliverable is the document itself and the copy would be written and approved twice; IDs per table (`RDM-STK-1`), since a cross-table rule has no table and renaming or splitting a table would change the ID that tests cite.
 
 #### D30. Archive stations with no attributes
 
