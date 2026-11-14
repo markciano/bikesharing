@@ -21,7 +21,6 @@ Current step: the step being implemented, or —. -->
 - Current step: —
 - Next: session 3 below. [D3](#d3-feeds-that-enter-the-model) decides the Bicing archive: the status series from December 2025 to 13 October 2026 into the stock, no movements or split by propulsion from it, no information series; D4, D5, D22, D23 and `docs/data-model.md` are adjusted. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions followed Kimball's four-step design and are all decided, detailed design included ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)).
   - Parked for the Requirements (session 3): a count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided.
-  - Parked as failure cases of D3 (session 3, before the STRIDE pass): the archive's stock of a station with no attributes (an unknown member of the station dimension); the archive's duplicate rows and per-type counts that do not add up ([Bicing › History](../sources/bicing.md#history)); D5 says past occupancy needs the capacity of its time, which [D17](#d17-occupancy) no longer uses.
   - Closing plan, to unblock T060 soon; this task delivers documents only. One session each, in this order:
     1. Done: the place of the source field dictionary and the worksheets ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), and the failure cases [D16](#d16-vehicles-at-an-out-of-service-station) and [D20](#d20-zero-counts-in-the-stock-by-vehicle-type). [D19](#d19-last-reported-time-in-the-stock) is not a failure case: the age from which a Bicing count stops being current is a threshold, fixed by the slice that answers Q2 ([D27](#d27-gold-per-question)).
     2. Profile of the Bicing history archives over one year (done: December 2025 to October 2026, check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md) › `profile/bicing-historical/`, findings in the [Bicing](../sources/bicing.md#history) source card); [D3](#d3-feeds-that-enter-the-model) decides the archive as a source (done).
@@ -80,6 +79,7 @@ The Bicing history archive ([Bicing › History](../sources/bicing.md#history)) 
 - **No movements from it:** its counts are 5 minutes apart and see about two thirds of the movements that 1-minute counts see ([p7_movements.csv](../../spikes/d005-data-model/profile/bicing-historical/p7_movements.csv)).
 - **No split by propulsion from it:** its mechanical and electric counts answer no question, since Q1 asks for the latest stock only.
 - **No information series:** `..._INFORMACIO.7z` does not enter. Occupancy needs no capacity ([D17](#d17-occupancy)), and the station dimension comes from real-time `station_information`, so a station retired before real-time capture began has no attributes.
+- **Failure cases of the archive:** [D30](#d30-archive-stations-with-no-attributes), [D31](#d31-duplicate-rows-in-the-archive).
 
 What would change it: a new question that needs a discarded feed; the feed then enters, and its history is already in bronze. For the archive, a question that compares years, or Q8 asking for the network before real-time capture; the earlier status months or the information series then enter, profiled first.
 
@@ -118,7 +118,7 @@ Each dimension answers what describes a fact row: when, where, whose and what. T
 
 - **Date** and **time of day**, apart, since questions group by day and by hour or time band; the exact UTC instant stays in the fact.
 - **System**, its own dimension, since every question compares AMBici with Bicing, and a capture's completeness and lateness belong to the system's response, not to a station ([D26](#d26-timeliness-and-completeness-of-the-feeds)).
-- **Station**, with its history (SCD type 2), since Q8 asks for it and past occupancy needs the capacity of its time; post code and municipality flattened into it.
+- **Station**, with its history (SCD type 2), since Q8 asks for it; post code and municipality flattened into it.
 - **Vehicle type**, with its propulsion as the level that compares across systems.
 
 The status flags `is_installed`, `is_renting` and `is_returning` stay in the stock fact, not in a dimension.
@@ -375,6 +375,18 @@ The quality rules of silver and gold are the model's data contract: the uniquene
 What would change it: [d007](d007-pipeline-design.md) choosing a test tool with an executable contract; that contract then becomes the rules' place, recorded as an ADR.
 
 Rejected: an executable contract per table now (dbt `schema.yml`, SodaCL, Open Data Contract Standard), since its format depends on the test tool, which d007 decides.
+
+#### D30. Archive stations with no attributes
+
+A station in the Bicing archive's stock that is absent from real-time `station_information`, retired before real-time capture began ([D3](#d3-feeds-that-enter-the-model)), enters the station dimension as an inferred member (Kimball): one row per `station_id`, with its natural key and every descriptive attribute `Unknown`. Its stock rows reference that row like any other station's, so Q3's network totals stay complete over the archive's months, its runs are computed per station, and Q4's slices by territory show it as `Unknown`. Unlike Kimball's late-arriving member, the row is never completed, since no source will give its attributes.
+
+Rejected: a single unknown member (`-1`) for all of them, since two such stations in one capture would repeat the stock's grain ([D4](#d4-business-processes-and-the-grain-of-the-stock)) and mix their runs; dropping their stock rows, since the archive's months would count fewer stations than real-time capture's within Q3's window.
+
+#### D31. Duplicate rows in the archive
+
+The Bicing archive repeats station and snapshot rows in May, June and July 2026, with different values in 8 keys only ([Bicing › History](../sources/bicing.md#history)). The station stock keeps one row per station and snapshot (deduplication on the grain's key, DAMA's uniqueness): the one with the latest `last_updated`, and on a tie the first in the archive. One rule covers identical and differing duplicates alike; at 8 keys in 48.3 million rows, which of two differing rows is kept changes no result.
+
+Rejected: excluding the differing keys and counting them as a quality indicator, since it adds a separate path for 8 rows.
 
 ### 1.3 Requirements
 
