@@ -7,7 +7,7 @@ Sections marked Optional are kept only when they apply.
 # Design: Data model
 
 - **Task:** T040
-- **ADRs:** [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md)
+- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md)
 - **New ADRs from this doc:** none
 
 ## Status
@@ -24,7 +24,7 @@ Current step: the step being implemented, or —. -->
     1. Done: the place of the source field dictionary and the worksheets ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), and the failure cases [D16](#d16-vehicles-at-an-out-of-service-station) and [D20](#d20-zero-counts-in-the-stock-by-vehicle-type). [D19](#d19-last-reported-time-in-the-stock) is not a failure case: the age from which a Bicing count stops being current is a threshold, fixed by the slice that answers Q2 ([D27](#d27-gold-per-question)).
     2. Profile of the Bicing history archives over one year (done: December 2025 to October 2026, check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md) › `profile/bicing-historical/`, findings in the [Bicing](../sources/bicing.md#history) source card); [D3](#d3-feeds-that-enter-the-model) decides the archive as a source (done).
     3. A short STRIDE pass (done), the data contract in `docs/data-model.md` and the Spec approval.
-    4. Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model; File layout; the template of the mapping and the dictionary.
+    4. Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model; an ADR that supersedes [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) with D33, local calendar keys; File layout; the template of the mapping and the dictionary.
     5. `review-plan`.
     6. Steps.
     7. `review-steps`.
@@ -342,7 +342,7 @@ Few departures may mean low demand, no service or a station that stopped reporti
 
 [d002 › Q2](d002-requirements.md#guiding-questions) asks whether the feeds arrive on time and complete, a question about the data, so the model measures it on the data, not on capture's logs. What was captured is what reached bronze, as [d004 › D6](d004-bronze-data-capture.md#d6-capture-completeness-target) counts a clean minute by its stored object, and the age of the data is in the response. The only dynamic feed the model reads is `station_status` ([D3](#d3-feeds-that-enter-the-model)), so both measures come from the station stock, per system:
 
-- **Completeness:** the share of the minutes of the time-of-day dimension with a capture in the station stock. A minute with no capture has no rows ([D4](#d4-business-processes-and-the-grain-of-the-stock)), and two captures in one minute ([d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)) count it once.
+- **Completeness:** the share of the UTC minutes with a capture in the station stock, counted on each capture's instant ([D33](#d33-local-calendar-keys)). A minute with no capture has no rows ([D4](#d4-business-processes-and-the-grain-of-the-stock)), and two captures in one minute ([d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)) count it once.
 - **Lateness:** each capture keeps its response's `last_updated`, the time GBFS gives to the feed's data, and the age of the data is the capture time minus it.
 
 Q2's records that break invariants and frozen stations ([D25](#d25-lack-of-service-and-frozen-counts)) also read the station stock. Capture's logs, which explain why a capture failed, stay logs: how they are queried, together with the pipeline's, is decided in [d007](d007-pipeline-design.md) (OQ5).
@@ -391,6 +391,14 @@ Rejected: excluding the differing keys and counting them as a quality indicator,
 
 A STRIDE pass over the model finds no threat it must control: its data is open and holds no personal data, credentials and storage belong to capture ([d004](d004-bronze-data-capture.md)) and the pipeline ([d007](d007-pipeline-design.md)), wrong source values are data quality, checked by the data contract ([D29](#d29-data-contract-of-the-model)), and the +P list ([D18](#d18-ambicis-p-stations)) changes only through a reviewed pull request. Source text such as station names ([D12](#d12-station-names)) is stored as published; escaping it on output belongs to the public visualization (T041).
 
+#### D33. Local calendar keys
+
+The questions group by day and by hour or time band as people in Barcelona live them ([d002 › Q3, Q4, Q6, Q7](d002-requirements.md#guiding-questions)), and a UTC day is not a local day: in summer it runs from 02:00 to 02:00 local time. Each fact row therefore keeps its UTC instant, as [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) sets, and references the date and time-of-day dimensions by the local date and minute of that instant in `Europe/Madrid` (Kimball's local calendar keys beside a UTC timestamp). The dimensions stay plain calendars, of days and of minutes of the day. A measure that counts UTC minutes, such as completeness ([D26](#d26-timeliness-and-completeness-of-the-feeds)), reads the instant, since on the autumn change the local minutes from 02:00 to 02:59 occur twice.
+
+The model thus converts to local time before presenting, which ADR-0005 leaves to presentation; the Plan writes an ADR that supersedes it.
+
+Rejected: UTC calendar keys, with gold aggregating by UTC hour and the visualization summing hours into local days, since every view would reaggregate hourly data, about 6.8 million rows a year for Q6 against 285,000 by day, and a view that forgets the conversion shows shifted days; a local date as an attribute of a date dimension keyed by UTC day, since one UTC day spans two local days.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -410,20 +418,20 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D2. Capture's fixtures as the feed sample](#d2-captures-fixtures-as-the-feed-sample) | None: a method of inspection, not a property of the model |
 | [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | RDM4, RDM5, RDM16, RDM23 |
 | [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | RDM1, RDM2, RDM3, RDM15, RDM16, RDM22 |
-| [D5. Conformed dimensions](#d5-conformed-dimensions) | Pending |
-| [D6. AMBici's post code](#d6-ambicis-post-code) | Pending |
+| [D5. Conformed dimensions](#d5-conformed-dimensions) | RDM33, RDM34, RDM35, RDM36, RDM37, RDM38 |
+| [D6. AMBici's post code](#d6-ambicis-post-code) | RDM41, RDM42, RDM43 |
 | [D7. Station status flags](#d7-station-status-flags) | RDM8 |
-| [D8. Vehicle propulsion](#d8-vehicle-propulsion) | Pending |
-| [D9. Station municipality](#d9-station-municipality) | Pending |
-| [D10. Barcelona district and neighbourhood](#d10-barcelona-district-and-neighbourhood) | Pending |
-| [D11. Place names](#d11-place-names) | Pending |
-| [D12. Station names](#d12-station-names) | Pending |
-| [D13. Model labels](#d13-model-labels) | Pending |
+| [D8. Vehicle propulsion](#d8-vehicle-propulsion) | RDM54, RDM55 |
+| [D9. Station municipality](#d9-station-municipality) | RDM44, RDM45, RDM46 |
+| [D10. Barcelona district and neighbourhood](#d10-barcelona-district-and-neighbourhood) | RDM47, RDM48, RDM49 |
+| [D11. Place names](#d11-place-names) | RDM50, RDM51 |
+| [D12. Station names](#d12-station-names) | RDM40 |
+| [D13. Model labels](#d13-model-labels) | RDM49, RDM56 |
 | [D14. Vocabulary of the measures](#d14-vocabulary-of-the-measures) | RDM7, RDM19 |
 | [D15. Disabled vehicles and docks](#d15-disabled-vehicles-and-docks) | RDM10 |
 | [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20 |
 | [D17. Occupancy](#d17-occupancy) | RDM13, RDM14 |
-| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | Pending |
+| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | RDM52, RDM53 |
 | [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9 |
 | [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | RDM17, RDM18, RDM19 |
 | [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21 |
@@ -435,9 +443,10 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D27. Gold per question](#d27-gold-per-question) | Pending |
 | [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | Pending |
 | [D29. Data contract of the model](#d29-data-contract-of-the-model) | Pending |
-| [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | Pending |
+| [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | RDM39, RDM56 |
 | [D31. Duplicate rows in the archive](#d31-duplicate-rows-in-the-archive) | RDM6 |
 | [D32. Security of the model](#d32-security-of-the-model) | None: the STRIDE pass finds no threat specific to the model |
+| [D33. Local calendar keys](#d33-local-calendar-keys) | RDM57 |
 
 ### 1.4 Done when
 
