@@ -422,12 +422,12 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D2. Capture's fixtures as the feed sample](#d2-captures-fixtures-as-the-feed-sample) | None: a method of inspection, not a property of the model |
 | [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | RDM4, RDM5, RDM16, RDM23, RDM65 |
 | [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | RDM1, RDM2, RDM3, RDM15, RDM16, RDM22; the additivity of each measure goes in its worksheet row ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
-| [D5. Conformed dimensions](#d5-conformed-dimensions) | RDM33, RDM34, RDM35, RDM36, RDM37, RDM38 |
+| [D5. Conformed dimensions](#d5-conformed-dimensions) | RDM33, RDM34, RDM35, RDM36, RDM37, RDM38, RDM43, RDM46, RDM73 |
 | [D6. AMBici's post code](#d6-ambicis-post-code) | RDM41, RDM42, RDM43 |
 | [D7. Station status flags](#d7-station-status-flags) | RDM8 |
-| [D8. Vehicle propulsion](#d8-vehicle-propulsion) | RDM54, RDM55 |
-| [D9. Station municipality](#d9-station-municipality) | RDM44, RDM45, RDM46 |
-| [D10. Barcelona district and neighbourhood](#d10-barcelona-district-and-neighbourhood) | RDM47, RDM48, RDM49 |
+| [D8. Vehicle propulsion](#d8-vehicle-propulsion) | RDM54, RDM55, RDM74 |
+| [D9. Station municipality](#d9-station-municipality) | RDM44, RDM45, RDM46, RDM72 |
+| [D10. Barcelona district and neighbourhood](#d10-barcelona-district-and-neighbourhood) | RDM38, RDM47, RDM48, RDM49, RDM73 |
 | [D11. Place names](#d11-place-names) | RDM50, RDM51 |
 | [D12. Station names](#d12-station-names) | RDM40 |
 | [D13. Model labels](#d13-model-labels) | RDM49, RDM56 |
@@ -447,7 +447,7 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D27. Gold per question](#d27-gold-per-question) | RDM67 |
 | [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | RDM68, RDM69 |
 | [D29. Data contract of the model](#d29-data-contract-of-the-model) | All: it sets the form, place and IDs of every rule |
-| [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | RDM39, RDM56 |
+| [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | RDM39, RDM47, RDM56, RDM71 |
 | [D31. Duplicate rows in the archive](#d31-duplicate-rows-in-the-archive) | RDM6 |
 | [D32. Security of the model](#d32-security-of-the-model) | None: the STRIDE pass finds no threat specific to the model |
 | [D33. Local calendar keys](#d33-local-calendar-keys) | RDM57, RDM62 |
