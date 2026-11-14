@@ -1,9 +1,12 @@
 ---
-status: accepted
+status: Superseded
 date: 2026-10-07
+superseded-by: 0040
 ---
 
 # The common station model follows GBFS 3.0
+
+Superseded on 2026-11-14 (T040) by [ADR-0040](../0040-model-vocabulary-from-gbfs-3-0.md): the model takes from GBFS 3.0 the names and definitions of its measures, not its layout or formats.
 
 ## Context and Problem Statement
 
@@ -55,6 +58,6 @@ AMBici's future 3.0 release into a configuration change.
 
 ## More Information
 
-* [Bicing spike](../spikes/s002-bicing-realtime-capture.md), Findings 1–2
-* [AMBici spike](../spikes/s001-ambici-realtime-capture.md), Findings 1–2
+* [Bicing spike](../../spikes/s002-bicing-realtime-capture.md), Findings 1–2
+* [AMBici spike](../../spikes/s001-ambici-realtime-capture.md), Findings 1–2
 * Revisit if AMBici publishes 3.0 (retire the transform) or if a source drops 3.0.

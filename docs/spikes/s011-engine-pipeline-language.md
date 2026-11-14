@@ -1,7 +1,7 @@
 # Spike: Processing engine and pipeline language
 
 - **Task:** T036
-- **ADRs:** [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0019](../decisions/0019-own-lakehouse-on-cloudflare-r2.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0022](../decisions/0022-delta-lake-for-silver-and-gold.md), [ADR-0023](../decisions/0023-storage-security-baseline.md)
+- **ADRs:** [ADR-0008](../decisions/archive/0008-common-model-on-gbfs-3-0.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0019](../decisions/0019-own-lakehouse-on-cloudflare-r2.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0022](../decisions/0022-delta-lake-for-silver-and-gold.md), [ADR-0023](../decisions/0023-storage-security-baseline.md)
 
 ## Status
 
@@ -62,7 +62,7 @@ Workload the engine must cover. It traces criteria to requirements and is not a 
 
 | # | Operation | Source | Separates engines |
 |---|---|---|---|
-| O1 | Read nested `json.gz` from R2 and flatten it | Bronze, [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) | Yes |
+| O1 | Read nested `json.gz` from R2 and flatten it | Bronze, [ADR-0008](../decisions/archive/0008-common-model-on-gbfs-3-0.md) | Yes |
 | O2 | Read Bicing monthly archives | [d002 › R5, R9](../designs/d002-requirements.md#requirements) | Little |
 | O3 | Clean, type, deduplicate and validate invariants | [d002 › R6, Q2](../designs/d002-requirements.md#guiding-questions) | No |
 | O4 | Compare each reading with the station's previous one (window functions): movements and frozen stations | [d002 › Q2, Q4, Q6, Q7](../designs/d002-requirements.md#guiding-questions) | Somewhat |
@@ -176,7 +176,7 @@ Needs the form must cover:
 | # | Need | Source |
 |---|---|---|
 | N1 | Express O3–O7: cleaning, comparison with the previous reading, episodes that span batches, gaps against a time grid, aggregates in local time | D1 workload, [d002 › Q2–Q7, R12](../designs/d002-requirements.md#guiding-questions) |
-| N2 | Flatten bronze's nested JSON (O1) and read the Bicing archives (O2) | [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md), [d002 › R5, R9](../designs/d002-requirements.md#requirements) |
+| N2 | Flatten bronze's nested JSON (O1) and read the Bicing archives (O2) | [ADR-0008](../decisions/archive/0008-common-model-on-gbfs-3-0.md), [d002 › R5, R9](../designs/d002-requirements.md#requirements) |
 | N3 | Use the same logic for the incremental batch and for a rebuild from bronze, changing only the data range | [d002 › R11, R13](../designs/d002-requirements.md#requirements) |
 | N4 | Be tested before the code is written, locally and with no infrastructure | [Testing strategy](../testing-strategy.md) |
 | N5 | Follow the practice of a company data team and show data engineering skills | [d002 › Context](../designs/d002-requirements.md#context) |

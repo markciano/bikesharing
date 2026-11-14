@@ -1,7 +1,7 @@
 # Design: Requirements
 
 - **Task:** T034
-- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md)
+- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0008](../decisions/archive/0008-common-model-on-gbfs-3-0.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md)
 - **New ADRs from this doc:** [ADR-0018](../decisions/0018-medallion-architecture.md)
 
 ## Status
