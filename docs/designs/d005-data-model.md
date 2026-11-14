@@ -20,12 +20,20 @@ Current step: the step being implemented, or —. -->
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
 - Next: OQ3. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19–D21), occupancy (D17), AMBici's +P stations (D18), the stock movements (D22–D25), the feeds' timeliness and completeness (D26) and gold per question (D27) are decided; detailed design (OQ3) remains.
-  - Closing plan, to unblock T060 soon: this task delivers documents only. OQ3 in its minimal form: the template and place of the mapping and the source field dictionary, which each slice of T060 fills for its own process. Then the four failure cases below in one round, a short STRIDE pass, Requirements and the Plan. The next session challenges this plan before following it.
-  - For failure cases: the behaviours observed over 2026-10-14 to 10-26 that each decision relies on; first known gap: Bicing's `num_docks_available` at a closed station. For [D16](#d16-vehicles-at-an-out-of-service-station): GBFS 2.x counts the bikes of a station with `is_renting` false as disabled ([NABSA/gbfs#195](https://github.com/NABSA/gbfs/pull/195)), while Bicing reports 0. For [D19](#d19-last-reported-time-in-the-stock): the counts of a Bicing station in service that has not reported for a long time, and from what age they stop being current. For [D20](#d20-zero-counts-in-the-stock-by-vehicle-type): a capture where no station of a system lists a type that has stock in others.
-  - For the Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model.
+  - Closing plan, to unblock T060 soon; this task delivers documents only. One session each, in this order:
+    1. OQ3 in its minimal form: the template and place of the mapping and the source field dictionary, which each slice of T060 fills for its own process. Then the failure cases, from the behaviours observed over 2026-10-14 to 10-26:
+       - [D16](#d16-vehicles-at-an-out-of-service-station): whether a closing Bicing station moves its bikes to `num_vehicles_disabled`, as GBFS 2.x counts the bikes of a station with `is_renting` false ([NABSA/gbfs#195](https://github.com/NABSA/gbfs/pull/195)), or drops them from every count; the same check gives Bicing's `num_docks_available` at a closed station.
+       - [D20](#d20-zero-counts-in-the-stock-by-vehicle-type): the set of types each capture is made dense over, so that a capture where no station lists a type that has stock in others keeps its rows.
+       - [D19](#d19-last-reported-time-in-the-stock) is not a failure case: the age from which a Bicing count stops being current is a threshold, fixed by the slice that answers Q2 ([D27](#d27-gold-per-question)).
+    2. Profile of the Bicing history archives over one year, limited to what the model assumes of them: schema, 5-minute cadence, fields and the mechanical and electric split. Findings go to the [Bicing](../sources/bicing.md#history) source card; then [D3](#d3-feeds-that-enter-the-model) decides the archives as a source, and D4, D5, D22 and D23 are adjusted if they do not fit.
+    3. Starts by deciding what the requirements state and how the slices of T060 reference the model, `docs/data-model.md` or this design's requirements. Then a short STRIDE pass, Requirements and the Spec approval.
+    4. Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model; File layout; the template of the mapping and the dictionary.
+    5. `review-plan`.
+    6. Steps.
+    7. `review-steps`.
+    8. `/implement`: `docs/data-model.md`, the template and the source cards; PR and merge.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
   - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
-  - For D3: the Bicing history archives as a source of the model.
 
 ## 1. Spec — what and why
 
