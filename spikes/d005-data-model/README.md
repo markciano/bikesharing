@@ -5,6 +5,7 @@ Throwaway checks behind the framing decisions of [d005](../../docs/designs/d005-
 ## Prerequisites
 
 - **Bronze copy:** the capture spike's copy, `spikes/cloudflare-capture-spike/data/V4/raw/` (2026-10-14 to 10-26, not in Git), with `<source>/<feed>/<date>/<ts>.json.gz`.
+- **Bicing history archives:** the Bicing spike's copy, `spikes/bicing-spike/historical-data/raw/` (not in Git), with the monthly `..._BicingNou_{ESTACIONS,INFORMACIO}.7z` of December 2025 to October 2026; read in place, for `profile/bicing-historical/`.
 - **Python 3**, standard library only; every script runs with `python3 -I`.
 - **DuckDB CLI 2.0.0**, for the `.sql` checks.
 - **Network**, for `post-code/` and `municipality/` (public ICGC services) and the download of `neighbourhood/`. Downloads go to the check's `data/` folder, ignored by Git.
@@ -184,4 +185,25 @@ duckdb -f spikes/d005-data-model/capacity-arithmetic/capacity_arithmetic.sql
 
 ```text
 duckdb -f spikes/d005-data-model/last-reported/last_reported.sql
+```
+
+## 14. `profile/bicing-historical/`
+
+- **Question:** do Bicing's history archives fit the model as written for the real-time feeds, so that both make one continuous station stock?
+  - **P1.** Which columns does each month have, and which real-time field (GBFS 3.0) does each map to? The archive has no disabled vehicles or docks. Evidence for [D3](../../docs/designs/d005-data-model.md#d3-feeds-that-enter-the-model), [D7](../../docs/designs/d005-data-model.md#d7-station-status-flags), [D15](../../docs/designs/d005-data-model.md#d15-disabled-vehicles-and-docks).
+  - **P2.** Is there one row per station and snapshot, with every station in each snapshot? Evidence for [D4](../../docs/designs/d005-data-model.md#d4-business-processes-and-the-grain-of-the-stock).
+  - **P3.** Are snapshots 5 minutes apart? Evidence for [D4](../../docs/designs/d005-data-model.md#d4-business-processes-and-the-grain-of-the-stock), [D23](../../docs/designs/d005-data-model.md#d23-movements-across-gaps-in-capture).
+  - **P4.** Where are the gaps, with the threshold taken from the measured cadence, and do they match those the provider publishes ([Bicing › History](../../docs/sources/bicing.md#history))? Evidence for [D23](../../docs/designs/d005-data-model.md#d23-movements-across-gaps-in-capture).
+  - **P5.** Do mechanical and electric bikes add up to `num_bikes_available`? Evidence for [D5](../../docs/designs/d005-data-model.md#d5-conformed-dimensions), [D8](../../docs/designs/d005-data-model.md#d8-vehicle-propulsion).
+  - **P6.** Is the archive's `station_id` the real-time one, and does the information series give each station's capacity over time? Evidence for [D5](../../docs/designs/d005-data-model.md#d5-conformed-dimensions).
+  - **P7.** Over the overlap with the bronze copy (2026-10-14 to 10-26): for one station and `last_updated`, do the archive and the real-time response give the same counts; and how far apart are a day's departures and arrivals from the archive (5 minutes, available bikes only) and from the real-time feeds (1 minute, available plus disabled)? Evidence for [D3](../../docs/designs/d005-data-model.md#d3-feeds-that-enter-the-model), [D22](../../docs/designs/d005-data-model.md#d22-departures-and-arrivals).
+- **Scripts:**
+  - `convert.py` extracts one archive at a time, converts its CSV to Parquet in `work/` (every column as text; ignored by Git) and deletes the CSV, so only one CSV of about 1 GB is on disk at once; it resumes an interrupted run. It writes `archives.csv` (one row per archive: bytes, CSV name, columns) and `headers.csv` (one row per archive and column, with its position): P1.
+  - `profile.sql` answers P2–P7 over the Parquet files, reading columns by name, since they are added, removed and moved between months; P7 also reads the bronze copy. The mapping of P1 is done by Chat from `headers.csv` and [`profile/bicing/`](profile/bicing/), not by a script.
+- **Output:** `archives.csv`, `headers.csv` and one CSV per question of `profile.sql`, next to the scripts.
+- **Run time:** TODO(T040): measure on the first run.
+
+```text
+python3 -I spikes/d005-data-model/profile/bicing-historical/convert.py spikes/bicing-spike/historical-data/raw
+duckdb -f spikes/d005-data-model/profile/bicing-historical/profile.sql
 ```
