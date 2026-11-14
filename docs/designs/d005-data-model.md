@@ -404,40 +404,40 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 The requirements are the rules of the model's data contract, written once in [data-model.md › Data contract](../data-model.md#data-contract) ([D29](#d29-data-contract-of-the-model)). Each decision reaches these rules; a column rule moves to its table's worksheet with its ID.
 
-| Decision | Rules | Kind |
-|---|---|---|
-| D1 | | |
-| D2 | None: a method of inspection, not a property of the model | — |
-| D3 | RDM4, RDM5 | Table; RDM5 column |
-| D4 | RDM1, RDM2, RDM3 | Table |
-| D5 | | |
-| D6 | | |
-| D7 | RDM8 | Column |
-| D8 | | |
-| D9 | | |
-| D10 | | |
-| D11 | | |
-| D12 | | |
-| D13 | | |
-| D14 | RDM7 | Column |
-| D15 | RDM10 | Column |
-| D16 | RDM11, RDM12 | Table |
-| D17 | RDM13, RDM14 | Table |
-| D18 | | |
-| D19 | RDM9 | Column |
-| D20 | | |
-| D21 | | |
-| D22 | | |
-| D23 | | |
-| D24 | | |
-| D25 | | |
-| D26 | | |
-| D27 | | |
-| D28 | | |
-| D29 | | |
-| D30 | | |
-| D31 | RDM6 | Table |
-| D32 | None: the STRIDE pass finds no threat specific to the model | — |
+| Decision | Rules |
+|---|---|
+| [D1. One model over one bus matrix](#d1-one-model-over-one-bus-matrix) | |
+| [D2. Capture's fixtures as the feed sample](#d2-captures-fixtures-as-the-feed-sample) | None: a method of inspection, not a property of the model |
+| [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | RDM4, RDM5, RDM16 |
+| [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | RDM1, RDM2, RDM3, RDM15, RDM16 |
+| [D5. Conformed dimensions](#d5-conformed-dimensions) | |
+| [D6. AMBici's post code](#d6-ambicis-post-code) | |
+| [D7. Station status flags](#d7-station-status-flags) | RDM8 |
+| [D8. Vehicle propulsion](#d8-vehicle-propulsion) | |
+| [D9. Station municipality](#d9-station-municipality) | |
+| [D10. Barcelona district and neighbourhood](#d10-barcelona-district-and-neighbourhood) | |
+| [D11. Place names](#d11-place-names) | |
+| [D12. Station names](#d12-station-names) | |
+| [D13. Model labels](#d13-model-labels) | |
+| [D14. Vocabulary of the measures](#d14-vocabulary-of-the-measures) | RDM7, RDM19 |
+| [D15. Disabled vehicles and docks](#d15-disabled-vehicles-and-docks) | RDM10 |
+| [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20 |
+| [D17. Occupancy](#d17-occupancy) | RDM13, RDM14 |
+| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | |
+| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9 |
+| [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | RDM17, RDM18, RDM19 |
+| [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21 |
+| [D22. Departures and arrivals](#d22-departures-and-arrivals) | |
+| [D23. Movements across gaps in capture](#d23-movements-across-gaps-in-capture) | |
+| [D24. Movements at an out-of-service station](#d24-movements-at-an-out-of-service-station) | |
+| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | |
+| [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | |
+| [D27. Gold per question](#d27-gold-per-question) | |
+| [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | |
+| [D29. Data contract of the model](#d29-data-contract-of-the-model) | |
+| [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | |
+| [D31. Duplicate rows in the archive](#d31-duplicate-rows-in-the-archive) | RDM6 |
+| [D32. Security of the model](#d32-security-of-the-model) | None: the STRIDE pass finds no threat specific to the model |
 
 ### 1.4 Done when
 
