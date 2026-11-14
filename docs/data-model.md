@@ -184,7 +184,7 @@ The quality rules of silver and gold: the uniqueness of each grain, nullability,
 - **RDM29** Each row of the stock movements shall hold departures or arrivals above 0, never both ([d005 › D22](designs/d005-data-model.md#d22-departures-and-arrivals)).
 - **RDM30** Each row of the stock movements shall keep the capture time of both of its counts ([d005 › D23](designs/d005-data-model.md#d23-movements-across-gaps-in-capture)). TODO(T060): move to the stock movements' worksheet.
 - **RDM31** Each row of the stock movements shall fall on the date and time of day of its later count ([d005 › D23](designs/d005-data-model.md#d23-movements-across-gaps-in-capture)).
-- **RDM32** For each station and day, the stock movements' arrivals minus departures shall equal the sum of the changes in the vehicles at the station over that day's pairs of consecutive counts with `is_renting` and `is_returning` true in both ([d005 › D22](designs/d005-data-model.md#d22-departures-and-arrivals), [D23](designs/d005-data-model.md#d23-movements-across-gaps-in-capture), [D24](designs/d005-data-model.md#d24-movements-at-an-out-of-service-station)).
+- **RDM32** For each station and day, the stock movements' arrivals minus departures shall equal the sum, over the pairs of consecutive real-time counts whose later count falls on that day, of each rise in the vehicles at the station with `is_returning` true in both counts and each drop, as a negative, with `is_renting` true in both ([d005 › D22](designs/d005-data-model.md#d22-departures-and-arrivals), [D23](designs/d005-data-model.md#d23-movements-across-gaps-in-capture), [D24](designs/d005-data-model.md#d24-movements-at-an-out-of-service-station)).
 
 ### Dimensions
 
