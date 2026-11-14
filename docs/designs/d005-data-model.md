@@ -360,7 +360,7 @@ The model maps each question of [d002 › Guiding questions](d002-requirements.m
 Every column of silver and gold is traced to the source fields and the rule it comes from, in two places (the data dictionary of data profiling and Kimball's detailed design worksheet):
 
 - **Source field dictionary:** the Fields item of each feed in its source card. Each field the model reads has one entry, with a link to its definition in the GBFS version the source publishes and the values observed. A card holds one source only, so the dictionary does not compare them.
-- **Detailed design worksheet:** one Markdown file per target table in `docs/data-model/`, linked from [data-model.md](../data-model.md). It is the dictionary of the table and its source-to-target mapping at once: one row per column, with its description, type, nullability, source field in AMBici and in Bicing, and the rule, linking the decision it applies.
+- **Detailed design worksheet:** one Markdown file per target table in `docs/data-model/`, linked from [data-model.md](../data-model.md). It is the dictionary of the table and its source-to-target mapping at once: one row per column, with its description, type, nullability, source field in AMBici and in Bicing, and the rule, linking the decision it applies; a measure of a fact also states its additivity (additive, semi-additive or non-additive), as Kimball's worksheet records it.
 
 Each slice of T060 fills the dictionary entries of the fields it reads and the worksheets of its tables; the worksheet's template is set in the Plan. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md).
 
@@ -421,7 +421,7 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D1. One model over one bus matrix](#d1-one-model-over-one-bus-matrix) | RDM66 |
 | [D2. Capture's fixtures as the feed sample](#d2-captures-fixtures-as-the-feed-sample) | None: a method of inspection, not a property of the model |
 | [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | RDM4, RDM5, RDM16, RDM23, RDM65 |
-| [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | RDM1, RDM2, RDM3, RDM15, RDM16, RDM22 |
+| [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | RDM1, RDM2, RDM3, RDM15, RDM16, RDM22; the additivity of each measure goes in its worksheet row ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
 | [D5. Conformed dimensions](#d5-conformed-dimensions) | RDM33, RDM34, RDM35, RDM36, RDM37, RDM38 |
 | [D6. AMBici's post code](#d6-ambicis-post-code) | RDM41, RDM42, RDM43 |
 | [D7. Station status flags](#d7-station-status-flags) | RDM8 |
@@ -435,8 +435,8 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D15. Disabled vehicles and docks](#d15-disabled-vehicles-and-docks) | RDM10 |
 | [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20 |
 | [D17. Occupancy](#d17-occupancy) | RDM13, RDM14 |
-| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | RDM52, RDM53 |
-| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9, RDM61 |
+| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | RDM52, RDM53; the script that rebuilds the list is code, tested by its slice of T060 ([Out of scope](#15-out-of-scope)) |
+| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9, RDM61; the additivity of `last_reported` and of the stock's counts goes in their worksheet rows ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
 | [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | RDM17, RDM18, RDM19 |
 | [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21, RDM58 |
 | [D22. Departures and arrivals](#d22-departures-and-arrivals) | RDM25, RDM26, RDM27, RDM29, RDM32 |
