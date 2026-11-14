@@ -19,14 +19,12 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: step 2 of the closing plan, in a new session. The Spec is approved: the data contract is written and reviewed in `docs/data-model.md` › Data contract, RDM1 to RDM77, and Requirements records which rules each decision reaches.
+- Next: step 1 of the closing plan, the Plan.
   - Closing plan. This task delivers documents only, so it skips Steps, `review-steps` and `/implement`: every deliverable is written and approved on its diff within the Spec or the Plan. In this order:
-    1. Done: **Spec**, with its Done when, and coverage checked both ways.
-    2. **Out of scope:** each item assigned "at the end of this design" becomes a task with `/task`, and its line names that task.
-    3. **Plan:** a Decision summary row for each choice asked of the owner; an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14 and one that supersedes [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) with D33, each superseded ADR moved to `archive/` and every link to it updated, CLAUDE.md › Conventions › Time included; the template of the worksheet and of the dictionary ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)); File layout, listing every file this task changes; Plan approval, checking Plan in Phase.
-    4. **Consistency pass:** `grep "TODO(T040)"` finds nothing left; every column rule, and only those, carries `TODO(T060)`; the sections of d002, d004 and d007 that this design refines link back to it; data-model.md and the source cards agree with the decisions they state.
-    5. **Review in a new session,** after `review-plan`: the Plan and every deliverable against the Spec, findings with quote and consequence; the owner picks the fixes, applied on the diff.
-    6. **Close:** 4. Close filled (Implemented, Known gaps at close), State Complete ✅; the owner pushes, opens the PR `T040: Data model` with `Closes` for T040's issue, and merges once the checks pass.
+    1. **Plan:** a Decision summary row for each choice asked of the owner; an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14 and one that supersedes [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) with D33, each superseded ADR moved to `archive/` and every link to it updated, CLAUDE.md › Conventions › Time included; the template of the worksheet and of the dictionary ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)); File layout, listing every file this task changes; Plan approval, checking Plan in Phase.
+    2. **Consistency pass:** `grep "TODO(T040)"` finds nothing left; every column rule, and only those, carries `TODO(T060)`; the sections of d002, d004 and d007 that this design refines link back to it; data-model.md and the source cards agree with the decisions they state.
+    3. **Review in a new session,** after `review-plan`: the Plan and every deliverable against the Spec, findings with quote and consequence; the owner picks the fixes, applied on the diff.
+    4. **Close:** 4. Close filled (Implemented, Known gaps at close), State Complete ✅; the owner pushes, opens the PR `T040: Data model` with `Closes` for T040's issue, and merges once the checks pass.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions, facts and the data contract go to `docs/data-model.md`; the worksheets go to `docs/data-model/` ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), created by T060.
 
 ## 1. Spec — what and why
@@ -462,10 +460,10 @@ The requirements are the rules of the model's data contract, written once in [da
 
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
-- Capturing less often, or no longer capturing, the feeds that do not enter the model ([D3](#d3-feeds-that-enter-the-model)), except `free_bike_status`, kept for future questions on AMBici's battery levels — task assigned at the end of this design
+- Capturing less often, or no longer capturing, the feeds that do not enter the model ([D3](#d3-feeds-that-enter-the-model)), except `free_bike_status`, kept for future questions on AMBici's battery levels — T061
 - The code that derives station attributes: AMBici's post code from ICGC with its doubt check ([D6](#d6-ambicis-post-code)), the containing municipality, district and neighbourhood ([D9](#d9-station-municipality), [D10](#d10-barcelona-district-and-neighbourhood)), and the script that rebuilds the list of +P stations ([D18](#d18-ambicis-p-stations)) — T060, in the slice that builds the station dimension
 - A language selector in the public visualization (Catalan, Spanish, English) for its interface texts and the model's labels ([D13](#d13-model-labels)) — T041
-- One or two more years of the Bicing status archive before December 2025, to compare occupancy across years, profiled first ([D3](#d3-feeds-that-enter-the-model)) — task assigned at the end of this design
+- One or two more years of the Bicing status archive before December 2025, to compare occupancy across years, profiled first ([D3](#d3-feeds-that-enter-the-model)) — T062
 
 ## 2. Plan — how
 
