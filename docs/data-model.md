@@ -222,3 +222,11 @@ The quality rules of silver and gold: the uniqueness of each grain, nullability,
 - **RDM62** The model shall measure each system's completeness as the share of UTC minutes with at least one real-time capture in the station stock, counted on each capture's instant, with a minute of two captures counted once ([d005 › D26](designs/d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds), [D33](designs/d005-data-model.md#d33-local-calendar-keys)).
 - **RDM63** Each row of the station stock shall keep the `last_updated` of the response it comes from ([d005 › D26](designs/d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)). TODO(T060): move to the station stock's worksheet.
 - **RDM64** The model shall measure each capture's lateness as its capture time minus its response's `last_updated` ([d005 › D26](designs/d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)).
+
+### Model as a whole
+
+- **RDM65** The model shall read only the feeds that enter it: `station_status`, `station_information` and `vehicle_types` of both systems, AMBici's `system_regions`, and Bicing's status archive ([d005 › D3](designs/d005-data-model.md#d3-feeds-that-enter-the-model)).
+- **RDM66** Each table of silver and gold shall belong to a business process or a conformed dimension of the bus matrix ([d005 › D1](designs/d005-data-model.md#d1-one-model-over-one-bus-matrix)).
+- **RDM67** Each gold table shall answer a guiding question through the business process that [Business processes](#business-processes) maps to it ([d005 › D27](designs/d005-data-model.md#d27-gold-per-question)).
+- **RDM68** Each column of silver and gold shall have a row in its table's worksheet, with its description, type, nullability, source field in AMBici and in Bicing, and rule, linking the decision it applies ([d005 › D28](designs/d005-data-model.md#d28-source-field-dictionary-and-detailed-design-per-table)).
+- **RDM69** Each source field the model reads shall have an entry in the Fields of its feed in the source card, with a link to its definition in the GBFS version the source publishes and the values observed ([d005 › D28](designs/d005-data-model.md#d28-source-field-dictionary-and-detailed-design-per-table)).
