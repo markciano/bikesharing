@@ -19,7 +19,8 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: OQ3. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions follow Kimball's four-step design: the dimensions' conformed values (D8–D13), the vocabulary of the measures (D14), the stock's measures from the feed (D15, D16, D19–D21), occupancy (D17), AMBici's +P stations (D18), the stock movements (D22–D25), the feeds' timeliness and completeness (D26) and gold per question (D27) are decided; detailed design (OQ3) remains.
+- Next: the failure cases of session 1 below. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions followed Kimball's four-step design and are all decided, detailed design included ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)).
+  - Parked for the Requirements (session 3): a count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided.
   - Closing plan, to unblock T060 soon; this task delivers documents only. One session each, in this order:
     1. OQ3 in its minimal form: the template and place of the mapping and the source field dictionary, which each slice of T060 fills for its own process. Then the failure cases, from the behaviours observed over 2026-10-14 to 10-26:
        - [D16](#d16-vehicles-at-an-out-of-service-station): whether a closing Bicing station moves its bikes to `num_vehicles_disabled`, as GBFS 2.x counts the bikes of a station with `is_renting` false ([NABSA/gbfs#195](https://github.com/NABSA/gbfs/pull/195)), or drops them from every count; the same check gives Bicing's `num_docks_available` at a closed station.
@@ -33,7 +34,6 @@ Current step: the step being implemented, or —. -->
     7. `review-steps`.
     8. `/implement`: `docs/data-model.md`, the template and the source cards; PR and merge.
   - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
-  - Until OQ3 closes, a change to D3–D7 rewrites the decision as if taken now, with no trace of the earlier version.
 
 ## 1. Spec — what and why
 
@@ -345,6 +345,17 @@ Rejected: a capture passes fact, one row per source, feed and pass from capture'
 
 The model maps each question of [d002 › Guiding questions](d002-requirements.md#guiding-questions) to the business process that answers it ([data-model.md › Business processes](../data-model.md#business-processes)). Gold's tables, formulas and thresholds are fixed by the design of the slice that builds each process ([D1](#d1-one-model-over-one-bus-matrix)), as d002 sets for formulas and thresholds.
 
+#### D28. Source field dictionary and detailed design per table
+
+Every column of silver and gold is traced to the source fields and the rule it comes from, in two places (the data dictionary of data profiling and Kimball's detailed design worksheet):
+
+- **Source field dictionary:** the Fields item of each feed in its source card. Each field the model reads has one entry, with a link to its definition in the GBFS version the source publishes and the values observed. A card holds one source only, so the dictionary does not compare them.
+- **Detailed design worksheet:** one Markdown file per target table in `docs/data-model/`, linked from [data-model.md](../data-model.md). It is the dictionary of the table and its source-to-target mapping at once: one row per column, with its description, type, nullability, source field in AMBici and in Bicing, and the rule, linking the decision it applies.
+
+Each slice of T060 fills the dictionary entries of the fields it reads and the worksheets of its tables; the worksheet's template is set in the Plan. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md).
+
+Rejected: a dictionary file per source, since it repeats the cards' Fields; each worksheet as a section of `data-model.md`, since every slice would edit one file, which grows with every gold table.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -378,7 +389,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ3 | How each silver or gold column is traced back to the raw fields and the calculation it comes from, and a dictionary of the source fields with their official GBFS definition and how each source behaves (Kimball's detailed design) | D27 | Standards to weigh: the data dictionary with data profiling, and Kimball's detailed design worksheet per table, the base of the source-to-target mapping (column-level lineage). The source cards in `docs/sources/` already hold facts observed per source, with their evidence and date. Row-level lineage, to bronze and to the run, is decided in [d007](d007-pipeline-design.md). A count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided |
 
 ## 2. Plan — how
 
