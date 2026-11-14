@@ -34,7 +34,7 @@ Movements can be derived from the stock, but they are a fact of their own becaus
 
 | Process | Grain | Sources |
 |---|---|---|
-| Station stock | One row per station and capture | `station_status`; before real-time capture, Bicing's status archive from December 2025 to 13 October 2026 ([d005 › D3](designs/d005-data-model.md#d3-feeds-that-enter-the-model)) |
+| Station stock | One row per station and capture | `station_status`; before real-time capture, Bicing's status archive from December 2025 up to the first local day that real-time capture covers whole ([d005 › D3](designs/d005-data-model.md#d3-feeds-that-enter-the-model)) |
 | Stock by vehicle type | One row per station, capture and vehicle type | `vehicle_types_available` in `station_status` |
 | Stock movements | One row per station and pair of consecutive captures with a change | Station stock, real-time captures only |
 
