@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Requirements, in session 3 below. The model's data contract ([D29](#d29-data-contract-of-the-model)) is written once, in `docs/data-model.md` › Data contract, as EARS rules `RDM1`, `RDM2`…, each citing its decision, in six groups: station stock, stock by vehicle type, stock movements, dimensions, data quality and drill-across, and model documentation. This design's Requirements link to that section and record which rules each decision reaches; D2 and D32 reach none, since one is a method of inspection and the other finds no threat. Coverage is checked both ways: every decision reaches a rule or is recorded without one, and every rule falls in the table, or the drill-across, that its test checks. The archive's failure cases are decided ([D30](#d30-archive-stations-with-no-attributes), [D31](#d31-duplicate-rows-in-the-archive)), and the STRIDE pass finds no threat specific to the model ([D32](#d32-security-of-the-model)).
+- Next: the data contract is written, RDM1 to RDM69, and every decision reaches it in Requirements. A review in a new session checks each rule against the decision it cites, for a rule that says more or less than its decision and a decision that reaches no rule; then Done when, removing the empty Open questions, and the Spec approval. The model's data contract ([D29](#d29-data-contract-of-the-model)) is written once, in `docs/data-model.md` › Data contract, as EARS rules `RDM1`, `RDM2`…, each citing its decision, in six groups: station stock, stock by vehicle type, stock movements, dimensions, data quality and drill-across, and model documentation. This design's Requirements link to that section and record which rules each decision reaches; D2 and D32 reach none, since one is a method of inspection and the other finds no threat. Coverage is checked both ways: every decision reaches a rule or is recorded without one, and every rule falls in the table, or the drill-across, that its test checks. The archive's failure cases are decided ([D30](#d30-archive-stations-with-no-attributes), [D31](#d31-duplicate-rows-in-the-archive)), and the STRIDE pass finds no threat specific to the model ([D32](#d32-security-of-the-model)).
   - Closing plan, to unblock T060 soon; this task delivers documents only. One session each, in this order:
     1. Done: the place of the source field dictionary and the worksheets ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), and the failure cases [D16](#d16-vehicles-at-an-out-of-service-station) and [D20](#d20-zero-counts-in-the-stock-by-vehicle-type). [D19](#d19-last-reported-time-in-the-stock) is not a failure case: the age from which a Bicing count stops being current is a threshold, fixed by the slice that answers Q2 ([D27](#d27-gold-per-question)).
     2. Profile of the Bicing history archives over one year (done: December 2025 to October 2026, check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md) › `profile/bicing-historical/`, findings in the [Bicing](../sources/bicing.md#history) source card); [D3](#d3-feeds-that-enter-the-model) decides the archive as a source (done).
@@ -414,9 +414,9 @@ The requirements are the rules of the model's data contract, written once in [da
 
 | Decision | Rules |
 |---|---|
-| [D1. One model over one bus matrix](#d1-one-model-over-one-bus-matrix) | Pending |
+| [D1. One model over one bus matrix](#d1-one-model-over-one-bus-matrix) | RDM66 |
 | [D2. Capture's fixtures as the feed sample](#d2-captures-fixtures-as-the-feed-sample) | None: a method of inspection, not a property of the model |
-| [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | RDM4, RDM5, RDM16, RDM23 |
+| [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | RDM4, RDM5, RDM16, RDM23, RDM65 |
 | [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | RDM1, RDM2, RDM3, RDM15, RDM16, RDM22 |
 | [D5. Conformed dimensions](#d5-conformed-dimensions) | RDM33, RDM34, RDM35, RDM36, RDM37, RDM38 |
 | [D6. AMBici's post code](#d6-ambicis-post-code) | RDM41, RDM42, RDM43 |
@@ -440,9 +440,9 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D24. Movements at an out-of-service station](#d24-movements-at-an-out-of-service-station) | RDM26, RDM27, RDM28, RDM32 |
 | [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | RDM59, RDM60, RDM61 |
 | [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | RDM62, RDM63, RDM64 |
-| [D27. Gold per question](#d27-gold-per-question) | Pending |
-| [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | Pending |
-| [D29. Data contract of the model](#d29-data-contract-of-the-model) | Pending |
+| [D27. Gold per question](#d27-gold-per-question) | RDM67 |
+| [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | RDM68, RDM69 |
+| [D29. Data contract of the model](#d29-data-contract-of-the-model) | All: it sets the form, place and IDs of every rule |
 | [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | RDM39, RDM56 |
 | [D31. Duplicate rows in the archive](#d31-duplicate-rows-in-the-archive) | RDM6 |
 | [D32. Security of the model](#d32-security-of-the-model) | None: the STRIDE pass finds no threat specific to the model |
