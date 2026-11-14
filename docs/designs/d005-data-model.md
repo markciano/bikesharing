@@ -433,18 +433,18 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D13. Model labels](#d13-model-labels) | RDM49, RDM56 |
 | [D14. Vocabulary of the measures](#d14-vocabulary-of-the-measures) | RDM7, RDM19 |
 | [D15. Disabled vehicles and docks](#d15-disabled-vehicles-and-docks) | RDM10 |
-| [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20, RDM70 |
+| [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20, RDM58, RDM70 |
 | [D17. Occupancy](#d17-occupancy) | RDM13, RDM14, RDM70 |
 | [D18. AMBici's +P stations](#d18-ambicis-p-stations) | RDM52, RDM53; the script that rebuilds the list is code, tested by its slice of T060 ([Out of scope](#15-out-of-scope)) |
-| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9, RDM61; the additivity of `last_reported` and of the stock's counts goes in their worksheet rows ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
+| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9, RDM61, RDM75; the additivity of `last_reported` and of the stock's counts goes in their worksheet rows ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
 | [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | RDM17, RDM18, RDM19 |
 | [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21, RDM58 |
 | [D22. Departures and arrivals](#d22-departures-and-arrivals) | RDM25, RDM26, RDM27, RDM29, RDM32 |
 | [D23. Movements across gaps in capture](#d23-movements-across-gaps-in-capture) | RDM23, RDM24, RDM30, RDM31, RDM32 |
 | [D24. Movements at an out-of-service station](#d24-movements-at-an-out-of-service-station) | RDM26, RDM27, RDM28, RDM32 |
-| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | RDM59, RDM60, RDM61 |
+| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | RDM59, RDM60, RDM61, RDM75 |
 | [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | RDM62, RDM63, RDM64 |
-| [D27. Gold per question](#d27-gold-per-question) | RDM67 |
+| [D27. Gold per question](#d27-gold-per-question) | RDM61, RDM67 |
 | [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | RDM68, RDM69 |
 | [D29. Data contract of the model](#d29-data-contract-of-the-model) | All: it sets the form, place and IDs of every rule |
 | [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | RDM39, RDM47, RDM56, RDM71 |
