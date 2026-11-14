@@ -67,7 +67,7 @@ Why not the others:
 ### The convention
 
 - **Format:** JSON Lines, one event per line.
-- **Common fields:** every event carries `ts` (UTC, [ADR-0005](0005-utc-for-all-stored-timestamps.md)), `level`, `component`, `version`, `run_id` and `event`, in that order, before its own fields.
+- **Common fields:** every event carries `ts` (UTC, [ADR-0005](archive/0005-utc-for-all-stored-timestamps.md)), `level`, `component`, `version`, `run_id` and `event`, in that order, before its own fields.
 - **One object per run:** each run writes its events as one object, with the UTC day in the key (`date=YYYY-MM-DD/<run_id>.jsonl`).
 - **Place and retention, per component:**
   - Capture: under `logs/` in bronze, kept under the bucket lock with the data they describe.

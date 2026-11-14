@@ -73,7 +73,7 @@ Why not the others:
 ### The convention
 
 - **Format:** JSON Lines, one event per line.
-- **Common fields:** every event carries `ts` (UTC, [ADR-0005](../0005-utc-for-all-stored-timestamps.md)), `level`, `run_id` and `event`.
+- **Common fields:** every event carries `ts` (UTC, [ADR-0005](0005-utc-for-all-stored-timestamps.md)), `level`, `run_id` and `event`.
 - **Final event of a run:** it also carries `duration_s` and `peak_memory_mb`, the measures that can reopen [ADR-0027](../0027-modal-as-execution-platform.md).
 - **Place:** one object per run in a prefix of the pipeline's own, with the UTC day in the key (`date=YYYY-MM-DD/<run_id>.jsonl`), outside bronze, so a bucket lock does not block the lifecycle rule and the pipeline needs no write access there.
 - **Retention:** 30 days, by a lifecycle rule.

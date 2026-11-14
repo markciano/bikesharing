@@ -2,7 +2,7 @@
 # Design: Bronze data capture
 
 - **Task:** T039
-- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md), [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)
+- **ADRs:** [ADR-0005](../decisions/archive/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0011](../decisions/0011-cloudflare-workers-r2-for-realtime-capture.md), [ADR-0012](../decisions/0012-collectors-decoupled-by-output-contract.md), [ADR-0018](../decisions/0018-medallion-architecture.md), [ADR-0020](../decisions/0020-bronze-as-captured-objects.md), [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)
 - **New ADRs from this doc:** [ADR-0035](../decisions/0035-cloud-resource-naming.md) (D1); [ADR-0036](../decisions/0036-log-convention-across-components.md) (D9), which supersedes [ADR-0030](../decisions/archive/0030-pipeline-logs.md); [ADR-0037](../decisions/0037-test-fixtures-per-component.md) (DL15), which supersedes [ADR-0009](../decisions/archive/0009-trimmed-source-samples-as-test-fixtures.md); [ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md) (DI8)
 
 ## Status
