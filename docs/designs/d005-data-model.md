@@ -342,7 +342,7 @@ Few departures may mean low demand, no service or a station that stopped reporti
 
 [d002 › Q2](d002-requirements.md#guiding-questions) asks whether the feeds arrive on time and complete, a question about the data, so the model measures it on the data, not on capture's logs. What was captured is what reached bronze, as [d004 › D6](d004-bronze-data-capture.md#d6-capture-completeness-target) counts a clean minute by its stored object, and the age of the data is in the response. The only dynamic feed the model reads is `station_status` ([D3](#d3-feeds-that-enter-the-model)), so both measures come from the station stock, per system:
 
-- **Completeness:** the share of the UTC minutes with a capture in the station stock, counted on each capture's instant ([D33](#d33-local-calendar-keys)). A minute with no capture has no rows ([D4](#d4-business-processes-and-the-grain-of-the-stock)), and two captures in one minute ([d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)) count it once.
+- **Completeness:** the share of the UTC minutes with a real-time capture in the station stock, counted on each capture's instant ([D33](#d33-local-calendar-keys)). The archive's rows do not count, since its 5-minute snapshots would measure the archive's resolution, not whether the feeds arrived. A minute with no capture has no rows ([D4](#d4-business-processes-and-the-grain-of-the-stock)), and two captures in one minute ([d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)) count it once.
 - **Lateness:** each capture keeps its response's `last_updated`, the time GBFS gives to the feed's data, and the age of the data is the capture time minus it.
 
 Q2's records that break invariants and frozen stations ([D25](#d25-lack-of-service-and-frozen-counts)) also read the station stock. Capture's logs, which explain why a capture failed, stay logs: how they are queried, together with the pipeline's, is decided in [d007](d007-pipeline-design.md) (OQ5).
@@ -432,21 +432,21 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20 |
 | [D17. Occupancy](#d17-occupancy) | RDM13, RDM14 |
 | [D18. AMBici's +P stations](#d18-ambicis-p-stations) | RDM52, RDM53 |
-| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9 |
+| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9, RDM61 |
 | [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | RDM17, RDM18, RDM19 |
-| [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21 |
+| [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21, RDM58 |
 | [D22. Departures and arrivals](#d22-departures-and-arrivals) | RDM25, RDM26, RDM27, RDM29, RDM32 |
 | [D23. Movements across gaps in capture](#d23-movements-across-gaps-in-capture) | RDM23, RDM24, RDM30, RDM31, RDM32 |
 | [D24. Movements at an out-of-service station](#d24-movements-at-an-out-of-service-station) | RDM26, RDM27, RDM28, RDM32 |
-| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | Pending |
-| [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | Pending |
+| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | RDM59, RDM60, RDM61 |
+| [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | RDM62, RDM63, RDM64 |
 | [D27. Gold per question](#d27-gold-per-question) | Pending |
 | [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | Pending |
 | [D29. Data contract of the model](#d29-data-contract-of-the-model) | Pending |
 | [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | RDM39, RDM56 |
 | [D31. Duplicate rows in the archive](#d31-duplicate-rows-in-the-archive) | RDM6 |
 | [D32. Security of the model](#d32-security-of-the-model) | None: the STRIDE pass finds no threat specific to the model |
-| [D33. Local calendar keys](#d33-local-calendar-keys) | RDM57 |
+| [D33. Local calendar keys](#d33-local-calendar-keys) | RDM57, RDM62 |
 
 ### 1.4 Done when
 
