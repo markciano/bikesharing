@@ -7,8 +7,8 @@ Sections marked Optional are kept only when they apply.
 # Design: Data model
 
 - **Task:** T040
-- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md)
-- **New ADRs from this doc:** none
+- **ADRs:** [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md), [ADR-0006](../decisions/0006-raw-layer-keeps-source-responses-untouched.md), [ADR-0008](../decisions/archive/0008-common-model-on-gbfs-3-0.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md)
+- **New ADRs from this doc:** [ADR-0040](../decisions/0040-model-vocabulary-from-gbfs-3-0.md)
 
 ## Status
 
@@ -19,9 +19,9 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: step 1 of the closing plan, the Plan.
+- Next: step 1 of the closing plan, the Plan: the ADR that supersedes ADR-0005 with D33. ADR-0040 supersedes ADR-0008.
   - Closing plan. This task delivers documents only, so it skips Steps, `review-steps` and `/implement`: every deliverable is written and approved on its diff within the Spec or the Plan. In this order:
-    1. **Plan:** a Decision summary row for each choice asked of the owner; an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14 and one that supersedes [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) with D33, each superseded ADR moved to `archive/` and every link to it updated, CLAUDE.md › Conventions › Time included; the template of the worksheet and of the dictionary ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)); File layout, listing every file this task changes; Plan approval, checking Plan in Phase.
+    1. **Plan:** a Decision summary row for each choice asked of the owner; an ADR that supersedes [ADR-0008](../decisions/archive/0008-common-model-on-gbfs-3-0.md) with D14 and one that supersedes [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) with D33, each superseded ADR moved to `archive/` and every link to it updated, CLAUDE.md › Conventions › Time included; the template of the worksheet and of the dictionary ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)); File layout, listing every file this task changes; Plan approval, checking Plan in Phase.
     2. **Consistency pass:** `grep "TODO(T040)"` finds nothing left; every column rule, and only those, carries `TODO(T060)`; the sections of d002, d004 and d007 that this design refines link back to it; data-model.md and the source cards agree with the decisions they state.
     3. **Review in a new session,** after `review-plan`: the Plan and every deliverable against the Spec, findings with quote and consequence; the owner picks the fixes, applied on the diff.
     4. **Close:** 4. Close filled (Implemented, Known gaps at close), State Complete ✅; the owner pushes, opens the PR `T040: Data model` with `Closes` for T040's issue, and merges once the checks pass.
@@ -452,7 +452,7 @@ The requirements are the rules of the model's data contract, written once in [da
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
-- The owner has accepted the ADRs that supersede [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) and [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md).
+- The owner has accepted the ADRs that supersede [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) and [ADR-0008](../decisions/archive/0008-common-model-on-gbfs-3-0.md).
 - Each Out of scope item names the task that covers it, none left as "assigned at the end of this design".
 - T060's issue names [data-model.md › Data contract](../data-model.md#data-contract) as the input of its slices.
 
@@ -487,7 +487,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| | | | | | |
+| 1 | [D14](#d14-vocabulary-of-the-measures) | One ADR states what GBFS 3.0 governs in the model: the names and definitions of its measures, not its layout or formats; it supersedes ADR-0008 ([ADR-0040](../decisions/0040-model-vocabulary-from-gbfs-3-0.md)) | Vocabulary and shape are one decision, the scope of the standard; the dimensional shape is already set by D1 | — | Plan |
 
 ### 2.3 Architecture
 
