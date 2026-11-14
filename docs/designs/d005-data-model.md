@@ -19,17 +19,15 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Done when, removing the empty Open questions, and the Spec approval. The data contract is written and reviewed, RDM1 to RDM77: each rule was checked against the decision it cites, rules with a table and a column part were split, every column rule carries its `TODO(T060)` marker, and coverage was checked both ways. The review refined [D3](#d3-feeds-that-enter-the-model) (the archive's cutover at a local day), [D5](#d5-conformed-dimensions) (the station's whole history, and a review table for manual checks), [D21](#d21-per-type-counts-that-do-not-add-up-to-the-stations) (the indicator over known counts), [D28](#d28-source-field-dictionary-and-detailed-design-per-table) (additivity in the worksheet), [D29](#d29-data-contract-of-the-model) (one behaviour per rule) and [D30](#d30-archive-stations-with-no-attributes) (the inferred member's values). The model's data contract ([D29](#d29-data-contract-of-the-model)) is written once, in `docs/data-model.md` › Data contract, as EARS rules `RDM1`, `RDM2`…, each citing its decision, in six groups: station stock, stock by vehicle type, stock movements, dimensions, data quality and drill-across, and model documentation. This design's Requirements link to that section and record which rules each decision reaches; D2 and D32 reach none, since one is a method of inspection and the other finds no threat. Coverage is checked both ways: every decision reaches a rule or is recorded without one, and every rule falls in the table, or the drill-across, that its test checks. The archive's failure cases are decided ([D30](#d30-archive-stations-with-no-attributes), [D31](#d31-duplicate-rows-in-the-archive)), and the STRIDE pass finds no threat specific to the model ([D32](#d32-security-of-the-model)).
-  - Closing plan, to unblock T060 soon; this task delivers documents only. One session each, in this order:
-    1. Done: the place of the source field dictionary and the worksheets ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), and the failure cases [D16](#d16-vehicles-at-an-out-of-service-station) and [D20](#d20-zero-counts-in-the-stock-by-vehicle-type). [D19](#d19-last-reported-time-in-the-stock) is not a failure case: the age from which a Bicing count stops being current is a threshold, fixed by the slice that answers Q2 ([D27](#d27-gold-per-question)).
-    2. Profile of the Bicing history archives over one year (done: December 2025 to October 2026, check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md) › `profile/bicing-historical/`, findings in the [Bicing](../sources/bicing.md#history) source card); [D3](#d3-feeds-that-enter-the-model) decides the archive as a source (done).
-    3. A short STRIDE pass (done), the data contract in `docs/data-model.md` (done, reviewed) and the Spec approval.
-    4. Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model; an ADR that supersedes [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) with D33, local calendar keys; File layout; the template of the mapping and the dictionary.
-    5. `review-plan`.
-    6. Steps.
-    7. `review-steps`.
-    8. `/implement`: the rest of `docs/data-model.md`, the template and the source cards; PR and merge.
-  - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions and facts go to `docs/data-model.md`; the detailed design's place is decided in OQ3.
+- Next: step 1 of the closing plan. The data contract is written and reviewed in `docs/data-model.md` › Data contract, RDM1 to RDM77, and Requirements records which rules each decision reaches.
+  - Closing plan. This task delivers documents only, so it skips Steps, `review-steps` and `/implement`: every deliverable is written and approved on its diff within the Spec or the Plan. In this order:
+    1. **Spec:** Done when, if the task has closing conditions no rule expresses; remove the empty Open questions; check that every decision reaches a rule or is recorded without one; Spec approval, checking Spec in Phase.
+    2. **Out of scope:** each item assigned "at the end of this design" becomes a task with `/task`, and its line names that task.
+    3. **Plan:** a Decision summary row for each choice asked of the owner; an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14 and one that supersedes [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) with D33, each superseded ADR moved to `archive/` and every link to it updated, CLAUDE.md › Conventions › Time included; the worksheet template ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)); File layout, listing every file this task changes; Plan approval, checking Plan in Phase.
+    4. **Consistency pass:** `grep "TODO(T040)"` finds nothing left; every column rule, and only those, carries `TODO(T060)`; the sections of d002, d004 and d007 that this design refines link back to it; data-model.md and the source cards agree with the decisions they state.
+    5. **Review in a new session,** after `review-plan`: the Plan and every deliverable against the Spec, findings with quote and consequence; the owner picks the fixes, applied on the diff.
+    6. **Close:** 4. Close filled (Implemented, Known gaps at close), State Complete ✅; the owner pushes, opens the PR `T040: Data model` with `Closes` for T040's issue, and merges once the checks pass.
+  - Outputs: source facts go to the source cards, which decisions link when they need them; dimensions, facts and the data contract go to `docs/data-model.md`; the worksheets go to `docs/data-model/` ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), created by T060.
 
 ## 1. Spec — what and why
 
@@ -456,7 +454,9 @@ The requirements are the rules of the model's data contract, written once in [da
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
-- `<extra condition>`
+- The owner has accepted the ADRs that supersede [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) and [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md).
+- Each Out of scope item names the task that covers it, none left as "assigned at the end of this design".
+- T060's issue names [data-model.md › Data contract](../data-model.md#data-contract) as the input of its slices.
 
 ### 1.5 Out of scope
 
@@ -466,13 +466,6 @@ The requirements are the rules of the model's data contract, written once in [da
 - The code that derives station attributes: AMBici's post code from ICGC with its doubt check ([D6](#d6-ambicis-post-code)), the containing municipality, district and neighbourhood ([D9](#d9-station-municipality), [D10](#d10-barcelona-district-and-neighbourhood)), and the script that rebuilds the list of +P stations ([D18](#d18-ambicis-p-stations)) — T060, in the slice that builds the station dimension
 - A language selector in the public visualization (Catalan, Spanish, English) for its interface texts and the model's labels ([D13](#d13-model-labels)) — T041
 - One or two more years of the Bicing status archive before December 2025, to compare occupancy across years, profiled first ([D3](#d3-feeds-that-enter-the-model)) — task assigned at the end of this design
-
-### 1.6 Open questions
-
-<!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
-
-| OQ | Question | Depends on | Notes |
-|---|---|---|---|
 
 ## 2. Plan — how
 
