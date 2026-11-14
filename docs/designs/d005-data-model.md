@@ -17,11 +17,11 @@ Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
 - State: Draft 📝
-- Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: step 1 of the closing plan. The data contract is written and reviewed in `docs/data-model.md` › Data contract, RDM1 to RDM77, and Requirements records which rules each decision reaches.
+- Next: step 2 of the closing plan, in a new session. The Spec is approved: the data contract is written and reviewed in `docs/data-model.md` › Data contract, RDM1 to RDM77, and Requirements records which rules each decision reaches.
   - Closing plan. This task delivers documents only, so it skips Steps, `review-steps` and `/implement`: every deliverable is written and approved on its diff within the Spec or the Plan. In this order:
-    1. **Spec:** Done when, if the task has closing conditions no rule expresses; remove the empty Open questions; check that every decision reaches a rule or is recorded without one; Spec approval, checking Spec in Phase.
+    1. Done: **Spec**, with its Done when, and coverage checked both ways.
     2. **Out of scope:** each item assigned "at the end of this design" becomes a task with `/task`, and its line names that task.
     3. **Plan:** a Decision summary row for each choice asked of the owner; an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14 and one that supersedes [ADR-0005](../decisions/0005-utc-for-all-stored-timestamps.md) with D33, each superseded ADR moved to `archive/` and every link to it updated, CLAUDE.md › Conventions › Time included; the worksheet template ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)); File layout, listing every file this task changes; Plan approval, checking Plan in Phase.
     4. **Consistency pass:** `grep "TODO(T040)"` finds nothing left; every column rule, and only those, carries `TODO(T060)`; the sections of d002, d004 and d007 that this design refines link back to it; data-model.md and the source cards agree with the decisions they state.
