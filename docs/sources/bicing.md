@@ -42,7 +42,7 @@ Always read `gbfs.json` and follow its URLs instead of hard-coding feed URLs, si
 | Format | Monthly `.7z` archives from March 2019: `..._ESTACIONS.7z` (status, 16–26 MB per month) and `..._INFORMACIO.7z` (information, 6–9 MB per month) |
 | Auth | Public, no token; listable through the CKAN API (`/data/api/3/action/package_show?id=<dataset>`) |
 
-- **Completeness:** months not listed (2026-10-03): status November 2025, January 2026 and July 2026; information November 2025 and July 2026.
+- **Completeness:** months not listed (2026-11-14): November 2025, in both series; December 2025 to October 2026 are published.
 - **Completeness:** gaps published by the provider, useful to validate an automatic gap detector:
   - 2019: 20 June 07:40–14:00; 26 July 13:30 → 29 July 10:40; 26 Nov 22:00 → 27 Nov 11:00 (possibly).
   - 2020: 7 Aug 02:25 → 10 Aug 10:40; November: 4th 01:45–11:05, 20th 19:50 → 21st 10:50, 27th 02:50 → 30th 09:50. Service stopped during COVID-19 measures.
