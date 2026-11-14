@@ -19,12 +19,10 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: the failure cases of session 1 below. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions followed Kimball's four-step design and are all decided, detailed design included ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)).
+- Next: session 2 below, the profile of the Bicing history archives. The data profile (Kimball's data realities) is reviewed, and its findings are in the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)). The open questions followed Kimball's four-step design and are all decided, detailed design included ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)).
   - Parked for the Requirements (session 3): a count discrepancy per stock item, `capacity` minus available and disabled vehicles and docks, as a data quality indicator ([Bicing › `station_status`](../sources/bicing.md#station_status)); an idea, not decided.
   - Closing plan, to unblock T060 soon; this task delivers documents only. One session each, in this order:
-    1. OQ3 in its minimal form: the template and place of the mapping and the source field dictionary, which each slice of T060 fills for its own process. Then the failure cases, from the behaviours observed over 2026-10-14 to 10-26:
-       - [D20](#d20-zero-counts-in-the-stock-by-vehicle-type): the set of types each capture is made dense over, so that a capture where no station lists a type that has stock in others keeps its rows.
-       - [D19](#d19-last-reported-time-in-the-stock) is not a failure case: the age from which a Bicing count stops being current is a threshold, fixed by the slice that answers Q2 ([D27](#d27-gold-per-question)).
+    1. Done: the place of the source field dictionary and the worksheets ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)), and the failure cases [D16](#d16-vehicles-at-an-out-of-service-station) and [D20](#d20-zero-counts-in-the-stock-by-vehicle-type). [D19](#d19-last-reported-time-in-the-stock) is not a failure case: the age from which a Bicing count stops being current is a threshold, fixed by the slice that answers Q2 ([D27](#d27-gold-per-question)).
     2. Profile of the Bicing history archives over one year, limited to what the model assumes of them: schema, 5-minute cadence, fields and the mechanical and electric split. Findings go to the [Bicing](../sources/bicing.md#history) source card; then [D3](#d3-feeds-that-enter-the-model) decides the archives as a source, and D4, D5, D22 and D23 are adjusted if they do not fit.
     3. Starts by deciding what the requirements state and how the slices of T060 reference the model, `docs/data-model.md` or this design's requirements. Then a short STRIDE pass, Requirements and the Spec approval.
     4. Plan: an ADR that supersedes [ADR-0008](../decisions/0008-common-model-on-gbfs-3-0.md) with D14, GBFS 3.0 as the vocabulary of the model; File layout; the template of the mapping and the dictionary.
@@ -158,7 +156,7 @@ The bikes of both systems are either mechanical or electrically assisted; none i
 | `human` | Mechanical |
 | `electric_assist` | Electric |
 
-The rule reads only what each type publishes, so a new or renamed type, such as Bicing's `METRO`, which became `METRO_BASE` on 2026-10-22, is classified with no change to the model. The dimension keeps one row per published type, with its `vehicle_type_id`, name and `form_factor`, so stock is still counted per type; propulsion is the level above it, used to compare systems.
+The rule reads only what each type publishes, so a new or renamed type, such as Bicing's `METRO`, which became `METRO_BASE` on 2026-10-22, is classified with no change to the model. The dimension keeps one row per published type, with its `vehicle_type_id`, name, `form_factor` and the time a station first listed it ([D20](#d20-zero-counts-in-the-stock-by-vehicle-type)), so stock is still counted per type; propulsion is the level above it, used to compare systems.
 
 - AMBici: `196` is `human`; `204` and `420` are `electric_assist`.
 - Bicing: of its 11 types, only `FIT`, `EFIT`, `BOOST` and `ICONIC` appear in `vehicle_types_available`; `ICONIC` and `FIT` are `human`, and `BOOST` and `EFIT` are `electric_assist`. Check in [spikes/d005-data-model](../../spikes/d005-data-model/README.md). The standing scooter (`CHLOE`) and the trailer (`TRAILER`) are published but not rented, and never have stock.
@@ -282,14 +280,14 @@ Rejected: keeping only the capture time, since a frozen Bicing station would rea
 
 #### D20. Zero counts in the stock by vehicle type
 
-The stock by vehicle type is a dense periodic snapshot: in each capture, every station has a row for every vehicle type that any station of its system lists in `vehicle_types_available`, with `num_vehicles_available` 0 when it has none of that type. The measure is the `count` of each entry, under its GBFS 3.0 name ([D14](#d14-vocabulary-of-the-measures)). An average over time or an empty run per type then reads the table with no filling.
+The stock by vehicle type is a dense periodic snapshot over the system's stocked types: in each capture, every station has a row for every vehicle type that its system publishes in `vehicle_types` at that time and that some station of the system has listed in `vehicle_types_available` at or before that capture, with `num_vehicles_available` 0 when it has none of that type. The vehicle type dimension keeps the time a type was first listed at a station ([D8](#d8-vehicle-propulsion)), so the set of a capture does not depend on what that capture lists: a capture where no station lists a type with stock elsewhere keeps the type's rows, and a type the system stops publishing gets no more rows. The measure is the `count` of each entry, under its GBFS 3.0 name ([D14](#d14-vocabulary-of-the-measures)). An average over time or an empty run per type then reads the table with no filling.
 
 - **Bicing** lists its 4 types with stock at every station, with count 0 when there are none ([Bicing › `station_status`](../sources/bicing.md#station_status)).
 - **AMBici** omits the types with count 0, and its list is empty at a station with no bikes ([AMBici › `station_status`](../sources/ambici.md#station_status)); the missing types get a row with 0. Only `196` and `204` ever appear ([profile › station_status_vehicle_types](../../spikes/d005-data-model/profile/ambici/station_status_vehicle_types.csv)).
 
-A type that no station lists, such as AMBici's `420` or Bicing's `CHLOE` and `TRAILER` ([D8](#d8-vehicle-propulsion)), has no rows.
+A type that no station has listed, such as AMBici's `420` or Bicing's `CHLOE` and `TRAILER` ([D8](#d8-vehicle-propulsion)), has no rows.
 
-Rejected: a row only for counts above 0, since every average over time or empty run would have to fill the missing rows from the station stock, and a missed fill inflates the result.
+Rejected: the types listed in the same capture, since a capture where no AMBici station has a type would lose that type's zeros and inflate its average over time; every type the system publishes, since Bicing's rows would grow from 4 to 11 per station and capture, mostly zeros of types that are not rented; a row only for counts above 0, since every average over time or empty run would have to fill the missing rows from the station stock, and a missed fill inflates the result.
 
 #### D21. Per-type counts that do not add up to the station's
 
