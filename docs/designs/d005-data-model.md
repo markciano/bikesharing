@@ -19,7 +19,7 @@ Current step: the step being implemented, or —. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: in a new session, review of the field dictionaries of `docs/sources/ambici.md` and `docs/sources/bicing.md`: every Observed and Example cell against the profile its Evidence names, every Description, Required and Domain against the GBFS version it links, and each card against `.claude/rules/docs/source-cards.md` › Field dictionary; findings with quote and consequence, the owner picks the fixes. Then the Plan's File layout, listing every file this task changes. The field dictionaries of AMBici and Bicing are written, Bicing's status archive as a feed of its own; so are the templates of the dictionary and the worksheet; ADR-0040 supersedes ADR-0008, and ADR-0041 supersedes ADR-0005.
+- Next: the Plan's optional sections, those that apply written and the rest removed; then Plan approval, checking Plan in Phase. The File layout lists every file this task changes. The field dictionaries of AMBici and Bicing are written and reviewed against their profiles and fixtures, Bicing's status archive as a feed of its own; so are the templates of the dictionary and the worksheet; ADR-0040 supersedes ADR-0008, and ADR-0041 supersedes ADR-0005.
 - Closing plan. This task delivers documents only, so it skips Steps, `review-steps` and `/implement`: every deliverable is written and approved on its diff within the Spec or the Plan. In this order:
   1. **Plan:** a Decision summary row for each choice asked of the owner; an ADR that supersedes [ADR-0008](../decisions/archive/0008-common-model-on-gbfs-3-0.md) with D14 and one that supersedes [ADR-0005](../decisions/archive/0005-utc-for-all-stored-timestamps.md) with D33, each superseded ADR moved to `archive/` and every link to it updated, CLAUDE.md › Conventions › Time included; the template of the worksheet and of the dictionary ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)); File layout, listing every file this task changes; Plan approval, checking Plan in Phase.
   2. **Consistency pass:** `grep "TODO(T040)"` finds nothing left; every column rule, and only those, carries `TODO(T060)`; the sections of d002, d004 and d007 that this design refines link back to it; data-model.md and the source cards agree with the decisions they state.
@@ -499,8 +499,63 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
 ```text
-<path>/
-└── <file>      (new)        <purpose>
+.
+├── CLAUDE.md                                   (modified)  Pending items moved into the working document; decisions name their standard; Time convention points to ADR-0041
+├── .gitignore                                  (modified)  Ignores images
+├── .claude/
+│   ├── rules/
+│   │   ├── code/spikes.md                      (modified)  One subfolder per check; README as a procedure citing decisions
+│   │   └── docs/
+│   │       ├── data-model.md                   (new)       Template of the per-table worksheet (D28)
+│   │       ├── general.md                      (modified)  Diagrams allowed for static structures such as a data model
+│   │       └── source-cards.md                 (modified)  Fixed card structure on DCAT and DAMA; field dictionary template (D28); provider cards
+│   └── skills/
+│       ├── design/SKILL.md                     (modified)  Asks whether to move a task's pending items into its design
+│       └── spike/
+│           ├── SKILL.md                        (modified)  Same question for a spike report
+│           └── review-steps.md                 (modified)  Link to ADR-0041
+├── docs/
+│   ├── architecture.md                         (modified)  free_bike_status out of the model; links to data-model.md, ADR-0040 and ADR-0041
+│   ├── data-model.md                           (new)       Bus matrix, star schemas, dimensions, facts and the data contract
+│   ├── decisions/
+│   │   ├── 0040-model-vocabulary-from-gbfs-3-0.md        (new)       GBFS 3.0 governs the measures' vocabulary (D14); supersedes ADR-0008
+│   │   ├── 0041-utc-timestamps-local-calendar-keys.md    (new)       UTC storage plus local calendar keys (D33); supersedes ADR-0005
+│   │   ├── 0036-log-convention-across-components.md      (modified)  Link to ADR-0041
+│   │   └── archive/
+│   │       ├── 0005-utc-for-all-stored-timestamps.md     (moved)     Superseded by ADR-0041
+│   │       ├── 0008-common-model-on-gbfs-3-0.md          (moved)     Superseded by ADR-0040
+│   │       └── 0030-pipeline-logs.md                     (modified)  Link to ADR-0041
+│   ├── designs/
+│   │   ├── d002-requirements.md                (modified)  Q4 extended with district and neighbourhood; links to ADR-0040 and ADR-0041
+│   │   ├── d004-bronze-data-capture.md         (modified)  Feed timeliness measured on the data (D26); link to ADR-0041
+│   │   ├── d005-data-model.md                  (new)       This design
+│   │   ├── d006-capture-retry-on-403.md        (modified)  Link to ADR-0041
+│   │   └── d007-pipeline-design.md             (new)       Pipeline concerns split from this design
+│   ├── sources/
+│   │   ├── ambici.md                           (modified)  Fixed structure, profile findings and field dictionaries
+│   │   ├── bicing.md                           (modified)  Fixed structure, profile findings and field dictionaries, status archive included
+│   │   ├── cloudflare.md                       (modified)  Provider card with a single facts section; pending items moved into this design
+│   │   └── modal.md                            (modified)  Provider card with a single facts section
+│   └── spikes/
+│       ├── s011-engine-pipeline-language.md    (modified)  Link to ADR-0040
+│       ├── s012-execution-target.md            (modified)  Pending items moved into this design
+│       └── s013-visualization-tool.md          (modified)  Pending items moved into this design
+└── spikes/d005-data-model/                     (new)       Evidence of this design's decisions, one subfolder per check
+    ├── .gitignore                              Ignores downloaded boundaries and raw copies
+    ├── README.md                               The checks as a procedure, each citing its decision
+    ├── capacity-arithmetic/                    Bicing's counts against capacity, for its source card
+    ├── free-bike-status/                       free_bike_status left out of the model (D3)
+    ├── last-reported/                          last_reported in the station stock (D19)
+    ├── municipality/                           Station municipality against ICGC boundaries (D9)
+    ├── neighbourhood/                          District and neighbourhood against City Council boundaries (D10)
+    ├── out-of-service/                         Counts at an out-of-service station (D16)
+    ├── over-capacity/                          AMBici's bikes over capacity, for its source card
+    ├── plus-p/                                 AMBici's +P stations (D17)
+    ├── post-code/                              AMBici's post code from ICGC (D6)
+    ├── profile/                                Data profile of each feed and of Bicing's status archive, keys_check.py (D3 and the source cards)
+    ├── station-flags/                          What the status flags carry (D7)
+    ├── station-names/                          Bicing's station names across languages (D12)
+    └── vehicle-types/                          Bicing's vehicle type IDs over time (D8)
 ```
 
 ### 2.5 Components
