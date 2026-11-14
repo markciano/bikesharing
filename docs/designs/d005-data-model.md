@@ -10,13 +10,10 @@
 Phase: the blocks and reviews completed.
 Current step: the step being implemented, or —. -->
 
-- State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [ ] Plan review
+- State: Complete ✅
+- Phase: [x] Spec · [x] Plan · [x] Plan review
 - Current step: —
-- Next: the final review, in a new session.
-- Closing plan. This task delivers documents only, so it has no Steps block and skips `review-steps` and `/implement`. Every deliverable of [Approach](#21-approach) is delivered and was approved on its diff, and the Plan records them. Already met: no `TODO(T040)` is left; d002, d004 and d007 link back to the sections this design refines; ADR-0040 and ADR-0041 are accepted; every Out of scope item names its task. What remains, in this order:
-  1. **Final review in a new session,** with `/design d005 review-plan`: each deliverable of Approach against the Spec; that every column rule of data-model.md, and only those, carries `TODO(T060)`; and that data-model.md and the source cards agree with the decisions they state. Findings with quote and consequence; the owner picks the fixes, applied on the diff; Plan review is checked in Phase.
-  2. **Close:** T060's issue (#52) names [data-model.md › Data contract](../data-model.md#data-contract) as the input of its slices, the last [Done when](#14-done-when) item; 3. Close filled (Implemented, Known gaps at close), State Complete ✅; the owner pushes, opens the PR `T040: Data model` with `Closes` for T040's issue, and merges once the checks pass.
+- Next: PR `T040: Data model` with `Closes` for T040's issue.
 
 ## 1. Spec — what and why
 
@@ -92,7 +89,7 @@ Each dimension answers what describes a fact row: when, where, whose and what. T
 
 The status flags `is_installed`, `is_renting` and `is_returning` stay in the stock fact, not in a dimension.
 
-A station whose derived values need a manual check ([D6](#d6-ambicis-post-code), [D9](#d9-station-municipality), [D10](#d10-barcelona-district-and-neighbourhood)) is recorded in a review table, not flagged in the station dimension, since the check describes the data, not the station (Kimball's error event schema): one row per station version and failed check, with the values compared. TODO(T060): set in [d007](d007-pipeline-design.md) where the review table lives.
+A station whose derived values need a manual check ([D6](#d6-ambicis-post-code), [D9](#d9-station-municipality), [D10](#d10-barcelona-district-and-neighbourhood)) is recorded in a review table, not flagged in the station dimension, since the check describes the data, not the station (Kimball's error event schema): one row per station version and failed check, with the values compared.
 
 Rejected: system as an attribute of the station, since a capture's completeness and lateness could then only be reached through a station; municipality as a dimension of its own linked to the station (a snowflake), since it adds a join for a small hierarchy; history only for Q8's name, capacity and location, with the other attributes overwritten (SCD type 1), since a redrawn neighbourhood ([D10](#d10-barcelona-district-and-neighbourhood)) or a change of +P would rewrite the past; the review flags as type 1 attributes of the station, since they mix the data's review state into the dimension and add an update step to its history.
 
@@ -513,7 +510,7 @@ This task delivers documents only: the model, its contract and the templates T06
     ├── neighbourhood/                          District and neighbourhood against City Council boundaries (D10)
     ├── out-of-service/                         Counts at an out-of-service station (D16)
     ├── over-capacity/                          AMBici's bikes over capacity, for its source card
-    ├── plus-p/                                 AMBici's +P stations (D17)
+    ├── plus-p/                                 AMBici's +P stations (D18)
     ├── post-code/                              AMBici's post code from ICGC (D6)
     ├── profile/                                Data profile of each feed and of Bicing's status archive, keys_check.py (D3 and the source cards)
     ├── station-flags/                          What the status flags carry (D7)
@@ -529,25 +526,14 @@ This task delivers documents only: the model, its contract and the templates T06
 
 <!-- The record of what the task delivered, for whoever opens this design later. -->
 
-### 4.1 Implemented
+### 3.1 Implemented
 
-<!-- Component — what was delivered; tests passing. -->
+- Documents — the dimensional model and its data contract (data-model.md), the field dictionaries of the AMBici and Bicing source cards, the worksheet template, ADR-0040 and ADR-0041, as listed in [Approach](#21-approach); the evidence of each decision in `spikes/d005-data-model/`. No code or tests.
 
-### 4.2 Known gaps at close
+### 3.2 Known gaps at close
 
-<!-- What the task leaves undone or imperfect, each with the task that covers it: requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
+- The column rules of [data-model.md › Data contract](../data-model.md#data-contract) are not yet in their tables' worksheets; each slice of T060 moves its tables' rules, marked `TODO(T060)` — T060
 
-- `<gap>` — TNNN
+### 3.3 Decisions taken during implementation
 
-### 4.3 Decisions taken during implementation
-
-<!-- Decisions made after the Plan was approved, including deviations from Scope approved by the owner. Oldest first; "None" is valid.
-- #: `DI1`, `DI2`… (decision during implementation).
-- Applies to: anchor link(s) to the design section the decision changes, or the path of a file outside the design.
-- Decision and Reason: one line each; the content goes where it applies.
-- Decided at: the step where it was decided (`Step N`).
--->
-
-| # | Applies to | Decision | Reason | Decided at |
-|---|---|---|---|---|
-| | | | | |
+None.
