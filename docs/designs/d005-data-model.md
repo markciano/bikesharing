@@ -269,9 +269,9 @@ Rejected: the types listed in the same capture, since a capture where no AMBici 
 
 #### D21. Per-type counts that do not add up to the station's
 
-The station stock keeps the station's `num_vehicles_available` and the stock by vehicle type keeps each type's count, both as the source publishes them, even when the types do not add up to the station's count, as in 2.7% of Bicing's station items ([Bicing › `station_status`](../sources/bicing.md#station_status)). The data model states that the two may differ.
+The station stock keeps the station's `num_vehicles_available` and the stock by vehicle type keeps each type's count, both as the source publishes them, even when the types do not add up to the station's count, as in 2.7% of Bicing's station items ([Bicing › `station_status`](../sources/bicing.md#station_status)). The data model states that the two may differ, and the share of station items where they do is a data quality indicator (DAMA's consistency). It is measured over the station items whose `num_vehicles_available` is known: the items of a Bicing station out of service, null by [D16](#d16-vehicles-at-an-out-of-service-station), are left out of both terms, since a count the model does not know is neither consistent nor inconsistent.
 
-Rejected: making them add up, by taking the station's count from the types or adjusting a type, since the model would publish a count no source gives and hide the source's inconsistency. **[d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)**
+Rejected: making them add up, by taking the station's count from the types or adjusting a type, since the model would publish a count no source gives and hide the source's inconsistency; counting the null items as consistent, since the share would then include items that were never checked.
 
 #### D22. Departures and arrivals
 
@@ -391,12 +391,12 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D13. Model labels](#d13-model-labels) | RDM49, RDM56 |
 | [D14. Vocabulary of the measures](#d14-vocabulary-of-the-measures) | RDM7, RDM19 |
 | [D15. Disabled vehicles and docks](#d15-disabled-vehicles-and-docks) | RDM10 |
-| [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20, RDM70 |
+| [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20, RDM58, RDM70 |
 | [D17. Occupancy](#d17-occupancy) | RDM13, RDM14, RDM70 |
 | [D18. AMBici's +P stations](#d18-ambicis-p-stations) | RDM52, RDM53, RDM66, RDM76; the script that rebuilds the list is code, tested by its slice of T060 ([Out of scope](#15-out-of-scope)) |
 | [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9, RDM61, RDM75; the additivity of `last_reported` and of the stock's counts goes in their worksheet rows ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
 | [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | RDM17, RDM18, RDM19 |
-| [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21 |
+| [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21, RDM58 |
 | [D22. Departures and arrivals](#d22-departures-and-arrivals) | RDM25, RDM26, RDM27, RDM29, RDM32 |
 | [D23. Movements across gaps in capture](#d23-movements-across-gaps-in-capture) | RDM23, RDM24, RDM30, RDM31, RDM32 |
 | [D24. Movements at an out-of-service station](#d24-movements-at-an-out-of-service-station) | RDM26, RDM27, RDM28, RDM32 |
