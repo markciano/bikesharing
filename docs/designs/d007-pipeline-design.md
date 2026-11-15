@@ -84,16 +84,25 @@ The data quality catalog sorts every rule of [data-model.md › Data contract](.
 |---|---|---|---|
 | Transformation spec | How a value is built | Unit or integration test in CI, on fixtures | RDM4–RDM14, RDM16–RDM21, RDM23–RDM28, RDM30, RDM31, RDM37–RDM55, RDM57, RDM63, RDM70–RDM72, RDM74, RDM76 |
 | Runtime rule | What must always hold on real data | Data test in every run | RDM1, RDM3, RDM15, RDM22, RDM29, RDM32–RDM36, RDM52, RDM56 |
-| Quality indicator | A measure tracked over time | Gold table, queried by the owner | RDM61, RDM62, RDM64, RDM75; the review table of RDM43, RDM46 and RDM73 |
+| Quality indicator | A measure tracked over time | Gold table, queried by the owner | RDM58, RDM61, RDM62, RDM64, RDM75; the review table of RDM43, RDM46 and RDM73 |
 | Documentation | Worksheets, source cards and the feeds read | Inspection | RDM65–RDM69 |
 
-A runtime rule fails with severity error, following Write-Audit-Publish: if any runtime rule fails, the run publishes nothing, the page keeps the last file that passed, and the failure is logged in the run's events. The visitor sees only an older data age.
+Besides the Data contract, these checks join the catalog:
 
-A quality indicator is kept only if it is actionable: when it moves, the owner acts on capture, on a provider or on the model's reference data. Besides those of the Data contract, [d002 › R14](d002-requirements.md#requirements) is one, built by the observability child since it reads capture's logs.
+| Check | Class | Dimension | Severity |
+|---|---|---|---|
+| Schema drift: a bronze feed adds or drops a field of those the model reads (RDM65, RDM69) | Runtime rule | Validity | warn |
+| Volume: a capture lists fewer stations than the recent median, by more than the threshold the slice building it fixes | Runtime rule | Completeness | warn |
+| Reconciliation: the rows a run adds to silver and gold match the items it reads from bronze, by count, or by total in a gold table that aggregates | Runtime rule | Completeness | error |
+| Counts above `capacity`: the share of station items whose vehicles and docks exceed the station's `capacity`, leaving out AMBici's +P stations (RDM52), whose bikes in +P spaces exceed it by design | Quality indicator | Consistency | — |
+
+Severity follows who causes a failure. A rule on the pipeline's own logic fails with severity error, following Write-Audit-Publish: the run publishes nothing, the page keeps the last file that passed, and the failure is logged in the run's events, so the visitor sees only an older data age. A rule on a provider's data fails with severity warn: the failure is logged and the run publishes. The owner learns of a failure of either severity through observability (OQ5).
+
+A quality indicator is kept if it is actionable, when the owner acts on capture, on a provider or on the model's reference data as it moves, or if it measures a provider's quality, which answers [d002 › Q2](d002-requirements.md#guiding-questions). RDM58, RDM61, RDM64 and the counts above `capacity` form each provider's scorecard. [d002 › R14](d002-requirements.md#requirements) is an actionable indicator, built by the observability child since it reads capture's logs.
 
 Frozen counts also reach the visitor: a published file that holds a station's latest count marks it when that count is frozen (RDM61), so a stale count is never shown as current. How the page shows the mark is decided by T041.
 
-Rejected: severity warn, publishing and logging the failure, since the visitor could then see wrong data with no sign of it; an indicator of the share of station items whose per-type counts do not add up to the station's, since no action follows it: both counts are kept as published (RDM21); frozen counts for the owner only, since the visitor could then trust a count hours old.
+Rejected: severity warn for rules on the pipeline's logic, since the visitor could then see wrong data with no sign of it; severity error for rules on a provider's data, since the page would stop for what the project cannot fix; a rule that blocks counts above `capacity`, since GBFS defines no relation between the two and both are kept as published; frozen counts for the owner only, since the visitor could then trust a count hours old.
 
 ### 1.3 Requirements
 
@@ -129,9 +138,9 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
 | OQ2 | How the historical archives reach R2 and are loaded, and how the Bicing archive is checked against the real-time capture | d005 | Bicing's archive is not on R2 yet. The check was handed to T040 by [d002 › Out of scope](d002-requirements.md) and is taken by T060. Decided by the child that loads the history, since no other child shares it; Children assigns it |
-| OQ3 | The rest of the data quality catalog (D4): which new checks join, where each item is queried, and what this task builds and what T042 builds | D4 | RDM60 measures service, not quality, and leaves the catalog. Candidates: schema drift in bronze, stations per snapshot, row counts from bronze to gold (D2), counts within `capacity`, the published file's age. [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) leaves where rules live and their format to T042 |
+| OQ3 | The rest of the data quality catalog (D4): the published file's age as an indicator, where each item is queried, and what this task builds and what T042 builds | D4 | RDM60 measures service, not quality, and leaves the catalog. [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) leaves where rules live and their format to T042 |
 | OQ4 | How a silver or gold row is traced back to its bronze objects and to the run that wrote it | d005 | Column-level lineage and the source field dictionary are decided in d005 |
-| OQ5 | How the owner queries the logs of capture, the pipeline and the web page together | — | Today, querying capture's logs means downloading hundreds of files. Capture's logs do not enter the data model, which measures the feeds' timeliness and completeness on the data ([d005 › D26](d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)). Decided by the observability child (D1); Children assigns it |
+| OQ5 | How the owner queries the logs of capture, the pipeline and the web page together, and learns of a failed runtime rule of either severity (D4) | — | Today, querying capture's logs means downloading hundreds of files. Capture's logs do not enter the data model, which measures the feeds' timeliness and completeness on the data ([d005 › D26](d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)). Decided by the observability child (D1); Children assigns it |
 | OQ6 | A script with the owner's common health queries, and whether it can run from a phone | OQ5 | [s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel). An option from [s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs), not verified: a manual GitHub Actions run, with no server, but its summary is public if the repository is, and GitHub holds one more read-only key. Decided by the observability child (D1); Children assigns it |
 | OQ7 | The child tasks `T060.M`: one per business process, plus observability, in build order | D1, OQ1–OQ6 | Each child changes its tables' `TODO(T060)` markers in [data-model.md › Data contract](../data-model.md#data-contract) to its own ID |
 
