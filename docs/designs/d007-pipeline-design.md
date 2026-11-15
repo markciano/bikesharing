@@ -2,6 +2,7 @@
 Design doc template. A design doc is the working document of one task: Spec (what and why), Plan (how), Steps (implementation), Close (what was delivered).
 It is detailed enough that Code can implement it without making design decisions.
 Sections marked Optional are kept only when they apply.
+Kind: a build task builds code or configuration and has every block. A document-only task delivers documents only, written during the Spec and the Plan, and has no Steps block. A parent is a document-only task with children (`TNNN.M`): it holds what its children share, and its Children section.
 -->
 
 # Design: Processing pipeline
@@ -13,13 +14,11 @@ Sections marked Optional are kept only when they apply.
 
 ## Status
 
-<!-- State: Draft 📝 · Ready for implementation 🎬 · In progress 🔄 · Complete ✅.
-Phase: the blocks and reviews completed.
-Current step: the step being implemented, or —. -->
+<!-- State: Draft 📝 · Complete ✅.
+Phase: the blocks and reviews completed. -->
 
 - State: Draft 📝
-- Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current step: —
+- Phase: [ ] Spec · [ ] Plan · [ ] Plan review
 
 ## 1. Spec — what and why
 
@@ -88,7 +87,15 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 - `<extra condition>`
 
-### 1.5 Open questions
+### 1.5 Children
+
+<!-- Parent only. The child map, in build order: each child's scope (e.g. the business process it builds), the questions or requirements it closes, the children it depends on, and the condition that closes it. Each child has its own working document, which cites the parent's decisions instead of repeating them. Every open question and requirement of the parent is closed by the parent or by one child. The parent's Done when: its Open questions closed and its children created. -->
+
+| Child | Scope | Closes | Depends on | Done when |
+|---|---|---|---|---|
+| `TNNN.1` | | | — | |
+
+### 1.6 Open questions
 
 <!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
 
@@ -109,7 +116,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 ### 2.1 Approach
 
 <!-- Detailed plan organized by #### blocks.
-Block `3. Steps` is written using this plan.
+Approach lists the main and supporting deliverables, each already written.
 If some block contains `options considered`, include them with pros and cons.
 -->
 
@@ -186,58 +193,21 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 -
 
-## 3. Steps
-
-<!-- Each step is one reviewable result and one commit, touching at most 2–3 files.
-- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- R: the requirements the step implements or tests, or —.
-- Commit: the proposed message, following the Git conventions in CLAUDE.md.
-- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner. -->
-
-### 3.1 Prerequisites
-
-<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
-
-### Step 1 — `<Title>`
-
-- **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md, including `<dNNN.sN - >` at the begining of the message, for the design and the step number.
-- **R:** R1, R3 (or —)
-- **Model:** `<model · effort>` (or —)
-
-#### Scope
-
-<!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
-
-#### Reads
-
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
-
-#### Do
-
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
-
-#### Check
-
-<!-- command/s or verification with a yes/no result. -->
-
-## 4. Close
+## 3. Close
 
 <!-- The record of what the task delivered, for whoever opens this design later. -->
 
-### 4.1 Implemented
+### 3.1 Implemented
 
-<!-- Component — what was delivered; tests passing. -->
+<!-- Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. -->
 
-### 4.2 Known gaps at close
+### 3.2 Known gaps at close
 
 <!-- What the task leaves undone or imperfect, each with the task that covers it: requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
 
 - `<gap>` — TNNN
 
-### 4.3 Decisions taken during implementation
+### 3.3 Decisions taken during implementation
 
 <!-- Decisions made after the Plan was approved, including deviations from Scope approved by the owner. Oldest first; "None" is valid.
 - #: `DI1`, `DI2`… (decision during implementation).
