@@ -78,7 +78,7 @@ Rejected: on-demand runs, since the station status (d002's Q1) must stay current
 
 #### D4. Data quality in four classes
 
-The data quality catalog sorts every rule of [data-model.md › Data contract](../data-model.md#data-contract), every indicator and every new check into four classes, following the dimensions of DAMA-DMBOK and ISO/IEC 25012. A class sets how the item is verified:
+The data quality catalog sorts every rule of [data-model.md › Data contract](../data-model.md#data-contract), every indicator and every new check into four classes, following the dimensions of DAMA-DMBOK and ISO/IEC 25012. The runtime rules and the quality indicators form the catalog, in a document of their own apart from the model, as the Open Data Contract Standard keeps quality apart from the schema; the Plan fixes its file and format. A class sets how the item is verified:
 
 | Class | What it is | Verified by | Items of the Data contract |
 |---|---|---|---|
