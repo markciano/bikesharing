@@ -157,18 +157,12 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | Child | Scope | Closes | Depends on | Done when |
 |---|---|---|---|---|
-| `TNNN.1` | | | — | |
+| T060.1 | The station stock from real-time capture as a walking skeleton (D1), with the conformed dimensions Date, Time of day, System and Station, up to its published file | [d002 › Q1](d002-requirements.md#guiding-questions) without the split by type, Q2, Q3, Q5, Q8; the cadence review (D3) and the execution platform check (Carried-over inputs) | — | It runs on Modal every 15 min in production; one acceptance query per question passes on real data (D2); its run time and memory are measured, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them |
+| T060.2 | Observability of capture and the pipeline: their logs queried together, and alerts on failed runtime rules and on quality indicators off target (D4) | How the owner queries the logs of capture, the pipeline and the page together, and learns of a failed runtime rule of either severity; a script with the owner's common health queries, and whether it runs from a phone ([s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel), [P9](../spikes/s013-visualization-tool.md#55-production-inputs)); [d002 › R14](d002-requirements.md#requirements) | T060.1 | A failed rule of each severity reaches the owner; the indicator targets are reviewed against weeks of production indicators (D4) |
+| T060.3 | The stock by vehicle type, then the stock movements, from real-time capture, with the Vehicle type dimension | [d002 › Q1](d002-requirements.md#guiding-questions)'s split by type, Q4, Q6, Q7; RDM58's target in T060.2's alerts | T060.1, T060.2 | One acceptance query per question passes on real data (D2) |
+| T060.4 | The historical archives, loaded into the station stock | How the archives reach R2 and are loaded, and how Bicing's archive is checked against real-time capture, the check handed over by [d002 › Out of scope](d002-requirements.md) | T060.1 | The archives the model takes ([data-model.md › Grain](../data-model.md#grain)) are in the station stock and pass their check against real-time capture |
 
-### 1.6 Open questions
-
-<!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
-
-| OQ | Question | Depends on | Notes |
-|---|---|---|---|
-| OQ2 | How the historical archives reach R2 and are loaded, and how the Bicing archive is checked against the real-time capture | d005 | Bicing's archive is not on R2 yet. The check was handed to T040 by [d002 › Out of scope](d002-requirements.md) and is taken by T060. Decided by the child that loads the history, since no other child shares it; Children assigns it |
-| OQ5 | How the owner queries the logs of capture, the pipeline and the web page together, and learns of a failed runtime rule of either severity (D4) | — | Today, querying capture's logs means downloading hundreds of files. Capture's logs do not enter the data model, which measures the feeds' timeliness and completeness on the data ([d005 › D26](d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)). Decided by the observability child (D1); Children assigns it |
-| OQ6 | A script with the owner's common health queries, and whether it can run from a phone | OQ5 | [s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel). An option from [s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs), not verified: a manual GitHub Actions run, with no server, but its summary is public if the repository is, and GitHub holds one more read-only key. Decided by the observability child (D1); Children assigns it |
-| OQ7 | The child tasks `T060.M`: one per business process, plus observability, in build order | D1, OQ1–OQ6 | Each child changes its tables' `TODO(T060)` markers in [data-model.md › Data contract](../data-model.md#data-contract) to its own ID |
+Each child changes its tables' `TODO(T060)` markers in [data-model.md › Data contract](../data-model.md#data-contract) to its own ID.
 
 ## 2. Plan — how
 
