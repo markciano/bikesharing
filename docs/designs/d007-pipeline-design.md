@@ -103,6 +103,10 @@ A quality indicator is kept if it is actionable, when the owner acts on capture,
 
 Each quality indicator has a target, such as a minimum monthly completeness. Capture's completeness target of [d004 › D6](d004-bronze-data-capture.md) joins the catalog. An initial value comes from what the source cards measured on real captures, and the child that builds the alerts reviews it against weeks of production indicators before it closes, following the SRE practice of setting an objective from a measured baseline. This task builds the whole catalog; T042 is absorbed by it.
 
+Frozen counts also reach the visitor: a published file that holds a station's latest count marks it when that count is frozen (RDM61), so a stale count is never shown as current. How the page shows the mark is decided by T041.
+
+Rejected: severity warn for rules on the pipeline's logic, since the visitor could then see wrong data with no sign of it; severity error for rules on a provider's data, since the page would stop for what the project cannot fix; a rule that blocks counts above `capacity`, since GBFS defines no relation between the two and both are kept as published; frozen counts for the owner only, since the visitor could then trust a count hours old.
+
 #### D5. Lineage at four levels
 
 Lineage is covered at the four levels that OpenLineage and Kimball's audit dimension name, adding as little as each level needs:
@@ -123,10 +127,6 @@ Nothing is built to show which code each platform runs. Each component already r
 What would change it: deployments made by GitHub Actions, which could then record each one with its commit (GitHub Deployments).
 
 Rejected: tagging each deployment with its commit on its platform, and reading every component's latest version in one health query, since an occasional lookup by time is enough for this project.
-
-Frozen counts also reach the visitor: a published file that holds a station's latest count marks it when that count is frozen (RDM61), so a stale count is never shown as current. How the page shows the mark is decided by T041.
-
-Rejected: severity warn for rules on the pipeline's logic, since the visitor could then see wrong data with no sign of it; severity error for rules on a provider's data, since the page would stop for what the project cannot fix; a rule that blocks counts above `capacity`, since GBFS defines no relation between the two and both are kept as published; frozen counts for the owner only, since the visitor could then trust a count hours old.
 
 ### 1.3 Requirements
 
