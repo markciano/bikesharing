@@ -166,7 +166,7 @@ Capture signals a heartbeat to Healthchecks.io once per hour, the service [ADR-0
 
 One failed signal does not alert, since the next one arrives within the grace. An outage shorter than about an hour may raise no alert, and shows in completeness (D6) instead. The signal costs nothing on Cloudflare's Free plan: it is an outgoing request from an existing pass.
 
-What this alert does not cover: a static feed or an index failing repeatedly, and a source returning HTTP 200 with frozen data, both quality checks in T042; and CPU peaks, which the Worker cannot measure.
+What this alert does not cover: a static feed or an index failing repeatedly, and a source returning HTTP 200 with frozen data, both quality checks in T060; and CPU peaks, which the Worker cannot measure. **[d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)**
 
 Rejected:
 
@@ -245,12 +245,12 @@ One STRIDE pass over D1–D11 keeps the threats with a real chance or a lasting 
 
 ### 1.5 Out of scope
 
-- Calculating and storing completeness and other quality answers (D7), from the questions and fields in D9 — T042
-- Quality checks capture does not make: repeated failures of a static feed or an index, and HTTP 200 with frozen data (D10) — T042
+- Calculating and storing completeness and other quality answers (D7), from the questions and fields in D9 — T060 **[d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)**
+- Quality checks capture does not make: repeated failures of a static feed or an index, and HTTP 200 with frozen data (D10) — T060 **[d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)**
 - Fixture entries chosen for variety of records (empty, full or out-of-service stations), which only code that reads them can use ([Fixtures](#fixtures)) — T040
 - Citing the finding IDs of other documents with their source, such as s008's in `docs/testing-strategy.md` — T058
 - Whether the pipeline gets a component folder of its own, like `capture/`, instead of `src/` and `tests/` at the root — T040
-- Centralising quality rules and targets, such as D6's, in one place — T042
+- Centralising quality rules and targets, such as D6's, in one place — T060 **[d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)**
 - Bicing's HTTP 403s on `bicing/station_status` after `capture-v4` stopped, about 1.3 per hour with no retry (4.1, D8) — T059
 
 ## 2. Plan — how
@@ -1068,7 +1068,7 @@ Tests: none; R21's Inspection row of the Test plan is checked here on the file a
 
 #### Scope
 
-The two shared contracts of [Tests and contracts](#tests-and-contracts), as golden test vectors in the format of `.claude/rules/code/testing.md` › Contracts between components. No code: the producer tests that read them come in Steps 5 and 6, and the `invalid` cases serve the consumers (T040, T042).
+The two shared contracts of [Tests and contracts](#tests-and-contracts), as golden test vectors in the format of `.claude/rules/code/testing.md` › Contracts between components. No code: the producer tests that read them come in Steps 5 and 6, and the `invalid` cases serve the consumers (T040, T060).
 
 - `contracts/bronze-keys.json` (new): object keys under `raw/` and `logs/` (ADR-0012, D1, D9).
   - `contract`: one line naming both layouts.
