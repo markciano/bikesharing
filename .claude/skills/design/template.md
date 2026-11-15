@@ -2,19 +2,21 @@
 Design doc template. A design doc is the working document of one task: Spec (what and why), Plan (how), Steps (implementation), Close (what was delivered).
 It is detailed enough that Code can implement it without making design decisions.
 Sections marked Optional are kept only when they apply.
+Kind: a build task builds code or configuration and has every block. A document-only task delivers documents only, written during the Spec and the Plan, and has no Steps block. A parent is a document-only task with children (`TNNN.M`): it holds what its children share, and its Children section.
 -->
 
 # Design: `<title>`
 
 - **Task:** TNNN
+- **Kind:** `<build | document-only | parent>`
 - **ADRs:** `<ADRs this design must respect, or "none">`
 - **New ADRs from this doc:** `<ADRs created during this design, or "none">`
 
 ## Status
 
-<!-- State: Draft 📝 · Ready for implementation 🎬 · In progress 🔄 · Complete ✅.
-Phase: the blocks and reviews completed.
-Current step: the step being implemented, or —. -->
+<!-- State: Draft 📝 · Ready for implementation 🎬 · In progress 🔄 · Complete ✅. A document-only task goes from Draft to Complete.
+Phase: the blocks and reviews completed. A document-only task shows only Spec · Plan · Plan review.
+Current step: the step being implemented, or —. A document-only task has no Current step. -->
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
@@ -70,7 +72,15 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 - `<item>` — TNNN
 
-### 1.6 Open questions
+### 1.6 Children
+
+<!-- Parent only. The child map, in build order: each child's scope (e.g. the business process it builds), the questions or requirements it closes, the children it depends on, and the condition that closes it. Each child has its own working document, which cites the parent's decisions instead of repeating them. Every open question and requirement of the parent is closed by the parent or by one child. The parent's Done when: its Open questions closed and its children created. -->
+
+| Child | Scope | Closes | Depends on | Done when |
+|---|---|---|---|---|
+| `TNNN.1` | | | — | |
+
+### 1.7 Open questions
 
 <!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
 
@@ -85,7 +95,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 ### 2.1 Approach
 
 <!-- Detailed plan organized by #### blocks.
-Block `3. Steps` is written using this plan.
+Block `3. Steps` is written using this plan. In a document-only task, Approach lists the main and supporting deliverables instead, each already written.
 If some block contains `options considered`, include them with pros and cons.
 -->
 
@@ -152,7 +162,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 ## 3. Steps
 
-<!-- Each step is one reviewable result and one commit, touching at most 2–3 files.
+<!-- Build tasks only; a document-only task removes this block.
+Each step is one reviewable result and one commit, touching at most 2–3 files.
 - Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
 - Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
 - R: the requirements the step implements or tests, or —.
@@ -193,7 +204,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 ### 4.1 Implemented
 
-<!-- Component — what was delivered; tests passing. -->
+<!-- Component — what was delivered; tests passing. In a document-only task: Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. -->
 
 ### 4.2 Known gaps at close
 
