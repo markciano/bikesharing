@@ -86,7 +86,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 - Table format (Delta Lake or an alternative) — T035
 - Whether the capture restarts on its own after an interruption — T037
 - Capture completeness target — T037
-- Data quality checks and targets beyond R14 and Q2 — T042
+- Data quality checks and targets beyond R14 and Q2 — T060 **[d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)**
 - Which Must question the first vertical slice builds — T040
 - Checking the Bicing archive against the real-time capture, scope to be decided — T040
 

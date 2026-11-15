@@ -218,7 +218,7 @@ Quality scenarios that make the goals in §1.2 measurable:
 | QS17 | Cost (§2) | A pipeline run fails or exceeds its time limit | It stops after a limited number of retries and the owner is alerted | [d002 › R23](designs/d002-requirements.md#requirements) |
 | QS18 | Completeness | Normal operation | Each dynamic feed has a clean capture in at least 99.5% of the minutes of each month | [d004 › D6](designs/d004-bronze-data-capture.md#d6-capture-completeness-target) |
 
-- TODO(T042): data quality checks and targets.
+- TODO(T060): data quality checks and targets.
 
 ## 11. Risks and technical debt
 

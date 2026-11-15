@@ -13,7 +13,7 @@ The engine executes the transformations, and the table format library writes the
 - Transformations flatten nested input, compare each reading with the previous one, follow episodes across batches, detect gaps against a time grid and aggregate in local time ([d002/Q2–Q7, R12](../designs/d002-requirements.md#guiding-questions)).
 - The same logic serves the incremental batch and a rebuild from bronze, changing only the data range ([d002/R11, R13](../designs/d002-requirements.md#requirements)).
 - Each transformation is tested before it is written, locally and with no infrastructure ([testing strategy](../testing-strategy.md)).
-- Data quality rules are added later at any layer, without rewriting transformations ([task T042](../tasks.md)).
+- Data quality rules are added later at any layer, without rewriting transformations (T042).
 - The project follows the practice of a company data team. Its owner has very strong SQL and basic Python.
 
 ## Considered Options
