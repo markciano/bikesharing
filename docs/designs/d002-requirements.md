@@ -24,7 +24,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 
 | Priority | # | Question | Measures | Grain | Window | Freshness |
 |---|---|---|---|---|---|---|
-| Must | Q1 | How many bikes and free docks does each station have right now? | Bikes available by type, docks available | Snapshot | Latest | ≤ 5 min (R3) |
+| Must | Q1 | How many bikes and free docks does each station have right now? | Bikes available by type, docks available | Snapshot | Latest | Cadence + run (R3) |
 | Must | Q2 | Do the feeds arrive on time and complete? | Age of latest data, minutes without capture, % records breaking invariants, frozen stations | Minute | 30 days | ≤ 5 min |
 | Must | Q3 | When is each station full or empty, and for how long? | Occupancy %, count and duration of empty and full episodes | Hour | 12 months | 1 hour |
 | Should | Q4 | How many trips are made per day, by municipality and post code, and in Barcelona by district and neighbourhood? **[d005 › D10](d005-data-model.md#d10-barcelona-district-and-neighbourhood)** | **KPI** estimated trips (lower bound), trips per dock | Day | 12 months | 1 hour |
@@ -46,7 +46,7 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 
 - **R1** The visualization shall be publicly accessible, read-only, without login.
 - **R2** The visualization shall show the attribution each data source's licence requires.
-- **R3** The visualization shall show current station status (Q1) captured no more than 5 minutes earlier, and no more than 1 minute where the chosen tools allow it within R4.
+- **R3** The visualization shall show current station status (Q1) captured no more than one pipeline cadence plus one run earlier. **[d007 › D3](d007-pipeline-design.md#d3-continuous-mode-with-a-15-minute-cadence)**
 - **R4** The solution shall cost less than €10 per month to run.
 - **R5** The solution shall load, once, the Bicing monthly archives covering the 12 months before the first load.
 - **R6** The solution shall organize data in medallion layers: bronze (raw as captured), silver (cleaned and conformed), gold (modelled for the guiding questions).
