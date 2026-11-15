@@ -76,6 +76,21 @@ What would change it: when the runs measured in T060.1 show that a 10-minute cad
 
 Rejected: on-demand runs, since the station status (d002's Q1) must stay current with no one asking for it; a 10-minute cadence from the start, since it would rest on the unmeasured run time.
 
+#### D4. Data quality in four classes
+
+The data quality catalog sorts every rule of [data-model.md › Data contract](../data-model.md#data-contract), every indicator and every new check into four classes, following the dimensions of DAMA-DMBOK and ISO/IEC 25012. A class sets how the item is verified:
+
+| Class | What it is | Verified by | Items of the Data contract |
+|---|---|---|---|
+| Transformation spec | How a value is built | Unit or integration test in CI, on fixtures | RDM4–RDM14, RDM16–RDM21, RDM23–RDM28, RDM30, RDM31, RDM37–RDM55, RDM57, RDM63, RDM70–RDM72, RDM74, RDM76 |
+| Runtime rule | What must always hold on real data | Data test in every run | RDM1, RDM3, RDM15, RDM22, RDM29, RDM32–RDM36, RDM52, RDM56 |
+| Quality indicator | A measure tracked over time | Gold table, queried by the owner | RDM58, RDM61, RDM62, RDM64, RDM75; the review table of RDM43, RDM46 and RDM73 |
+| Documentation | Worksheets, source cards and the feeds read | Inspection | RDM65–RDM69 |
+
+A runtime rule fails with severity error, following Write-Audit-Publish: if any runtime rule fails, the run publishes nothing, the page keeps the last file that passed, and the failure is logged in the run's events. The visitor sees only an older data age.
+
+Rejected: severity warn, publishing and logging the failure, since the visitor could then see wrong data with no sign of it.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -110,7 +125,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
 | OQ2 | How the historical archives reach R2 and are loaded, and how the Bicing archive is checked against the real-time capture | d005 | Bicing's archive is not on R2 yet. The check was handed to T040 by [d002 › Out of scope](d002-requirements.md) and is taken by T060. Decided by the child that loads the history, since no other child shares it; Children assigns it |
-| OQ3 | Data quality: which rules and indicators this task builds and which T042 builds | d005 | [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) leaves where rules live and their format to T042 |
+| OQ3 | The rest of the data quality catalog (D4): which indicators stay, which new checks join, where each item is queried, and what this task builds and what T042 builds | D4 | Indicators to review: RDM58, RDM61 and RDM75 (also shown to the visitor?), RDM62, RDM64, the review table, and [d002 › R14](d002-requirements.md#requirements). RDM60 measures service, not quality, and leaves the catalog. Candidates: schema drift in bronze, stations per snapshot, row counts from bronze to gold (D2), counts within `capacity`, the published file's age. [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) leaves where rules live and their format to T042 |
 | OQ4 | How a silver or gold row is traced back to its bronze objects and to the run that wrote it | d005 | Column-level lineage and the source field dictionary are decided in d005 |
 | OQ5 | How the owner queries the logs of capture, the pipeline and the web page together | — | Today, querying capture's logs means downloading hundreds of files. Capture's logs do not enter the data model, which measures the feeds' timeliness and completeness on the data ([d005 › D26](d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)). Decided by the observability child (D1); Children assigns it |
 | OQ6 | A script with the owner's common health queries, and whether it can run from a phone | OQ5 | [s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel). An option from [s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs), not verified: a manual GitHub Actions run, with no server, but its summary is public if the repository is, and GitHub holds one more read-only key. Decided by the observability child (D1); Children assigns it |
