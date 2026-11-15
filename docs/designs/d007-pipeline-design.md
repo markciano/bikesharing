@@ -51,14 +51,18 @@ The pipeline is built one business process at a time, following Kimball's bus ar
 
 The build order:
 
-1. T060.1, a walking skeleton on the station stock from real-time capture: the thinnest path from bronze to a published file, run on Modal. It builds the conformed dimensions that the other processes reuse, and measures the real run time and memory that several carried-over inputs depend on.
-2. The historical archives, loaded into the station stock.
-3. The stock by vehicle type and the stock movements, in the order OQ7 sets.
-4. Observability, a child of its own.
+1. T060.1, a walking skeleton on the station stock from real-time capture: the thinnest path from bronze to a published file, run on Modal. It builds the conformed dimensions that the other processes reuse, fixes the patterns the later children apply, and measures the real run time and memory that several carried-over inputs depend on.
+2. T060.2, observability.
+3. T060.3, the stock by vehicle type and then the stock movements, both from real-time capture.
+4. T060.4, the historical archives, loaded into the station stock.
 
-What would change it: the measurements of T060.1 can reopen [ADR-0027](../decisions/0027-modal-as-execution-platform.md) (Carried-over inputs › Execution platform check); the later children are then built on the platform that review keeps.
+Observability comes right after T060.1, following the SRE practice of monitoring from the first production release: from T060.1 the pipeline runs 24/7, and a run that fails publishes nothing with no other sign (D4). It needs only what T060.1 and capture already emit, the log events of [ADR-0036](../decisions/0036-log-convention-across-components.md), so a later child's rules reach its alerts with no change, and a later indicator, such as RDM58, only adds its target.
 
-Rejected: a split by layer (silver, then gold), since silver would be built with no consumer to validate it, and real runs would be measured late.
+After T060.2, no child depends on another, so they follow increasing difficulty: each adds one new kind of work to what the previous ones built. The stock by vehicle type repeats T060.1's pattern with one more dimension; the stock movements compare each count with the previous one of its station, across runs; the historical load brings a new source, a bulk load that can be rerun and its check against real-time capture. The two real-time processes share one child, since neither takes an architecture decision.
+
+What would change it: the measurements of T060.1 can reopen [ADR-0027](../decisions/0027-modal-as-execution-platform.md) (Carried-over inputs › Execution platform check); the later children are then built on the platform that review keeps. If T060.3's steps exceed ten, its design splits it into one child per process.
+
+Rejected: a split by layer (silver, then gold), since silver would be built with no consumer to validate it, and real runs would be measured late; observability as the last child, since two children would be built with the pipeline in production and no alert of a failed run; one child per business process, since the stock by vehicle type would take a full design and pull request for little to decide; the historical load right after T060.1, since nothing depends on it and the archives are already held by the owner.
 
 #### D2. Visualization after all slices
 
