@@ -68,6 +68,14 @@ What would change it: if T041 needs a file shaped differently, the contract and 
 
 Rejected: a minimal page after T060.1, to validate the file's shape and the page's deployment early, since the data validation above does not need a page and T060.1 already deploys the file.
 
+#### D3. Continuous mode with a 15-minute cadence
+
+The pipeline runs 24/7 on a schedule, every 15 minutes, so the visitor sees data about 17 minutes old (cadence plus a run of about 2 min, not measured). This refines [d002 › R3](d002-requirements.md#requirements). The cadence starts with margin because its cost estimate rests on a run time nobody has measured yet ([s012 › D1](../spikes/s012-execution-target.md#d1-execution-platform)); lowering it is a configuration change, not a redesign.
+
+What would change it: when the runs measured in T060.1 show that a 10-minute cadence costs less per month than Modal's monthly credit of $30, the cadence lowers to 10 min. It does not go below 10 min, the shortest interval R2's Class B quota allows running 24/7 ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)).
+
+Rejected: on-demand runs, since the station status (d002's Q1) must stay current with no one asking for it; a 10-minute cadence from the start, since it would rest on the unmeasured run time.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -101,7 +109,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ1 | The pipeline's mode (24/7 or on demand) and refresh cadence, against [d002 › R3](d002-requirements.md#requirements) and the freshness that d002's Q1, Q2 and Q5 need | d005 | The visitor sees the data's age as cadence plus run time (about 2 min, not measured): a 5–10 minute cadence gives about 7–12 minutes, above R3's 5 minutes ([s013 › D3](../spikes/s013-visualization-tool.md#d3-static-web-page-with-javascript)). Running 24/7, R2's Class B quota allows a commit every 10 minutes or more ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)). The owner's target is a 10 to 15 minute cadence, lowered later if its cost allows, which refines R3. Modal's monthly credit of $30 covers its cost estimate of about €7.20 at 10 minutes ([s012 › D1](../spikes/s012-execution-target.md#d1-execution-platform)), so the Execution platform check is reviewed against the credit |
 | OQ2 | How the historical archives reach R2 and are loaded, and how the Bicing archive is checked against the real-time capture | d005 | Bicing's archive is not on R2 yet. The check was handed to T040 by [d002 › Out of scope](d002-requirements.md) and is taken by T060. Decided by the child that loads the history, since no other child shares it; Children assigns it |
 | OQ3 | Data quality: which rules and indicators this task builds and which T042 builds | d005 | [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) leaves where rules live and their format to T042 |
 | OQ4 | How a silver or gold row is traced back to its bronze objects and to the run that wrote it | d005 | Column-level lineage and the source field dictionary are decided in d005 |
@@ -124,7 +131,7 @@ If some block contains `options considered`, include them with pros and cons.
 
 Inputs about the how, left to this design by earlier spikes and designs; each becomes a Plan concern or part of one.
 
-- **Execution platform check:** if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, or OQ1 chooses the on-demand mode, the decision of [ADR-0027](../decisions/0027-modal-as-execution-platform.md) is reopened with Cloud Run and Fly.io as candidates. The run's final log event carries `duration_s` and `peak_memory_mb`, the latter from `ru_maxrss` ([s012 › D1, P1](../spikes/s012-execution-target.md#d1-execution-platform)).
+- **Execution platform check:** if the first slice measures runs of 1 minute or less, or normal runs of 2 GB or less, the decision of [ADR-0027](../decisions/0027-modal-as-execution-platform.md) is reopened with Cloud Run and Fly.io as candidates. The run's final log event carries `duration_s` and `peak_memory_mb`, the latter from `ru_maxrss` ([s012 › D1, P1](../spikes/s012-execution-target.md#d1-execution-platform)).
 - **Memory:** set DuckDB's memory limit below the container's; decide on a hard container limit (`memory=(request, limit)`; without one, usage above the request is billed, as Modal charges the higher of the two); cap what one run processes and leave the rest to the next; do not retry memory errors, since they are permanent; check in the first slice how Modal treats a memory kill of a scheduled function ([s012 › D3, TH12](../spikes/s012-execution-target.md#d3-pipeline-security), [d002 › R23](d002-requirements.md#requirements)).
 - **Reading many JSON files:** in DuckDB 2.0.0, `read_json` over thousands of files runs out of memory when it binds each file's schema, with `union_by_name` or a schema sample over every file ([duckdb#27806](https://github.com/duckdb/duckdb/issues/27806)). The fix is merged upstream, but no release carrying it was confirmed. The d005 profile met it ([spikes/d005-data-model › profile](../../spikes/d005-data-model/README.md#profile)).
 - **Platform separation:** CI checks for rules 1, 2 and 4 of [ADR-0029](../decisions/0029-pipeline-code-architecture.md), and where the platform module lives in the repository ([s012 › D4](../spikes/s012-execution-target.md#d4-processing-logic-separated-from-the-platform)).
