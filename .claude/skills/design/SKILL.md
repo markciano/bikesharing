@@ -1,6 +1,6 @@
 ---
 name: design
-description: Build the design doc of one task through a conversation with the owner, block by block from Spec to Steps, and review its Plan and Steps in fresh sessions. Use at the start or resumption of a design session, or to review a design.
+description: Build the design doc of one task through a conversation with the owner, block by block from Spec to Steps (to Plan for a document-only or parent task), and review its Plan and Steps in fresh sessions. Use at the start or resumption of a design session, or to review a design.
 disable-model-invocation: true
 argument-hint: "[task ID for a new design | design ID to resume | design ID + review-plan | design ID + review-steps]"
 ---
@@ -9,7 +9,7 @@ argument-hint: "[task ID for a new design | design ID to resume | design ID + re
 
 You are a data architect and technical lead. Your goal is to understand a feature fully and produce a design doc from [template.md](template.md) that is readable by a human and that Claude Code can implement with no ambiguity about what to change or where.
 
-The design doc follows the blocks of the template. This skill fills Spec, Plan and Steps; Close is filled by `/implement`.
+The design doc follows the blocks of the template. This skill fills Spec, Plan and Steps; Close is filled by `/implement`. A document-only or parent task (the kinds are in the template's header comment) ends at the Plan: its deliverables are written during the Spec and the Plan, with no `/implement`, and `review-plan` fills Close.
 
 ## Start
 
@@ -28,7 +28,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 ## 1. Spec
 
 1. **Introduction.** The owner explains the task in their own words. Ask only what is needed to write Context and to list the decisions to take; the decisions themselves come later.
-2. **Playback.** Write Context. If a part can be delivered and closed on its own, or the task looks like more than 10 steps, propose splitting it now.
+2. **Playback.** Write Context. If a part can be delivered and closed on its own, or the task looks like more than 10 steps, propose splitting it now. Then set the Kind with the owner and remove what it does not use: a document-only task drops the Steps block and the Phase items after Plan review; a parent keeps Children, whose split and order are decided in this Spec like any other decision.
 3. **Decisions to take.** List them in Open questions in dependency order: nothing is decided before what it depends on. The owner adjusts the list. A question that comes up later joins the list in its place.
 4. **Decisions.** Take them in that order: with options and a recommendation when there is a reasonable range, open otherwise. A task that changes existing behaviour also decides what must not break. Each one closes as a decision in Decided at framing as soon as the owner approves it, and leaves the table.
 5. **Failure cases.** With the behaviour decided, go through the decisions asking what can go wrong. Each answer is a new decision or extends an existing one.
@@ -47,12 +47,13 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 3. Once the owner picks, write **Options considered** (only if alternatives were weighed) and one row in **Decision summary**.
    A cross-cutting decision becomes an **ADR**: write it during the Plan from [adr-template.md](adr-template.md); the owner approves it on the edit's diff. Link it in the header.
 4. With every concern decided, write **File layout**, then **Components** and **Test plan** when they apply. A change to the overall structure also updates CLAUDE.md › Project structure; ask the owner.
-5. **Rule documents.** Every file in File layout that states rules or decisions (ADRs, `.claude/rules/`, skills, templates, `CLAUDE.md`) is written and approved now, one per message, on the edit's diff. Implementation builds the remaining files and verifies them against these; a mismatch is fixed in the design, not in the build.
-6. Ask for the Plan approval. Once approved, check Plan in Phase and tell the owner to run `/design dNNN review-plan` in a new session. The session ends here.
+5. **Rule documents and document-only deliverables.** Every file in File layout that states rules or decisions (ADRs, `.claude/rules/`, skills, templates, `CLAUDE.md`) is written and approved now, one per message, on the edit's diff. Implementation builds the remaining files and verifies them against these; a mismatch is fixed in the design, not in the build.
+   In a document-only or parent task, every deliverable is written and approved this way, in the Spec or here, and Approach records them instead of planning a build.
+6. Ask for the Plan approval. Once approved, check Plan in Phase and tell the owner to run `/design dNNN review-plan` in a new session; for a document-only or parent task it is the final review. The session ends here.
 
 ## 3. Steps
 
-Starts only when Phase shows Plan review checked.
+Build tasks only. Starts only when Phase shows Plan review checked.
 
 1. **Prerequisites.** List what the owner prepares outside the repo before Step 1 (installs on the local machine, accounts, access), with exact versions decided now.
 2. Propose the step skeleton as a compact table (step · title · R · files); the owner adjusts order and cuts.
