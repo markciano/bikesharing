@@ -116,6 +116,14 @@ Lineage is covered at the four levels that OpenLineage and Kimball's audit dimen
 
 Rejected: a table of runs, with the bronze object's key in every silver row and the configuration version of each run, since this project does not need more than the levels above; the run's ID alone in each row, since the code version would be lost with the logs and the Delta history after 30 days at most.
 
+#### D6. No release tracking
+
+Nothing is built to show which code each platform runs. Each component already reports its own version in what it produces: capture as its Worker's version ID ([ADR-0036](../decisions/0036-log-convention-across-components.md)), the pipeline in its rows and logs (D5). Since every deployment is made by hand from `main` right after a merge, the commit behind a deployment is the last merge to `main` before the deployment's time on its platform.
+
+What would change it: deployments made by GitHub Actions, which could then record each one with its commit (GitHub Deployments).
+
+Rejected: tagging each deployment with its commit on its platform, and reading every component's latest version in one health query, since an occasional lookup by time is enough for this project.
+
 Frozen counts also reach the visitor: a published file that holds a station's latest count marks it when that count is frozen (RDM61), so a stale count is never shown as current. How the page shows the mark is decided by T041.
 
 Rejected: severity warn for rules on the pipeline's logic, since the visitor could then see wrong data with no sign of it; severity error for rules on a provider's data, since the page would stop for what the project cannot fix; a rule that blocks counts above `capacity`, since GBFS defines no relation between the two and both are kept as published; frozen counts for the owner only, since the visitor could then trust a count hours old.
@@ -154,10 +162,9 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
 | OQ2 | How the historical archives reach R2 and are loaded, and how the Bicing archive is checked against the real-time capture | d005 | Bicing's archive is not on R2 yet. The check was handed to T040 by [d002 › Out of scope](d002-requirements.md) and is taken by T060. Decided by the child that loads the history, since no other child shares it; Children assigns it |
-| OQ8 | How the owner learns which code version is deployed on each platform (Cloudflare, Modal, the page) | D5 | Capture's logs already carry `version` ([d004 › D9](d004-bronze-data-capture.md)); every row carries the version that wrote it (D5) |
 | OQ5 | How the owner queries the logs of capture, the pipeline and the web page together, and learns of a failed runtime rule of either severity (D4) | — | Today, querying capture's logs means downloading hundreds of files. Capture's logs do not enter the data model, which measures the feeds' timeliness and completeness on the data ([d005 › D26](d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)). Decided by the observability child (D1); Children assigns it |
 | OQ6 | A script with the owner's common health queries, and whether it can run from a phone | OQ5 | [s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel). An option from [s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs), not verified: a manual GitHub Actions run, with no server, but its summary is public if the repository is, and GitHub holds one more read-only key. Decided by the observability child (D1); Children assigns it |
-| OQ7 | The child tasks `T060.M`: one per business process, plus observability, in build order | D1, OQ1–OQ6, OQ8 | Each child changes its tables' `TODO(T060)` markers in [data-model.md › Data contract](../data-model.md#data-contract) to its own ID |
+| OQ7 | The child tasks `T060.M`: one per business process, plus observability, in build order | D1, OQ1–OQ6 | Each child changes its tables' `TODO(T060)` markers in [data-model.md › Data contract](../data-model.md#data-contract) to its own ID |
 
 ## 2. Plan — how
 
