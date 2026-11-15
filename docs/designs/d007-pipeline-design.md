@@ -7,6 +7,7 @@ Sections marked Optional are kept only when they apply.
 # Design: Processing pipeline
 
 - **Task:** T060
+- **Kind:** parent
 - **ADRs:** [ADR-0025](../decisions/0025-sql-models-directed-by-python.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0027](../decisions/0027-modal-as-execution-platform.md), [ADR-0029](../decisions/0029-pipeline-code-architecture.md)
 - **New ADRs from this doc:** none
 
@@ -47,9 +48,26 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 
 #### D1. Build by vertical slice
 
-The pipeline is built one business process at a time, following Kimball's bus architecture: the model is designed once in [d005](d005-data-model.md), and each child task of T060 builds one of its business processes from bronze to silver and gold and runs it on Modal. Each child's design fixes that process's columns, gold tables and code. Observability is a child of its own. The first slice measures real run time and memory, which several carried-over inputs depend on.
+The pipeline is built one business process at a time, following Kimball's bus architecture: the model is designed once in [d005](d005-data-model.md), the concerns shared by every process (scheduling, lineage, data quality, the historical load, observability) are decided once in this design, and each child task of T060 builds one business process from bronze to silver and gold and runs it on Modal. Each child's design fixes that process's columns, gold tables and code, and moves its tables' column rules into their worksheets.
+
+The build order:
+
+1. T060.1, a walking skeleton on the station stock from real-time capture: the thinnest path from bronze to a published file, run on Modal. It builds the conformed dimensions that the other processes reuse, and measures the real run time and memory that several carried-over inputs depend on.
+2. The historical archives, loaded into the station stock.
+3. The stock by vehicle type and the stock movements, in the order OQ7 sets.
+4. Observability, a child of its own.
+
+What would change it: the measurements of T060.1 can reopen [ADR-0027](../decisions/0027-modal-as-execution-platform.md) (Carried-over inputs › Execution platform check); the later children are then built on the platform that review keeps.
 
 Rejected: a split by layer (silver, then gold), since silver would be built with no consumer to validate it, and real runs would be measured late.
+
+#### D2. Visualization after all slices
+
+Each slice ends at a published file, not at a page. The public page (T041) is built once every business process publishes, so it is designed as a whole. Without a page, a slice is validated by data tests on its silver and gold tables, by reconciling its row counts from bronze to silver to gold, and by one acceptance query on gold per question it closes, checked on real data. Each published file has a fixed contract, a JSON Schema checked by a contract test ([ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md)), which is what T041 builds on.
+
+What would change it: if T041 needs a file shaped differently, the contract and its test change in T041.
+
+Rejected: a minimal page after T060.1, to validate the file's shape and the page's deployment early, since the data validation above does not need a page and T060.1 already deploys the file.
 
 ### 1.3 Requirements
 
@@ -76,13 +94,13 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ1 | The pipeline's mode (24/7 or on demand) and refresh cadence, against [d002 › R3](d002-requirements.md#requirements) and the freshness that d002's Q1, Q2 and Q5 need | d005 | The visitor sees the data's age as cadence plus run time (about 2 min, not measured): a 5–10 minute cadence gives about 7–12 minutes, above R3's 5 minutes ([s013 › D3](../spikes/s013-visualization-tool.md#d3-static-web-page-with-javascript)). Running 24/7, R2's Class B quota allows a commit every 10 minutes or more ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)) |
+| OQ1 | The pipeline's mode (24/7 or on demand) and refresh cadence, against [d002 › R3](d002-requirements.md#requirements) and the freshness that d002's Q1, Q2 and Q5 need | d005 | The visitor sees the data's age as cadence plus run time (about 2 min, not measured): a 5–10 minute cadence gives about 7–12 minutes, above R3's 5 minutes ([s013 › D3](../spikes/s013-visualization-tool.md#d3-static-web-page-with-javascript)). Running 24/7, R2's Class B quota allows a commit every 10 minutes or more ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)). The owner's target is a 10 to 15 minute cadence, lowered later if its cost allows, which refines R3. Modal's monthly credit of $30 covers its cost estimate of about €7.20 at 10 minutes ([s012 › D1](../spikes/s012-execution-target.md#d1-execution-platform)), so the Execution platform check is reviewed against the credit |
 | OQ2 | How the historical archives reach R2 and are loaded, and how the Bicing archive is checked against the real-time capture | d005 | Bicing's archive is not on R2 yet. The check was handed to T040 by [d002 › Out of scope](d002-requirements.md) and is taken here |
 | OQ3 | Data quality: which rules and indicators this task builds and which T042 builds | d005 | [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) leaves where rules live and their format to T042 |
 | OQ4 | How a silver or gold row is traced back to its bronze objects and to the run that wrote it | d005 | Column-level lineage and the source field dictionary are decided in d005 |
 | OQ5 | How the owner queries the logs of capture, the pipeline and the web page together | — | Today, querying capture's logs means downloading hundreds of files. Capture's logs do not enter the data model, which measures the feeds' timeliness and completeness on the data ([d005 › D26](d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)) |
 | OQ6 | A script with the owner's common health queries, and whether it can run from a phone | OQ5 | [s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel). An option from [s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs), not verified: a manual GitHub Actions run, with no server, but its summary is public if the repository is, and GitHub holds one more read-only key |
-| OQ7 | The child tasks `T060.M`: one per business process, plus observability, in build order | D1, OQ1–OQ6 | |
+| OQ7 | The child tasks `T060.M`: one per business process, plus observability, in build order | D1, OQ1–OQ6 | Each child changes its tables' `TODO(T060)` markers in [data-model.md › Data contract](../data-model.md#data-contract) to its own ID |
 
 ## 2. Plan — how
 
