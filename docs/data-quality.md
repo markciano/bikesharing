@@ -12,8 +12,8 @@ A row that fails its schema is quarantined: it is written to the quarantine tabl
 
 A runtime rule's severity follows who causes its failure ([d007 › D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)):
 
-- **error:** a rule on the pipeline's own logic. Following Write-Audit-Publish, the batch that fails publishes nothing and is set aside until a new code version, the page keeps the last file that passed, and the failure is logged in the run's events.
-- **warn:** a rule on a provider's data. The failure is logged and the run publishes.
+- **error:** a rule on the pipeline's own logic. Following Write-Audit-Publish, a batch that fails commits nothing to silver and gold and is set aside until a new code version; a file that fails is not deployed, and the run ends with no failure signal. The page keeps the last file that passed, and the failure is logged in the run's events ([d007 › #9](designs/d007-pipeline-design.md#22-decision-summary)).
+- **warn:** a rule on a provider's data. The failure is logged and the batch is committed.
 
 ## Runtime rules
 
@@ -44,7 +44,7 @@ A runtime rule's severity follows who causes its failure ([d007 › D4](designs/
 | DQR11 | If a bronze feed adds or drops a field of those the model reads ([data-model.md › RDM2, RDM6](data-model.md#model-as-a-whole)), then the run shall log a schema drift ([d007 › D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)). | Validity | warn |
 | DQR12 | If a capture lists fewer stations than the recent median, by more than the threshold that the slice building this rule fixes, then the run shall log a volume drop ([d007 › D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)). TODO(T060.1): fix the threshold and the window of the median. | Completeness | warn |
 | DQR13 | The rows a run adds to silver and gold shall match the items it reads from bronze, by count, or by total in a gold table that aggregates ([d007 › D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)). | Completeness | error |
-| DQR14 | Each file the pipeline publishes shall match its JSON Schema before it is published ([d007 › D2](designs/d007-pipeline-design.md#d2-visualization-after-all-slices), [D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)). | Validity | error |
+| DQR14 | Each file the pipeline publishes shall match its JSON Schema before it is deployed ([d007 › D2](designs/d007-pipeline-design.md#d2-visualization-after-all-slices), [D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)). | Validity | error |
 
 ## Quality indicators
 
