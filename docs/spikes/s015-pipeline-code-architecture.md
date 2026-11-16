@@ -119,6 +119,34 @@ Options:
 
 Facts on the patterns from the web research of 2026-11-16 (§ 6. Sources): no source recommends a fake of a SQL engine, and dbt tests SQL by running it on fixtures; an engine adapter is justified by many engines, as in dbt; functional data engineering makes every task a pure, idempotent function over a partition.
 
+#### D2. Collaborators at the edge, and no driven ports
+
+No collaborator needs a driven port today: each one's I/O can wait for the shell, before or after the core, so it enters the core as a value or leaves it as a returned decision. The one exception is logging, which happens mid-flow by nature: the core logs through Python's standard `logging`, and the shell configures its handlers at start-up, so tests capture logs with pytest's `caplog`. `logging` already separates the call from its destination, which is the port-and-adapter split, so no own interface is added.
+
+What would change it: a collaborator whose I/O must happen mid-flow, such as a recurring external API read page by page with retries, takes a driven port under D1's evolution rule; the others stay as they are.
+
+Options rejected: for logging, the core returning a list of events for the shell to write; a run that breaks mid-flow loses the events before the failure, the ones most needed, and it reimplements what `logging` does.
+
+| Collaborator | When its I/O happens | In the core |
+|---|---|---|
+| Clock | Start | The current time, as a value |
+| Last run, for the catch-up ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)) | Start | Read by the shell, passed as a value; the core computes the window |
+| Configuration and credentials | Start | One configuration value (D4) |
+| Engine and storage | During the run | None: the shell runs the SQL on the location the configuration names; tests use a local path (D1) |
+| Heartbeat ([ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)) | End | Returns whether to send it and what |
+| Published file ([ADR-0033](../decisions/0033-data-published-by-redeploying-static-assets.md)) | End | Returns what is published |
+| Lineage records ([ADR-0043](../decisions/0043-lineage-at-four-levels.md)) | End | Returns the records |
+| Retries (R23) | Around the run | None: the shell retries; the core is idempotent (N10) |
+| Logs ([ADR-0036](../decisions/0036-log-convention-across-components.md)) | During the run | Logs through `logging`; the shell sets the handlers |
+
+#### D3. Runtime rules as SQL files run by one runner
+
+Each runtime rule of the [quality catalog](../data-quality.md) is one SQL file named after its ID that returns the rows breaking it, as in dbt's singular data tests; the catalog stays the rules' source ([d005 › D29](../designs/d005-data-model.md#d29-data-contract-of-the-model)), and the file cites it. One generic runner in the shell runs every rule on the tables just built and on the published file. The core receives the results as values and turns them into a verdict (fail, warn or pass) with the severity of [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md), as a pure function. Adding a rule is one SQL file and its test case. Quality indicators need nothing apart: they are gold models like any other.
+
+This fixes the shape of a rule in the code, not which rules exist, when they run within a run, or a test tool: a tool's file would be derived from the catalog (d005 › D29).
+
+Options rejected: a Python list with each rule's SQL inline; it saves a file per rule but keeps SQL in strings, without SQL highlighting or lint, and apart from how models live ([ADR-0025](../decisions/0025-sql-models-directed-by-python.md)).
+
 ### 1.3 Questions
 
 <!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
