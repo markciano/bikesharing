@@ -1,24 +1,13 @@
-<!--
-Spike doc template. A spike is a time-boxed investigation of one task: it reaches the decisions a task needs, by analysis where possible and with evidence only where an unknown would change the choice. Its output is knowledge (decisions, answers, a verdict, inputs for designs and ADRs); its code is throwaway and lives in spikes/<name>/.
-Blocks: Questions (what we need to know), Method (how we find out), Steps, Findings (filled during execution), Conclusion (filled after the last step).
-Sections marked Optional are kept only when they apply.
--->
-
 # Spike: Pipeline code architecture
 
 - **Task:** T064
-- **ADRs:** [ADR-0029](../decisions/0029-pipeline-code-architecture.md) (under revision: this spike replaces it)
-- **Code:** `spikes/pipeline-code-architecture/`
+- **ADRs:** [ADR-0029](../decisions/0029-pipeline-code-architecture.md), which this spike replaces
+- **Code:** none: the spike has no run
 
 ## Status
 
-<!-- State: Draft 📝 · Ready 🎬 · Running 🔄 · Concluded ✅.
-Phase: the blocks and the review completed.
-Started / Finished: UTC dates of the first step executed and of the Conclusion.
-Current step: the step being executed, or —. -->
-
 - State: Draft 📝
-- Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
+- Phase: [x] Questions · Method, Steps and Steps review: not applicable, no run · [ ] Conclusion
 - Started: — · Finished: —
 - Current step: —
 
@@ -26,17 +15,11 @@ Current step: the step being executed, or —. -->
 
 ### 1.1 Context
 
-<!-- 2–4 sentences: the decisions this spike takes, which of them depend on evidence and why, and the spikes or designs it builds on. -->
+This spike revisits the pipeline's code architecture, set by [ADR-0029](../decisions/0029-pipeline-code-architecture.md) from [s012 › D4](s012-execution-target.md#d4-processing-logic-separated-from-the-platform), before T060.1 builds the walking skeleton whose patterns every later child of [d007](../designs/d007-pipeline-design.md) follows. It decides the architecture style (D1, the central decision), the collaborators at the edge (D2), the shape of runtime rules in the code (D3), how configuration enters (D4) and how the rules are checked in CI (D5). None depends on evidence: D1 is settled by a weighted decision matrix over code skeletons, and the facts behind it and D5 come from the tools' documentation, so the spike has no run.
 
 ### 1.2 Decided at framing
 
 #### D1. Pipeline code architecture style
-
-<!-- In this order, so the reader finds what matters first:
-1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
-2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
-3. The options rejected and how robust the result is.
-4. The evaluation behind it: the table or weighted matrix (needs, cuts, anchors and scores) if one was used. A security decision lists its threats in a table: `| # | Threat (STRIDE) | Impact | Control | Requirement |`, with IDs `TH1`, `TH2`… per document. -->
 
 **B1. Functional core, imperative shell.** The pipeline's logic is pure functions over values: the current time, the last run and the configuration enter at the edge as values, and the core returns results and decisions (the window to process, whether to send a heartbeat) that the shell acts on. The shell holds all I/O: the engine, the network and the platform. The SQL still runs on DuckDB in the shell, unchanged, so tests run it on the real engine. B1 scores 475 of 500: it keeps the failure paths, time and entry points testable as values (C1, C2, C4) at a cost of one extra concept (C6).
 
@@ -61,7 +44,7 @@ Options:
 - **B2. B1 with selective driven ports:** interfaces only for external I/O that happens mid-flow (such as the clock or a notifier), with fakes in tests.
 - **C. Full ports and adapters (hexagonal):** every external system, the engine and storage included, behind a port.
 
-**Needs.** N7 was withdrawn: historical statistical analysis reads gold outside the pipeline (Out of scope).
+**Needs.** N7 was withdrawn: historical statistical analysis reads gold outside the pipeline ([Out of scope](#13-out-of-scope)).
 
 | N | The architecture must let | Origin |
 |---|---|---|
@@ -117,7 +100,7 @@ Options:
 | C6 (25) | 5: no extra concept; 1–2 files per operation | 4: one extra concept (core and shell exchange values); 2 files per operation | 3: ports, adapters, fakes and their wiring; 2–4 files per operation | 1: four or more concepts; 7 files in the skeleton, 4 or more per operation |
 | **Total (of 500)** | **375** | **475** | **450** | **355** |
 
-Facts on the patterns from the web research of 2026-11-16 (§ 6. Sources): no source recommends a fake of a SQL engine, and dbt tests SQL by running it on fixtures; an engine adapter is justified by many engines, as in dbt; functional data engineering makes every task a pure, idempotent function over a partition.
+Facts on the patterns from the web research of 2026-11-16 ([Sources](#3-sources)): no source recommends a fake of a SQL engine, and dbt tests SQL by running it on fixtures; an engine adapter is justified by many engines, as in dbt; functional data engineering makes every task a pure, idempotent function over a partition.
 
 #### D2. Collaborators at the edge, and no driven ports
 
@@ -174,175 +157,44 @@ Not verified: a `forbidden` contract on an external package such as `duckdb` nee
 
 Options rejected: PyTestArch, the same rules as pytest tests; it needs no extra CI step but is less established, and the rules become code rather than declarations.
 
-### 1.3 Questions
+### 1.3 Out of scope
 
-<!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
-"Observe only": things to note during the run with no dedicated effort. -->
+- The module names, the rest of the package's layout and where SQL models, rules and tests live — T060.1
+- When runtime rules run within a run, and whether a test tool replaces the runner (D3) — T060
+- Historical statistical analysis and environmental data, read from gold outside the pipeline — T067
 
-Main question: `<one sentence>`
+## 2. Conclusion
 
-- **Q1.** `<question>`
-- **Observe only:** `<item>`
+### 2.1 Verdict
 
-### 1.4 Exit criteria
+The pipeline's code follows a functional core with an imperative shell (D1): the shell holds all I/O, the engine included, and the core takes values and returns decisions. No driven port exists today, and one is added only under D1's evolution rule. Its rules (D2–D5) are checked in CI with import-linter; it replaces ADR-0029's thin platform wrapper and keeps its rules.
 
-<!-- Fixed before the first run; a later change is recorded in the Decision log.
-Derived from the standard that applies to this kind of question, named in the first line: e.g. DAMA data quality dimensions for a data source, a weighted decision matrix for a technology choice.
-Each criterion is measurable and says whether it is a hard cut or a guide. The timebox says what ends the run. State whether one variant meeting the criteria is enough. -->
+### 2.2 Not verified
 
-- **Standard:** `<standard or pattern applied>`
-- **Timebox:** `<window, and what ends it>`
-- `<criterion>` — `<threshold>` — hard cut | guide
+- `include_external_packages` is needed for a `forbidden` contract on `duckdb` (D5) — rule 2 cannot be expressed that way — T060.1 checks it when it configures the contracts; if it fails, PyTestArch, D5's rejected option.
+- The scores come from code skeletons, not from built code — B1 costs more than estimated — T060.1 is its first real use, and D1 states what reopens it.
+- Functional data engineering was read through summaries, as its page refused automated access — a nuance cited wrongly — it supports N10 only and decides no score.
 
-### 1.5 Out of scope
-
-<!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
-
-- `<item>` — TNNN
-
-### 1.6 Open questions
-
-<!-- Optional. Unresolved questions about what to find out. Questions about how belong to Method. -->
-
-| Question | Notes |
-|---|---|
-| | |
-
-## 2. Method — how we find out
-
-### 2.1 Approach
-
-<!-- The variants, options or probes compared, and what each one tells that the others do not. -->
-
-| Variant | What it is | What it tells |
-|---|---|---|
-| | | |
-
-#### 2.1.1 Shared behaviour
-
-<!-- Optional. Rules every variant follows (schedules, formats, key layouts, logs), stated once so the steps can cite them. -->
-
--
-
-#### `<A>`. `<Title of variant, option or probe A>`
-
-<!-- Detailed description -->
-
-### 2.3 Decision log
-
-<!-- It logs decisions about the method, before and during the run, including changes of course. Oldest first.
-Entries follow .claude/rules/docs/decision-log.md (log only, change links).
-- Column Applies to: anchor link(s) to the section where the decision is applied, named in one or two words (e.g. Q1, Probe A, File layout).
-- Column Decided at: the Status phase where it was decided (Method, Steps), `<phase> review` when decided while reviewing that phase, or `Running step N` when decided during the run.
--->
-
-| # | Applies to | Decision | Reason | Decided at |
-|---|---|---|---|---|
-| `<N>` |  |  |  |  |
-
-### 2.4 File layout
-
-<!-- Every file and folder the spike creates, as a tree with its purpose in one line. Captured data and outputs are marked as ignored by Git. The README is always included. -->
-
-```text
-spikes/<name>/
-├── README.md        Question, setup and commands, what each script does, link to the report
-└── <file>           <purpose>
-```
-
-## 3. Steps
-<!-- Each step is one reviewable result, touching at most 2–3 files.
-- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- Commit: only in a step that changes committed files: the proposed message, following the Git conventions in CLAUDE.md.
-- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner.
-- Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>. -->
-
-### 3.1 Prerequisites
-
-<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
-
-### Step 1 — `<title>`
-
-- **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md.
-- **Model:** `<model · effort>` (or —)
-- **Gate:** `<condition>` → `<consequence>`
-
-#### Scope
-
-<!-- The result of the step. List the components and the files created or changed (code, tests, docs). A reviewer should know what the diff will contain from this section alone. -->
-
-#### Reads
-
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
-
-#### Do
-
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
-
-#### Check
-
-<!-- command/s or verification with a yes/no result. -->
-
-## 4. Findings
-
-<!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
-
-### F1. `<one-line statement>`
-
-Step N · YYYY-MM-DD · `<source of evidence>`
-
-- `<evidence>`
-- Consequence: `<for variants, steps or questions>`
-
-## 5. Conclusion
-
-<!-- Filled after the last step. Covers only the observed window. -->
-
-Observed window: `<from–to, UTC; what it does not cover>`
-
-### 5.1 Answers
-
-- **Q1. Title** `<answer>` (FN)
-
-### 5.2 Exit criteria
-
-<!-- One result per criterion and variant. -->
-
-| Criterion | Kind | Result | Findings |
-|---|---|---|---|
-
-### 5.3 Verdict
-
-<!-- The answer to the main question in 2–3 sentences. -->
-
-### 5.4 Not verified
-
-<!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
-
-- `<item>` — `<risk>` — `<mitigation>`
-
-### 5.5 Production inputs
-
-<!-- Optional. What a later task must take into account when it builds, from any part of the spike: done when that task runs. Each one has a Destination: a design (with its task) or discarded with a reason. -->
+### 2.3 Production inputs
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | | `<e.g. D1, #2, F3>` | |
+| P1 | The names of the core, the shell and the platform module, and the rest of the package's layout | D5, [Out of scope](#13-out-of-scope) | [d007](../designs/d007-pipeline-design.md) › T060.1 |
+| P2 | Import contracts for rules 1–4, the CI test for rule 5, and the `include_external_packages` check | D5 | d007 › T060.1 |
+| P3 | Each run is one operation over a window that overwrites its output (idempotent), shared by the scheduled run, the history load and the rebuild | D1 (N10) | d007 › T060.1 |
+| P4 | Runtime rules as SQL files with one runner and the verdict in the core | D3 | d007 › T060.1 for its first rules; T060 for the rest |
 
-### 5.6 Records
-
-<!-- Documents this spike updates before it closes: ADRs from Decided at framing (each in its own commit), architecture, requirements, source cards and new tasks agreed with the owner. A decision that updates no document has no row. Commit: "Done", or "Pending" until delivered; the spike closes when every row is Done. Production inputs are not repeated here. -->
+### 2.4 Records
 
 | Output | From | Destination | Commit |
 |---|---|---|---|
-| `<ADR, requirement, source card or task>` | `<e.g. D1, F3>` | `<document and section>` | `<Done, or Pending>` |
+| ADR-0046, pipeline code architecture: functional core with imperative shell; ADR-0029 superseded and archived | D1–D5 | `docs/decisions/` | Pending |
+| Platform separation input re-pointed to ADR-0046 | D5 | [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs) | Pending |
+| Lines citing ADR-0029 | D1 | `docs/architecture.md`, `docs/testing-strategy.md`, in ADR-0046's commit | Pending |
+| T067, historical analysis of bike use with environmental data | Out of scope | GitHub Issues | Done |
+| T068, detect operator rebalancing | Raised while framing | GitHub Issues | Done |
 
-## 6. Sources
-
-<!-- Optional. Earlier spikes, benchmarks and documentation used. -->
+## 3. Sources
 
 Web research of 2026-11-16, for D1:
 
