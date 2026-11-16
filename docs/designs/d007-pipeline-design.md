@@ -20,10 +20,11 @@ Phase: the blocks and reviews completed. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review
 - Next: Plan step 5, writing File layout's deliverables in this order:
-  1. Done: catalog and renumbering, applying #1 and #4–#7, awaiting the owner's commit.
-  2. Parked: propose to Carried-over inputs, for T060.1, limiting each runtime rule to the rows and partitions its batch touched.
-  3. The four ADRs, ADR-0042 including #7's quarantine, one per message; first propose a comment in `.claude/skills/design/adr-template.md`: Considered Options holds only alternatives actually weighed, never obvious or forced ones. Numbers shift if T064's ADR is written first.
-  4. `architecture.md`.
+  1. Done: catalog and renumbering (committed); #4–#7 merged into #1, under the new Merge before approval rule (awaiting the owner's commit). The next log entry is #8.
+  2. Parked, owner's request: make `data-quality.md`'s runtime rules and quality indicators easier to read by ordering or grouping them.
+  3. Parked: propose to Carried-over inputs, for T060.1, limiting each runtime rule to the rows and partitions its batch touched.
+  4. The four ADRs, in a new session, ADR-0042 including #1's quarantine, one per message; first propose a comment in `.claude/skills/design/adr-template.md`: Considered Options holds only alternatives actually weighed, never obvious or forced ones. Numbers shift if T064's ADR is written first.
+  5. `architecture.md`.
 
 ## 1. Spec — what and why
 
@@ -96,7 +97,7 @@ The data quality catalog sorts every rule of [data-model.md › Data contract](.
 | Quality indicator | A measure tracked over time | Gold table, queried by the owner | DQM1–DQM8, the first three in the review table |
 | Documentation | The model's structure, worksheets, source cards and the feeds read | Inspection | RDM1–RDM6 |
 
-A column's type, nullability and accepted values are its schema, cells of its row in its table's worksheet with no ID, checked in every run; the catalog holds only what no column's schema states. Until their worksheets exist, TR44's nullability and TR50's domain stay as transformation specs. **#4** **#6**
+A column's type, nullability and accepted values are its schema, cells of its row in its table's worksheet with no ID, checked in every run; the catalog holds only what no column's schema states. Until their worksheets exist, TR44's nullability and TR50's domain stay as transformation specs. **#1**
 
 Besides the Data contract, these checks join the catalog:
 
@@ -111,7 +112,7 @@ Besides the Data contract, these checks join the catalog:
 
 Severity follows who causes a failure. A rule on the pipeline's own logic fails with severity error, following Write-Audit-Publish: the batch that fails publishes nothing and is set aside until a new code version (D7), the page keeps the last file that passed, and the failure is logged in the run's events, so the visitor sees at most an older data age, or a gap in the history until the batch returns. A rule on a provider's data fails with severity warn: the failure is logged and the run publishes. The owner learns of a failure of either severity through observability (OQ5).
 
-A row that fails its column's schema is quarantined instead, following a quarantine table: it is written there with the check it failed and the bronze object it comes from, the failure is logged, and the rest of its batch publishes. A provider's new value then removes only its rows from the page, never shows the visitor a value outside the schema, and reaches the owner through observability like any failed rule. **#7**
+A row that fails its column's schema is quarantined instead, following a quarantine table: it is written there with the check it failed and the bronze object it comes from, the failure is logged, and the rest of its batch publishes. A provider's new value then removes only its rows from the page, never shows the visitor a value outside the schema, and reaches the owner through observability like any failed rule. **#1**
 
 A quality indicator is kept if it is actionable, when the owner acts on capture, on a provider or on the model's reference data as it moves, or if it measures a provider's quality, which answers [d002 › Q2](d002-requirements.md#guiding-questions). DQM4, DQM5, DQM8 and the counts above `capacity` form each provider's scorecard. [d002 › R14](d002-requirements.md#requirements) is an actionable indicator, DQM11, built by the observability child since it reads capture's logs. TR52, a station's service, measures the business, not its data, and stays in the model outside the catalog.
 
@@ -146,7 +147,7 @@ Rejected: tagging each deployment with its commit on its platform, and reading e
 
 Each run processes the bronze objects no run has processed yet, whatever their capture instant, in bounded batches, oldest first, one after another until none is left, and then ends, following the drain mode of bounded micro-batches (Spark's `AvailableNow` trigger). Each batch is audited and published as it ends (D4), so a failure keeps what earlier batches published. Processing an object again adds no rows, and a run never starts while another is running, so scheduled runs wait while a run drains and the cadence resumes by itself.
 
-A batch whose processing fails, on reading, writing or the platform, stays pending and is retried by the next run. A batch that fails a runtime rule of severity error is set aside, following a dead-letter queue with redrive: the run logs it with its rule (D4) and goes on with the next batch, and every batch set aside returns to pending when a new code version is deployed (D5). Each batch is processed from bronze as a whole, so nothing of a failed batch counts as done. A bronze object with rows in quarantine (D4) also returns to pending with a new code version, and processing it again adds only the rows silver and gold do not hold yet. **#7**
+A batch whose processing fails, on reading, writing or the platform, stays pending and is retried by the next run. A batch that fails a runtime rule of severity error is set aside, following a dead-letter queue with redrive: the run logs it with its rule (D4) and goes on with the next batch, and every batch set aside returns to pending when a new code version is deployed (D5). Each batch is processed from bronze as a whole, so nothing of a failed batch counts as done. A bronze object with rows in quarantine (D4) also returns to pending with a new code version, and processing it again adds only the rows silver and gold do not hold yet. **#1**
 
 A backlog, from the first load of the bronze captured so far or from an outage of capture or Modal, drains in one run with the same code, and an object that reaches bronze late, or a batch that returns from being set aside, enters the next run. While a backlog drains, the published file serves older data and its age says so (D4). A batch is bounded in objects and in bytes so that it fits in a run's memory with margin, and an object above the byte bound on its own is set aside like a batch that fails a rule (D8); T060.1 fixes both bounds and the run's timeout from the memory and run time it measures. How a late object changes the stock movements already derived is decided by T060.3.
 
@@ -182,25 +183,25 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R1** The pipeline shall publish each file the page serves with a JSON Schema contract, checked by a contract test in CI. (D2)
 - **R2** If a file fails its JSON Schema, then the pipeline shall not publish it, as a runtime rule of severity error. (D2, D4)
 - **R3** The pipeline shall run every 15 min, 24/7. (D3)
-- **R4** The pipeline shall check every runtime rule of the quality catalog, and every column against its schema, in every run. (D4, #4)
+- **R4** The pipeline shall check every runtime rule of the quality catalog, and every column against its schema, in every run. (D4, #1)
 - **R5** If a batch fails a runtime rule of severity error, then the pipeline shall publish nothing from it, set it aside and log the failure with its rule in the run's events. (D4, D7)
 - **R6** If a batch fails a runtime rule of severity warn, then the pipeline shall log the failure with its rule in the run's events and publish the batch. (D4)
 - **R7** The pipeline shall build each quality indicator of the catalog as a gold table, with its target. (D4)
 - **R8** Where a published file holds a station's latest count, the pipeline shall mark the count when it is frozen (DQM5). (D4)
 - **R9** When the age of a published file exceeds one cadence plus one run, the observability shall alert the owner. (D4)
-- **R10** When a batch fails a runtime rule of either severity, or a row is quarantined, the observability shall alert the owner. (D4, #7)
+- **R10** When a batch fails a runtime rule of either severity, or a row is quarantined, the observability shall alert the owner. (D4, #1)
 - **R11** The pipeline shall write in every silver and gold row the ID of the run that wrote it and that run's code version. (D5)
 - **R12** The pipeline shall log, for each run, what it read, what it wrote and its outcome. (D5)
 - **R13** When a run starts, the pipeline shall process the bronze objects no run has processed yet, oldest first, in batches bounded in objects and in bytes, one after another until none is left. (D7)
-- **R14** When processing a bronze object again, the pipeline shall add no row that silver and gold already hold. (D7, #7)
+- **R14** When processing a bronze object again, the pipeline shall add no row that silver and gold already hold. (D7, #1)
 - **R15** While a run is running, the pipeline shall not start another run. (D7)
 - **R16** When a batch passes its audit, the pipeline shall publish it before processing the next one. (D7)
 - **R17** If a batch fails on reading, writing or the platform, then the pipeline shall leave it pending for the next run. (D7)
 - **R18** If a bronze object on its own exceeds the batch's byte bound, then the pipeline shall set it aside and log it. (D7, D8)
-- **R19** When a new code version is deployed, the pipeline shall return every batch set aside, and every bronze object with rows in quarantine, to pending. (D7, #7)
+- **R19** When a new code version is deployed, the pipeline shall return every batch set aside, and every bronze object with rows in quarantine, to pending. (D7, #1)
 - **R20** The pipeline shall rebuild its record of the bronze objects processed and set aside from bronze and the silver rows' lineage. (D8)
 - **R21** If a run reaches its timeout, then the pipeline shall end it and signal a failure to the heartbeat. (D8)
-- **R22** If a row fails its column's schema, then the pipeline shall write it to the quarantine table with the check it failed and its bronze object, log the failure in the run's events, and publish the rest of its batch. (D4, D7, #7)
+- **R22** If a row fails its column's schema, then the pipeline shall write it to the quarantine table with the check it failed and its bronze object, log the failure in the run's events, and publish the rest of its batch. (D4, D7, #1)
 
 ### 1.4 Done when
 
@@ -234,7 +235,15 @@ If some block contains `options considered`, include them with pros and cons.
 
 #### Quality catalog
 
-[data-quality.md](../data-quality.md) holds the quality catalog of D4, apart from the model: the runtime rules and the quality indicators, one table per class, each item with its full text. They leave [data-model.md › Data contract](../data-model.md#data-contract), which keeps the transformation specs and the documentation items. Each item of the catalog has a flat ID with a prefix per class, after the terms of DAMA-DMBOK and ISO/IEC 25024: a runtime rule is `DQR1`, `DQR2`…, and carries its dimension and severity; a quality indicator, a quality measure in ISO/IEC 25024, is `DQM1`, `DQM2`…, and carries its dimension, its target, the gold table that builds it and why it is kept: the action it prompts or the provider's quality it measures (D4). **#5** The items left in the Data contract take a prefix per class of D4, numbered in the order they appear: a transformation spec becomes `TR1`, `TR2`…, as the transformation rules of a source-to-target mapping, and keeps its ID when it moves to its table's worksheet; a documentation item becomes `RDM1`, `RDM2`…. Every citation of a moved or renumbered item is updated in the same change. Tests and alerts cite the catalog's ID. The child that builds an item translates it into its data-test tool; a machine-readable file that tool needs is derived from the catalog, which stays the source. **#1** A column's type, nullability and accepted values are its schema: cells of its worksheet row, with no ID, checked in every run; the catalog holds only what no column's schema states. **#4** Until its table's worksheet exists, a rule that becomes a column's schema stays in the Data contract as a transformation spec with its pending marker, and the child that creates the worksheet turns it into the column's cells. **#6**
+[data-quality.md](../data-quality.md) holds the quality catalog of D4, apart from the model, after the terms of DAMA-DMBOK and ISO/IEC 25024. Each item lives in one place, with its full text and a flat ID whose prefix tells its class, numbered per class in the order the items appear:
+
+- **Runtime rules** (`DQR1`, `DQR2`…): in the catalog, each with its dimension and severity.
+- **Quality indicators** (`DQM1`, `DQM2`…), quality measures in ISO/IEC 25024: in the catalog, each with its dimension, its target, the gold table that builds it and why it is kept: the action it prompts or the provider's quality it measures (D4).
+- **Transformation specs** (`TR1`, `TR2`…), the transformation rules of a source-to-target mapping: in [data-model.md › Data contract](../data-model.md#data-contract). A spec on one column moves to its table's worksheet with its ID.
+- **Documentation items** (`RDM1`, `RDM2`…): in the Data contract.
+- **Column schema:** a column's type, nullability and accepted values, cells of its worksheet row with no ID, checked in every run; the catalog holds only what no schema states, and a row that fails its schema is quarantined (D4). Until its table's worksheet exists, a rule that becomes schema stays a transformation spec with its pending marker, and the child that creates the worksheet turns it into the column's cells.
+
+Tests and alerts cite these IDs. The child that builds an item translates it into its data-test tool; a machine-readable file that tool needs is derived from the catalog, which stays the source. **#1**
 
 Options considered:
 
@@ -269,13 +278,9 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| 1 | [Quality catalog](#quality-catalog) | The quality catalog is a Markdown document, `docs/data-quality.md`, that takes the runtime rules and quality indicators out of the Data contract as `DQR` and `DQM`, after DAMA-DMBOK's and ISO/IEC 25024's terms; the items left are renumbered per class, transformation specs as `TR` and documentation items as `RDM`; following docs-as-code and source-to-target mapping; **refines [d005 › D29](d005-data-model.md#d29-data-contract-of-the-model)** **→ #4, #5** | One place per rule, readable on its own; the ID tells the item's class and how it is verified; no code cites the IDs yet | R4, R7 | Plan |
+| 1 | [Quality catalog](#quality-catalog), [D4](#d4-data-quality-in-four-classes), [D7](#d7-catch-up-in-bounded-batches) | The quality catalog is a Markdown document, `docs/data-quality.md`, holding the runtime rules (`DQR`) and the quality indicators (`DQM`), each indicator with a Why; the Data contract keeps transformation specs (`TR`) and documentation items (`RDM`); a column's type, nullability and accepted values are its schema in its worksheet, with no ID, and a row that fails it is quarantined while the rest of its batch publishes; following DAMA-DMBOK and ISO/IEC 25024, docs-as-code, source-to-target mapping, ODCS's schema apart from quality, dbt's model contracts, and a quarantine table with D7's redrive; **refines [d005 › D29](d005-data-model.md#d29-data-contract-of-the-model)** | One place per rule, readable on its own; the ID tells the item's class and how it is verified; each check stated once; a provider's change removes only its rows from the page | R4, R7, R10, R14, R19, R22 | Plan |
 | 2 | [Approach](#21-approach) | D4, D5, D6 and D7 become ADRs, following Nygard's ADRs for cross-cutting architecture decisions | Each binds work after T060 and outside it: every future rule and table, every component's deployment, the pipeline's run mode | R4–R6, R11–R21 | Plan |
 | 3 | [Carried-over inputs](#carried-over-inputs), [Children](#15-children) | Each carried-over input goes to the first child that needs it: all to T060.1 but where the history load runs, to T060.4 | Each is first needed where the pipeline first reads bronze, runs on Modal and publishes | — | Plan |
-| 4 | [Quality catalog](#quality-catalog), [D4](#d4-data-quality-in-four-classes) | A column's type, nullability and accepted values are its schema, cells of its worksheet row with no ID, checked in every run; the catalog holds only what no column's schema states, following ODCS's schema apart from quality and dbt's model contracts; **refines #1** **→ #6, #7** | Each check stated once; no runtime rule per column | R4 | Plan |
-| 5 | [Quality catalog](#quality-catalog) | Each quality indicator states in a Why column the action it prompts or the provider's quality it measures, following DAMA-DMBOK's business relevance of a metric; **refines #1** | D4's criterion for keeping an indicator is checked row by row | R7 | Plan |
-| 6 | [Quality catalog](#quality-catalog) | Until its worksheet exists, a rule that becomes a column's schema, such as TR44's nullability and TR50's domain, stays in the Data contract as a transformation spec with its pending marker, following docs-as-code's single source; **refines #4** | Each rule moves once and always has one home | R4 | Plan |
-| 7 | [D4](#d4-data-quality-in-four-classes), [D7](#d7-catch-up-in-bounded-batches) | A row that fails its column's schema is quarantined with its check and bronze object, and the rest of its batch publishes; its object returns to pending with a new code version; following a quarantine table (Databricks expectations' `drop`, dbt's `store_failures`) with D7's redrive; **refines #4** | A provider's change removes only its rows, not the whole page; the visitor never sees a value outside the schema; the owner is alerted | R4, R10, R14, R19, R22 | Plan |
 
 ### 2.3 File layout
 
