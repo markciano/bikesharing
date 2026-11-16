@@ -19,6 +19,10 @@ Phase: the blocks and reviews completed. -->
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review
+- Next: Plan step 5, writing File layout's deliverables in this order:
+  1. Catalog and renumbering, as one change, applying #1, #4 and #5: `data-quality.md`, `data-model.md`, `.claude/rules/docs/data-model.md`, d005 and d007's citations, D4 included. Start with the rule file and a worked worksheet example (`is_plus`, `propulsion`) for the owner to check #4 before renumbering. The rule file's Rule IDs, as approved: "a rule's ID tells its class: `TR` for a transformation spec, kept when it moves from `docs/data-model.md` › Data contract to its table's worksheet; `RDM` for a documentation item; `DQR` and `DQM` for a runtime rule and a quality indicator, in `docs/data-quality.md`. A new item takes the next free ID of its class, and an ID is never reused." #4 also changes: the worksheet row gains Accepted values and loses `## Column rules`, TRs going in the row's Rule (RDM68 and the rule file); RDM52 splits into a TR and its column's Nullable; RDM56 becomes the Accepted values of the columns it covers; D4 states the schema check and drops RDM52 and RDM56 from its runtime rules; R4 adds every column's schema.
+  2. The four ADRs, one per message; first propose a comment in `.claude/skills/design/adr-template.md`: Considered Options holds only alternatives actually weighed, never obvious or forced ones. Numbers shift if T064's ADR is written first.
+  3. `architecture.md`.
 
 ## 1. Spec — what and why
 
@@ -224,7 +228,7 @@ If some block contains `options considered`, include them with pros and cons.
 
 #### Quality catalog
 
-[data-quality.md](../data-quality.md) holds the quality catalog of D4, apart from the model: the runtime rules and the quality indicators, one table per class, each item with its full text. They leave [data-model.md › Data contract](../data-model.md#data-contract), which keeps the transformation specs and the documentation items. Each item of the catalog has a flat ID with a prefix per class, after the terms of DAMA-DMBOK and ISO/IEC 25024: a runtime rule is `DQR1`, `DQR2`…, and carries its dimension and severity; a quality indicator, a quality measure in ISO/IEC 25024, is `DQM1`, `DQM2`…, and carries its dimension, its target and the gold table that builds it. The items left in the Data contract take a prefix per class of D4, numbered in the order they appear: a transformation spec becomes `TR1`, `TR2`…, as the transformation rules of a source-to-target mapping, and keeps its ID when it moves to its table's worksheet; a documentation item becomes `RDM1`, `RDM2`…. Every citation of a moved or renumbered item is updated in the same change. Tests and alerts cite the catalog's ID. The child that builds an item translates it into its data-test tool; a machine-readable file that tool needs is derived from the catalog, which stays the source. **#1**
+[data-quality.md](../data-quality.md) holds the quality catalog of D4, apart from the model: the runtime rules and the quality indicators, one table per class, each item with its full text. They leave [data-model.md › Data contract](../data-model.md#data-contract), which keeps the transformation specs and the documentation items. Each item of the catalog has a flat ID with a prefix per class, after the terms of DAMA-DMBOK and ISO/IEC 25024: a runtime rule is `DQR1`, `DQR2`…, and carries its dimension and severity; a quality indicator, a quality measure in ISO/IEC 25024, is `DQM1`, `DQM2`…, and carries its dimension, its target, the gold table that builds it and why it is kept: the action it prompts or the provider's quality it measures (D4). **#5** The items left in the Data contract take a prefix per class of D4, numbered in the order they appear: a transformation spec becomes `TR1`, `TR2`…, as the transformation rules of a source-to-target mapping, and keeps its ID when it moves to its table's worksheet; a documentation item becomes `RDM1`, `RDM2`…. Every citation of a moved or renumbered item is updated in the same change. Tests and alerts cite the catalog's ID. The child that builds an item translates it into its data-test tool; a machine-readable file that tool needs is derived from the catalog, which stays the source. **#1**
 
 Options considered:
 
@@ -259,17 +263,31 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| 1 | [Quality catalog](#quality-catalog) | The quality catalog is a Markdown document, `docs/data-quality.md`, that takes the runtime rules and quality indicators out of the Data contract as `DQR` and `DQM`, after DAMA-DMBOK's and ISO/IEC 25024's terms; the items left are renumbered per class, transformation specs as `TR` and documentation items as `RDM`; following docs-as-code and source-to-target mapping | One place per rule, readable on its own; the ID tells the item's class and how it is verified; no code cites the IDs yet | R4, R7 | Plan |
+| 1 | [Quality catalog](#quality-catalog) | The quality catalog is a Markdown document, `docs/data-quality.md`, that takes the runtime rules and quality indicators out of the Data contract as `DQR` and `DQM`, after DAMA-DMBOK's and ISO/IEC 25024's terms; the items left are renumbered per class, transformation specs as `TR` and documentation items as `RDM`; following docs-as-code and source-to-target mapping **→ #4, #5** | One place per rule, readable on its own; the ID tells the item's class and how it is verified; no code cites the IDs yet | R4, R7 | Plan |
 | 2 | [Approach](#21-approach) | D4, D5, D6 and D7 become ADRs, following Nygard's ADRs for cross-cutting architecture decisions | Each binds work after T060 and outside it: every future rule and table, every component's deployment, the pipeline's run mode | R4–R6, R11–R21 | Plan |
 | 3 | [Carried-over inputs](#carried-over-inputs), [Children](#15-children) | Each carried-over input goes to the first child that needs it: all to T060.1 but where the history load runs, to T060.4 | Each is first needed where the pipeline first reads bronze, runs on Modal and publishes | — | Plan |
+| 4 | [Quality catalog](#quality-catalog), [D4](#d4-data-quality-in-four-classes) | A column's type, nullability and accepted values are its schema, cells of its worksheet row with no ID, checked in every run; the catalog holds only what no column's schema states, following ODCS's schema apart from quality and dbt's model contracts; **refines #1** | Each check stated once; no runtime rule per column | R4 | Plan |
+| 5 | [Quality catalog](#quality-catalog) | Each quality indicator states in a Why column the action it prompts or the provider's quality it measures, following DAMA-DMBOK's business relevance of a metric; **refines #1** | D4's criterion for keeping an indicator is checked row by row | R7 | Plan |
 
 ### 2.3 File layout
 
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
 ```text
-<path>/
-└── <file>      (new)        <purpose>
+.claude/rules/docs/
+└── data-model.md                              (modified)  Rule IDs: a column rule keeps its TR ID when it moves to its worksheet
+docs/
+├── data-quality.md                            (new)       Quality catalog: runtime rules (DQR) and quality indicators (DQM) (#1)
+├── data-model.md                              (modified)  Data contract loses the runtime rules and quality indicators; the rest renumbered as TR and RDM (#1)
+├── architecture.md                            (modified)  §6.2 runs in bounded batches, audited before publishing; §8 data quality, lineage and releases cite their ADRs
+├── decisions/
+│   ├── 0042-data-quality-classes-and-severity.md  (new)   D4: four classes, severity by who causes a failure, write-audit-publish (#2)
+│   ├── 0043-lineage-at-four-levels.md         (new)       D5: lineage by table, column, run and row (#2)
+│   ├── 0044-no-release-tracking.md            (new)       D6: a deployment's commit found by time, with no release tracking (#2)
+│   └── 0045-catch-up-in-bounded-batches.md    (new)       D7: drain mode in bounded batches, dead-letter with redrive (#2)
+└── designs/
+    ├── d005-data-model.md                     (modified)  D29 and Implemented: the contract's IDs per class, refined by #1; citations renumbered
+    └── d007-pipeline-design.md                (modified)  Header lists the new ADRs; D4 and every citation renumbered
 ```
 
 ## 3. Close
