@@ -8,7 +8,7 @@ Sections marked Optional are kept only when they apply.
 
 - **Task:** T069
 - **ADRs:** [ADR-0013](../decisions/0013-github-flow-with-rebase-merge.md), [ADR-0014](../decisions/0014-ci-test-layers.md), [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md)
-- **Code:** `spikes/code-workflow/`
+- **Code:** none (no run)
 
 ## Status
 
@@ -18,7 +18,7 @@ Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current step: the step being executed, or —. -->
 
 - State: Draft 📝
-- Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
+- Phase: [x] Questions · [ ] Conclusion (no run: Method, Steps and Steps review do not apply; delivering 5.6 Records)
 - Started: — · Finished: —
 - Current step: —
 
@@ -148,155 +148,19 @@ Practices already covered or not worth their cost:
 3. The options rejected and how robust the result is.
 4. The evaluation behind it: the table or weighted matrix (needs, cuts, anchors and scores) if one was used. A security decision lists its threats in a table: `| # | Threat (STRIDE) | Impact | Control | Requirement |`, with IDs `TH1`, `TH2`… per document. -->
 
-### 1.3 Questions
-
-<!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
-"Observe only": things to note during the run with no dedicated effort. -->
-
-Main question: `<one sentence>`
-
-- **Q1.** `<question>`
-- **Observe only:** `<item>`
-
-### 1.4 Exit criteria
-
-<!-- Fixed before the first run; a later change is recorded in the Decision log.
-Derived from the standard that applies to this kind of question, named in the first line: e.g. DAMA data quality dimensions for a data source, a weighted decision matrix for a technology choice.
-Each criterion is measurable and says whether it is a hard cut or a guide. The timebox says what ends the run. State whether one variant meeting the criteria is enough. -->
-
-- **Standard:** `<standard or pattern applied>`
-- **Timebox:** `<window, and what ends it>`
-- `<criterion>` — `<threshold>` — hard cut | guide
-
-### 1.5 Out of scope
-
-<!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
-
-- `<item>` — TNNN
-
-### 1.6 Open questions
-
-<!-- Optional. Unresolved questions about what to find out. Questions about how belong to Method. -->
-
-| Question | Notes |
-|---|---|
-| | |
-
-## 2. Method — how we find out
-
-### 2.1 Approach
-
-<!-- The variants, options or probes compared, and what each one tells that the others do not. -->
-
-| Variant | What it is | What it tells |
-|---|---|---|
-| | | |
-
-#### 2.1.1 Shared behaviour
-
-<!-- Optional. Rules every variant follows (schedules, formats, key layouts, logs), stated once so the steps can cite them. -->
-
--
-
-#### `<A>`. `<Title of variant, option or probe A>`
-
-<!-- Detailed description -->
-
-### 2.3 Decision log
-
-<!-- It logs decisions about the method, before and during the run, including changes of course. Oldest first.
-Entries follow .claude/rules/docs/decision-log.md (log only, change links).
-- Column Applies to: anchor link(s) to the section where the decision is applied, named in one or two words (e.g. Q1, Probe A, File layout).
-- Column Decided at: the Status phase where it was decided (Method, Steps), `<phase> review` when decided while reviewing that phase, or `Running step N` when decided during the run.
--->
-
-| # | Applies to | Decision | Reason | Decided at |
-|---|---|---|---|---|
-| `<N>` |  |  |  |  |
-
-### 2.4 File layout
-
-<!-- Every file and folder the spike creates, as a tree with its purpose in one line. Captured data and outputs are marked as ignored by Git. The README is always included. -->
-
-```text
-spikes/<name>/
-├── README.md        Question, setup and commands, what each script does, link to the report
-└── <file>           <purpose>
-```
-
-## 3. Steps
-<!-- Each step is one reviewable result, touching at most 2–3 files.
-- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- Commit: only in a step that changes committed files: the proposed message, following the Git conventions in CLAUDE.md.
-- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner.
-- Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>. -->
-
-### 3.1 Prerequisites
-
-<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
-
-### Step 1 — `<title>`
-
-- **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md.
-- **Model:** `<model · effort>` (or —)
-- **Gate:** `<condition>` → `<consequence>`
-
-#### Scope
-
-<!-- The result of the step. List the components and the files created or changed (code, tests, docs). A reviewer should know what the diff will contain from this section alone. -->
-
-#### Reads
-
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
-
-#### Do
-
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
-
-#### Check
-
-<!-- command/s or verification with a yes/no result. -->
-
-## 4. Findings
-
-<!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
-
-### F1. `<one-line statement>`
-
-Step N · YYYY-MM-DD · `<source of evidence>`
-
-- `<evidence>`
-- Consequence: `<for variants, steps or questions>`
-
 ## 5. Conclusion
 
 <!-- Filled after the last step. Covers only the observed window. -->
 
-Observed window: `<from–to, UTC; what it does not cover>`
-
-### 5.1 Answers
-
-- **Q1. Title** `<answer>` (FN)
-
-### 5.2 Exit criteria
-
-<!-- One result per criterion and variant. -->
-
-| Criterion | Kind | Result | Findings |
-|---|---|---|---|
-
-### 5.3 Verdict
-
-<!-- The answer to the main question in 2–3 sentences. -->
+The spike had no run: every decision was settled at framing by documents and arithmetic.
 
 ### 5.4 Not verified
 
 <!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
 
-- `<item>` — `<risk>` — `<mitigation>`
+- Whether `/code-review` applies `.claude/rules/`; its documentation names only `CLAUDE.md` — the review may not judge project conventions — tools enforce the mechanical ones (D2) and `review.md` checks conformance to the design; reopen D1 if the first review in T060.1 ignores a rule.
+- How the local `/code-review` verifies its findings; only the cloud review documents it — false positives cost the owner's time at each review point — `low` effort reports only the findings it is most confident in.
+- The `/code-review` target that covers "since the previous review point, uncommitted changes included" — a point could miss changes — set and checked against the documentation in the edit to `/implement`.
 
 ### 5.5 Production inputs
 
@@ -304,7 +168,11 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | | `<e.g. D1, #2, F3>` | |
+| P1 | `pyproject.toml` configures ruff (default rule set), mypy (standard mode) and import-linter (the contracts of ADR-0046) | D2 | Design of T060.1 |
+| P2 | `scripts/check-pipeline.sh` runs ruff, mypy, `lint-imports` and pytest; it is the Check of every code step and the command of the pipeline's CI job; `docs/testing-strategy.md` › Python is updated with it | D2 | Design of T060.1 |
+| P3 | A `PostToolUse` hook on `.py` edits runs `ruff format` and `ruff check --fix`, and reports what remains on stderr with exit 2 | D2 | Design of T060.1 |
+| P4 | Each step sets its Review field; the last step is `yes`, and `yes, security` if the task touches secrets, permissions or external input | D1, D3 | Design of T060.1 |
+| P5 | Layout and conventions of the SQL files, and their rule | D3 | Design of T060.1 |
 
 ### 5.6 Records
 
@@ -312,10 +180,9 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 | Output | From | Destination | Commit |
 |---|---|---|---|
-| `<ADR, requirement, source card or task>` | `<e.g. D1, F3>` | `<document and section>` | `<Done, or Pending>` |
-
-## 6. Sources
-
-<!-- Optional. Earlier spikes, benchmarks and documentation used. -->
-
--
+| Review field in design steps, and its check | D1, D3 | `.claude/skills/design/template.md` › Steps; `.claude/skills/design/review-steps.md` | Pending |
+| Review points, security review and the check script in the step protocol | D1, D2, D3 | `.claude/skills/implement/SKILL.md` › Step protocol, Change report | Pending |
+| Tooling and Pipeline architecture | D2, D3 | `.claude/rules/code/python.md` | Pending |
+| A pipeline job runs the check script | D2 | `.claude/rules/code/ci.md` › Job per component | Pending |
+| ADRs carried into rules | D3 | `.claude/rules/docs/adr.md` › Lifecycle | Pending |
+| T024 closed, covered by T060.1 | D2 | GitHub issue of T024 | Pending |
