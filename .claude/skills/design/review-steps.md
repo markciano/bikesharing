@@ -17,6 +17,7 @@ Phase shows Steps checked and Steps review unchecked. Otherwise stop and tell th
 2. **Traceability.** Every requirement is covered by at least one step. Every step names its requirements (R). No step adds scope the Plan does not contain.
 3. **Order.** No step, its Check included, uses something created in a later step.
 4. **Shape.** Each step touches at most 2–3 files, all in File layout, and contradicts no decision in Decision summary. A code step includes its tests. The last step verifies the deliverable end to end. Commit follows the Git conventions in CLAUDE.md. Pending items follow the conventions in CLAUDE.md.
+5. **Review points.** Every step sets Review; each review closes a reviewable unit, and the last code step has at least `code`.
 
 ## Severity
 
