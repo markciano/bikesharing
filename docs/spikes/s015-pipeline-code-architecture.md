@@ -147,6 +147,33 @@ This fixes the shape of a rule in the code, not which rules exist, when they run
 
 Options rejected: a Python list with each rule's SQL inline; it saves a file per rule but keeps SQL in strings, without SQL highlighting or lint, and apart from how models live ([ADR-0025](../decisions/0025-sql-models-directed-by-python.md)).
 
+#### D4. Configuration as one typed value, read at the edge
+
+Configuration and credentials arrive as environment variables, set by the platform's secret store (R25), as Twelve-Factor's Config asks. One function in the shell, and only that one, reads the environment and returns a frozen dataclass of the standard library; the core receives it as a value, and tests build it directly with no environment. Each credential is wrapped in a type whose text form is masked, so a log or a printed configuration never shows it (R22). A missing variable fails at start-up. This narrows [ADR-0029](../decisions/0029-pipeline-code-architecture.md)'s rule 3, from the package to that one function.
+
+What would change it: configuration that grows in number of variables, holds non-trivial types or becomes nested moves to `pydantic-settings`; the change stays in the configuration module, since the rest of the code sees only the value.
+
+Options rejected: `pydantic-settings` now; its type coercion and validation have little to do with a handful of text variables, and it adds two dependencies to pin and maintain ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)).
+
+#### D5. Architecture rules checked in CI with import-linter
+
+The rules of D1, D2 and D4 are checked in CI, so a departure fails the PR instead of waiting for review. Import contracts use import-linter, the reference tool for import rules in Python, declared in `pyproject.toml` and run by the pipeline's CI job as a development dependency. The core and the shell are separate subpackages of the pipeline package, and the platform module lives outside the package; their names are chosen when T060.1 creates them. These boundaries are what makes the rules checkable: an import contract holds between modules, so a module mixing core and shell could not satisfy rule 2, and the package could not satisfy rules 1 and 5 if the module importing the platform's SDK lived inside it.
+
+| # | Rule | Check |
+|---|---|---|
+| 1 | The package never imports the platform's SDK | `forbidden` contract |
+| 2 | The core never imports the engine or an HTTP client | `forbidden` contract |
+| 3 | Dependencies point from the shell to the core, never back | `layers` contract |
+| 4 | The platform module never imports the engine | `forbidden` contract |
+| 5 | The pipeline starts without the platform's SDK installed | A CI test |
+| 6 | Only the configuration function reads the environment (D4) | Review: an import check cannot tell this use of `os` from others |
+
+Rules 1, 4 and 5 carry over [ADR-0029](../decisions/0029-pipeline-code-architecture.md)'s rules 1, 2 and 4; rules 2 and 3 are new with B1. A driven port added under D1's evolution rule breaks no contract; the engine imported into the core does.
+
+Not verified: a `forbidden` contract on an external package such as `duckdb` needs `include_external_packages` set, as summarised from import-linter's documentation; T060.1 confirms it when it configures the contracts.
+
+Options rejected: PyTestArch, the same rules as pytest tests; it needs no extra CI step but is less established, and the rules become code rather than declarations.
+
 ### 1.3 Questions
 
 <!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
