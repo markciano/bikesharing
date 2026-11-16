@@ -34,7 +34,12 @@ The pipeline (T060.1 onwards) is the first large codebase in the project, built 
 
 #### D1. Code review
 
-TODO(T069): decision, pending the weighted decision matrix.
+Code is reviewed at review points planned in the design, following risk-based review and Google's guidance on small changes. Each design step carries a **Review** field (`yes`, with its reason, or `no`), set when the steps are written and checked in the design's steps review; a point goes where logic carries risk (time handling, aggregations, parsing) or after about 400 changed lines since the previous one, and the last step is always a point. At a point, the implementing session runs the built-in `/code-review` at `low` effort, without `--fix`, over the changes since the previous point; it runs as a background subagent with its own context, and its findings go into the Change report, where the owner decides the fixes, applied within the step's Scope and taken in the step's commit. Conformance to the design stays in the end-of-task review (`review.md`). The exact `/code-review` target for "since the previous point, uncommitted changes included" is set in the edit to `/implement`.
+
+- **Would change it:** bugs that a review point should have caught reach the PR, or review points end up on nearly every step: move to a review on every step (option D below).
+- **Would not change it:** a task diff of any size, since the points bound each review, not the task.
+
+Rejected: a review of the whole task (A, B), because a pipeline task can exceed the size a review handles well (K3); a review on every step (C, D), because it asks the owner to decide findings at every step for little gain on steps with no risk. E beats D by 0.15 on owner effort only; with a lower weight on C5 (5 instead of 15) the order holds.
 
 Needs:
 
@@ -50,6 +55,7 @@ Hard cuts:
 
 - **K1 (N2):** the reviewer does not share the context of the session that wrote the code.
 - **K2 (N4):** the reviewer reports and applies nothing on its own; the owner decides the fixes and makes every commit.
+- **K3 (N1, N5):** each review covers a small change, bounded where the steps are known; about 400 changed lines as a guide. Detection falls beyond about 400 lines per review (SmartBear/Cisco, second-hand) and Google calls 1,000 lines "usually too large".
 
 Criteria:
 
@@ -71,7 +77,28 @@ Anchors:
 | C4 | At the end of the task, every step done (about 5–10) | Mid-task (about 3 steps, one Produce session) | After each step |
 | C5 | New files and a change to the step or PR flow | An edit to an existing file | No files to maintain: a built-in tool |
 
-The result is checked for sensitivity to a lower weight on C5.
+Options:
+
+- **A.** A code-quality checklist added to `review.md`, end of task.
+- **B.** `/code-review` over the branch diff in the end-of-task review session.
+- **C.** A custom read-only reviewer subagent that compares each step with the Spec.
+- **D.** `/code-review` over each step's diff, run by `/implement`.
+- **E.** `/code-review` at review points planned in the design.
+
+All pass K1 (a background subagent or fresh session does not see the conversation) and K2 (`/code-review` without `--fix` only reports; C is read-only). A and B fail K3: they review the whole task.
+
+| C (weight) | C | D | E |
+|---|---|---|---|
+| C1 (30) | 4: against the Spec; no verification of findings | 4: dedicated bug pass; no Spec, finding verification not documented | 4: as D |
+| C2 (20) | 2: findings to decide at every step | 2: as C | 4: findings only at planned points |
+| C3 (15) | 3: only a summary returns | 3: findings return from a background subagent | 3: as D |
+| C4 (20) | 5: every step | 5: every step | 4: within the bound, by design |
+| C5 (15) | 1: a new agent file and a change to the step | 3: built-in, one change to the step | 3: built-in; a field in the design template and one change to the step |
+| **Total** | 3.20 | 3.50 | **3.65** |
+
+Sensitivity: with C5 at 5, E 3.72, D 3.56, C 3.44.
+
+Sources: [Claude Code › Local code review](https://code.claude.com/docs/en/code-review-local), [Claude Code › Subagents](https://code.claude.com/docs/en/sub-agents), [Google › What to look for](https://google.github.io/eng-practices/review/reviewer/looking-for.html), [Google › Small CLs](https://google.github.io/eng-practices/review/developer/small-cls.html), [SmartBear › Best practices for peer code review](https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/).
 
 <!-- In this order, so the reader finds what matters first:
 1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
