@@ -34,7 +34,7 @@ The pipeline (T060.1 onwards) is the first large codebase in the project, built 
 
 #### D1. Code review
 
-Code is reviewed at review points planned in the design, following risk-based review and Google's guidance on small changes. Each design step carries a **Review** field (`yes`, with its reason, or `no`), set when the steps are written and checked in the design's steps review; a point goes where logic carries risk (time handling, aggregations, parsing) or after about 400 changed lines since the previous one, and the last step is always a point. At a point, the implementing session runs the built-in `/code-review` at `low` effort, without `--fix`, over the changes since the previous point; it runs as a background subagent with its own context, and its findings go into the Change report, where the owner decides the fixes, applied within the step's Scope and taken in the step's commit. Conformance to the design stays in the end-of-task review (`review.md`). The exact `/code-review` target for "since the previous point, uncommitted changes included" is set in the edit to `/implement`.
+Code is reviewed at review points planned in the design, following risk-based review and Google's guidance on small changes. Each design step carries a **Review** field (`code`, `security`, `code and security`, or `no`), set when the steps are written and checked in the design's steps review. A review goes on the step that completes a reviewable unit, a flow or action usually built over several steps (Google's self-contained change); risk and size, about 400 changed lines as a guide, decide how small a unit is; the last code step has at least `code`. At a `code` point, the implementing session runs the built-in `/code-review` at `low` effort, without `--fix`, over the changes since the previous point; it runs as a background subagent with its own context, and its findings go into the Change report, where the owner decides the fixes, applied within the step's Scope and taken in the step's commit. Conformance to the design stays in the end-of-task review (`review.md`). The exact `/code-review` target for "since the previous point, uncommitted changes included" is set in the edit to `/implement`.
 
 - **Would change it:** bugs that a review point should have caught reach the PR, or review points end up on nearly every step: move to a review on every step (option D below).
 - **Would not change it:** a task diff of any size, since the points bound each review, not the task.
@@ -129,7 +129,7 @@ The rest of `.claude/` is compared with Anthropic's Claude Code best practices; 
 
 - **Code rules for the pipeline.** `python.md` gains two short sections: Tooling, from D2, and Pipeline architecture, one line per rule of [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md) and [s015](s015-pipeline-code-architecture.md) that constrains code, each citing its source. An ADR is not loaded into a session on its own, and Anthropic's practice is that rules hold what Claude cannot infer from the code. Rejected: citing ADR-0046 in every step's Reads, which depends on no step omitting it. SQL rules wait for the first SQL files: the design of T060.1 sets their layout and conventions.
 - **ADRs carried into rules.** Most ADRs reach the code through the design that reads them and turns them into its Spec, or through a module built once that later code follows. A rule in `.claude/rules/` is kept for a convention that applies to every edit in a path, that no tool enforces and that the code does not show; such an ADR adds a one-line rule citing it to the rule file where it applies, in the same commit as the ADR. `adr.md` gains this in Lifecycle. An audit of ADR-0036 to ADR-0046 against this criterion leaves only ADR-0046, whose dependency rules import-linter enforces (D2) and whose other code rules go to `python.md`, as in the item above; ADRs before 0036 are not audited, with no evidence of a gap. Rejected: a check in the reviews, which comes later and depends on someone remembering it.
-- **Security review.** When a task touches secrets, permissions or external input, the Review field of its last step reads `yes, security`, with its reason, and the implementing session runs the built-in `/security-review` with `/code-review`, in the same way as D1. One review mechanism, set where the risk is known. Rejected: a checklist item in `review.md`, which keeps that session on conformance only.
+- **Security review.** A unit that touches secrets, permissions or external input has `security` in its Review field, and the implementing session runs the built-in `/security-review`, in the same way as D1. One review mechanism, set where the risk is known. Rejected: a checklist item in `review.md`, which keeps that session on conformance only.
 
 Practices already covered or not worth their cost:
 
@@ -171,7 +171,7 @@ The spike had no run: every decision was settled at framing by documents and ari
 | P1 | `pyproject.toml` configures ruff (default rule set), mypy (standard mode) and import-linter (the contracts of ADR-0046) | D2 | Design of T060.1 |
 | P2 | `scripts/check-pipeline.sh` runs ruff, mypy, `lint-imports` and pytest; it is the Check of every code step and the command of the pipeline's CI job; `docs/testing-strategy.md` › Python is updated with it | D2 | Design of T060.1 |
 | P3 | A `PostToolUse` hook on `.py` edits runs `ruff format` and `ruff check --fix`, and reports what remains on stderr with exit 2 | D2 | Design of T060.1 |
-| P4 | Each step sets its Review field; the last step is `yes`, and `yes, security` if the task touches secrets, permissions or external input | D1, D3 | Design of T060.1 |
+| P4 | Each step sets its Review field; the last code step has at least `code`, and a unit that touches secrets, permissions or external input has `security` | D1, D3 | Design of T060.1 |
 | P5 | Layout and conventions of the SQL files, and their rule | D3 | Design of T060.1 |
 
 ### 5.6 Records
@@ -180,7 +180,7 @@ The spike had no run: every decision was settled at framing by documents and ari
 
 | Output | From | Destination | Commit |
 |---|---|---|---|
-| Review field in design steps, and its check | D1, D3 | `.claude/skills/design/template.md` › Steps; `.claude/skills/design/review-steps.md` | Pending |
+| Review field in design steps, and its check | D1, D3 | `.claude/skills/design/template.md` › Steps; `.claude/skills/design/review-steps.md` | Done |
 | Review points, security review and the check script in the step protocol | D1, D2, D3 | `.claude/skills/implement/SKILL.md` › Step protocol, Change report | Pending |
 | Tooling and Pipeline architecture | D2, D3 | `.claude/rules/code/python.md` | Pending |
 | A pipeline job runs the check script | D2 | `.claude/rules/code/ci.md` › Job per component | Pending |
