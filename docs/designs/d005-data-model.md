@@ -335,12 +335,13 @@ Rejected: a dictionary file per source, since it repeats the cards' Fields; each
 
 #### D29. Data contract of the model
 
-The quality rules of silver and gold are the model's data contract: the uniqueness of each grain, nullability, accepted values, referential integrity with the conformed dimensions, and invariants across columns or tables. Each rule is written once, in EARS, in [data-model.md](../data-model.md) › Data contract, and cites the decision it applies. Its ID is `RDM` and a number (`RDM1`, `RDM2`…), flat and opaque: it carries no table, is never reused, and is kept when the rule moves, so the T060 test checking it can cite it from the start.
+The rules of silver and gold are written once, in EARS, and each cites the decision it applies. Its ID is a prefix per class and a number, flat and opaque: it carries no table, is never reused, and is kept when the rule moves, so the T060 test or alert checking it can cite it from the start.
 
-- **Table and cross-table rules** (grain, invariants, drill-across): stay in data-model.md.
-- **Column rules** (type, nullability, accepted values): marked `TODO(T060):` until the slice that creates their table's worksheet ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) moves them there with their ID. That slice adds rules for the columns no rule covers.
+- **Transformation specs** (`TR`, how a table or value is built) and **documentation items** (`RDM`, what the model's documents hold): in [data-model.md](../data-model.md) › Data contract. A spec on one column is marked `TODO(T060):` until the slice that creates its table's worksheet ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) moves it there with its ID.
+- **Runtime rules** (`DQR`: grain, referential integrity, invariants) and **quality indicators** (`DQM`): in the quality catalog, [data-quality.md](../data-quality.md).
+- **Column schema** (type, nullability, accepted values): cells of the column's worksheet row, with no ID. A rule that states one stays a transformation spec, marked `TODO(T060):`, until its worksheet exists. That slice adds the schema of the columns no rule covers.
 
-Each rule states one behaviour (singular, as ISO/IEC/IEEE 29148 asks of a requirement), so it is either a table rule or a column rule. A rule that holds both is split: the table part keeps its ID and the column part takes the next free one.
+Each rule states one behaviour (singular, as ISO/IEC/IEEE 29148 asks of a requirement), so it is either a table rule or a column rule. A rule that holds both is split: the table part keeps its ID and the column part takes the next free one of its class. **[d007 › #1, #4, #6](d007-pipeline-design.md#22-decision-summary)**
 
 What would change it: [d007](d007-pipeline-design.md) choosing a test tool with an executable contract; that contract then becomes the rules' place, recorded as an ADR.
 
@@ -376,39 +377,39 @@ The requirements are the rules of the model's data contract, written once in [da
 
 | Decision | Rules |
 |---|---|
-| [D1. One model over one bus matrix](#d1-one-model-over-one-bus-matrix) | RDM66 |
+| [D1. One model over one bus matrix](#d1-one-model-over-one-bus-matrix) | RDM3 |
 | [D2. Capture's fixtures as the feed sample](#d2-captures-fixtures-as-the-feed-sample) | None: a method of inspection, not a property of the model |
-| [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | RDM4, RDM5, RDM16, RDM23, RDM65 |
-| [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | RDM1, RDM2, RDM3, RDM15, RDM16, RDM22; the additivity of each measure goes in its worksheet row ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
-| [D5. Conformed dimensions](#d5-conformed-dimensions) | RDM33, RDM34, RDM35, RDM36, RDM37, RDM38, RDM43, RDM46, RDM66, RDM73, RDM77 |
-| [D6. AMBici's post code](#d6-ambicis-post-code) | RDM41, RDM42, RDM43 |
-| [D7. Station status flags](#d7-station-status-flags) | RDM8 |
-| [D8. Vehicle propulsion](#d8-vehicle-propulsion) | RDM54, RDM55, RDM74 |
-| [D9. Station municipality](#d9-station-municipality) | RDM44, RDM45, RDM46, RDM72 |
-| [D10. Barcelona district and neighbourhood](#d10-barcelona-district-and-neighbourhood) | RDM38, RDM47, RDM48, RDM49, RDM73 |
-| [D11. Place names](#d11-place-names) | RDM50, RDM51 |
-| [D12. Station names](#d12-station-names) | RDM40 |
-| [D13. Model labels](#d13-model-labels) | RDM49, RDM56 |
-| [D14. Vocabulary of the measures](#d14-vocabulary-of-the-measures) | RDM7, RDM19 |
-| [D15. Disabled vehicles and docks](#d15-disabled-vehicles-and-docks) | RDM10 |
-| [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | RDM11, RDM12, RDM20, RDM58, RDM70 |
-| [D17. Occupancy](#d17-occupancy) | RDM13, RDM14, RDM70 |
-| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | RDM52, RDM53, RDM66, RDM76; the script that rebuilds the list is code, tested by its slice of T060 ([Out of scope](#15-out-of-scope)) |
-| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | RDM9, RDM61, RDM75; the additivity of `last_reported` and of the stock's counts goes in their worksheet rows ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
-| [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | RDM17, RDM18, RDM19 |
-| [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | RDM21, RDM58 |
-| [D22. Departures and arrivals](#d22-departures-and-arrivals) | RDM25, RDM26, RDM27, RDM29, RDM32 |
-| [D23. Movements across gaps in capture](#d23-movements-across-gaps-in-capture) | RDM23, RDM24, RDM30, RDM31, RDM32 |
-| [D24. Movements at an out-of-service station](#d24-movements-at-an-out-of-service-station) | RDM26, RDM27, RDM28, RDM32 |
-| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | RDM59, RDM60, RDM61, RDM75 |
-| [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | RDM62, RDM63, RDM64 |
-| [D27. Gold per question](#d27-gold-per-question) | RDM61, RDM67 |
-| [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | RDM66, RDM67, RDM68, RDM69 |
+| [D3. Feeds that enter the model](#d3-feeds-that-enter-the-model) | TR2, TR3, TR14, TR20, RDM2 |
+| [D4. Business processes and the grain of the stock](#d4-business-processes-and-the-grain-of-the-stock) | DQR1, TR1, DQR2, DQR3, TR14, DQR4; the additivity of each measure goes in its worksheet row ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
+| [D5. Conformed dimensions](#d5-conformed-dimensions) | DQR7, DQR8, DQR9, DQR10, TR28, TR29, DQM1, DQM2, RDM3, DQM3, TR40 |
+| [D6. AMBici's post code](#d6-ambicis-post-code) | TR33, TR34, DQM1 |
+| [D7. Station status flags](#d7-station-status-flags) | TR6 |
+| [D8. Vehicle propulsion](#d8-vehicle-propulsion) | TR47, TR49, TR48 |
+| [D9. Station municipality](#d9-station-municipality) | TR35, TR36, DQM2, TR37 |
+| [D10. Barcelona district and neighbourhood](#d10-barcelona-district-and-neighbourhood) | TR29, TR38, TR39, TR41, DQM3 |
+| [D11. Place names](#d11-place-names) | TR42, TR43 |
+| [D12. Station names](#d12-station-names) | TR32 |
+| [D13. Model labels](#d13-model-labels) | TR41, TR50 |
+| [D14. Vocabulary of the measures](#d14-vocabulary-of-the-measures) | TR5, TR17 |
+| [D15. Disabled vehicles and docks](#d15-disabled-vehicles-and-docks) | TR8 |
+| [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | TR9, TR10, TR18, DQM4, TR13 |
+| [D17. Occupancy](#d17-occupancy) | TR11, TR12, TR13 |
+| [D18. AMBici's +P stations](#d18-ambicis-p-stations) | TR44, TR45, RDM3, TR46; the script that rebuilds the list is code, tested by its slice of T060 ([Out of scope](#15-out-of-scope)) |
+| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | TR7, DQM5, DQM6; the additivity of `last_reported` and of the stock's counts goes in their worksheet rows ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
+| [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | TR15, TR16, TR17 |
+| [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | TR19, DQM4 |
+| [D22. Departures and arrivals](#d22-departures-and-arrivals) | TR22, TR23, TR24, DQR5, DQR6 |
+| [D23. Movements across gaps in capture](#d23-movements-across-gaps-in-capture) | TR20, TR21, TR26, TR27, DQR6 |
+| [D24. Movements at an out-of-service station](#d24-movements-at-an-out-of-service-station) | TR23, TR24, TR25, DQR6 |
+| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | RDM1, TR52, DQM5, DQM6 |
+| [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | DQM7, TR53, DQM8 |
+| [D27. Gold per question](#d27-gold-per-question) | DQM5, RDM4 |
+| [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | RDM3, RDM4, RDM5, RDM6 |
 | [D29. Data contract of the model](#d29-data-contract-of-the-model) | All: it sets the form, place and IDs of every rule |
-| [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | RDM39, RDM47, RDM56, RDM71 |
-| [D31. Duplicate rows in the archive](#d31-duplicate-rows-in-the-archive) | RDM6 |
+| [D30. Archive stations with no attributes](#d30-archive-stations-with-no-attributes) | TR30, TR38, TR50, TR31 |
+| [D31. Duplicate rows in the archive](#d31-duplicate-rows-in-the-archive) | TR4 |
 | [D32. Security of the model](#d32-security-of-the-model) | None: the STRIDE pass finds no threat specific to the model |
-| [D33. Local calendar keys](#d33-local-calendar-keys) | RDM57, RDM62 |
+| [D33. Local calendar keys](#d33-local-calendar-keys) | TR51, DQM7 |
 
 ### 1.4 Done when
 
@@ -528,7 +529,7 @@ This task delivers documents only: the model, its contract and the templates T06
 
 ### 3.1 Implemented
 
-- Documents — the dimensional model and its data contract (data-model.md), the field dictionaries of the AMBici and Bicing source cards, the worksheet template, ADR-0040 and ADR-0041, as listed in [Approach](#21-approach); the evidence of each decision in `spikes/d005-data-model/`. No code or tests.
+- Documents — the dimensional model and its data contract (data-model.md; its runtime rules and quality indicators now in data-quality.md, **[d007 › #1](d007-pipeline-design.md#22-decision-summary)**), the field dictionaries of the AMBici and Bicing source cards, the worksheet template, ADR-0040 and ADR-0041, as listed in [Approach](#21-approach); the evidence of each decision in `spikes/d005-data-model/`. No code or tests.
 
 ### 3.2 Known gaps at close
 

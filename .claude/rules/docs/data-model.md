@@ -18,23 +18,22 @@ A worksheet is the detailed design of one silver or gold table, after Kimball's 
     - **History:** in a dimension, how it keeps changes to its attributes (slowly changing dimension); the type per attribute goes in Columns.
     - **Business process and questions:** its row in `docs/data-model.md` › Business processes and the questions of d002 it answers, as links.
     - **Sources:** the feeds it reads, linked to their section in the source cards.
-    - **Table rules:** the IDs of its grain and invariant rules, linked to `docs/data-model.md` › Data contract, where they live.
+    - **Table rules:** the IDs of the rules on the table as a whole, each linked where it lives: its transformation specs in `docs/data-model.md` › Data contract, and its runtime rules, such as its grain and invariants, in `docs/data-quality.md`.
     - **Size:** estimated rows per day and growth per year.
     - **Load:** frequency, full or incremental, and the incremental key.
     - **Partitioning:** the partition column or columns.
-  - `## Columns`: one row per column, with these columns:
+  - `## Columns`: one row per column, with these columns; Type, Nullable and Accepted values are the column's schema, checked in every run, and carry no ID:
     - **Column:** physical name.
     - **Description:** its meaning in one sentence.
     - **Type:** logical type (integer, string, boolean, date, timestamp in UTC…).
     - **Nullable:** yes or no.
+    - **Accepted values:** the closed list of values the column takes, each in backticks; `—` when its type alone bounds it.
     - **Example:** one real value.
     - **SCD:** in a dimension, the slowly changing dimension type of the attribute.
     - **Additivity:** in a fact's measure, additive, semi-additive or non-additive.
-    - **Column rules:** the IDs of its rules in Column rules.
   - `## Mapping`: one row per column, with these columns:
     - **Column:** as in Columns.
     - **AMBici:** feed and field path, linked to the feed's field dictionary.
     - **Bicing:** as AMBici; when real time and the archive differ, both, each named.
-    - **Rule:** the transformation in one sentence, linking the decision it applies.
-  - `## Column rules`: one list item per rule on type, nullability or accepted values, led by its ID in bold, in EARS, citing the decision it applies.
-- **Rule IDs:** column rules keep the `RDM` ID they had in `docs/data-model.md` › Data contract; a new rule takes the next free ID there, and an ID is never reused.
+    - **Rule:** the column's transformation spec in EARS, led by its ID in bold and citing the decision it applies; a spec that covers several columns is written in the first one's row, and the others hold its ID.
+- **Rule IDs:** a rule's ID tells its class: `TR` for a transformation spec, kept when it moves from `docs/data-model.md` › Data contract to its table's worksheet; `RDM` for a documentation item; `DQR` and `DQM` for a runtime rule and a quality indicator, in `docs/data-quality.md`. A new item takes the next free ID of its class, and an ID is never reused.
