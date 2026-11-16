@@ -1,14 +1,14 @@
 # Spike: Pipeline code architecture
 
 - **Task:** T064
-- **ADRs:** [ADR-0029](../decisions/archive/0029-pipeline-code-architecture.md), which this spike replaces
+- **ADRs:** [ADR-0029](../decisions/archive/0029-pipeline-code-architecture.md) (replaced by [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md))
 - **Code:** none: the spike has no run
 
 ## Status
 
-- State: Draft 📝
-- Phase: [x] Questions · Method, Steps and Steps review: not applicable, no run · [ ] Conclusion
-- Started: — · Finished: —
+- State: Concluded ✅
+- Phase: [x] Questions · Method, Steps and Steps review: not applicable, no run · [x] Conclusion
+- Started: — · Finished: 2026-11-16
 - Current step: —
 
 ## 1. Questions — what we need to know
@@ -188,9 +188,9 @@ The pipeline's code follows a functional core with an imperative shell (D1): the
 
 | Output | From | Destination | Commit |
 |---|---|---|---|
-| ADR-0046, pipeline code architecture: functional core with imperative shell; ADR-0029 superseded and archived | D1–D5 | `docs/decisions/` | Pending |
-| Platform separation input re-pointed to ADR-0046 | D5 | [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs) | Pending |
-| Lines citing ADR-0029 | D1 | `docs/architecture.md` and the links to ADR-0029, in ADR-0046's commit | Pending |
+| ADR-0046, pipeline code architecture: functional core with imperative shell; ADR-0029 superseded and archived | D1–D5 | `docs/decisions/` | Done |
+| Platform separation input re-pointed to ADR-0046 | D5 | [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs) | Done |
+| Lines citing ADR-0029 | D1 | `docs/architecture.md` and the links to ADR-0029, in ADR-0046's commit | Done |
 | T067, historical analysis of bike use with environmental data | Out of scope | GitHub Issues | Done |
 | T068, detect operator rebalancing | Raised while framing | GitHub Issues | Done |
 
