@@ -18,11 +18,8 @@ Kind: a build task builds code or configuration and has every block. A document-
 Phase: the blocks and reviews completed. -->
 
 - State: Draft 📝
-- Phase: [x] Spec · [ ] Plan · [ ] Plan review
-- Next: Plan step 5, writing File layout's deliverables in this order:
-  1. Done: catalog and renumbering; #4–#7 merged into #1.
-  2. Done: ADR-0042 to ADR-0045; D6 changed by #8, with R23–R24, Out of scope (T065, T066) and ADR-0044. The next log entry is #9.
-  3. Next, in a new session: `architecture.md` (§6.2 bounded batches audited before publishing; §8 data quality, lineage and deployments citing ADR-0042 to ADR-0045). Then the Plan approval.
+- Phase: [x] Spec · [x] Plan · [ ] Plan review
+- Next: Plan review (`review-plan`), the final review of this parent. The next log entry is #9.
 
 ## 1. Spec — what and why
 
