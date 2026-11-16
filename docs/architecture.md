@@ -200,18 +200,26 @@ Decisions in force are the ADRs in [decisions/](decisions/); retired ones are in
 
 ## 10. Quality requirements
 
-Quality scenarios that make the goals in §1.2 measurable:
+Quality scenarios that make the goals in §1.2 measurable, grouped by goal in its priority order, then the cost constraint of §2. The data quality rules and indicators, with their targets, are in the [quality catalog](data-quality.md).
+
+### 10.1 Currentness
+
+| ID | Stimulus | Response | Source |
+|---|---|---|---|
+| QS1 | Normal operation | Station status (Q1) is shown no more than 5 minutes after capture, and no more than 1 minute where the chosen tools allow it within the cost limit | [d002 › R3](designs/d002-requirements.md#requirements) |
+| QS2 | A feed stops updating | The visualization shows the age of the latest data instead of presenting it as current | [d002 › R7](designs/d002-requirements.md#requirements) |
+
+### 10.2 Recoverability
+
+| ID | Stimulus | Response | Source |
+|---|---|---|---|
+| QS6 | Processing resumes after a stop | All data captured since the last run is processed, at each question's grain | [d002 › R11](designs/d002-requirements.md#requirements) |
+| QS7 | Silver or gold must be rebuilt | They are rebuilt from bronze | [d002 › R13](designs/d002-requirements.md#requirements) |
+
+### 10.3 Confidentiality and integrity
 
 | ID | Quality | Stimulus | Response | Source |
 |---|---|---|---|---|
-| QS1 | Currentness | Normal operation | Station status (Q1) is shown no more than 5 minutes after capture, and no more than 1 minute where the chosen tools allow it within the cost limit | [d002 › R3](designs/d002-requirements.md#requirements) |
-| QS2 | Currentness | A feed stops updating | The visualization shows the age of the latest data instead of presenting it as current | [d002 › R7](designs/d002-requirements.md#requirements) |
-| QS3 | Completeness | The capture is interrupted | The owner is alerted | [d002 › R8](designs/d002-requirements.md#requirements) |
-| QS4 | Completeness | A monthly archive is missing or has gaps | The gap is recorded and the other months keep loading | [d002 › R9](designs/d002-requirements.md#requirements) |
-| QS5 | Completeness | Data is missing for a period | The gap is attributed to the platform's own capture or to the provider's feed | [d002 › R14](designs/d002-requirements.md#requirements) |
-| QS6 | Recoverability | Processing resumes after a stop | All data captured since the last run is processed, at each question's grain | [d002 › R11](designs/d002-requirements.md#requirements) |
-| QS7 | Recoverability | Silver or gold must be rebuilt | They are rebuilt from bronze | [d002 › R13](designs/d002-requirements.md#requirements) |
-| QS8 | Cost (§2) | The monthly cost is forecast to exceed €10 | The owner is alerted | [d002 › R10](designs/d002-requirements.md#requirements) |
 | QS9 | Confidentiality | A component's token leaks | It reaches only that component's buckets and access | [d002 › R15](designs/d002-requirements.md#requirements) |
 | QS10 | Integrity | A locked bronze object is deleted or overwritten | The store refuses it | [d002 › R16](designs/d002-requirements.md#requirements) |
 | QS11 | Integrity | The pipeline writes to bronze | The store refuses it | [d002 › R17](designs/d002-requirements.md#requirements) |
@@ -220,10 +228,22 @@ Quality scenarios that make the goals in §1.2 measurable:
 | QS14 | Integrity | The pipeline starts a run | It uses only pinned code installed ahead of the run, with no downloads | [d002 › R20](designs/d002-requirements.md#requirements) |
 | QS15 | Integrity | A history archive exceeds the size limit or holds a path outside its folder | It is rejected, the gap is recorded and the other months keep loading | [d002 › R21](designs/d002-requirements.md#requirements) |
 | QS16 | Confidentiality | A pipeline run writes logs and engine files | They hold no storage credentials | [d002 › R22](designs/d002-requirements.md#requirements) |
-| QS17 | Cost (§2) | A pipeline run fails or exceeds its time limit | It stops after a limited number of retries and the owner is alerted | [d002 › R23](designs/d002-requirements.md#requirements) |
-| QS18 | Completeness | Normal operation | Each dynamic feed has a clean capture in at least 99.5% of the minutes of each month | [d004 › D6](designs/d004-bronze-data-capture.md#d6-capture-completeness-target) |
 
-- TODO(T060): data quality checks and targets.
+### 10.4 Completeness
+
+| ID | Stimulus | Response | Source |
+|---|---|---|---|
+| QS3 | The capture is interrupted | The owner is alerted | [d002 › R8](designs/d002-requirements.md#requirements) |
+| QS4 | A monthly archive is missing or has gaps | The gap is recorded and the other months keep loading | [d002 › R9](designs/d002-requirements.md#requirements) |
+| QS5 | Data is missing for a period | The gap is attributed to the platform's own capture or to the provider's feed | [d002 › R14](designs/d002-requirements.md#requirements) |
+| QS18 | Normal operation | Each dynamic feed has a clean capture in at least 99.5% of the minutes of each month | [d004 › D6](designs/d004-bronze-data-capture.md#d6-capture-completeness-target) |
+
+### 10.5 Cost
+
+| ID | Stimulus | Response | Source |
+|---|---|---|---|
+| QS8 | The monthly cost is forecast to exceed €10 | The owner is alerted | [d002 › R10](designs/d002-requirements.md#requirements) |
+| QS17 | A pipeline run fails or exceeds its time limit | It stops after a limited number of retries and the owner is alerted | [d002 › R23](designs/d002-requirements.md#requirements) |
 
 ## 11. Risks and technical debt
 
