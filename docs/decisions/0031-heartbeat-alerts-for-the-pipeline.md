@@ -82,7 +82,7 @@ Why not the others:
 
 ## More information
 
-- Signals carry no body, so logs stay in R2 and leave for no other provider. The package signals only when the URL's environment variable is set, so it still runs without the monitor ([ADR-0029](0029-pipeline-code-architecture.md)).
+- Signals carry no body, so logs stay in R2 and leave for no other provider. The package signals only when the URL's environment variable is set, so it still runs without the monitor ([ADR-0029](archive/0029-pipeline-code-architecture.md)).
 - Decision at framing: [s012/D5](../spikes/s012-execution-target.md#d5-pipeline-logs); outcome in [s012 Decisions to record](../spikes/s012-execution-target.md#54-decisions-to-record).
 - Facts on Modal's notifications: [Modal source card](../sources/modal.md).
 - Heartbeat services: <https://healthchecks.io/pricing/>, <https://healthchecks.io/docs/http_api/>, <https://healthchecks.io/docs/self_hosted/>, <https://cronitor.io/pricing>, <https://betterstack.com/pricing>.

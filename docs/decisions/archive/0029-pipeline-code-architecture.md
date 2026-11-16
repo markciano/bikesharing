@@ -1,23 +1,26 @@
 ---
-status: Accepted
+status: Superseded
 date: 2026-11-02
 supersedes: ADR-0010
+superseded-by: ADR-0046
 ---
 
 # Pipeline code architecture: a thin platform wrapper with inward dependencies
+
+Superseded on 2026-11-16 (T064) by [ADR-0046](../0046-functional-core-imperative-shell-for-the-pipeline.md): it left the clock and the network inside the logic that decides on them, and let each entry point assemble its own sequence.
 
 ## Context and problem statement
 
 What architecture should the pipeline's code follow? Without a defined one, each task decides its own structure, and nobody can tell when the code has departed from it.
 
-The pressure comes mostly from where the code runs: the pipeline runs on a managed platform that requires its own SDK around the code ([ADR-0027](0027-modal-as-execution-platform.md)), and a fallback platform is already named in case that one stops being viable. The way platform code and pipeline logic meet decides how far a change of platform reaches and whether the logic can be tested without the platform.
+The pressure comes mostly from where the code runs: the pipeline runs on a managed platform that requires its own SDK around the code ([ADR-0027](../0027-modal-as-execution-platform.md)), and a fallback platform is already named in case that one stops being viable. The way platform code and pipeline logic meet decides how far a change of platform reaches and whether the logic can be tested without the platform.
 
-- The logic is mostly SQL, which the engine executes and Python runs in order ([ADR-0025](0025-sql-models-directed-by-python.md)).
-- The engine reads the same query from object storage or from a local path, so storage is reached through a location and credentials ([ADR-0024](0024-duckdb-as-processing-engine.md)).
+- The logic is mostly SQL, which the engine executes and Python runs in order ([ADR-0025](../0025-sql-models-directed-by-python.md)).
+- The engine reads the same query from object storage or from a local path, so storage is reached through a location and credentials ([ADR-0024](../0024-duckdb-as-processing-engine.md)).
 - Tests must run locally and in CI, with no platform account.
 - One person writes and operates the code, and must be able to understand and change its structure alone.
 
-[ADR-0010](archive/0010-ingestion-logic-separated-from-platform.md) answered a similar question while the platform was open, for ingestion only. Capture has since been built outside Python ([ADR-0011](0011-cloudflare-workers-r2-for-realtime-capture.md)), so that decision no longer describes any code, and it says nothing about the pipeline.
+[ADR-0010](0010-ingestion-logic-separated-from-platform.md) answered a similar question while the platform was open, for ingestion only. Capture has since been built outside Python ([ADR-0011](../0011-cloudflare-workers-r2-for-realtime-capture.md)), so that decision no longer describes any code, and it says nothing about the pipeline.
 
 ## Considered Options
 
@@ -73,7 +76,7 @@ Why not the others:
 - Full hexagonal architecture: its core would be almost empty, and its fakes would not exercise the SQL, where the main failures are expected.
 - Logic written directly on the platform: it fails both needs in the Context.
 
-**Scope:** The internal structure of the pipeline's Python code and how it meets the platform. It is not the architecture of the whole solution, which is in `docs/architecture.md`. It does not cover capture, which is decoupled by its output contract ([ADR-0012](0012-collectors-decoupled-by-output-contract.md)), or how tests are organised, in `docs/testing-strategy.md`. Where the platform module lives in the repository belongs to T040.
+**Scope:** The internal structure of the pipeline's Python code and how it meets the platform. It is not the architecture of the whole solution, which is in `docs/architecture.md`. It does not cover capture, which is decoupled by its output contract ([ADR-0012](../0012-collectors-decoupled-by-output-contract.md)), or how tests are organised, in `docs/testing-strategy.md`. Where the platform module lives in the repository belongs to T040.
 
 ### The architecture
 
@@ -107,7 +110,7 @@ These rules define the design. Each has a check, so a deviation can be detected:
 - **No storage double:** tests use the engine against local files or a local S3 endpoint, which is slower than a fake and can miss differences with the real store.
 - **Checks to build:** the rules hold only once T040 adds their checks; until then they depend on discipline.
 - **Rule 2 and rule 3 rest partly on review:** CI catches the import of the engine, not every piece of logic placed in the wrong file.
-- **Assumes the platform runs Python with environment variables:** all the candidates that passed the cuts in [ADR-0027](0027-modal-as-execution-platform.md) do, but a platform that does not would need more rework.
+- **Assumes the platform runs Python with environment variables:** all the candidates that passed the cuts in [ADR-0027](../0027-modal-as-execution-platform.md) do, but a platform that does not would need more rework.
 
 This decision is reopened if a **second real implementation** of the same work appears, such as a second engine alongside the first or a destination the engine cannot write to, or if business rules in Python grow beyond orchestration. Fake adapters do not count as an implementation. A change of platform, of S3-compatible store or of local path does not count either, since none changes how tables are built. Moving from the wrapper to ports then is a bounded refactor.
 
@@ -209,6 +212,6 @@ The higher cost of option 2 is not writing it once, but what repeats: each chang
 
 ### Sources
 
-- Decision at framing: [s012/D4](../spikes/s012-execution-target.md#d4-processing-logic-separated-from-the-platform); outcome in [s012 Decisions to record](../spikes/s012-execution-target.md#54-decisions-to-record).
+- Decision at framing: [s012/D4](../../spikes/s012-execution-target.md#d4-processing-logic-separated-from-the-platform); outcome in [s012 Decisions to record](../../spikes/s012-execution-target.md#54-decisions-to-record).
 - Hexagonal architecture: Alistair Cockburn, 2005.
 - Config and Backing Services: <https://12factor.net/config>, <https://12factor.net/backing-services>.
