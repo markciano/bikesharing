@@ -222,6 +222,19 @@ Approach lists the main and supporting deliverables, each already written.
 If some block contains `options considered`, include them with pros and cons.
 -->
 
+#### Quality catalog
+
+[data-quality.md](../data-quality.md) holds the quality catalog of D4, apart from the model: the runtime rules and the quality indicators, one table per class, each item with its full text. They leave [data-model.md › Data contract](../data-model.md#data-contract), which keeps the transformation specs and the documentation items. Each item of the catalog has a flat ID with a prefix per class, after the terms of DAMA-DMBOK and ISO/IEC 25024: a runtime rule is `DQR1`, `DQR2`…, and carries its dimension and severity; a quality indicator, a quality measure in ISO/IEC 25024, is `DQM1`, `DQM2`…, and carries its dimension, its target and the gold table that builds it. The items left in the Data contract take a prefix per class of D4, numbered in the order they appear: a transformation spec becomes `TR1`, `TR2`…, as the transformation rules of a source-to-target mapping, and keeps its ID when it moves to its table's worksheet; a documentation item becomes `RDM1`, `RDM2`…. Every citation of a moved or renumbered item is updated in the same change. Tests and alerts cite the catalog's ID. The child that builds an item translates it into its data-test tool; a machine-readable file that tool needs is derived from the catalog, which stays the source. **#1**
+
+Options considered:
+
+| Option | Pros | Cons |
+|---|---|---|
+| Markdown document in `docs/` holding the rules' text, with `DQR` and `DQM` IDs (chosen) | The approved document is the source; the catalog reads on its own; the ID tells a check from a transformation; leaves T060.1 free to choose its data-test tool | Each rule is translated into code by hand; about 60 citations change once |
+| Markdown catalog that cites the RDM items without moving them | No citation changes | The catalog cannot be read without the model |
+| Markdown catalog that moves the RDM items with their IDs | No citation changes | Two prefixes in the catalog; the ID does not tell a check from a transformation |
+| YAML file with ODCS v3's `quality` section, loaded by the runtime tests | One source that runs, with no translation | Fixes a format before T060.1 chooses how data tests run ([ADR-0025](../decisions/0025-sql-models-directed-by-python.md) fixes only SQL directed by Python); targets and their reasons are hard to review in it |
+
 #### Carried-over inputs
 
 Inputs about the how, left to this design by earlier spikes and designs; each becomes a Plan concern or part of one.
@@ -245,13 +258,10 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| | | | | | |
+| 1 | [Quality catalog](#quality-catalog) | The quality catalog is a Markdown document, `docs/data-quality.md`, that takes the runtime rules and quality indicators out of the Data contract as `DQR` and `DQM`, after DAMA-DMBOK's and ISO/IEC 25024's terms; the items left are renumbered per class, transformation specs as `TR` and documentation items as `RDM`; following docs-as-code and source-to-target mapping | One place per rule, readable on its own; the ID tells the item's class and how it is verified; no code cites the IDs yet | R4, R7 | Plan |
+| 2 | [Approach](#21-approach) | D4, D5, D6 and D7 become ADRs, following Nygard's ADRs for cross-cutting architecture decisions | Each binds work after T060 and outside it: every future rule and table, every component's deployment, the pipeline's run mode | R4–R6, R11–R21 | Plan |
 
-### 2.3 Architecture
-
-<!-- Optional. One diagram and 2–3 sentences. -->
-
-### 2.4 File layout
+### 2.3 File layout
 
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
@@ -259,41 +269,6 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 <path>/
 └── <file>      (new)        <purpose>
 ```
-
-### 2.5 Components
-
-<!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
-
-#### `<ComponentName>`
-
-- **Responsibility:** `<one sentence>`
-- **Location:** `path/to/file`
-- **Contract:**
-
-```python
-```
-
-### 2.6 Test plan
-
-<!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
-
-| R | Method | What is verified | Level |
-|---|---|---|---|
-| R1 | Test / Inspection / Analysis / Demonstration | | unit / integration / e2e; — for other methods |
-
-### 2.7 Breaking changes
-
-<!-- Optional. Shared models or interfaces this design changes, and how their dependants are handled. -->
-
-| File | Why it breaks | Strategy |
-|---|---|---|
-| | | |
-
-### 2.8 What does not change
-
-<!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
-
--
 
 ## 3. Close
 
