@@ -13,6 +13,8 @@ What situation forces a decision. The problem observed, and what happens if noth
 
 ## Considered Options
 
+Only alternatives actually weighed, as in the design's Options considered; never an obvious or forced one added to fill the section.
+
 ### 1. abc
 
 How it works in one or two sentences.
