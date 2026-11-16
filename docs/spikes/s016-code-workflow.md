@@ -34,7 +34,7 @@ The pipeline (T060.1 onwards) is the first large codebase in the project, built 
 
 #### D1. Code review
 
-Code is reviewed at review points planned in the design, following risk-based review and Google's guidance on small changes. Each design step carries a **Review** field (`code`, `security`, `code and security`, or `no`), set when the steps are written and checked in the design's steps review. A review goes on the step that completes a reviewable unit, a flow or action usually built over several steps (Google's self-contained change); risk and size, about 400 changed lines as a guide, decide how small a unit is; the last code step has at least `code`. At a `code` point, the implementing session runs the built-in `/code-review` at `low` effort, without `--fix`, over the changes since the previous point; it runs as a background subagent with its own context, and its findings go into the Change report, where the owner decides the fixes, applied within the step's Scope and taken in the step's commit. Conformance to the design stays in the end-of-task review (`review.md`). The exact `/code-review` target for "since the previous point, uncommitted changes included" is set in the edit to `/implement`.
+Code is reviewed at review points planned in the design, following risk-based review and Google's guidance on small changes. Each design step carries a **Review** field (`code`, `security`, `code and security`, or `no`), set when the steps are written and checked in the design's steps review. A review goes on the step that completes a reviewable unit, a flow or action usually built over several steps (Google's self-contained change); risk and size, about 400 changed lines as a guide, decide how small a unit is; the last code step has at least `code`. At a `code` point, once the owner has committed the step, the implementing session runs the built-in `/code-review` at `low` effort, without `--fix`, over the commit range since the previous point (`<base>..HEAD`, `main` for the first point), the documented form; a range is used because the documentation does not state that it adds uncommitted changes. It runs as a background subagent with its own context; the owner decides the fixes, each applied as a one-step change with its own commit before the next step. Conformance to the design stays in the end-of-task review (`review.md`).
 
 - **Would change it:** bugs that a review point should have caught reach the PR, or review points end up on nearly every step: move to a review on every step (option D below).
 - **Would not change it:** a task diff of any size, since the points bound each review, not the task.
@@ -160,7 +160,7 @@ The spike had no run: every decision was settled at framing by documents and ari
 
 - Whether `/code-review` applies `.claude/rules/`; its documentation names only `CLAUDE.md` — the review may not judge project conventions — tools enforce the mechanical ones (D2) and `review.md` checks conformance to the design; reopen D1 if the first review in T060.1 ignores a rule.
 - How the local `/code-review` verifies its findings; only the cloud review documents it — false positives cost the owner's time at each review point — `low` effort reports only the findings it is most confident in.
-- The `/code-review` target that covers "since the previous review point, uncommitted changes included" — a point could miss changes — set and checked against the documentation in the edit to `/implement`.
+- Whether `/security-review` accepts a commit range; its documentation says only that it checks the diff — a `security` point could review the wrong changes — checked at its first use in T060.1; if it takes no range, it runs before the owner's commit, over the step's diff.
 
 ### 5.5 Production inputs
 
@@ -181,7 +181,7 @@ The spike had no run: every decision was settled at framing by documents and ari
 | Output | From | Destination | Commit |
 |---|---|---|---|
 | Review field in design steps, and its check | D1, D3 | `.claude/skills/design/template.md` › Steps; `.claude/skills/design/review-steps.md` | Done |
-| Review points, security review and the check script in the step protocol | D1, D2, D3 | `.claude/skills/implement/SKILL.md` › Step protocol, Change report | Pending |
+| Review points and security review in the step protocol | D1, D3 | `.claude/skills/implement/SKILL.md` › Step protocol | Done |
 | Tooling and Pipeline architecture | D2, D3 | `.claude/rules/code/python.md` | Pending |
 | A pipeline job runs the check script | D2 | `.claude/rules/code/ci.md` › Job per component | Pending |
 | ADRs carried into rules | D3 | `.claude/rules/docs/adr.md` › Lifecycle | Pending |

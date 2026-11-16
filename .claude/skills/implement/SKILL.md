@@ -26,7 +26,8 @@ A step with Who: Owner is run by the owner: give its commands in code blocks and
 4. Run the Check and, if the step touches code, all unit and integration tests of the touched component, not only the step's (local layer, for reference see [testing strategy](../../../docs/testing-strategy.md)).
 5. If the Check and the tests pass, mark the step ✅ and set Current step; the mark goes into the owner's commit of the step. On the first step, State goes to In progress 🔄. If either fails, the step stays 🔄 and the report says why.
 6. End with the Change report.
-7. When running a range, stop before a step in another area, or past half context. The commit of a step must exist before the next step starts.
+7. **Review point.** If the step's Review is not `no`, once the owner has committed the step, run the built-in reviews over the changes since the previous review point: `/code-review low <base>..HEAD` for `code`, `/security-review` for `security`, never with `--fix`. `<base>` is the commit of the previous review point, found in `git log` by its `dNNN.sN` prefix, or `main` for the first. Report the findings by severity; the owner picks the fixes, each applied as a one-step change and committed before the next step.
+8. When running a range, stop before a step in another area, or past half context. The commit of a step must exist before the next step starts.
 
 ## Change report
 
