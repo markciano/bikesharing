@@ -296,7 +296,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 docs/
 ├── data-quality.md                            (new)       Quality catalog: runtime rules (DQR) and quality indicators (DQM) (#1)
 ├── data-model.md                              (modified)  Data contract loses the runtime rules and quality indicators; the rest renumbered as TR and RDM (#1)
-├── architecture.md                            (modified)  §6.2 runs in bounded batches, audited before publishing; §8 data quality, lineage and deployments cite their ADRs
+├── architecture.md                            (modified)  §6.2 runs in bounded batches, audited before publishing; §8 data quality, lineage and deployments cite their ADRs; §10 scenarios grouped by goal, its introduction pointing to the quality catalog
 ├── decisions/
 │   ├── 0042-data-quality-classes-and-severity.md  (new)   D4: four classes, severity by who causes a failure, write-audit-publish (#2)
 │   ├── 0043-lineage-at-four-levels.md         (new)       D5: lineage by table, column, run and row (#2)
