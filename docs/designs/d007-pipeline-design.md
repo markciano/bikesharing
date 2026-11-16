@@ -20,10 +20,9 @@ Phase: the blocks and reviews completed. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review
 - Next: Plan step 5, writing File layout's deliverables in this order:
-  1. Done: catalog and renumbering (committed); #4–#7 merged into #1, under the new Merge before approval rule (awaiting the owner's commit). The next log entry is #8.
-  2. Parked: propose to Carried-over inputs, for T060.1, limiting each runtime rule to the rows and partitions its batch touched.
-  3. The four ADRs, in a new session, ADR-0042 including #1's quarantine, one per message; first propose a comment in `.claude/skills/design/adr-template.md`: Considered Options holds only alternatives actually weighed, never obvious or forced ones. Numbers shift if T064's ADR is written first.
-  4. `architecture.md`.
+  1. Done: catalog and renumbering; #4–#7 merged into #1, under the Merge before approval rule. The next log entry is #8.
+  2. The four ADRs, in a new session, ADR-0042 including #1's quarantine, one per message; first propose a comment in `.claude/skills/design/adr-template.md`: Considered Options holds only alternatives actually weighed, never obvious or forced ones. Numbers shift if T064's ADR is written first.
+  3. `architecture.md`.
 
 ## 1. Spec — what and why
 
