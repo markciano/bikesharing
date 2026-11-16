@@ -4,9 +4,9 @@ The quality catalog of silver and gold: the runtime rules, checked on real data 
 
 ## Schema
 
-Every run checks each column of silver and gold against its schema, the type, nullability and accepted values of its row in its table's worksheet. A schema carries no ID and is not repeated here ([d007 › #4](designs/d007-pipeline-design.md#22-decision-summary)).
+Every run checks each column of silver and gold against its schema, the type, nullability and accepted values of its row in its table's worksheet. A schema carries no ID and is not repeated here ([d007 › #1](designs/d007-pipeline-design.md#22-decision-summary)).
 
-A row that fails its schema is quarantined: it is written to the quarantine table with the check it failed and the bronze object it comes from, the failure is logged in the run's events, and the rest of its batch publishes. When a new code version is deployed, each bronze object with rows in quarantine is processed again, adding only the rows silver and gold do not hold yet ([d007 › #7](designs/d007-pipeline-design.md#22-decision-summary)). DQR13 counts the quarantined rows as accounted for.
+A row that fails its schema is quarantined: it is written to the quarantine table with the check it failed and the bronze object it comes from, the failure is logged in the run's events, and the rest of its batch publishes. When a new code version is deployed, each bronze object with rows in quarantine is processed again, adding only the rows silver and gold do not hold yet ([d007 › #1](designs/d007-pipeline-design.md#22-decision-summary)). DQR13 counts the quarantined rows as accounted for.
 
 ## Severity
 

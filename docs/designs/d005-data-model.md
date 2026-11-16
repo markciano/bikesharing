@@ -341,7 +341,7 @@ The rules of silver and gold are written once, in EARS, and each cites the decis
 - **Runtime rules** (`DQR`: grain, referential integrity, invariants) and **quality indicators** (`DQM`): in the quality catalog, [data-quality.md](../data-quality.md).
 - **Column schema** (type, nullability, accepted values): cells of the column's worksheet row, with no ID. A rule that states one stays a transformation spec, marked `TODO(T060):`, until its worksheet exists. That slice adds the schema of the columns no rule covers.
 
-Each rule states one behaviour (singular, as ISO/IEC/IEEE 29148 asks of a requirement), so it is either a table rule or a column rule. A rule that holds both is split: the table part keeps its ID and the column part takes the next free one of its class. **[d007 › #1, #4, #6](d007-pipeline-design.md#22-decision-summary)**
+Each rule states one behaviour (singular, as ISO/IEC/IEEE 29148 asks of a requirement), so it is either a table rule or a column rule. A rule that holds both is split: the table part keeps its ID and the column part takes the next free one of its class. **[d007 › #1](d007-pipeline-design.md#22-decision-summary)**
 
 What would change it: [d007](d007-pipeline-design.md) choosing a test tool with an executable contract; that contract then becomes the rules' place, recorded as an ADR.
 
