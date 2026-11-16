@@ -1,10 +1,3 @@
-<!--
-Design doc template. A design doc is the working document of one task: Spec (what and why), Plan (how), Steps (implementation), Close (what was delivered).
-It is detailed enough that Code can implement it without making design decisions.
-Sections marked Optional are kept only when they apply.
-Kind: a build task builds code or configuration and has every block. A document-only task delivers documents only, written during the Spec and the Plan, and has no Steps block. A parent is a document-only task with children (`TNNN.M`): it holds what its children share, and its Children section.
--->
-
 # Design: Processing pipeline
 
 - **Task:** T060
@@ -14,37 +7,16 @@ Kind: a build task builds code or configuration and has every block. A document-
 
 ## Status
 
-<!-- State: Draft 📝 · Complete ✅.
-Phase: the blocks and reviews completed. -->
-
-- State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [ ] Plan review
-- Next: Plan review (`review-plan`), the final review of this parent. The next log entry is #13.
+- State: Complete ✅
+- Phase: [x] Spec · [x] Plan · [x] Plan review
 
 ## 1. Spec — what and why
 
-<!-- What the result does seen from outside, not how it is built. The test: if whoever uses the result would notice a change, it belongs here; if not, it belongs to the Plan. External systems and their data (feeds, fields) may be named. -->
-
 ### 1.1 Context
-
-<!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
 
 Capture writes the raw feeds of AMBici and Bicing to the bronze layer on R2 ([d004](d004-bronze-data-capture.md)), and [d005](d005-data-model.md) designs the data model that silver and gold hold. Nothing builds that model yet, so the questions of [d002](d002-requirements.md) have no answer and the public visualization (T041) has no data to show. This design decides how the pipeline builds silver and gold from bronze on the stack chosen by s010–s013, within the project's budget, and how the owner inspects the operation of capture and the pipeline, which today means downloading hundreds of capture log files.
 
 ### 1.2 Decided at framing
-
-<!-- Optional. One heading per decision about what the result does. In this order, so the reader finds what matters first:
-1. The decision and why, in one short paragraph.
-2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
-3. The options rejected.
-4. The artefact that fixes it, in whatever form the decision needs (e.g. a mapping table, a page map, a weighted matrix). An artefact that does not fit here or must outlive the design goes in its own file: the Plan decides where it lives and its format, File layout lists it, and this decision links to it.
-
-A security decision lists its threats in this table, with IDs `TH1`, `TH2`… per document:
-
-| # | Threat (STRIDE) | Impact | Control | Requirement |
-|---|---|---|---|---|
-| `TH1` | | | | |
--->
 
 #### D1. Build by vertical slice
 
@@ -87,9 +59,9 @@ The data quality catalog sorts every rule of [data-model.md › Data contract](.
 
 | Class | What it is | Verified by | Items of the Data contract |
 |---|---|---|---|
-| Transformation spec | How a table or value is built | Unit or integration test in CI, on fixtures | TR1–TR53 |
+| Transformation spec | How a table or value is built | Unit or integration test in CI, on fixtures | TR1–TR54 |
 | Runtime rule | What must always hold on real data | Data test in every run | DQR1–DQR10 |
-| Quality indicator | A measure tracked over time | Gold table or observability, queried by the owner | DQM1–DQM8, the first three in the review table |
+| Quality indicator | A measure tracked over time | Gold table or observability, queried by the owner | DQM1–DQM8 but DQM6, now TR54; the first three in the review table |
 | Documentation | The model's structure, worksheets, source cards and the feeds read | Inspection | RDM1–RDM6 |
 
 A column's type, nullability and accepted values are its schema, cells of its row in its table's worksheet with no ID, checked in every run; the catalog holds only what no column's schema states. Until their worksheets exist, TR44's nullability and TR50's domain stay as transformation specs. **#1**
@@ -140,13 +112,13 @@ Rejected: finding a deployment's commit as the last merge to `main` before its t
 
 #### D7. Catch-up in bounded batches
 
-Each run processes the bronze objects no run has processed yet, whatever their capture instant, in bounded batches, oldest first, one after another until none is left or its time budget is spent, and then ends, following the drain mode of bounded micro-batches (Spark's `AvailableNow` trigger). Each batch is audited and committed to silver and gold as it ends (D4), so a failure keeps what earlier batches committed; the page's files are generated, audited and deployed once, at the end of the run. **#9** Processing an object again adds no rows, and a run never starts while another is running, so scheduled runs wait while a run drains and the cadence resumes by itself.
+Each run processes the bronze objects no run has processed yet, whatever their capture instant, in bounded batches, oldest first, one after another until none is left or its time budget is spent, and then ends, following the drain mode of bounded micro-batches (Spark's `AvailableNow` trigger). Each batch is audited and committed to silver and gold as it ends (D4), so a failure keeps what earlier batches committed; the page's files are generated, audited and deployed once, at the end of the run. Processing an object again adds no rows, and a run never starts while another is running, so scheduled runs wait while a run drains and the cadence resumes by itself. **#9**
 
 A batch whose processing fails, on reading, writing or the platform, stays pending and is retried by the next run. A batch that fails a runtime rule of severity error is set aside, following a dead-letter queue with redrive: the run logs it with its rule (D4) and goes on with the next batch, and every batch set aside returns to pending when a new code version is deployed (D5). Each batch is processed from bronze as a whole, so nothing of a failed batch counts as done. A bronze object with rows in quarantine (D4) also returns to pending with a new code version, and processing it again adds only the rows silver and gold do not hold yet. **#1**
 
-A backlog, from the first load of the bronze captured so far or from an outage of capture or Modal, drains with the same code, in consecutive runs when it exceeds one run's time budget, and an object that reaches bronze late, or a batch that returns from being set aside, enters the next run. While a backlog drains, the published file serves older data and its age says so (D4). A batch is bounded in objects and in bytes so that it fits in a run's memory with margin, and an object above the byte bound on its own is set aside like a batch that fails a rule (D8).
+A backlog, from the first load of the bronze captured so far or from an outage of capture or Modal, drains with the same code, in consecutive runs when it exceeds one run's time budget, and an object that reaches bronze late, or a batch that returns from being set aside, enters the next run. While a backlog drains, the published file serves older data and its age says so (D4). A batch is bounded in objects and in bytes so that it fits in a run's memory with margin, and an object above the byte bound on its own is set aside like a batch that fails a rule (D8). How a late object changes the stock movements already derived is decided by T060.3.
 
-A run takes no further batch once the time it has spent reaches its time budget, a fixed value: the run's timeout less the longest batch measured and the run's close (generating, auditing and deploying the files, uploading the logs, signalling the heartbeat). It then closes and ends well, leaving the rest pending and logging how many objects remain, following a graceful shutdown before a deadline. The timeout is a backstop for a run that hangs. T060.1 fixes both bounds, the time budget and the timeout from the memory and run time it measures. **#10** How a late object changes the stock movements already derived is decided by T060.3.
+A run takes no further batch once the time it has spent reaches its time budget, a fixed value: the run's timeout less the longest batch measured and the run's close (generating, auditing and deploying the files, uploading the logs, signalling the heartbeat). It then closes and ends well, leaving the rest pending and logging how many objects remain, following a graceful shutdown before a deadline. The timeout is a backstop for a run that hangs. T060.1 fixes both bounds, the time budget and the timeout from the memory and run time it measures. **#10**
 
 What would change it: if the pipeline processed bronze slower than capture writes it, a backlog would never drain; the run's memory or the platform then change in T060.1's review of [ADR-0027](../decisions/0027-modal-as-execution-platform.md).
 
@@ -167,15 +139,6 @@ Repudiation is covered by row lineage (D5): every row names the run and the code
 Rejected: one STRIDE pass over the whole pipeline here, since storage and runtime are already covered and each child knows best what its tool or source adds.
 
 ### 1.3 Requirements
-
-<!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
-One behaviour per requirement, verifiable, with a measurable threshold where one applies. Written in EARS:
-- Ubiquitous: The <system> shall <response>.
-- Event: When <trigger>, the <system> shall <response>.
-- State: While <state>, the <system> shall <response>.
-- Unwanted: If <condition>, then the <system> shall <response>.
-- Optional: Where <feature is included>, the <system> shall <response>.
-Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
 - **R1** The pipeline shall publish each file the page serves with a JSON Schema contract, checked by a contract test in CI. (D2)
 - **R2** If a file fails its JSON Schema, then the pipeline shall not deploy it, keep the last file that passed, log the failure in the run's events and end the run with no failure signal. (D2, D4, #9)
@@ -205,8 +168,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 ### 1.4 Done when
 
-<!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
-
 - T060.1–T060.4 exist as sub-issues of T060, each with the scope of Children and blocked by the tasks it depends on.
 
 ### 1.5 Out of scope
@@ -215,8 +176,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - Deployments from GitHub Actions on merge to `main` (continuous deployment), running each component's deploy script — T066
 
 ### 1.6 Children
-
-<!-- Parent only. The child map, in build order: each child's scope (e.g. the business process it builds), the questions or requirements it closes, the children it depends on, and the condition that closes it. Each child has its own working document, which cites the parent's decisions instead of repeating them. Every open question and requirement of the parent is closed by the parent or by one child. The parent's Done when: its Open questions closed and its children created. -->
 
 | Child | Scope | Closes | Depends on | Done when |
 |---|---|---|---|---|
@@ -229,21 +188,16 @@ Each child changes its tables' `TODO(T060)` markers in [data-model.md › Data c
 
 ## 2. Plan — how
 
-<!-- 2-3 sentences -->
+This parent delivers documents only: the quality catalog, four ADRs for its cross-cutting decisions, and the documents they change. Each child plans and builds its own slice in its own design, from the decisions above and the carried-over inputs below.
 
 ### 2.1 Approach
-
-<!-- Detailed plan organized by #### blocks.
-Approach lists the main and supporting deliverables, each already written.
-If some block contains `options considered`, include them with pros and cons.
--->
 
 #### Deliverables
 
 - [data-quality.md](../data-quality.md): the quality catalog, its runtime rules (DQR) and quality indicators (DQM), with their severity, targets and where each is built (D4, #1, #9, #11).
 - [data-model.md › Data contract](../data-model.md#data-contract): the transformation specs (TR) and documentation items (RDM) that stay with the model (#1).
 - [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md), [ADR-0043](../decisions/0043-lineage-at-four-levels.md), [ADR-0044](../decisions/0044-deployments-tagged-with-their-commit.md), [ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md): D4, D5, D6 and D7 as cross-cutting decisions (#2, #8, #9, #10).
-- [architecture.md](../architecture.md): freshness in §1.1 and §10.1, the pipeline run in §6.2, data quality, lineage and deployments in §8, and the cadence risk in §11 (#12).
+- [architecture.md](../architecture.md): freshness in §1.1 and §10.1, the pipeline run in §6.2, data quality, lineage and deployments in §8, and the risks that wait on measured runs in §11 (#12).
 - `.claude/rules/docs/data-model.md`: a column rule keeps its TR ID when it moves to its worksheet (#1).
 - [d002](d002-requirements.md): the freshness of Q1, Q2 and Q5 and R3 (D3, #12); [d005 › D29](d005-data-model.md#d29-data-contract-of-the-model): the contract's IDs per class (#1).
 
@@ -284,13 +238,6 @@ Inputs about the how, left to this design by earlier spikes and designs; each go
 
 ### 2.2 Decision summary
 
-<!-- It logs decisions about the plan, including changes. Oldest first.
-Entries follow .claude/rules/docs/decision-log.md (log only, change links).
-- Applies to: anchor link(s) to the section where the decision is applied, named in one or two words.
-- Decided at: the Status phase where it was decided (Plan, Steps), or `<phase> review` when decided while reviewing that phase.
-- R: Requirement affected.
--->
-
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | 1 | [Quality catalog](#quality-catalog), [D4](#d4-data-quality-in-four-classes), [D7](#d7-catch-up-in-bounded-batches) | The quality catalog is a Markdown document, `docs/data-quality.md`, holding the runtime rules (`DQR`) and the quality indicators (`DQM`), each indicator with a Why and where it is built: a gold table when it measures silver and gold, the observability child otherwise; the Data contract keeps transformation specs (`TR`) and documentation items (`RDM`); a column's type, nullability and accepted values are its schema in its worksheet, with no ID, and a row that fails it is quarantined while the rest of its batch publishes; following DAMA-DMBOK and ISO/IEC 25024, docs-as-code, source-to-target mapping, ODCS's schema apart from quality, dbt's model contracts, and a quarantine table with D7's redrive; **refines [d005 › D29](d005-data-model.md#d29-data-contract-of-the-model)** | One place per rule, readable on its own; the ID tells the item's class and how it is verified; each check stated once; a provider's change removes only its rows from the page | R4, R7, R10, R14, R19, R22 | Plan |
@@ -304,14 +251,12 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 ### 2.3 File layout
 
-<!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
-
 ```text
 .claude/rules/docs/
 └── data-model.md                              (modified)  Rule IDs: a column rule keeps its TR ID when it moves to its worksheet
 docs/
 ├── data-quality.md                            (new)       Quality catalog: runtime rules (DQR) and quality indicators (DQM) (#1)
-├── data-model.md                              (modified)  Data contract loses the runtime rules and quality indicators; the rest renumbered as TR and RDM (#1)
+├── data-model.md                              (modified)  Data contract loses the runtime rules and quality indicators; the rest renumbered as TR and RDM, DQM6 becomes TR54 (#1)
 ├── architecture.md                            (modified)  §1.1 and QS1 freshness as one cadence plus one run (#12); §6.2 runs in bounded batches, audited before publishing; §8 data quality, lineage and deployments cite their ADRs; §10 scenarios grouped by goal, its introduction pointing to the quality catalog; §11 risks that wait on measured runs owned by T060.1
 ├── decisions/
 │   ├── 0042-data-quality-classes-and-severity.md  (new)   D4: four classes, severity by who causes a failure, write-audit-publish (#2)
@@ -326,27 +271,15 @@ docs/
 
 ## 3. Close
 
-<!-- The record of what the task delivered, for whoever opens this design later. -->
-
 ### 3.1 Implemented
 
-<!-- Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. -->
+- Documents, as listed in [Deliverables](#deliverables): the quality catalog (data-quality.md), the Data contract's transformation specs and documentation items (data-model.md), ADR-0042 to ADR-0045, and the changes to architecture.md, the data model rule, d002 and d005. No code or tests.
+- Children created at close, with their dependencies as in [Children](#16-children): T060.1 (#63), T060.2 (#64), T060.3 (#65), T060.4 (#66).
 
 ### 3.2 Known gaps at close
 
-<!-- What the task leaves undone or imperfect, each with the task that covers it: requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
-
-- `<gap>` — TNNN
+- The column rules of [data-model.md › Data contract](../data-model.md#data-contract) still carry `TODO(T060)`; each child moves its tables' rules to their worksheets and changes their markers to its own ID — T060.1–T060.4
 
 ### 3.3 Decisions taken during implementation
 
-<!-- Decisions made after the Plan was approved, including deviations from Scope approved by the owner. Oldest first; "None" is valid.
-- #: `DI1`, `DI2`… (decision during implementation).
-- Applies to: anchor link(s) to the design section the decision changes, or the path of a file outside the design.
-- Decision and Reason: one line each; the content goes where it applies.
-- Decided at: the step where it was decided (`Step N`).
--->
-
-| # | Applies to | Decision | Reason | Decided at |
-|---|---|---|---|---|
-| | | | | |
+None.
