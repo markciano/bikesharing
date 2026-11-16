@@ -21,10 +21,9 @@ Phase: the blocks and reviews completed. -->
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review
 - Next: Plan step 5, writing File layout's deliverables in this order:
   1. Done: catalog and renumbering (committed); #4–#7 merged into #1, under the new Merge before approval rule (awaiting the owner's commit). The next log entry is #8.
-  2. Parked, owner's request: make `data-quality.md`'s runtime rules and quality indicators easier to read by ordering or grouping them.
-  3. Parked: propose to Carried-over inputs, for T060.1, limiting each runtime rule to the rows and partitions its batch touched.
-  4. The four ADRs, in a new session, ADR-0042 including #1's quarantine, one per message; first propose a comment in `.claude/skills/design/adr-template.md`: Considered Options holds only alternatives actually weighed, never obvious or forced ones. Numbers shift if T064's ADR is written first.
-  5. `architecture.md`.
+  2. Parked: propose to Carried-over inputs, for T060.1, limiting each runtime rule to the rows and partitions its batch touched.
+  3. The four ADRs, in a new session, ADR-0042 including #1's quarantine, one per message; first propose a comment in `.claude/skills/design/adr-template.md`: Considered Options holds only alternatives actually weighed, never obvious or forced ones. Numbers shift if T064's ADR is written first.
+  4. `architecture.md`.
 
 ## 1. Spec — what and why
 
@@ -94,7 +93,7 @@ The data quality catalog sorts every rule of [data-model.md › Data contract](.
 |---|---|---|---|
 | Transformation spec | How a table or value is built | Unit or integration test in CI, on fixtures | TR1–TR53 |
 | Runtime rule | What must always hold on real data | Data test in every run | DQR1–DQR10 |
-| Quality indicator | A measure tracked over time | Gold table, queried by the owner | DQM1–DQM8, the first three in the review table |
+| Quality indicator | A measure tracked over time | Gold table or observability, queried by the owner | DQM1–DQM8, the first three in the review table |
 | Documentation | The model's structure, worksheets, source cards and the feeds read | Inspection | RDM1–RDM6 |
 
 A column's type, nullability and accepted values are its schema, cells of its row in its table's worksheet with no ID, checked in every run; the catalog holds only what no column's schema states. Until their worksheets exist, TR44's nullability and TR50's domain stay as transformation specs. **#1**
@@ -114,7 +113,7 @@ Severity follows who causes a failure. A rule on the pipeline's own logic fails 
 
 A row that fails its column's schema is quarantined instead, following a quarantine table: it is written there with the check it failed and the bronze object it comes from, the failure is logged, and the rest of its batch publishes. A provider's new value then removes only its rows from the page, never shows the visitor a value outside the schema, and reaches the owner through observability like any failed rule. **#1**
 
-A quality indicator is kept if it is actionable, when the owner acts on capture, on a provider or on the model's reference data as it moves, or if it measures a provider's quality, which answers [d002 › Q2](d002-requirements.md#guiding-questions). DQM4, DQM5, DQM8 and the counts above `capacity` form each provider's scorecard. [d002 › R14](d002-requirements.md#requirements) is an actionable indicator, DQM11, built by the observability child since it reads capture's logs. TR52, a station's service, measures the business, not its data, and stays in the model outside the catalog.
+A quality indicator is kept if it is actionable, when the owner acts on capture, on a provider or on the model's reference data as it moves, or if it measures a provider's quality, which answers [d002 › Q2](d002-requirements.md#guiding-questions). DQM4, DQM5, DQM8 and the counts above `capacity` form each provider's scorecard. An indicator that measures silver and gold is built by the pipeline as a gold table; one that measures something outside the model is built by the observability child: DQM10, the age of the files the page serves, which the pipeline cannot measure while it is not running, and DQM11, [d002 › R14](d002-requirements.md#requirements), which reads capture's logs. **#1** TR52, a station's service, measures the business, not its data, and stays in the model outside the catalog.
 
 Each quality indicator has a target, such as a minimum monthly completeness. Capture's completeness target of [d004 › D6](d004-bronze-data-capture.md) joins the catalog. An initial value comes from what the source cards measured on real captures, and the child that builds the alerts reviews it against weeks of production indicators before it closes, following the SRE practice of setting an objective from a measured baseline. This task builds the whole catalog; T042 is absorbed by it.
 
@@ -186,7 +185,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R4** The pipeline shall check every runtime rule of the quality catalog, and every column against its schema, in every run. (D4, #1)
 - **R5** If a batch fails a runtime rule of severity error, then the pipeline shall publish nothing from it, set it aside and log the failure with its rule in the run's events. (D4, D7)
 - **R6** If a batch fails a runtime rule of severity warn, then the pipeline shall log the failure with its rule in the run's events and publish the batch. (D4)
-- **R7** The pipeline shall build each quality indicator of the catalog as a gold table, with its target. (D4)
+- **R7** The pipeline shall build each quality indicator of the catalog that measures silver and gold as a gold table, with its target. (D4)
 - **R8** Where a published file holds a station's latest count, the pipeline shall mark the count when it is frozen (DQM5). (D4)
 - **R9** When the age of a published file exceeds one cadence plus one run, the observability shall alert the owner. (D4)
 - **R10** When a batch fails a runtime rule of either severity, or a row is quarantined, the observability shall alert the owner. (D4, #1)
@@ -238,7 +237,7 @@ If some block contains `options considered`, include them with pros and cons.
 [data-quality.md](../data-quality.md) holds the quality catalog of D4, apart from the model, after the terms of DAMA-DMBOK and ISO/IEC 25024. Each item lives in one place, with its full text and a flat ID whose prefix tells its class, numbered per class in the order the items appear:
 
 - **Runtime rules** (`DQR1`, `DQR2`…): in the catalog, each with its dimension and severity.
-- **Quality indicators** (`DQM1`, `DQM2`…), quality measures in ISO/IEC 25024: in the catalog, each with its dimension, its target, the gold table that builds it and why it is kept: the action it prompts or the provider's quality it measures (D4).
+- **Quality indicators** (`DQM1`, `DQM2`…), quality measures in ISO/IEC 25024: in the catalog, each with its dimension, its target, where it is built (a gold table, or observability for what lies outside the model) and why it is kept: the action it prompts or the provider's quality it measures (D4).
 - **Transformation specs** (`TR1`, `TR2`…), the transformation rules of a source-to-target mapping: in [data-model.md › Data contract](../data-model.md#data-contract). A spec on one column moves to its table's worksheet with its ID.
 - **Documentation items** (`RDM1`, `RDM2`…): in the Data contract.
 - **Column schema:** a column's type, nullability and accepted values, cells of its worksheet row with no ID, checked in every run; the catalog holds only what no schema states, and a row that fails its schema is quarantined (D4). Until its table's worksheet exists, a rule that becomes schema stays a transformation spec with its pending marker, and the child that creates the worksheet turns it into the column's cells.
@@ -278,7 +277,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| 1 | [Quality catalog](#quality-catalog), [D4](#d4-data-quality-in-four-classes), [D7](#d7-catch-up-in-bounded-batches) | The quality catalog is a Markdown document, `docs/data-quality.md`, holding the runtime rules (`DQR`) and the quality indicators (`DQM`), each indicator with a Why; the Data contract keeps transformation specs (`TR`) and documentation items (`RDM`); a column's type, nullability and accepted values are its schema in its worksheet, with no ID, and a row that fails it is quarantined while the rest of its batch publishes; following DAMA-DMBOK and ISO/IEC 25024, docs-as-code, source-to-target mapping, ODCS's schema apart from quality, dbt's model contracts, and a quarantine table with D7's redrive; **refines [d005 › D29](d005-data-model.md#d29-data-contract-of-the-model)** | One place per rule, readable on its own; the ID tells the item's class and how it is verified; each check stated once; a provider's change removes only its rows from the page | R4, R7, R10, R14, R19, R22 | Plan |
+| 1 | [Quality catalog](#quality-catalog), [D4](#d4-data-quality-in-four-classes), [D7](#d7-catch-up-in-bounded-batches) | The quality catalog is a Markdown document, `docs/data-quality.md`, holding the runtime rules (`DQR`) and the quality indicators (`DQM`), each indicator with a Why and where it is built: a gold table when it measures silver and gold, the observability child otherwise; the Data contract keeps transformation specs (`TR`) and documentation items (`RDM`); a column's type, nullability and accepted values are its schema in its worksheet, with no ID, and a row that fails it is quarantined while the rest of its batch publishes; following DAMA-DMBOK and ISO/IEC 25024, docs-as-code, source-to-target mapping, ODCS's schema apart from quality, dbt's model contracts, and a quarantine table with D7's redrive; **refines [d005 › D29](d005-data-model.md#d29-data-contract-of-the-model)** | One place per rule, readable on its own; the ID tells the item's class and how it is verified; each check stated once; a provider's change removes only its rows from the page | R4, R7, R10, R14, R19, R22 | Plan |
 | 2 | [Approach](#21-approach) | D4, D5, D6 and D7 become ADRs, following Nygard's ADRs for cross-cutting architecture decisions | Each binds work after T060 and outside it: every future rule and table, every component's deployment, the pipeline's run mode | R4–R6, R11–R21 | Plan |
 | 3 | [Carried-over inputs](#carried-over-inputs), [Children](#15-children) | Each carried-over input goes to the first child that needs it: all to T060.1 but where the history load runs, to T060.4 | Each is first needed where the pipeline first reads bronze, runs on Modal and publishes | — | Plan |
 
