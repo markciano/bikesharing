@@ -1,9 +1,3 @@
-<!--
-Spike doc template. A spike is a time-boxed investigation of one task: it reaches the decisions a task needs, by analysis where possible and with evidence only where an unknown would change the choice. Its output is knowledge (decisions, answers, a verdict, inputs for designs and ADRs); its code is throwaway and lives in spikes/<name>/.
-Blocks: Questions (what we need to know), Method (how we find out), Steps, Findings (filled during execution), Conclusion (filled after the last step).
-Sections marked Optional are kept only when they apply.
--->
-
 # Spike: Code workflow for the pipeline
 
 - **Task:** T069
@@ -12,21 +6,14 @@ Sections marked Optional are kept only when they apply.
 
 ## Status
 
-<!-- State: Draft 📝 · Ready 🎬 · Running 🔄 · Concluded ✅.
-Phase: the blocks and the review completed.
-Started / Finished: UTC dates of the first step executed and of the Conclusion.
-Current step: the step being executed, or —. -->
-
-- State: Draft 📝
-- Phase: [x] Questions · [ ] Conclusion (no run: Method, Steps and Steps review do not apply; delivering 5.6 Records)
-- Started: — · Finished: —
+- State: Concluded ✅
+- Phase: [x] Questions · [x] Conclusion (no run: Method, Steps and Steps review do not apply)
+- Started: — · Finished: 2026-11-16
 - Current step: —
 
 ## 1. Questions — what we need to know
 
 ### 1.1 Context
-
-<!-- 2–4 sentences: the decisions this spike takes, which of them depend on evidence and why, and the spikes or designs it builds on. -->
 
 The pipeline (T060.1 onwards) is the first large codebase in the project, built by one developer with Claude Code. This spike is a gap analysis of the code workflow in `.claude/` against reference practices (Anthropic's Claude Code best practices, Google's code review practices, shift-left testing), keeping a gap only when its value outweighs its upkeep for one developer. It decides code review (D1), automatic checks (D2) and any further gap (D3), in that order. All three are settled by documents and arithmetic, so the spike has no run. It builds on the pipeline architecture of [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md).
 
@@ -127,7 +114,7 @@ Sources: [Claude Code › Hooks](https://code.claude.com/docs/en/hooks), [Claude
 
 The rest of `.claude/` is compared with Anthropic's Claude Code best practices; a gap is closed only when its value outweighs its upkeep for one developer.
 
-- **Code rules for the pipeline.** `python.md` gains nothing, by the criterion of the next item. [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md) reaches the code through the design of T060.1, which turns it into its Spec, and through the modules that design builds once (core functions that take the current time as an argument, the one configuration function, the logging setup), which later code follows; its import rules are enforced by import-linter (D2), and review (D1) catches departures from the rest, as the ADR itself assigns them. The defaults policy of D2 applies only when the tool configuration changes, so it goes as a comment next to that configuration (P1). Reopened if a review finds the clock or the environment read in the core: a ruff `banned-api` rule enforces it, or a line is added to `python.md`. Rejected: one rule line per rule of the ADR, which repeats what import-linter enforces and what the Spec and the code show. SQL rules wait for the first SQL files: the design of T060.1 sets their layout and conventions.
+- **Code rules for the pipeline.** None: [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md) reaches the code through the design of T060.1 and the code it builds, import-linter (D2) and review (D1); D2's defaults policy goes as a comment next to the tool configuration (P1); SQL rules wait for the first SQL files (P5).
 - **ADRs carried into rules.** Most ADRs reach the code through the design that reads them and turns them into its Spec, or through a module built once that later code follows. A rule in `.claude/rules/` is kept for a convention that applies to every edit in a path, that no tool enforces and that the code does not show; such an ADR adds a one-line rule citing it to the rule file where it applies, in the same commit as the ADR. `adr.md` gains this in Lifecycle only when an ADR first meets the criterion. An audit of ADR-0036 to ADR-0046 against this criterion leaves no rule: ADR-0046, the only candidate, is covered as in the item above; ADRs before 0036 are not audited, with no evidence of a gap. Rejected: a check in the reviews, which comes later and depends on someone remembering it.
 - **Security review.** A unit that touches secrets, permissions or external input has `security` in its Review field, and the implementing session runs the built-in `/security-review`, in the same way as D1. One review mechanism, set where the risk is known. Rejected: a checklist item in `review.md`, which keeps that session on conformance only.
 
@@ -142,29 +129,17 @@ Practices already covered or not worth their cost:
 | Claude in CI (headless) | Not adopted | A cost per PR; D1 already reviews locally |
 | Design review against reference practices | No change beyond D1's Review field | No evidence of a gap; design reviews have worked |
 
-<!-- In this order, so the reader finds what matters first:
-1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
-2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
-3. The options rejected and how robust the result is.
-4. The evaluation behind it: the table or weighted matrix (needs, cuts, anchors and scores) if one was used. A security decision lists its threats in a table: `| # | Threat (STRIDE) | Impact | Control | Requirement |`, with IDs `TH1`, `TH2`… per document. -->
-
 ## 5. Conclusion
-
-<!-- Filled after the last step. Covers only the observed window. -->
 
 The spike had no run: every decision was settled at framing by documents and arithmetic.
 
 ### 5.4 Not verified
-
-<!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
 
 - Whether `/code-review` applies `.claude/rules/`; its documentation names only `CLAUDE.md` — the review may not judge project conventions — tools enforce the mechanical ones (D2) and `review.md` checks conformance to the design; reopen D1 if the first review in T060.1 ignores a rule.
 - How the local `/code-review` verifies its findings; only the cloud review documents it — false positives cost the owner's time at each review point — `low` effort reports only the findings it is most confident in.
 - Whether `/security-review` accepts a commit range; its documentation says only that it checks the diff — a `security` point could review the wrong changes — checked at its first use in T060.1; if it takes no range, it runs before the owner's commit, over the step's diff.
 
 ### 5.5 Production inputs
-
-<!-- Optional. What a later task must take into account when it builds, from any part of the spike: done when that task runs. Each one has a Destination: a design (with its task) or discarded with a reason. -->
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
@@ -176,11 +151,9 @@ The spike had no run: every decision was settled at framing by documents and ari
 
 ### 5.6 Records
 
-<!-- Documents this spike updates before it closes: ADRs from Decided at framing (each in its own commit), architecture, requirements, source cards and new tasks agreed with the owner. A decision that updates no document has no row. Commit: "Done", or "Pending" until delivered; the spike closes when every row is Done. Production inputs are not repeated here. -->
-
 | Output | From | Destination | Commit |
 |---|---|---|---|
 | Review field in design steps, and its check | D1, D3 | `.claude/skills/design/template.md` › Steps; `.claude/skills/design/review-steps.md` | Done |
 | Review points and security review in the step protocol | D1, D3 | `.claude/skills/implement/SKILL.md` › Step protocol | Done |
 | A pipeline job runs the check script | D2 | `.claude/rules/code/ci.md` › Job per component | Done |
-| T024 closed, covered by T060.1 | D2 | GitHub issue of T024 | Pending |
+| T024 closed, covered by T060.1 | D2 | GitHub issue of T024 | Done |
