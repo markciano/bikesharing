@@ -151,9 +151,9 @@ One STRIDE pass covers what this design adds, following threat modelling per cha
 
 | # | Threat (STRIDE) | Impact | Control | Requirement |
 |---|---|---|---|---|
-| `TH1` | Tampering: the record of which bronze objects are processed or set aside (D7) is altered or lost | Batches skipped, leaving a gap, or processed again | Only the pipeline's token writes to the lakehouse bucket (ADR-0023); processing again adds no rows (D7); the record can be rebuilt from bronze and the silver rows' lineage (D5) | |
-| `TH2` | Denial of service: a bronze object too large for a run's memory, from a provider or capture, kills every run that reads it | Its batch is retried in every run and blocks the backlog behind it | A batch is bounded in bytes as well as in objects (D7); an object above the bound is set aside like a batch that fails a rule, and logged | |
-| `TH3` | Denial of wallet: a run that drains a large backlog, or a fault that keeps it busy, runs on Modal for hours | Cost beyond the pipeline's budget share ([ADR-0026](../decisions/0026-budget-shares-per-component.md)) | Each run ends at the timeout T060.1 fixes (D7); a run that ends there is a failure the heartbeat reports, and the next run resumes the backlog | |
+| `TH1` | Tampering: the record of which bronze objects are processed or set aside (D7) is altered or lost | Batches skipped, leaving a gap, or processed again | Only the pipeline's token writes to the lakehouse bucket (ADR-0023); processing again adds no rows (D7); the record can be rebuilt from bronze and the silver rows' lineage (D5) | R14, R20 |
+| `TH2` | Denial of service: a bronze object too large for a run's memory, from a provider or capture, kills every run that reads it | Its batch is retried in every run and blocks the backlog behind it | A batch is bounded in bytes as well as in objects (D7); an object above the bound is set aside like a batch that fails a rule, and logged | R13, R18 |
+| `TH3` | Denial of wallet: a run that drains a large backlog, or a fault that keeps it busy, runs on Modal for hours | Cost beyond the pipeline's budget share ([ADR-0026](../decisions/0026-budget-shares-per-component.md)) | Each run ends at the timeout T060.1 fixes (D7); a run that ends there is a failure the heartbeat reports, and the next run resumes the backlog | R17, R21 |
 
 Repudiation is covered by row lineage (D5): every row names the run and the code version that wrote it.
 
@@ -170,7 +170,27 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 - Optional: Where <feature is included>, the <system> shall <response>.
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
-- **R1** `<EARS statement>` (D`<N>`)
+- **R1** The pipeline shall publish each file the page serves with a JSON Schema contract, checked by a contract test in CI. (D2)
+- **R2** If a file fails its JSON Schema, then the pipeline shall not publish it, as a runtime rule of severity error. (D2, D4)
+- **R3** The pipeline shall run every 15 min, 24/7. (D3)
+- **R4** The pipeline shall check every runtime rule of the quality catalog in every run. (D4)
+- **R5** If a batch fails a runtime rule of severity error, then the pipeline shall publish nothing from it, set it aside and log the failure with its rule in the run's events. (D4, D7)
+- **R6** If a batch fails a runtime rule of severity warn, then the pipeline shall log the failure with its rule in the run's events and publish the batch. (D4)
+- **R7** The pipeline shall build each quality indicator of the catalog as a gold table, with its target. (D4)
+- **R8** Where a published file holds a station's latest count, the pipeline shall mark the count when it is frozen (RDM61). (D4)
+- **R9** When the age of a published file exceeds one cadence plus one run, the observability shall alert the owner. (D4)
+- **R10** When a batch fails a runtime rule of either severity, the observability shall alert the owner. (D4)
+- **R11** The pipeline shall write in every silver and gold row the ID of the run that wrote it and that run's code version. (D5)
+- **R12** The pipeline shall log, for each run, what it read, what it wrote and its outcome. (D5)
+- **R13** When a run starts, the pipeline shall process the bronze objects no run has processed yet, oldest first, in batches bounded in objects and in bytes, one after another until none is left. (D7)
+- **R14** When processing a bronze object again, the pipeline shall add no rows. (D7)
+- **R15** While a run is running, the pipeline shall not start another run. (D7)
+- **R16** When a batch passes its audit, the pipeline shall publish it before processing the next one. (D7)
+- **R17** If a batch fails on reading, writing or the platform, then the pipeline shall leave it pending for the next run. (D7)
+- **R18** If a bronze object on its own exceeds the batch's byte bound, then the pipeline shall set it aside and log it. (D7, D8)
+- **R19** When a new code version is deployed, the pipeline shall return every batch set aside to pending. (D7)
+- **R20** The pipeline shall rebuild its record of the bronze objects processed and set aside from bronze and the silver rows' lineage. (D8)
+- **R21** If a run reaches its timeout, then the pipeline shall end it and signal a failure to the heartbeat. (D8)
 
 ### 1.4 Done when
 
@@ -184,9 +204,9 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | Child | Scope | Closes | Depends on | Done when |
 |---|---|---|---|---|
-| T060.1 | The station stock from real-time capture as a walking skeleton (D1), with the conformed dimensions Date, Time of day, System and Station, up to its published file; its STRIDE pass covers the token that publishes the file and the secrets of Modal and the heartbeat (D8) | [d002 › Q1](d002-requirements.md#guiding-questions) without the split by type, Q2, Q3, Q5, Q8; [d002 › R23](d002-requirements.md#requirements), with the heartbeat of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md); the cadence review (D3) and the execution platform check (Carried-over inputs) | — | It runs on Modal every 15 min in production; one acceptance query per question passes on real data (D2); its run time and memory are measured, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them |
-| T060.2 | Observability of capture and the pipeline: their logs queried together, and alerts on failed runtime rules and on quality indicators off target (D4); its STRIDE pass covers the tool's account and secret and who can read the logs (D8) | How the owner queries the logs of capture, the pipeline and the page together, and learns of a failed runtime rule of either severity; a script with the owner's common health queries, and whether it runs from a phone ([s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel), [P9](../spikes/s013-visualization-tool.md#55-production-inputs)); [d002 › R14](d002-requirements.md#requirements) | T060.1 | A failed rule of each severity reaches the owner; the indicator targets are reviewed against weeks of production indicators (D4) |
-| T060.3 | The stock by vehicle type, then the stock movements, from real-time capture, with the Vehicle type dimension | [d002 › Q1](d002-requirements.md#guiding-questions)'s split by type, Q4, Q6, Q7; RDM58's target in T060.2's alerts | T060.1, T060.2 | One acceptance query per question passes on real data (D2) |
+| T060.1 | The station stock from real-time capture as a walking skeleton (D1), with the conformed dimensions Date, Time of day, System and Station, up to its published file; its STRIDE pass covers the token that publishes the file and the secrets of Modal and the heartbeat (D8) | [d002 › Q1](d002-requirements.md#guiding-questions) without the split by type, Q2, Q3, Q5, Q8; [d002 › R23](d002-requirements.md#requirements), with the heartbeat of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md); R1–R6, R7 but RDM58, R8, R11–R21; the cadence review (D3) and the execution platform check (Carried-over inputs) | — | It runs on Modal every 15 min in production; one acceptance query per question passes on real data (D2); its run time and memory are measured, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them |
+| T060.2 | Observability of capture and the pipeline: their logs queried together, and alerts on failed runtime rules and on quality indicators off target (D4); its STRIDE pass covers the tool's account and secret and who can read the logs (D8) | How the owner queries the logs of capture, the pipeline and the page together, and learns of a failed runtime rule of either severity; a script with the owner's common health queries, and whether it runs from a phone ([s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel), [P9](../spikes/s013-visualization-tool.md#55-production-inputs)); [d002 › R14](d002-requirements.md#requirements); R9, R10 | T060.1 | A failed rule of each severity reaches the owner; the indicator targets are reviewed against weeks of production indicators (D4) |
+| T060.3 | The stock by vehicle type, then the stock movements, from real-time capture, with the Vehicle type dimension | [d002 › Q1](d002-requirements.md#guiding-questions)'s split by type, Q4, Q6, Q7; R7 for RDM58, with its target in T060.2's alerts | T060.1, T060.2 | One acceptance query per question passes on real data (D2) |
 | T060.4 | The historical archives, loaded into the station stock; its STRIDE pass covers the archives' upload and their integrity (D8) | How the archives reach R2 and are loaded, and how Bicing's archive is checked against real-time capture, the check handed over by [d002 › Out of scope](d002-requirements.md) | T060.1 | The archives the model takes ([data-model.md › Grain](../data-model.md#grain)) are in the station stock and pass their check against real-time capture |
 
 Each child changes its tables' `TODO(T060)` markers in [data-model.md › Data contract](../data-model.md#data-contract) to its own ID.
