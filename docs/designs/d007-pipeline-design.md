@@ -19,7 +19,7 @@ Phase: the blocks and reviews completed. -->
 
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [ ] Plan review
-- Next: Plan review (`review-plan`), the final review of this parent. The next log entry is #12.
+- Next: Plan review (`review-plan`), the final review of this parent. The next log entry is #13.
 
 ## 1. Spec — what and why
 
@@ -75,7 +75,7 @@ Rejected: a minimal page after T060.1, to validate the file's shape and the page
 
 #### D3. Continuous mode with a 15-minute cadence
 
-The pipeline runs 24/7 on a schedule, every 15 minutes, so the visitor sees data about 17 minutes old (cadence plus a run of about 2 min, not measured). This refines [d002 › R3](d002-requirements.md#requirements). The cadence starts with margin because its cost estimate rests on a run time nobody has measured yet ([s012 › D1](../spikes/s012-execution-target.md#d1-execution-platform)).
+The pipeline runs 24/7 on a schedule, every 15 minutes, so the visitor sees data about 17 minutes old (cadence plus a run of about 2 min, not measured). This refines [d002 › R3](d002-requirements.md#requirements), and the same data age is the freshness of every question answered from the current state, [d002 › Q1, Q2 and Q5](d002-requirements.md#guiding-questions). The cadence starts with margin because its cost estimate rests on a run time nobody has measured yet ([s012 › D1](../spikes/s012-execution-target.md#d1-execution-platform)). **#12**
 
 What would change it: when the runs measured in T060.1 show that a 10-minute cadence costs less per month than Modal's monthly credit of $30, the cadence lowers to 10 min. It does not go below 10 min, the shortest interval R2's Class B quota allows running 24/7 ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)). The review uses the cost Modal bills for the measured runs, container start included, and the data age they reach.
 
@@ -291,6 +291,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 9 | [D4](#d4-data-quality-in-four-classes), [D7](#d7-catch-up-in-bounded-batches) | Write-Audit-Publish at both points where data becomes visible: each batch audited before it is committed to silver and gold, each file audited before it is deployed at the end of the run; a file that fails is not deployed, the page keeps the last that passed, and the run ends with no failure signal, since rule failures reach the owner through observability and the heartbeat reports only failed runs | A file's check has no batch to set aside; each rule is audited where its output becomes visible, and one alert channel per kind of failure | R2, R5, R6, R16, R22 | Plan review |
 | 10 | [D7](#d7-catch-up-in-bounded-batches), [D8](#d8-pipeline-security-threats) | A run takes no further batch once a fixed time budget is spent, the timeout less the longest batch measured and the run's close, and ends well, leaving the rest pending; the timeout only catches a run that hangs; following a graceful shutdown before a deadline | A backlog has no bound, so draining it in one run would end each run at the timeout and alert as a failure what is normal work | R13, R21, R25 | Plan review |
 | 11 | [D4](#d4-data-quality-in-four-classes), [Children](#16-children) | Each indicator's target is reviewed against weeks of production indicators before a child closes: by T060.2 for those built up to it, by the child that builds any later one, such as T060.3 for DQM4; following the SRE practice of an objective set from a measured baseline | An indicator built after the alerts would otherwise keep its initial target unreviewed | R7 | Plan review |
+| 12 | [D3](#d3-continuous-mode-with-a-15-minute-cadence) | Every question answered from the current state (d002's Q1, Q2, Q5) has the freshness of R3, one cadence plus one run; following one freshness target per pipeline, since its outputs share its cadence; **refines [d002 › Guiding questions](d002-requirements.md#guiding-questions)** | Q2 and Q5 come from the same 15-minute pipeline, so 5 min could not be met; the cadence review of D3 then improves them all | R3 | Plan review |
 
 ### 2.3 File layout
 
@@ -302,13 +303,14 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 docs/
 ├── data-quality.md                            (new)       Quality catalog: runtime rules (DQR) and quality indicators (DQM) (#1)
 ├── data-model.md                              (modified)  Data contract loses the runtime rules and quality indicators; the rest renumbered as TR and RDM (#1)
-├── architecture.md                            (modified)  §6.2 runs in bounded batches, audited before publishing; §8 data quality, lineage and deployments cite their ADRs; §10 scenarios grouped by goal, its introduction pointing to the quality catalog
+├── architecture.md                            (modified)  §1.1 and QS1 freshness as one cadence plus one run (#12); §6.2 runs in bounded batches, audited before publishing; §8 data quality, lineage and deployments cite their ADRs; §10 scenarios grouped by goal, its introduction pointing to the quality catalog; §11 cadence risk owned by T060.1
 ├── decisions/
 │   ├── 0042-data-quality-classes-and-severity.md  (new)   D4: four classes, severity by who causes a failure, write-audit-publish (#2)
 │   ├── 0043-lineage-at-four-levels.md         (new)       D5: lineage by table, column, run and row (#2)
 │   ├── 0044-deployments-tagged-with-their-commit.md  (new)  D6: each deployment tagged with its commit by its component's deploy script (#2, #8)
 │   └── 0045-catch-up-in-bounded-batches.md    (new)       D7: drain mode in bounded batches, dead-letter with redrive (#2)
 └── designs/
+    ├── d002-requirements.md                   (modified)  Q2 and Q5 freshness as one cadence plus one run (#12)
     ├── d005-data-model.md                     (modified)  D29 and Implemented: the contract's IDs per class, refined by #1; citations renumbered
     └── d007-pipeline-design.md                (modified)  Header lists the new ADRs; D4 and every citation renumbered
 ```
