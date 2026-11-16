@@ -107,7 +107,7 @@ Besides the Data contract, these checks join the catalog:
 
 Severity follows who causes a failure. A rule on the pipeline's own logic fails with severity error, following Write-Audit-Publish at both points where data becomes visible: each batch is audited before it is committed to silver and gold, and each file the page serves is audited before it is deployed, at the end of the run. A batch that fails commits nothing and is set aside until a new code version (D7); a file that fails is not deployed, and the run ends with no failure signal. Either way the page keeps the last file that passed and the failure is logged in the run's events, so the visitor sees at most an older data age, or a gap in the history until the batch returns. A rule on a provider's data fails with severity warn: the failure is logged and the batch is committed. The owner learns of a failure of either severity through observability (T060.2), not through the heartbeat, which reports runs that fail or never start. **#9**
 
-A row that fails its column's schema is quarantined instead, following a quarantine table: it is written there with the check it failed and the bronze object it comes from, the failure is logged, and the rest of its batch publishes. A provider's new value then removes only its rows from the page, never shows the visitor a value outside the schema, and reaches the owner through observability like any failed rule. **#1**
+A row that fails its column's schema is quarantined instead, following a quarantine table: it is written there with the check it failed and the bronze object it comes from, the failure is logged, and the rest of its batch is committed; the reconciliation (DQR13) counts a quarantined row as accounted for. A provider's new value then removes only its rows from the page, never shows the visitor a value outside the schema, and reaches the owner through observability like any failed rule. **#1**
 
 A quality indicator is kept if it is actionable, when the owner acts on capture, on a provider or on the model's reference data as it moves, or if it measures a provider's quality, which answers [d002 › Q2](d002-requirements.md#guiding-questions). DQM4, DQM5, DQM8 and the counts above `capacity` form each provider's scorecard. An indicator that measures silver and gold is built by the pipeline as a gold table; one that measures something outside the model is built by the observability child: DQM10, the age of the files the page serves, which the pipeline cannot measure while it is not running, and DQM11, [d002 › R14](d002-requirements.md#requirements), which reads capture's logs. **#1** TR52, a station's service, measures the business, not its data, and stays in the model outside the catalog.
 
@@ -196,7 +196,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R17** If a batch fails on reading, writing or the platform, then the pipeline shall leave it pending for the next run. (D7)
 - **R18** If a bronze object on its own exceeds the batch's byte bound, then the pipeline shall set it aside and log it. (D7, D8)
 - **R19** When a new code version is deployed, the pipeline shall return every batch set aside, and every bronze object with rows in quarantine, to pending. (D7, #1)
-- **R20** The pipeline shall rebuild its record of the bronze objects processed and set aside from bronze and the silver rows' lineage. (D8)
+- **R20** If its record of the bronze objects processed and set aside is lost or altered, then the pipeline shall rebuild it from bronze and the silver rows' lineage. (D8)
 - **R21** If a run reaches its timeout, then the pipeline shall end it and signal a failure to the heartbeat. (D8)
 - **R22** If a row fails its column's schema, then the pipeline shall write it to the quarantine table with the check it failed and its bronze object, log the failure in the run's events, and commit the rest of its batch. (D4, D7, #1, #9)
 - **R23** If the working tree is not clean, or its commit is not the latest of `main`, then the pipeline's deploy script shall not deploy; otherwise it shall tag the deployment with that commit's SHA. (D6, #8)
@@ -208,6 +208,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
 - T060.1–T060.4 exist as sub-issues of T060, each with the scope of Children and blocked by the tasks it depends on.
+- T042 is closed as absorbed by T060 (D4).
 
 ### 1.5 Out of scope
 
@@ -223,7 +224,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 | T060.1 | The station stock from real-time capture as a walking skeleton (D1), with the conformed dimensions Date, Time of day, System and Station, up to its published file; its STRIDE pass covers the token that publishes the file and the secrets of Modal and the heartbeat (D8) | [d002 › Q1](d002-requirements.md#guiding-questions) without the split by type, Q2, Q3, Q5, Q8; [d002 › R23](d002-requirements.md#requirements), with the heartbeat of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md); R1–R6, R7 but DQM4, R8, R11–R25; the cadence review (D3); the Carried-over inputs but where the history load runs | T064 | It runs on Modal every 15 min in production; one acceptance query per question passes on real data (D2); its run time and memory are measured, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them |
 | T060.2 | Observability of capture and the pipeline: their logs queried together, and alerts on failed runtime rules and on quality indicators off target (D4); its STRIDE pass covers the tool's account and secret and who can read the logs (D8) | How the owner queries the logs of capture, the pipeline and the page together, and learns of a failed runtime rule of either severity; a script with the owner's common health queries, and whether it runs from a phone ([s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel), [P9](../spikes/s013-visualization-tool.md#55-production-inputs)); [d002 › R14](d002-requirements.md#requirements); R9, R10 | T060.1 | A failed rule of each severity reaches the owner; the targets of the indicators built by T060.1 and T060.2 are reviewed against weeks of production indicators (D4) |
 | T060.3 | The stock by vehicle type, then the stock movements, from real-time capture, with the Vehicle type dimension | [d002 › Q1](d002-requirements.md#guiding-questions)'s split by type, Q4, Q6, Q7; R7 for DQM4, with its target in T060.2's alerts | T060.1, T060.2 | One acceptance query per question passes on real data (D2); DQM4's target is reviewed against weeks of production indicators (D4) |
-| T060.4 | The historical archives, loaded into the station stock; its STRIDE pass covers the archives' upload and their integrity (D8) | How the archives reach R2 and are loaded, and where the load runs (Carried-over inputs › Run operation); how Bicing's archive is checked against real-time capture, the check handed over by [d002 › Out of scope](d002-requirements.md) | T060.1 | The archives the model takes ([data-model.md › Grain](../data-model.md#grain)) are in the station stock and pass their check against real-time capture |
+| T060.4 | The historical archives, loaded into the station stock; its STRIDE pass covers the archives' upload and their integrity (D8) | How the archives reach R2 and are loaded, and where the load runs (Carried-over inputs › Run operation); how Bicing's archive is checked against real-time capture, the check handed over by [d002 › Out of scope](d002-requirements.md) | T060.1, T060.2 | The archives the model takes ([data-model.md › Grain](../data-model.md#grain)) are in the station stock and pass their check against real-time capture |
 
 Each child changes its tables' `TODO(T060)` markers in [data-model.md › Data contract](../data-model.md#data-contract) to its own ID.
 
@@ -238,9 +239,18 @@ Approach lists the main and supporting deliverables, each already written.
 If some block contains `options considered`, include them with pros and cons.
 -->
 
+#### Deliverables
+
+- [data-quality.md](../data-quality.md): the quality catalog, its runtime rules (DQR) and quality indicators (DQM), with their severity, targets and where each is built (D4, #1, #9, #11).
+- [data-model.md › Data contract](../data-model.md#data-contract): the transformation specs (TR) and documentation items (RDM) that stay with the model (#1).
+- [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md), [ADR-0043](../decisions/0043-lineage-at-four-levels.md), [ADR-0044](../decisions/0044-deployments-tagged-with-their-commit.md), [ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md): D4, D5, D6 and D7 as cross-cutting decisions (#2, #8, #9, #10).
+- [architecture.md](../architecture.md): freshness in §1.1 and §10.1, the pipeline run in §6.2, data quality, lineage and deployments in §8, and the cadence risk in §11 (#12).
+- `.claude/rules/docs/data-model.md`: a column rule keeps its TR ID when it moves to its worksheet (#1).
+- [d002](d002-requirements.md): the freshness of Q1, Q2 and Q5 and R3 (D3, #12); [d005 › D29](d005-data-model.md#d29-data-contract-of-the-model): the contract's IDs per class (#1).
+
 #### Quality catalog
 
-[data-quality.md](../data-quality.md) holds the quality catalog of D4, apart from the model, after the terms of DAMA-DMBOK and ISO/IEC 25024. Each item lives in one place, with its full text and a flat ID whose prefix tells its class, numbered per class in the order the items appear:
+[data-quality.md](../data-quality.md) holds the quality catalog of D4, apart from the model, after the terms of DAMA-DMBOK and ISO/IEC 25024. Each item lives in one place, with its full text and a flat ID whose prefix tells its class, never reused:
 
 - **Runtime rules** (`DQR1`, `DQR2`…): in the catalog, each with its dimension and severity.
 - **Quality indicators** (`DQM1`, `DQM2`…), quality measures in ISO/IEC 25024: in the catalog, each with its dimension, its target, where it is built (a gold table, or observability for what lies outside the model) and why it is kept: the action it prompts or the provider's quality it measures (D4).

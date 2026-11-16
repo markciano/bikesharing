@@ -343,7 +343,7 @@ The rules of silver and gold are written once, in EARS, and each cites the decis
 
 Each rule states one behaviour (singular, as ISO/IEC/IEEE 29148 asks of a requirement), so it is either a table rule or a column rule. A rule that holds both is split: the table part keeps its ID and the column part takes the next free one of its class. **[d007 › #1](d007-pipeline-design.md#22-decision-summary)**
 
-What would change it: [d007](d007-pipeline-design.md) choosing a test tool with an executable contract; that contract then becomes the rules' place, recorded as an ADR.
+What would change it: not the choice of a test tool; a machine-readable file a tool needs is derived from these documents, which stay the rules' place. **[d007 › #1](d007-pipeline-design.md#22-decision-summary)**
 
 Rejected: an executable contract per table now (dbt `schema.yml`, SodaCL, Open Data Contract Standard), since its format depends on the test tool, which d007 decides; requirements in this design copied into data-model.md later, since the deliverable is the document itself and the copy would be written and approved twice; IDs per table (`RDM-STK-1`), since a cross-table rule has no table and renaming or splitting a table would change the ID that tests cite; rules that hold a table and a column part kept whole in data-model.md, since their column part would live outside its table's worksheet.
 
@@ -395,13 +395,13 @@ The requirements are the rules of the model's data contract, written once in [da
 | [D16. Vehicles at an out-of-service station](#d16-vehicles-at-an-out-of-service-station) | TR9, TR10, TR18, DQM4, TR13 |
 | [D17. Occupancy](#d17-occupancy) | TR11, TR12, TR13 |
 | [D18. AMBici's +P stations](#d18-ambicis-p-stations) | TR44, TR45, RDM3, TR46; the script that rebuilds the list is code, tested by its slice of T060 ([Out of scope](#15-out-of-scope)) |
-| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | TR7, DQM5, DQM6; the additivity of `last_reported` and of the stock's counts goes in their worksheet rows ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
+| [D19. Last reported time in the stock](#d19-last-reported-time-in-the-stock) | TR7, DQM5, TR54; the additivity of `last_reported` and of the stock's counts goes in their worksheet rows ([D28](#d28-source-field-dictionary-and-detailed-design-per-table)) |
 | [D20. Zero counts in the stock by vehicle type](#d20-zero-counts-in-the-stock-by-vehicle-type) | TR15, TR16, TR17 |
 | [D21. Per-type counts that do not add up to the station's](#d21-per-type-counts-that-do-not-add-up-to-the-stations) | TR19, DQM4 |
 | [D22. Departures and arrivals](#d22-departures-and-arrivals) | TR22, TR23, TR24, DQR5, DQR6 |
 | [D23. Movements across gaps in capture](#d23-movements-across-gaps-in-capture) | TR20, TR21, TR26, TR27, DQR6 |
 | [D24. Movements at an out-of-service station](#d24-movements-at-an-out-of-service-station) | TR23, TR24, TR25, DQR6 |
-| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | RDM1, TR52, DQM5, DQM6 |
+| [D25. Lack of service and frozen counts](#d25-lack-of-service-and-frozen-counts) | RDM1, TR52, TR54, DQM5 |
 | [D26. Timeliness and completeness of the feeds](#d26-timeliness-and-completeness-of-the-feeds) | DQM7, TR53, DQM8 |
 | [D27. Gold per question](#d27-gold-per-question) | DQM5, RDM4 |
 | [D28. Source field dictionary and detailed design per table](#d28-source-field-dictionary-and-detailed-design-per-table) | RDM3, RDM4, RDM5, RDM6 |

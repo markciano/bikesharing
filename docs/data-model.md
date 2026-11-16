@@ -212,6 +212,7 @@ The rules of silver and gold that the model's design sets, in two classes: trans
 - **RDM1** The station stock and the stock movements shall share the date, time-of-day, system and station dimensions, so that a query combines them by drill-across, with no column added to either for lack of service or frozen counts ([d005 › D25](designs/d005-data-model.md#d25-lack-of-service-and-frozen-counts)).
 - **TR52** The model shall measure a station's service from the station stock, as the share of its counts with `is_renting` true and the share with `is_returning` true ([d005 › D25](designs/d005-data-model.md#d25-lack-of-service-and-frozen-counts)).
 - **TR53** Each row of the station stock shall keep the `last_updated` of the response it comes from ([d005 › D26](designs/d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)). TODO(T060): move to the station stock's worksheet.
+- **TR54** The model shall take no AMBici count as frozen, since AMBici's `last_reported` is the feed time ([d005 › D19](designs/d005-data-model.md#d19-last-reported-time-in-the-stock), [D25](designs/d005-data-model.md#d25-lack-of-service-and-frozen-counts)).
 
 ### Model as a whole
 
