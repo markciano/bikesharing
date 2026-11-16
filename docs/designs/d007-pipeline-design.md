@@ -10,7 +10,7 @@ Kind: a build task builds code or configuration and has every block. A document-
 - **Task:** T060
 - **Kind:** parent
 - **ADRs:** [ADR-0025](../decisions/0025-sql-models-directed-by-python.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0027](../decisions/0027-modal-as-execution-platform.md), [ADR-0029](../decisions/0029-pipeline-code-architecture.md)
-- **New ADRs from this doc:** [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md), [ADR-0043](../decisions/0043-lineage-at-four-levels.md)
+- **New ADRs from this doc:** [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md), [ADR-0043](../decisions/0043-lineage-at-four-levels.md), [ADR-0044](../decisions/0044-deployments-tagged-with-their-commit.md)
 
 ## Status
 
@@ -21,7 +21,7 @@ Phase: the blocks and reviews completed. -->
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review
 - Next: Plan step 5, writing File layout's deliverables in this order:
   1. Done: catalog and renumbering; #4–#7 merged into #1, under the Merge before approval rule. The next log entry is #8.
-  2. The four ADRs, one per message: ADR-0042 (D4) and 0043 (D5) written; next ADR-0044 (D6), then 0045 (D7). Numbers shift if T064's ADR is written first.
+  2. The four ADRs, one per message: ADR-0042 (D4) and 0043 (D5) written; D6 changed by #8, with R23–R24, Out of scope and ADR-0044; Out of scope tasks T065 and T066 created; next ADR-0045 (D7). The next log entry is #9. Numbers shift if T064's ADR is written first.
   3. `architecture.md`.
 
 ## 1. Spec — what and why
@@ -133,13 +133,13 @@ Lineage is covered at the four levels that OpenLineage and Kimball's audit dimen
 
 Rejected: a table of runs, with the bronze object's key in every silver row and the configuration version of each run, since this project does not need more than the levels above; the run's ID alone in each row, since the code version would be lost with the logs and the Delta history after 30 days at most.
 
-#### D6. No release tracking
+#### D6. Deployments tagged with their commit
 
-Nothing is built to show which code each platform runs. Each component already reports its own version in what it produces: capture as its Worker's version ID ([ADR-0036](../decisions/0036-log-convention-across-components.md)), the pipeline in its rows and logs (D5). Since every deployment is made by hand from `main` right after a merge, the commit behind a deployment is the last merge to `main` before the deployment's time on its platform.
+Every production deployment is tagged with the commit it deploys, following Twelve-Factor's unique ID for each release. Each component deploys through a deploy script of its own, run instead of the platform's command: it deploys only when the working tree is clean and its commit is the latest of `main`, and passes that commit's SHA as the deployment's tag. The platform's version history then names the commit behind each deployment, which each component's own version in what it produces leads to: capture's Worker version ID ([ADR-0036](../decisions/0036-log-convention-across-components.md)), the pipeline's code version in its rows and logs (D5). The page, which the pipeline redeploys in its runs ([ADR-0033](../decisions/0033-data-published-by-redeploying-static-assets.md)), is tagged with the code version of the run that deploys it.
 
-What would change it: deployments made by GitHub Actions, which could then record each one with its commit (GitHub Deployments).
+The script takes its token from the environment and asks for nothing, so a CI job can run it unchanged (Out of scope).
 
-Rejected: tagging each deployment with its commit on its platform, and reading every component's latest version in one health query, since an occasional lookup by time is enough for this project.
+Rejected: finding a deployment's commit as the last merge to `main` before its time, since the lookup is manual and gives the wrong commit for a deployment from an out-of-date or modified local copy; one health query reading every component's running version, since each platform's history already answers an occasional lookup. **#8**
 
 #### D7. Catch-up in bounded batches
 
@@ -200,6 +200,8 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R20** The pipeline shall rebuild its record of the bronze objects processed and set aside from bronze and the silver rows' lineage. (D8)
 - **R21** If a run reaches its timeout, then the pipeline shall end it and signal a failure to the heartbeat. (D8)
 - **R22** If a row fails its column's schema, then the pipeline shall write it to the quarantine table with the check it failed and its bronze object, log the failure in the run's events, and publish the rest of its batch. (D4, D7, #1)
+- **R23** If the working tree is not clean, or its commit is not the latest of `main`, then the pipeline's deploy script shall not deploy; otherwise it shall tag the deployment with that commit's SHA. (D6, #8)
+- **R24** When the pipeline deploys the page, it shall tag the deployment with the run's code version. (D6, #8)
 
 ### 1.4 Done when
 
@@ -207,13 +209,18 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 - T060.1–T060.4 exist as sub-issues of T060, each with the scope of Children and blocked by the tasks it depends on.
 
-### 1.5 Children
+### 1.5 Out of scope
+
+- Capture's deploy script, with the checks and the tag of D6, built after the pipeline — T065
+- Deployments from GitHub Actions on merge to `main` (continuous deployment), running each component's deploy script — T066
+
+### 1.6 Children
 
 <!-- Parent only. The child map, in build order: each child's scope (e.g. the business process it builds), the questions or requirements it closes, the children it depends on, and the condition that closes it. Each child has its own working document, which cites the parent's decisions instead of repeating them. Every open question and requirement of the parent is closed by the parent or by one child. The parent's Done when: its Open questions closed and its children created. -->
 
 | Child | Scope | Closes | Depends on | Done when |
 |---|---|---|---|---|
-| T060.1 | The station stock from real-time capture as a walking skeleton (D1), with the conformed dimensions Date, Time of day, System and Station, up to its published file; its STRIDE pass covers the token that publishes the file and the secrets of Modal and the heartbeat (D8) | [d002 › Q1](d002-requirements.md#guiding-questions) without the split by type, Q2, Q3, Q5, Q8; [d002 › R23](d002-requirements.md#requirements), with the heartbeat of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md); R1–R6, R7 but DQM4, R8, R11–R22; the cadence review (D3); the Carried-over inputs but where the history load runs | T064 | It runs on Modal every 15 min in production; one acceptance query per question passes on real data (D2); its run time and memory are measured, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them |
+| T060.1 | The station stock from real-time capture as a walking skeleton (D1), with the conformed dimensions Date, Time of day, System and Station, up to its published file; its STRIDE pass covers the token that publishes the file and the secrets of Modal and the heartbeat (D8) | [d002 › Q1](d002-requirements.md#guiding-questions) without the split by type, Q2, Q3, Q5, Q8; [d002 › R23](d002-requirements.md#requirements), with the heartbeat of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md); R1–R6, R7 but DQM4, R8, R11–R24; the cadence review (D3); the Carried-over inputs but where the history load runs | T064 | It runs on Modal every 15 min in production; one acceptance query per question passes on real data (D2); its run time and memory are measured, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them |
 | T060.2 | Observability of capture and the pipeline: their logs queried together, and alerts on failed runtime rules and on quality indicators off target (D4); its STRIDE pass covers the tool's account and secret and who can read the logs (D8) | How the owner queries the logs of capture, the pipeline and the page together, and learns of a failed runtime rule of either severity; a script with the owner's common health queries, and whether it runs from a phone ([s013 › D5](../spikes/s013-visualization-tool.md#d5-no-separate-operations-panel), [P9](../spikes/s013-visualization-tool.md#55-production-inputs)); [d002 › R14](d002-requirements.md#requirements); R9, R10 | T060.1 | A failed rule of each severity reaches the owner; the indicator targets are reviewed against weeks of production indicators (D4) |
 | T060.3 | The stock by vehicle type, then the stock movements, from real-time capture, with the Vehicle type dimension | [d002 › Q1](d002-requirements.md#guiding-questions)'s split by type, Q4, Q6, Q7; R7 for DQM4, with its target in T060.2's alerts | T060.1, T060.2 | One acceptance query per question passes on real data (D2) |
 | T060.4 | The historical archives, loaded into the station stock; its STRIDE pass covers the archives' upload and their integrity (D8) | How the archives reach R2 and are loaded, and where the load runs (Carried-over inputs › Run operation); how Bicing's archive is checked against real-time capture, the check handed over by [d002 › Out of scope](d002-requirements.md) | T060.1 | The archives the model takes ([data-model.md › Grain](../data-model.md#grain)) are in the station stock and pass their check against real-time capture |
@@ -264,6 +271,7 @@ Inputs about the how, left to this design by earlier spikes and designs; each go
 - **Publishing:** the pipeline generates the prepared files from an explicit list and deploys them at the end of a run, with the token from the secret store; a failed deployment does not fail the run's data ([s013 › P8](../spikes/s013-visualization-tool.md#55-production-inputs)). Before building it, try a few deployments with the token limited to one Worker and read Cloudflare's terms ([s013 › Not verified](../spikes/s013-visualization-tool.md#54-not-verified)). → T060.1
 - **R2 operation classes:** confirm with R2's per-operation metrics (GraphQL Analytics) the class of conditional PutObject, ListObjectsV2 and DeleteObjects, which the pricing page does not name; s010 confirmed only class totals ([s010 › F14](../spikes/s010-storage-table-format.md#4-findings)). → T060.1
 - **Rule names in code:** the convention for the name each catalog item takes in the data-test tool, such as ODCS's `name` beside its `id`. → T060.1
+- **Deployment tags:** `wrangler deploy --tag` and `modal deploy --tag` exist; confirm on a test deployment where each tag shows (`wrangler versions list --json`, `modal app history --json`), any length limit, how the tag behaves on a Worker with static assets, and whether Modal's own record of the Git commit makes its tag redundant ([D6](#d6-deployments-tagged-with-their-commit)). → T060.1
 
 ### 2.2 Decision summary
 
@@ -278,7 +286,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 |---|---|---|---|---|---|
 | 1 | [Quality catalog](#quality-catalog), [D4](#d4-data-quality-in-four-classes), [D7](#d7-catch-up-in-bounded-batches) | The quality catalog is a Markdown document, `docs/data-quality.md`, holding the runtime rules (`DQR`) and the quality indicators (`DQM`), each indicator with a Why and where it is built: a gold table when it measures silver and gold, the observability child otherwise; the Data contract keeps transformation specs (`TR`) and documentation items (`RDM`); a column's type, nullability and accepted values are its schema in its worksheet, with no ID, and a row that fails it is quarantined while the rest of its batch publishes; following DAMA-DMBOK and ISO/IEC 25024, docs-as-code, source-to-target mapping, ODCS's schema apart from quality, dbt's model contracts, and a quarantine table with D7's redrive; **refines [d005 › D29](d005-data-model.md#d29-data-contract-of-the-model)** | One place per rule, readable on its own; the ID tells the item's class and how it is verified; each check stated once; a provider's change removes only its rows from the page | R4, R7, R10, R14, R19, R22 | Plan |
 | 2 | [Approach](#21-approach) | D4, D5, D6 and D7 become ADRs, following Nygard's ADRs for cross-cutting architecture decisions | Each binds work after T060 and outside it: every future rule and table, every component's deployment, the pipeline's run mode | R4–R6, R11–R21 | Plan |
-| 3 | [Carried-over inputs](#carried-over-inputs), [Children](#15-children) | Each carried-over input goes to the first child that needs it: all to T060.1 but where the history load runs, to T060.4 | Each is first needed where the pipeline first reads bronze, runs on Modal and publishes | — | Plan |
+| 3 | [Carried-over inputs](#carried-over-inputs), [Children](#16-children) | Each carried-over input goes to the first child that needs it: all to T060.1 but where the history load runs, to T060.4 | Each is first needed where the pipeline first reads bronze, runs on Modal and publishes | — | Plan |
+| 8 | [D6](#d6-deployments-tagged-with-their-commit), [Out of scope](#15-out-of-scope), [Carried-over inputs](#carried-over-inputs) | Every production deployment is tagged with its commit by its component's deploy script, which deploys only a clean, latest `main`; the page with the code version of the run that deploys it; following Twelve-Factor's unique release ID; **replaces D6's lookup by time** | The commit behind any deployment is read directly, and no deployment carries code that is not on `main`; the same script can run from CI later | R23, R24 | Plan |
 
 ### 2.3 File layout
 
@@ -294,7 +303,7 @@ docs/
 ├── decisions/
 │   ├── 0042-data-quality-classes-and-severity.md  (new)   D4: four classes, severity by who causes a failure, write-audit-publish (#2)
 │   ├── 0043-lineage-at-four-levels.md         (new)       D5: lineage by table, column, run and row (#2)
-│   ├── 0044-no-release-tracking.md            (new)       D6: a deployment's commit found by time, with no release tracking (#2)
+│   ├── 0044-deployments-tagged-with-their-commit.md  (new)  D6: each deployment tagged with its commit by its component's deploy script (#2, #8)
 │   └── 0045-catch-up-in-bounded-batches.md    (new)       D7: drain mode in bounded batches, dead-letter with redrive (#2)
 └── designs/
     ├── d005-data-model.md                     (modified)  D29 and Implemented: the contract's IDs per class, refined by #1; citations renumbered
