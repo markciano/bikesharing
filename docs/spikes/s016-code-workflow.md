@@ -123,6 +123,25 @@ Rejected:
 
 Sources: [Claude Code › Hooks](https://code.claude.com/docs/en/hooks), [Claude Code › Best practices](https://code.claude.com/docs/en/best-practices), [Ruff](https://docs.astral.sh/ruff/), [Import Linter › Caching](https://import-linter.readthedocs.io/en/stable/caching/).
 
+#### D3. Further gaps
+
+The rest of `.claude/` is compared with Anthropic's Claude Code best practices; a gap is closed only when its value outweighs its upkeep for one developer.
+
+- **Code rules for the pipeline.** `python.md` gains two short sections: Tooling, from D2, and Pipeline architecture, one line per rule of [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md) and [s015](s015-pipeline-code-architecture.md) that constrains code, each citing its source. An ADR is not loaded into a session on its own, and Anthropic's practice is that rules hold what Claude cannot infer from the code. Rejected: citing ADR-0046 in every step's Reads, which depends on no step omitting it. SQL rules wait for the first SQL files: the design of T060.1 sets their layout and conventions.
+- **ADRs carried into rules.** An ADR that constrains how code or documents are written adds a one-line rule, citing it, to the `.claude/rules/` file where it applies, in the same commit as the ADR; the ADR keeps the reason, the rule states what to do. `adr.md` gains this in Lifecycle. ADR-0046 reached no rule because nothing asked for it. Rejected: a check in the reviews, which comes later and depends on someone remembering it.
+- **Security review.** When a task touches secrets, permissions or external input, the Review field of its last step reads `yes, security`, with its reason, and the implementing session runs the built-in `/security-review` with `/code-review`, in the same way as D1. One review mechanism, set where the risk is known. Rejected: a checklist item in `review.md`, which keeps that session on conformance only.
+
+Practices already covered or not worth their cost:
+
+| Practice | Outcome | Reason |
+|---|---|---|
+| A check in a Stop hook at the end of each turn | Not adopted | It would also run in spike and design sessions; the Step Check covers sessions that write code |
+| Plan mode; explore, plan, then code | Covered | `/design` and `/spike` |
+| Context management (`/clear`, short sessions) | Covered | One session per skill, about 3 steps per session, a stop past half context |
+| Worktrees, Claude in parallel | Not adopted | One developer working sequentially |
+| Claude in CI (headless) | Not adopted | A cost per PR; D1 already reviews locally |
+| Design review against reference practices | No change beyond D1's Review field | No evidence of a gap; design reviews have worked |
+
 <!-- In this order, so the reader finds what matters first:
 1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
 2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
