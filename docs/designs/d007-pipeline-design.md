@@ -18,7 +18,7 @@ Kind: a build task builds code or configuration and has every block. A document-
 Phase: the blocks and reviews completed. -->
 
 - State: Draft 📝
-- Phase: [ ] Spec · [ ] Plan · [ ] Plan review
+- Phase: [x] Spec · [ ] Plan · [ ] Plan review
 
 ## 1. Spec — what and why
 
@@ -196,7 +196,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
-- `<extra condition>`
+- T060.1–T060.4 exist as sub-issues of T060, each with the scope of Children and blocked by the children it depends on.
 
 ### 1.5 Children
 
