@@ -100,6 +100,29 @@ Sensitivity: with C5 at 5, E 3.72, D 3.56, C 3.44.
 
 Sources: [Claude Code › Local code review](https://code.claude.com/docs/en/code-review-local), [Claude Code › Subagents](https://code.claude.com/docs/en/sub-agents), [Google › What to look for](https://google.github.io/eng-practices/review/reviewer/looking-for.html), [Google › Small CLs](https://google.github.io/eng-practices/review/developer/small-cls.html), [SmartBear › Best practices for peer code review](https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/).
 
+#### D2. Automatic checks
+
+Python code is checked in three layers, following shift-left: each check runs in the earliest layer where it is fast enough. Rules with no exceptions sit in deterministic mechanisms (hooks, CI), as Anthropic's best practices advise.
+
+| Layer | When | What runs | Purpose |
+|---|---|---|---|
+| Hook | After each edit of a `.py` file | `ruff format` and `ruff check --fix` on that file; what remains goes to stderr with exit 2, so Claude sees it | Claude fixes format and lint at once; neither reaches the diff or the review (D1) |
+| Step Check | Before a step is marked ✅ | `scripts/check-pipeline.sh`: ruff over the component, mypy, `lint-imports`, pytest; stops at the first failure | Full verification before the owner's commit |
+| CI | Every push to a PR | The same script, in the pipeline job | Enforces it on every change, edits outside Claude included |
+
+`uv run pytest` stays the test command inside a step's red-green loop; the script is the single entry point for "ready to commit", in the same pattern as the `docs` job and `scripts/lint-docs.sh`. Each tool starts from its default configuration: ruff's default rule set, mypy in standard mode (not `strict`), import-linter with the contracts of [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md) only. A rule or a stricter mode is added only when a bug or a review finding shows it would have caught something.
+
+The configuration (`pyproject.toml`), the script, the hook and the CI job are created by the pipeline's first design (T060.1), so the hook comes with the ruff configuration it runs. This covers T024, which closes; the Capture Worker (JS) gets no hook while it has no active development.
+
+- **Would change it:** the hook slows editing or its output is noise: drop it and keep the Step Check and CI.
+
+Rejected:
+
+- **No hook, Step Check and CI only:** nothing to maintain, but format and lint errors surface only at the end of a step, adding iterations and reformatting diffs; the hook costs one script and ruff runs in well under a second per file.
+- **pyright instead of mypy:** reported as faster, with no reliable benchmark at this project's size; mypy is the reference implementation of Python's type system (PEP 484) and the most documented, and at this size the speed gap is seconds.
+
+Sources: [Claude Code › Hooks](https://code.claude.com/docs/en/hooks), [Claude Code › Best practices](https://code.claude.com/docs/en/best-practices), [Ruff](https://docs.astral.sh/ruff/), [Import Linter › Caching](https://import-linter.readthedocs.io/en/stable/caching/).
+
 <!-- In this order, so the reader finds what matters first:
 1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
 2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
