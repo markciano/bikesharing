@@ -208,7 +208,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
 - T060.1–T060.4 exist as sub-issues of T060, each with the scope of Children and blocked by the tasks it depends on.
-- T042 is closed as absorbed by T060 (D4).
 
 ### 1.5 Out of scope
 
@@ -313,7 +312,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 docs/
 ├── data-quality.md                            (new)       Quality catalog: runtime rules (DQR) and quality indicators (DQM) (#1)
 ├── data-model.md                              (modified)  Data contract loses the runtime rules and quality indicators; the rest renumbered as TR and RDM (#1)
-├── architecture.md                            (modified)  §1.1 and QS1 freshness as one cadence plus one run (#12); §6.2 runs in bounded batches, audited before publishing; §8 data quality, lineage and deployments cite their ADRs; §10 scenarios grouped by goal, its introduction pointing to the quality catalog; §11 cadence risk owned by T060.1
+├── architecture.md                            (modified)  §1.1 and QS1 freshness as one cadence plus one run (#12); §6.2 runs in bounded batches, audited before publishing; §8 data quality, lineage and deployments cite their ADRs; §10 scenarios grouped by goal, its introduction pointing to the quality catalog; §11 risks that wait on measured runs owned by T060.1
 ├── decisions/
 │   ├── 0042-data-quality-classes-and-severity.md  (new)   D4: four classes, severity by who causes a failure, write-audit-publish (#2)
 │   ├── 0043-lineage-at-four-levels.md         (new)       D5: lineage by table, column, run and row (#2)
