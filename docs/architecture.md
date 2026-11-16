@@ -12,11 +12,11 @@ The platform answers the guiding questions below, each comparable across service
 
 | Priority | # | Question | Grain | Window | Freshness | Source |
 |---|---|---|---|---|---|---|
-| Must | Q1 | How many bikes and free docks does each station have right now? | Snapshot | Latest | ≤ 5 min | [d002 › Q1](designs/d002-requirements.md#guiding-questions) |
-| Must | Q2 | Do the feeds arrive on time and complete? | Minute | 30 days | ≤ 5 min | [d002 › Q2](designs/d002-requirements.md#guiding-questions) |
+| Must | Q1 | How many bikes and free docks does each station have right now? | Snapshot | Latest | Cadence + run | [d002 › Q1](designs/d002-requirements.md#guiding-questions) |
+| Must | Q2 | Do the feeds arrive on time and complete? | Minute | 30 days | Cadence + run | [d002 › Q2](designs/d002-requirements.md#guiding-questions) |
 | Must | Q3 | When is each station full or empty, and for how long? | Hour | 12 months | 1 hour | [d002 › Q3](designs/d002-requirements.md#guiding-questions) |
 | Should | Q4 | How many trips are made per day, by municipality and post code? | Day | 12 months | 1 hour | [d002 › Q4](designs/d002-requirements.md#guiding-questions) |
-| Should | Q5 | What share of the fleet is in use right now? | Snapshot | Latest | ≤ 5 min | [d002 › Q5](designs/d002-requirements.md#guiding-questions) |
+| Should | Q5 | What share of the fleet is in use right now? | Snapshot | Latest | Cadence + run | [d002 › Q5](designs/d002-requirements.md#guiding-questions) |
 | Should | Q6 | Which stations are used most and least? | Day | 12 months | 1 day | [d002 › Q6](designs/d002-requirements.md#guiding-questions) |
 | Could | Q7 | Which stations and zones act as sources or sinks by time band? | Hour | 12 months | 1 hour | [d002 › Q7](designs/d002-requirements.md#guiding-questions) |
 | Could | Q8 | How has the station network changed over time? | Change event | Since the earliest archive loaded | 1 day | [d002 › Q8](designs/d002-requirements.md#guiding-questions) |
@@ -206,7 +206,7 @@ Quality scenarios that make the goals in §1.2 measurable, grouped by goal in it
 
 | ID | Stimulus | Response | Source |
 |---|---|---|---|
-| QS1 | Normal operation | Station status (Q1) is shown no more than 5 minutes after capture, and no more than 1 minute where the chosen tools allow it within the cost limit | [d002 › R3](designs/d002-requirements.md#requirements) |
+| QS1 | Normal operation | Station status (Q1) is shown no more than one pipeline cadence plus one run after capture: a 15-minute cadence, lowered to no less than 10 min when measured runs fit Modal's monthly credit | [d002 › R3](designs/d002-requirements.md#requirements); [d007 › D3](designs/d007-pipeline-design.md#d3-continuous-mode-with-a-15-minute-cadence) |
 | QS2 | A feed stops updating | The visualization shows the age of the latest data instead of presenting it as current | [d002 › R7](designs/d002-requirements.md#requirements) |
 
 ### 10.2 Recoverability
@@ -253,7 +253,7 @@ Quality scenarios that make the goals in §1.2 measurable, grouped by goal in it
 - **Engine not exercised on real volumes:** the hand-off from DuckDB to `deltalake` and its memory use rest on documentation; the first slice of T040 checks both, with Polars as the fallback. [ADR-0024](decisions/0024-duckdb-as-processing-engine.md); [s011 › Not verified](spikes/s011-engine-pipeline-language.md#23-not-verified).
 - **Dependence on Modal's credit:** without the monthly credit, or with runs longer than estimated, the pipeline's platform cost exceeds its share; run time is not measured until the first slice of T040, and Oracle Cloud Always Free is the fallback. [ADR-0027](decisions/0027-modal-as-execution-platform.md).
 - **Deployments not confirmed by Cloudflare:** publishing relies on 4,300–8,600 deployments a month being accepted and on a token limited to one Worker being able to upload assets, and no page confirms either. If they fail, the page stays up with its last data and shows its age; the fallbacks are a Worker with the Cache API in front of private R2, and a separate Cloudflare account for the page. [ADR-0033](decisions/0033-data-published-by-redeploying-static-assets.md); [s013 › Not verified](spikes/s013-visualization-tool.md#54-not-verified).
-- **Freshness target not settled:** the 5 minutes of R3 is the intended target, and current estimates point to about 12 minutes. T040 sets the cadence with measured run times and reviews the target. [d002 › R3](designs/d002-requirements.md#requirements); [s010 › P5](spikes/s010-storage-table-format.md#production-inputs).
+- **Cadence not measured:** the 15-minute cadence rests on an estimated run time; T060.1 measures the runs and lowers it to 10 min if Modal's monthly credit covers them. [d007 › D3](designs/d007-pipeline-design.md#d3-continuous-mode-with-a-15-minute-cadence); [s012 › D1](spikes/s012-execution-target.md#d1-execution-platform).
 - **Undocumented Worker behaviour:** capture relies on `encodeResponseBody: 'manual'` and on the Free plan's CPU enforcement, neither documented. [ADR-0011](decisions/0011-cloudflare-workers-r2-for-realtime-capture.md).
 
 ## 12. Glossary

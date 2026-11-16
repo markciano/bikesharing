@@ -25,10 +25,10 @@ The data fits Kimball's inventory case: stations are stores, available bikes are
 | Priority | # | Question | Measures | Grain | Window | Freshness |
 |---|---|---|---|---|---|---|
 | Must | Q1 | How many bikes and free docks does each station have right now? | Bikes available by type, docks available | Snapshot | Latest | Cadence + run (R3) |
-| Must | Q2 | Do the feeds arrive on time and complete? | Age of latest data, minutes without capture, % records breaking invariants, frozen stations | Minute | 30 days | ≤ 5 min |
+| Must | Q2 | Do the feeds arrive on time and complete? | Age of latest data, minutes without capture, % records breaking invariants, frozen stations | Minute | 30 days | Cadence + run (R3) **[d007 › D3](d007-pipeline-design.md#d3-continuous-mode-with-a-15-minute-cadence)** |
 | Must | Q3 | When is each station full or empty, and for how long? | Occupancy %, count and duration of empty and full episodes | Hour | 12 months | 1 hour |
 | Should | Q4 | How many trips are made per day, by municipality and post code, and in Barcelona by district and neighbourhood? **[d005 › D10](d005-data-model.md#d10-barcelona-district-and-neighbourhood)** | **KPI** estimated trips (lower bound), trips per dock | Day | 12 months | 1 hour |
-| Should | Q5 | What share of the fleet is in use right now? | **KPI** % of fleet in use (estimated) | Snapshot | Latest | ≤ 5 min |
+| Should | Q5 | What share of the fleet is in use right now? | **KPI** % of fleet in use (estimated) | Snapshot | Latest | Cadence + run (R3) **[d007 › D3](d007-pipeline-design.md#d3-continuous-mode-with-a-15-minute-cadence)** |
 | Should | Q6 | Which stations are used most and least? | Changes per day, mean time between consecutive changes | Day | 12 months | 1 day |
 | Could | Q7 | Which stations and zones act as sources or sinks by time band? | Net flow (arrivals − departures) | Hour | 12 months | 1 hour |
 | Could | Q8 | How has the station network changed over time? | Capacity, location, name, stations added and removed | Change event | Since the earliest archive loaded | 1 day |
