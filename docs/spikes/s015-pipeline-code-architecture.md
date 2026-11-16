@@ -1,7 +1,7 @@
 # Spike: Pipeline code architecture
 
 - **Task:** T064
-- **ADRs:** [ADR-0029](../decisions/0029-pipeline-code-architecture.md), which this spike replaces
+- **ADRs:** [ADR-0029](../decisions/archive/0029-pipeline-code-architecture.md), which this spike replaces
 - **Code:** none: the spike has no run
 
 ## Status
@@ -15,7 +15,7 @@
 
 ### 1.1 Context
 
-This spike revisits the pipeline's code architecture, set by [ADR-0029](../decisions/0029-pipeline-code-architecture.md) from [s012 › D4](s012-execution-target.md#d4-processing-logic-separated-from-the-platform), before T060.1 builds the walking skeleton whose patterns every later child of [d007](../designs/d007-pipeline-design.md) follows. It decides the architecture style (D1, the central decision), the collaborators at the edge (D2), the shape of runtime rules in the code (D3), how configuration enters (D4) and how the rules are checked in CI (D5). None depends on evidence: D1 is settled by a weighted decision matrix over code skeletons, and the facts behind it and D5 come from the tools' documentation, so the spike has no run.
+This spike revisits the pipeline's code architecture, set by [ADR-0029](../decisions/archive/0029-pipeline-code-architecture.md) from [s012 › D4](s012-execution-target.md#d4-processing-logic-separated-from-the-platform), before T060.1 builds the walking skeleton whose patterns every later child of [d007](../designs/d007-pipeline-design.md) follows. It decides the architecture style (D1, the central decision), the collaborators at the edge (D2), the shape of runtime rules in the code (D3), how configuration enters (D4) and how the rules are checked in CI (D5). None depends on evidence: D1 is settled by a weighted decision matrix over code skeletons, and the facts behind it and D5 come from the tools' documentation, so the spike has no run.
 
 ### 1.2 Decided at framing
 
@@ -39,7 +39,7 @@ Options rejected, and how robust the result is:
 
 Options:
 
-- **A. Thin platform wrapper:** the current [ADR-0029](../decisions/0029-pipeline-code-architecture.md): inward dependencies, no interfaces.
+- **A. Thin platform wrapper:** the current [ADR-0029](../decisions/archive/0029-pipeline-code-architecture.md): inward dependencies, no interfaces.
 - **B1. Functional core, imperative shell:** pure functions take values (such as the current time) and return values or decisions; an outer shell performs all I/O. No interfaces.
 - **B2. B1 with selective driven ports:** interfaces only for external I/O that happens mid-flow (such as the clock or a notifier), with fakes in tests.
 - **C. Full ports and adapters (hexagonal):** every external system, the engine and storage included, behind a port.
@@ -54,7 +54,7 @@ Options:
 | N4 | A change of execution platform touch only the edge | [ADR-0027](../decisions/0027-modal-as-execution-platform.md) |
 | N5 | Adding a data quality rule or an observability metric be cheap | Q2, R7, R14; [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md), [ADR-0043](../decisions/0043-lineage-at-four-levels.md) |
 | N6 | Adding the load of a new source, one-off or recurring, leave the station flow untouched | Owner goal, no requirement |
-| N8 | One person understand and maintain the structure | Single developer ([ADR-0029](../decisions/0029-pipeline-code-architecture.md) › Context) |
+| N8 | One person understand and maintain the structure | Single developer ([ADR-0029](../decisions/archive/0029-pipeline-code-architecture.md) › Context) |
 | N9 | Credentials enter only at the edge and never reach logs | R22, R25 |
 | N10 | The scheduled run, the history load and the rebuild be the same operation over a different window, with no duplicated logic | R5, R11, R13; functional data engineering (Beauchemin) |
 
@@ -94,7 +94,7 @@ Options:
 |---|---|---|---|---|
 | C1 (20) | 3: the package sends the heartbeat itself ([s012 › D5](s012-execution-target.md#d5-pipeline-logs)), so "no heartbeat on failure" needs a patched HTTP call | 5: the heartbeat decision is a returned value | 5: a fake notifier passed as an argument | 5: as B2 |
 | C2 (15) | 2: nothing fixes how the time enters; it is read inside and overridden case by case | 5: the time enters at the edge; the window is a pure function of it and the last run | 5: a clock port with a fake | 5: as B2 |
-| C3 (15) | 5: one SQL file or list row and its test case | 5: as A | 5: rules are SQL and need no port | 2: the SQL lives in the adapter; each operation touches the port, the real adapter, the fake and their tests ([ADR-0029](../decisions/0029-pipeline-code-architecture.md) › Cost compared) |
+| C3 (15) | 5: one SQL file or list row and its test case | 5: as A | 5: rules are SQL and need no port | 2: the SQL lives in the adapter; each operation touches the port, the real adapter, the fake and their tests ([ADR-0029](../decisions/archive/0029-pipeline-code-architecture.md) › Cost compared) |
 | C4 (15) | 3: one entry point; the history load and the rebuild assemble their own sequence | 5: one operation over a window; entry points only compute it | 5: as B1 | 5: one shared use case |
 | C5 (10) | 4: a platform change touches the edge only; a recurring source mixes HTTP and logic in the package | 5: a new read at the edge and a pure function that interprets it | 5: a new adapter | 5: a new adapter |
 | C6 (25) | 5: no extra concept; 1–2 files per operation | 4: one extra concept (core and shell exchange values); 2 files per operation | 3: ports, adapters, fakes and their wiring; 2–4 files per operation | 1: four or more concepts; 7 files in the skeleton, 4 or more per operation |
@@ -132,7 +132,7 @@ Options rejected: a Python list with each rule's SQL inline; it saves a file per
 
 #### D4. Configuration as one typed value, read at the edge
 
-Configuration and credentials arrive as environment variables, set by the platform's secret store (R25), as Twelve-Factor's Config asks. One function in the shell, and only that one, reads the environment and returns a frozen dataclass of the standard library; the core receives it as a value, and tests build it directly with no environment. Each credential is wrapped in a type whose text form is masked, so a log or a printed configuration never shows it (R22). A missing variable fails at start-up. This narrows [ADR-0029](../decisions/0029-pipeline-code-architecture.md)'s rule 3, from the package to that one function.
+Configuration and credentials arrive as environment variables, set by the platform's secret store (R25), as Twelve-Factor's Config asks. One function in the shell, and only that one, reads the environment and returns a frozen dataclass of the standard library; the core receives it as a value, and tests build it directly with no environment. Each credential is wrapped in a type whose text form is masked, so a log or a printed configuration never shows it (R22). A missing variable fails at start-up. This narrows [ADR-0029](../decisions/archive/0029-pipeline-code-architecture.md)'s rule 3, from the package to that one function.
 
 What would change it: configuration that grows in number of variables, holds non-trivial types or becomes nested moves to `pydantic-settings`; the change stays in the configuration module, since the rest of the code sees only the value.
 
@@ -151,7 +151,7 @@ The rules of D1, D2 and D4 are checked in CI, so a departure fails the PR instea
 | 5 | The pipeline starts without the platform's SDK installed | A CI test |
 | 6 | Only the configuration function reads the environment (D4) | Review: an import check cannot tell this use of `os` from others |
 
-Rules 1, 4 and 5 carry over [ADR-0029](../decisions/0029-pipeline-code-architecture.md)'s rules 1, 2 and 4; rules 2 and 3 are new with B1. A driven port added under D1's evolution rule breaks no contract; the engine imported into the core does.
+Rules 1, 4 and 5 carry over [ADR-0029](../decisions/archive/0029-pipeline-code-architecture.md)'s rules 1, 2 and 4; rules 2 and 3 are new with B1. A driven port added under D1's evolution rule breaks no contract; the engine imported into the core does.
 
 Not verified: a `forbidden` contract on an external package such as `duckdb` needs `include_external_packages` set, as summarised from import-linter's documentation; T060.1 confirms it when it configures the contracts.
 
@@ -190,7 +190,7 @@ The pipeline's code follows a functional core with an imperative shell (D1): the
 |---|---|---|---|
 | ADR-0046, pipeline code architecture: functional core with imperative shell; ADR-0029 superseded and archived | D1–D5 | `docs/decisions/` | Pending |
 | Platform separation input re-pointed to ADR-0046 | D5 | [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs) | Pending |
-| Lines citing ADR-0029 | D1 | `docs/architecture.md`, `docs/testing-strategy.md`, in ADR-0046's commit | Pending |
+| Lines citing ADR-0029 | D1 | `docs/architecture.md` and the links to ADR-0029, in ADR-0046's commit | Pending |
 | T067, historical analysis of bike use with environmental data | Out of scope | GitHub Issues | Done |
 | T068, detect operator rebalancing | Raised while framing | GitHub Issues | Done |
 
