@@ -66,7 +66,7 @@ Rejected: a split by layer (silver, then gold), since silver would be built with
 
 #### D2. Visualization after all slices
 
-Each slice ends at a published file, not at a page. The public page (T041) is built once every business process publishes, so it is designed as a whole. Without a page, a slice is validated by data tests on its silver and gold tables, by reconciling its row counts from bronze to silver to gold, and by one acceptance query on gold per question it closes, checked on real data. Each published file has a fixed contract, a JSON Schema checked by a contract test ([ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md)), which is what T041 builds on.
+Each slice ends at a published file, not at a page. The public page (T041) is built once every business process publishes, so it is designed as a whole. Without a page, a slice is validated by data tests on its silver and gold tables, by reconciling its row counts from bronze to silver to gold, and by one acceptance query on gold per question it closes, checked on real data. Each published file has a fixed contract, a JSON Schema checked by a contract test ([ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md)) in CI and by a runtime rule before every publish (D4), which is what T041 builds on.
 
 What would change it: if T041 needs a file shaped differently, the contract and its test change in T041.
 
@@ -98,10 +98,11 @@ Besides the Data contract, these checks join the catalog:
 | Schema drift: a bronze feed adds or drops a field of those the model reads (RDM65, RDM69) | Runtime rule | Validity | warn |
 | Volume: a capture lists fewer stations than the recent median, by more than the threshold the slice building it fixes | Runtime rule | Completeness | warn |
 | Reconciliation: the rows a run adds to silver and gold match the items it reads from bronze, by count, or by total in a gold table that aggregates | Runtime rule | Completeness | error |
+| Published file contract: each file matches its JSON Schema (D2) before it is published | Runtime rule | Validity | error |
 | Counts above `capacity`: the share of station items whose vehicles and docks exceed the station's `capacity`, leaving out AMBici's +P stations (RDM52), whose bikes in +P spaces exceed it by design | Quality indicator | Consistency | — |
 | Published file age: the time since the capture of the data in each file the page serves, which alerts the owner when it exceeds one cadence plus one run ([d002 › R3](d002-requirements.md#requirements)) | Quality indicator | Timeliness | — |
 
-Severity follows who causes a failure. A rule on the pipeline's own logic fails with severity error, following Write-Audit-Publish: the run publishes nothing, the page keeps the last file that passed, and the failure is logged in the run's events, so the visitor sees only an older data age. A rule on a provider's data fails with severity warn: the failure is logged and the run publishes. The owner learns of a failure of either severity through observability (OQ5).
+Severity follows who causes a failure. A rule on the pipeline's own logic fails with severity error, following Write-Audit-Publish: the batch that fails publishes nothing and is set aside until a new code version (D7), the page keeps the last file that passed, and the failure is logged in the run's events, so the visitor sees at most an older data age, or a gap in the history until the batch returns. A rule on a provider's data fails with severity warn: the failure is logged and the run publishes. The owner learns of a failure of either severity through observability (OQ5).
 
 A quality indicator is kept if it is actionable, when the owner acts on capture, on a provider or on the model's reference data as it moves, or if it measures a provider's quality, which answers [d002 › Q2](d002-requirements.md#guiding-questions). RDM58, RDM61, RDM64 and the counts above `capacity` form each provider's scorecard. [d002 › R14](d002-requirements.md#requirements) is an actionable indicator, built by the observability child since it reads capture's logs. RDM60, a station's service, measures the business, not its data, and stays in the model outside the catalog.
 
@@ -136,11 +137,13 @@ Rejected: tagging each deployment with its commit on its platform, and reading e
 
 Each run processes the bronze objects no run has processed yet, whatever their capture instant, in bounded batches, oldest first, one after another until none is left, and then ends, following the drain mode of bounded micro-batches (Spark's `AvailableNow` trigger). Each batch is audited and published as it ends (D4), so a failure keeps what earlier batches published. Processing an object again adds no rows, and a run never starts while another is running, so scheduled runs wait while a run drains and the cadence resumes by itself.
 
-A backlog, from the first load of the bronze captured so far or from an outage of capture or Modal, drains in one run with the same code, and an object that reaches bronze late enters the next run. While a backlog drains, the published file serves older data and its age says so (D4). A batch fits in a run's memory with margin, and T060.1 fixes its size and the run's timeout from the memory and run time it measures. How a late object changes the stock movements already derived is decided by T060.3.
+A batch whose processing fails, on reading, writing or the platform, stays pending and is retried by the next run. A batch that fails a runtime rule of severity error is set aside, following a dead-letter queue with redrive: the run logs it with its rule (D4) and goes on with the next batch, and every batch set aside returns to pending when a new code version is deployed (D5). Each batch is processed from bronze as a whole, so nothing of a failed batch counts as done.
+
+A backlog, from the first load of the bronze captured so far or from an outage of capture or Modal, drains in one run with the same code, and an object that reaches bronze late, or a batch that returns from being set aside, enters the next run. While a backlog drains, the published file serves older data and its age says so (D4). A batch fits in a run's memory with margin, and T060.1 fixes its size and the run's timeout from the memory and run time it measures. How a late object changes the stock movements already derived is decided by T060.3.
 
 What would change it: if the pipeline processed bronze slower than capture writes it, a backlog would never drain; the run's memory or the platform then change in T060.1's review of [ADR-0027](../decisions/0027-modal-as-execution-platform.md).
 
-Rejected: one batch per run, since a backlog would drain by one batch per cadence; a fixed window, each run processing only the captures of its last cadence, since an outage would leave a gap until a manual reload; a separate first load followed by unbounded incremental runs, since it needs two code paths and a long outage could still overflow a run.
+Rejected: stopping at a batch that fails a rule until the code is fixed, since one faulty object would freeze the page; one batch per run, since a backlog would drain by one batch per cadence; a fixed window, each run processing only the captures of its last cadence, since an outage would leave a gap until a manual reload; a separate first load followed by unbounded incremental runs, since it needs two code paths and a long outage could still overflow a run.
 
 ### 1.3 Requirements
 
