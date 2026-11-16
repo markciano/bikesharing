@@ -10,7 +10,7 @@ Kind: a build task builds code or configuration and has every block. A document-
 - **Task:** T060
 - **Kind:** parent
 - **ADRs:** [ADR-0025](../decisions/0025-sql-models-directed-by-python.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0027](../decisions/0027-modal-as-execution-platform.md), [ADR-0029](../decisions/0029-pipeline-code-architecture.md)
-- **New ADRs from this doc:** [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md), [ADR-0043](../decisions/0043-lineage-at-four-levels.md), [ADR-0044](../decisions/0044-deployments-tagged-with-their-commit.md)
+- **New ADRs from this doc:** [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md), [ADR-0043](../decisions/0043-lineage-at-four-levels.md), [ADR-0044](../decisions/0044-deployments-tagged-with-their-commit.md), [ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)
 
 ## Status
 
@@ -21,7 +21,7 @@ Phase: the blocks and reviews completed. -->
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review
 - Next: Plan step 5, writing File layout's deliverables in this order:
   1. Done: catalog and renumbering; #4–#7 merged into #1, under the Merge before approval rule. The next log entry is #8.
-  2. The four ADRs, one per message: ADR-0042 (D4) and 0043 (D5) written; D6 changed by #8, with R23–R24, Out of scope and ADR-0044; Out of scope tasks T065 and T066 created; next ADR-0045 (D7). The next log entry is #9. Numbers shift if T064's ADR is written first.
+  2. The four ADRs, one per message: ADR-0042 (D4) and 0043 (D5) written; D6 changed by #8, with R23–R24, Out of scope and ADR-0044; Out of scope tasks T065 and T066 created; ADR-0045 (D7) written. The next log entry is #9. Numbers shift if T064's ADR is written first.
   3. `architecture.md`.
 
 ## 1. Spec — what and why
