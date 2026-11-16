@@ -76,7 +76,7 @@ Rejected: a minimal page after T060.1, to validate the file's shape and the page
 
 The pipeline runs 24/7 on a schedule, every 15 minutes, so the visitor sees data about 17 minutes old (cadence plus a run of about 2 min, not measured). This refines [d002 › R3](d002-requirements.md#requirements). The cadence starts with margin because its cost estimate rests on a run time nobody has measured yet ([s012 › D1](../spikes/s012-execution-target.md#d1-execution-platform)).
 
-What would change it: when the runs measured in T060.1 show that a 10-minute cadence costs less per month than Modal's monthly credit of $30, the cadence lowers to 10 min. It does not go below 10 min, the shortest interval R2's Class B quota allows running 24/7 ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)).
+What would change it: when the runs measured in T060.1 show that a 10-minute cadence costs less per month than Modal's monthly credit of $30, the cadence lowers to 10 min. It does not go below 10 min, the shortest interval R2's Class B quota allows running 24/7 ([s010 › P5](../spikes/s010-storage-table-format.md#production-inputs)). The review uses the cost Modal bills for the measured runs, container start included, and the data age they reach.
 
 Rejected: on-demand runs, since the station status (d002's Q1) must stay current with no one asking for it; a 10-minute cadence from the start, since it would rest on the unmeasured run time.
 
@@ -131,6 +131,16 @@ Nothing is built to show which code each platform runs. Each component already r
 What would change it: deployments made by GitHub Actions, which could then record each one with its commit (GitHub Deployments).
 
 Rejected: tagging each deployment with its commit on its platform, and reading every component's latest version in one health query, since an occasional lookup by time is enough for this project.
+
+#### D7. Catch-up in bounded batches
+
+Each run processes the bronze objects no run has processed yet, whatever their capture instant, in bounded batches, oldest first, one after another until none is left, and then ends, following the drain mode of bounded micro-batches (Spark's `AvailableNow` trigger). Each batch is audited and published as it ends (D4), so a failure keeps what earlier batches published. Processing an object again adds no rows, and a run never starts while another is running, so scheduled runs wait while a run drains and the cadence resumes by itself.
+
+A backlog, from the first load of the bronze captured so far or from an outage of capture or Modal, drains in one run with the same code, and an object that reaches bronze late enters the next run. While a backlog drains, the published file serves older data and its age says so (D4). A batch fits in a run's memory with margin, and T060.1 fixes its size and the run's timeout from the memory and run time it measures. How a late object changes the stock movements already derived is decided by T060.3.
+
+What would change it: if the pipeline processed bronze slower than capture writes it, a backlog would never drain; the run's memory or the platform then change in T060.1's review of [ADR-0027](../decisions/0027-modal-as-execution-platform.md).
+
+Rejected: one batch per run, since a backlog would drain by one batch per cadence; a fixed window, each run processing only the captures of its last cadence, since an outage would leave a gap until a manual reload; a separate first load followed by unbounded incremental runs, since it needs two code paths and a long outage could still overflow a run.
 
 ### 1.3 Requirements
 
