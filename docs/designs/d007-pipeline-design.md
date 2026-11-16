@@ -20,9 +20,9 @@ Phase: the blocks and reviews completed. -->
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review
 - Next: Plan step 5, writing File layout's deliverables in this order:
-  1. Done: catalog and renumbering; #4–#7 merged into #1, under the Merge before approval rule. The next log entry is #8.
-  2. The four ADRs, one per message: ADR-0042 (D4) and 0043 (D5) written; D6 changed by #8, with R23–R24, Out of scope and ADR-0044; Out of scope tasks T065 and T066 created; ADR-0045 (D7) written. The next log entry is #9. Numbers shift if T064's ADR is written first.
-  3. `architecture.md`.
+  1. Done: catalog and renumbering; #4–#7 merged into #1.
+  2. Done: ADR-0042 to ADR-0045; D6 changed by #8, with R23–R24, Out of scope (T065, T066) and ADR-0044. The next log entry is #9.
+  3. Next, in a new session: `architecture.md` (§6.2 bounded batches audited before publishing; §8 data quality, lineage and deployments citing ADR-0042 to ADR-0045). Then the Plan approval.
 
 ## 1. Spec — what and why
 
@@ -299,7 +299,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 docs/
 ├── data-quality.md                            (new)       Quality catalog: runtime rules (DQR) and quality indicators (DQM) (#1)
 ├── data-model.md                              (modified)  Data contract loses the runtime rules and quality indicators; the rest renumbered as TR and RDM (#1)
-├── architecture.md                            (modified)  §6.2 runs in bounded batches, audited before publishing; §8 data quality, lineage and releases cite their ADRs
+├── architecture.md                            (modified)  §6.2 runs in bounded batches, audited before publishing; §8 data quality, lineage and deployments cite their ADRs
 ├── decisions/
 │   ├── 0042-data-quality-classes-and-severity.md  (new)   D4: four classes, severity by who causes a failure, write-audit-publish (#2)
 │   ├── 0043-lineage-at-four-levels.md         (new)       D5: lineage by table, column, run and row (#2)
