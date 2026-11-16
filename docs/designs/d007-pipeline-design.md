@@ -10,7 +10,7 @@ Kind: a build task builds code or configuration and has every block. A document-
 - **Task:** T060
 - **Kind:** parent
 - **ADRs:** [ADR-0025](../decisions/0025-sql-models-directed-by-python.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0027](../decisions/0027-modal-as-execution-platform.md), [ADR-0029](../decisions/0029-pipeline-code-architecture.md)
-- **New ADRs from this doc:** [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md)
+- **New ADRs from this doc:** [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md), [ADR-0043](../decisions/0043-lineage-at-four-levels.md)
 
 ## Status
 
@@ -21,7 +21,7 @@ Phase: the blocks and reviews completed. -->
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review
 - Next: Plan step 5, writing File layout's deliverables in this order:
   1. Done: catalog and renumbering; #4–#7 merged into #1, under the Merge before approval rule. The next log entry is #8.
-  2. The four ADRs, one per message: ADR-0042 (D4) written; next ADR-0043 (D5), then 0044 (D6) and 0045 (D7). Numbers shift if T064's ADR is written first.
+  2. The four ADRs, one per message: ADR-0042 (D4) and 0043 (D5) written; next ADR-0044 (D6), then 0045 (D7). Numbers shift if T064's ADR is written first.
   3. `architecture.md`.
 
 ## 1. Spec — what and why
