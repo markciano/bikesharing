@@ -50,10 +50,10 @@ The repository is public, so anyone can open an issue. Lookups use `--author @me
   gh issue list --state all --author @me --search "TNNN in:title" --json number,title
   ```
 
-- **One task from its number,** with its body, children and dependencies:
+- **One task from its number,** with its body, comments, children and dependencies:
 
   ```bash
-  gh issue view N --json number,title,state,body,parent,subIssues,blockedBy,blocking
+  gh issue view N --json number,title,state,body,comments,parent,subIssues,blockedBy,blocking
   ```
 
 Issue numbers and PR numbers share one sequence, so they never match `TNNN`. Avoid the search filters `has:sub-issues` and `no:sub-issues`, which return every issue.
