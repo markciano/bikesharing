@@ -17,8 +17,8 @@ Phase: the blocks and the review completed.
 Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current step: the step being executed, or —. -->
 
-- State: Draft 📝
-- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review · [ ] Conclusion
+- State: Ready 🎬
+- Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: — · Finished: —
 - Current step: —
 
@@ -170,7 +170,7 @@ A rough worst-case estimate settles none of the guides, so each is measured with
 
 #### A. Build on DuckDB 2.0
 
-A dbt project with one staging model that reads bronze JSON with the batch's window in its file path through `var()`, with an enforced contract, one runtime rule as a test with its severity, and a quarantine model for the rows that break the schema. It is built with `dbt build` from the CLI on DuckDB 2.0, with `dbt-core` 1.12 and `dbt-duckdb` 1.11 (D2).
+A dbt project with a base model that reads bronze JSON with the batch's window in its file path through `var()`, and two models on it: a staging model with an enforced contract and one runtime rule as a test with its severity, and a quarantine model for the rows that break the schema. It is built with `dbt build` from the CLI on DuckDB 2.0, with `dbt-core` 1.12 and `dbt-duckdb` 1.11 (D2). **#3**
 
 #### B. Shell glue
 
@@ -180,7 +180,7 @@ It measures what dbt adds to a run against a baseline: the same batch runs once 
 
 #### C. Unit tests
 
-dbt unit tests on A's model, one written to pass and one to fail, with input and expected rows by hand; the suite is timed locally.
+dbt unit tests on A's staging and quarantine models, with the base model's rows mocked and expected rows written by hand, two written to pass and one to fail; the suite is timed locally. **#3**
 
 ### 2.3 Decision log
 
@@ -194,6 +194,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 |---|---|---|---|---|
 | 1 | [Shared behaviour](#211-shared-behaviour) | Probes read the real bronze bucket with a read-only R2 token and write Delta locally (least privilege) | Tests the real path layout the window relies on, with no write access to production data | Method |
 | 2 | [Probe B](#b-shell-glue) | dbt's time and memory measured against a baseline without dbt, locally, median of three runs (A/B benchmark with a baseline) | Isolates dbt's own cost from DuckDB's and `deltalake`'s work, which the guides do not count | Method |
+| 3 | [Probe A](#a-build-on-duckdb-20), [Probe C](#c-unit-tests) | Bronze is read in a base model that the staging and quarantine models `ref()` (dbt base model, dbt style guide) | dbt unit tests mock only `ref()` and `source()` inputs; a `source` with `external_location` would add a `dbt-duckdb` unknown to Q1 | Steps review |
 
 ### 2.4 File layout
 
@@ -210,14 +211,17 @@ spikes/dbt-in-the-pipeline/
 │   ├── dbt_project.yml
 │   ├── profiles.yml          DuckDB scratch database, httpfs to R2 from env vars
 │   └── models/staging/
-│       ├── stg_probe.sql             Probe A: reads bronze for the var() window
+│       ├── base_probe_read.sql       Probe A: reads bronze for the var() window, uncast
+│       ├── stg_probe.sql             Probe A: typed rows that meet the schema
 │       ├── stg_probe_quarantine.sql  Probe A: rows that break the schema
 │       ├── stg_probe.yml             Probe A: contract and runtime rule with severity
 │       └── stg_probe_unit.yml        Probe C: unit tests, two passing, one failing on purpose
 ├── shell_glue/
 │   └── run_batch.py          Probe B: --mode dbt|baseline; dbtRunner, callback, MERGE to Delta
-└── out/                      Ignored by Git: scratch database, local Delta table, events, timings
+└── out/                      Ignored by Git: scratch databases, local Delta table, events, timings
 ```
+
+The dbt project is shared by the three probes ([Shared behaviour](#211-shared-behaviour)), so it is not split into one subfolder per check; `shell_glue/` holds Probe B's script.
 
 ## 3. Steps
 <!-- Each step is one reviewable result, touching at most 2–3 files.
@@ -304,7 +308,7 @@ The three files exist, and `git status` shows no other change.
 
 #### Scope
 
-`dbt_project/dbt_project.yml`, `dbt_project/profiles.yml` and `dbt_project/models/staging/stg_probe.sql`. No contract, tests or quarantine yet (Step 5).
+`dbt_project/dbt_project.yml`, `dbt_project/profiles.yml` and `dbt_project/models/staging/base_probe_read.sql`. No staging model, contract, tests or quarantine yet (Step 5).
 
 #### Reads
 
@@ -315,8 +319,8 @@ The three files exist, and `git status` shows no other change.
 #### Do
 
 1. Write `dbt_project.yml`: project `dbt_in_the_pipeline`, models materialized as tables, the vars `source`, `feed`, `date` and `hour` with no defaults.
-2. Write `profiles.yml`: `dbt-duckdb` on the file `../out/scratch.duckdb`, the `httpfs` extension, and an S3 secret for R2 from `env_var()` of the four variables of `.env.example`.
-3. Write `stg_probe.sql`: read with `read_json` the objects matching `s3://<bucket>/raw/{{ var('source') }}/{{ var('feed') }}/{{ var('date') }}/<date without dashes>T{{ var('hour') }}*.json.gz`, with `filename = true`; unnest the stations; select a station key, the counts and a categorical field of the feed, the capture time of the object, and the object's key as `source_key`.
+2. Write `profiles.yml`: `dbt-duckdb` on the file `out/scratch.duckdb`, relative to the spike root, where every command runs; the `httpfs` extension, and an S3 secret for R2 from `env_var()` of the four variables of `.env.example`.
+3. Write `base_probe_read.sql`: read with `read_json` the objects matching `s3://{{ env_var('R2_BUCKET') }}/raw/{{ var('source') }}/{{ var('feed') }}/{{ var('date') }}/{{ var('date') | replace('-', '') }}T{{ var('hour') }}*.json.gz`, with `filename = true`; unnest the stations; select, uncast, a station key, the counts and a categorical field of the feed; then the capture time of the object, and the object's key as `source_key`.
 
 #### Check
 
@@ -333,12 +337,12 @@ The three files exist, and `git status` shows no other change.
 #### Do
 
 1. Run `<dbt> build <vars>`.
-2. Run `<dbt> show <vars> --inline "select count(*) as rows, count(distinct source_key) as objects, min(source_key) as first_key, max(source_key) as last_key from {{ ref('stg_probe') }}"`.
+2. Run `<dbt> show <vars> --inline "select count(*) as rows, count(distinct source_key) as objects, min(source_key) as first_key, max(source_key) as last_key from {{ ref('base_probe_read') }}"`.
 3. Report back: the output of both commands, in full if the build fails.
 
 #### Check
 
-The build passes; `objects` equals the number of objects of the hour reported in Prerequisites, and `first_key` and `last_key` both lie in that hour.
+The build passes; `objects` equals the number of objects of the hour reported in Prerequisites, and `first_key` and `last_key` both lie in that hour; `out/scratch.duckdb` exists at the spike root.
 
 ### Step 5 — Contract, rule and quarantine
 
@@ -349,18 +353,19 @@ The build passes; `objects` equals the number of objects of the hour reported in
 
 #### Scope
 
-`dbt_project/models/staging/stg_probe.yml` (new), `dbt_project/models/staging/stg_probe_quarantine.sql` (new), and `stg_probe.sql` (changed: it keeps only the rows that meet the schema).
+`dbt_project/models/staging/stg_probe.sql`, `stg_probe_quarantine.sql` and `stg_probe.yml`, all new; both models are built on `base_probe_read`, which does not change.
 
 #### Reads
 
 - [Probe A](#a-build-on-duckdb-20) and Q1.
 - [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md): the classes and severities that the rule's test and the quarantine follow.
-- The model written in Step 3.
+- The model written in Step 3, `base_probe_read.sql`.
+- The station status feed's section of the source card of the reported system: the values of the categorical field.
 
 #### Do
 
-1. Update `stg_probe.sql` to cast each field with `try_cast` and keep only the rows whose required fields cast to a non-null value.
-2. Write `stg_probe_quarantine.sql`: the rows of the same read that fail those casts, with the object's key and the failed field.
+1. Write `stg_probe.sql` on `ref('base_probe_read')`: cast each field with `try_cast` and keep only the rows whose required fields cast to a non-null value.
+2. Write `stg_probe_quarantine.sql` on `ref('base_probe_read')`: the rows that fail those casts, with `source_key` and the failed field.
 3. Write `stg_probe.yml`: an enforced contract on `stg_probe` with each column's type and `not_null` constraints on its required fields; `not_null` on the station key with severity `error`; `accepted_values` on the categorical field with severity `warn`, its values taken from a var `accepted` that defaults to the feed's values in its source card.
 
 #### Check
@@ -379,13 +384,13 @@ The build passes; `objects` equals the number of objects of the hour reported in
 
 1. Run `<dbt> build <vars>`.
 2. Run it again with `accepted` reduced to one value: `<vars>` with `"accepted": ["<one value of the feed>"]` added.
-3. Run `<dbt> show <vars> --inline "select count(*) as quarantined from {{ ref('stg_probe_quarantine') }}"`.
-4. Report back: the output of the three commands.
-5. Note how readable the compiled SQL in `dbt_project/target/compiled/` and any error message are (Observe only).
+3. Run `<dbt> show <vars> --inline "select (select count(*) from {{ ref('stg_probe') }}) as rows, (select count(*) from {{ ref('stg_probe_quarantine') }}) as quarantined"`.
+4. Open `dbt_project/target/run/dbt_in_the_pipeline/models/staging/stg_probe.sql`, the DDL dbt ran for the model.
+5. Report back: the output of the three commands; the `create table` statement of that file; and how readable the compiled SQL in `dbt_project/target/compiled/` and any error message are (Observe only, recorded as a Finding).
 
 #### Check
 
-Run 1 passes every test; run 2 ends with `accepted_values` as a warning and the build still succeeds; the quarantine model exists, with any row count.
+Run 1 passes every test, and the `create table` of `stg_probe` lists each column with its type and `not null` on the required fields; run 2 ends with `accepted_values` as a warning and the build still succeeds; the quarantine model exists, with any row count.
 
 ### Step 7 — Shell glue
 
@@ -408,8 +413,8 @@ Run 1 passes every test; run 2 ends with `accepted_values` as a warning and the 
 
 1. Write `run_batch.py` with `argparse`: `--mode dbt|baseline` and the four window arguments plus an optional `--accepted`.
 2. Implement `--mode dbt`: invoke `dbtRunner(callbacks=[…]).invoke(["build", …, "--vars", …])`; the callback appends each event's name, level and data fields to `out/events.jsonl`; from `dbtRunnerResult`, print as JSON per node its `unique_id`, status, failures, rows affected and execution time.
-3. Implement `--mode baseline`: execute on DuckDB, with no dbt, the compiled SQL of `stg_probe` read from `dbt_project/target/compiled/`, in a fresh scratch database.
-4. Implement the hand-off shared by both modes: read `stg_probe` from the scratch database as Arrow and MERGE it into the Delta table `out/delta/stg_probe` with `deltalake`, on the station key and capture time, creating the table on the first run; print the Delta table's row count.
+3. Implement `--mode baseline`: in a fresh database `out/baseline.duckdb`, with the same `httpfs` extension and R2 secret as `profiles.yml`, execute with no dbt the compiled SQL from `dbt_project/target/compiled/` of `base_probe_read`, `stg_probe` and `stg_probe_quarantine`, in that order, each as `CREATE TABLE <model> AS`, then the compiled query of each data test, so that DuckDB does the same work as in `--mode dbt`.
+4. Implement the hand-off shared by both modes: read `stg_probe` from its mode's database (`out/scratch.duckdb` or `out/baseline.duckdb`) as Arrow and MERGE it into the Delta table `out/delta/stg_probe` with `deltalake`, on the station key and capture time, creating the table on the first run; print the Delta table's row count.
 5. Import from dbt only `dbt.cli.main` (`dbtRunner`, `dbtRunnerResult`).
 
 #### Check
@@ -432,13 +437,16 @@ Below, `<run>` stands for `uv run --env-file .env /usr/bin/time -l python shell_
 2. Run `<run> --mode dbt` three times.
 3. Run `<run> --mode baseline` three times.
 4. Run `<run> --mode dbt --accepted <one value of the feed>` once.
-5. Report back: for each of the seven runs, the JSON printed, the Delta row count, and `/usr/bin/time`'s real time and maximum resident set size; and `out/events.jsonl` (or its distinct event names, if large).
+5. Run `grep -nE "^(from|import) dbt" shell_glue/run_batch.py`.
+6. Report back: for each of the seven runs, the JSON printed, the Delta row count, and `/usr/bin/time`'s real time and maximum resident set size; the output of the `grep`; and `out/events.jsonl` (or its distinct event names, if large).
 
 #### Check
 
 - Every node of the build appears in the JSON with its status; run 4 shows `accepted_values` with failures above 0.
-- The Delta row count equals the row count of `stg_probe` from Step 4, and stays the same across the seven runs.
-- The median real time and RSS of each mode are computed, and their difference set against the Q2 guides.
+- The Delta row count equals the row count of `stg_probe` reported in Step 6, and stays the same across the seven runs.
+- The `grep` shows only an import from `dbt.cli.main`.
+- For each model and test of the build, an event in `out/events.jsonl` carries its status, rows and duration, or its failures; the names of those events are noted.
+- The median of `--mode dbt` minus the median of `--mode baseline` is at most 15 s of real time and at most 500 MB of maximum resident set size, which macOS reports in bytes; each guide is met or missed.
 
 ### Step 9 — Unit tests
 
@@ -458,8 +466,8 @@ Below, `<run>` stands for `uv run --env-file .env /usr/bin/time -l python shell_
 
 #### Do
 
-1. Write a unit test on `stg_probe`: two hand-written input rows given as the result of its read, expected rows written by hand; it passes.
-2. Write a unit test on `stg_probe_quarantine`: one malformed row, expected in quarantine with its failed field; it passes.
+1. Write a unit test on `stg_probe`: two hand-written input rows given for `ref('base_probe_read')`, expected rows written by hand; it passes.
+2. Write a unit test on `stg_probe_quarantine`: one malformed row given for `ref('base_probe_read')`, expected in quarantine with its failed field; it passes.
 3. Write a unit test on `stg_probe` whose expected rows are wrong on purpose, named so that its failure reads as intended; it fails.
 
 #### Check
@@ -476,7 +484,7 @@ Below, `<run>` stands for `uv run --env-file .env /usr/bin/time -l python shell_
 
 #### Do
 
-1. Run `/usr/bin/time -l uv run --env-file .env dbt test --select test_type:unit --project-dir dbt_project --profiles-dir dbt_project <vars>` three times.
+1. Run `uv run --env-file .env /usr/bin/time -l dbt test --select test_type:unit --project-dir dbt_project --profiles-dir dbt_project <vars>` three times.
 2. Report back: the output of each run and its real time.
 
 #### Check
@@ -497,12 +505,12 @@ Each run shows two passes and one failure; the median real time is set against t
 #### Reads
 
 - `.claude/rules/code/spikes.md`: the README's procedure shape.
-- Steps 1–10 of this document: each check's command, output and run time.
+- Steps 1–10 of this document for each check's command, and its Findings for each output and run time.
 
 #### Do
 
 1. Write `README.md` as a procedure: the question and a link to s017, the prerequisites, then one section per probe (A, B, C) in run order, each citing the decision it is evidence for (D1, D2, D3, D4).
-2. Count the lines of `shell_glue/run_batch.py` without blank lines, comments and docstrings, and report it for the Q2 guide.
+2. Count the lines of `shell_glue/run_batch.py` without blank lines, comments, docstrings and the code of `--mode baseline`, which the guide does not count, and report it for the Q2 guide.
 
 #### Check
 
