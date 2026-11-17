@@ -20,7 +20,7 @@ Current step: the step being executed, or —. -->
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-17 · Finished: —
-- Current step: 3
+- Current step: 4
 
 ## 1. Questions — what we need to know
 
@@ -302,7 +302,7 @@ The three files exist, and `git status` shows no other change.
 
 ### Step 3 — Model reading the window
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: add the dbt project of spike s017 with a model reading one bronze hour`
 - **Model:** sonnet · medium
