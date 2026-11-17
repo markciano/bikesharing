@@ -20,7 +20,7 @@ Current step: the step being executed, or —. -->
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-17 · Finished: —
-- Current step: 7
+- Current step: 8
 
 ## 1. Questions — what we need to know
 
@@ -395,7 +395,7 @@ Run 1 passes every test, and the `create table` of `stg_probe` lists each column
 
 ### Step 7 — Shell glue
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: add the shell glue of spike s017 between dbt and Delta`
 - **Model:** sonnet · medium
