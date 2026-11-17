@@ -1,9 +1,3 @@
-<!--
-Spike doc template. A spike is a time-boxed investigation of one task: it reaches the decisions a task needs, by analysis where possible and with evidence only where an unknown would change the choice. Its output is knowledge (decisions, answers, a verdict, inputs for designs and ADRs); its code is throwaway and lives in spikes/<name>/.
-Blocks: Questions (what we need to know), Method (how we find out), Steps, Findings (filled during execution), Conclusion (filled after the last step).
-Sections marked Optional are kept only when they apply.
--->
-
 # Spike: dbt in the pipeline
 
 - **Task:** T060.7
@@ -12,21 +6,14 @@ Sections marked Optional are kept only when they apply.
 
 ## Status
 
-<!-- State: Draft 📝 · Ready 🎬 · Running 🔄 · Concluded ✅.
-Phase: the blocks and the review completed.
-Started / Finished: UTC dates of the first step executed and of the Conclusion.
-Current step: the step being executed, or —. -->
-
-- State: Running 🔄
-- Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
-- Started: 2026-11-17 · Finished: —
+- State: Concluded ✅
+- Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [x] Conclusion
+- Started: 2026-11-17 · Finished: 2026-11-17
 - Current step: —
 
 ## 1. Questions — what we need to know
 
 ### 1.1 Context
-
-<!-- 2–4 sentences: the decisions this spike takes, which of them depend on evidence and why, and the spikes or designs it builds on. -->
 
 This spike decides where dbt applies in the pipeline and which tool runs its runtime rules, as [d007 › Children](../designs/d007-pipeline-design.md#16-children) asks of T060.7, by a fit-gap analysis of dbt against the decisions in force: the engine and language of [s011](s011-engine-pipeline-language.md), the code architecture of [s015](s015-pipeline-code-architecture.md) and the catch-up and quality rules of [d007](../designs/d007-pipeline-design.md). Analysis and the documentation settle the shape (D1), the release line (D2), how SQL is tested (D3) and how dbt's events are logged (D4). What only a run can settle is the friction of the glue between dbt and the rest: whether `dbt-duckdb` works on DuckDB 2.0, how the shell invokes dbt and hands its result to `deltalake`, whether dbt unit tests run on DuckDB, and which events dbt emits. The owner wants to adopt dbt, for what it brings and for learning; the thresholds of friction are fixed before the run, so that this wish does not decide the result.
 
@@ -95,16 +82,7 @@ What would change it: Q4 finds that the callback does not receive per-model and 
 
 Option rejected: **B. dbt's own JSON log kept apart,** uploaded as a second file per run. No glue, but its events carry neither `component`, `version` nor `run_id`, so the query across components of ADR-0036 does not see them, and they could be joined only by time.
 
-<!-- In this order, so the reader finds what matters first:
-1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
-2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
-3. The options rejected and how robust the result is.
-4. The evaluation behind it: the table or weighted matrix (needs, cuts, anchors and scores) if one was used. A security decision lists its threats in a table: `| # | Threat (STRIDE) | Impact | Control | Requirement |`, with IDs `TH1`, `TH2`… per document. -->
-
 ### 1.3 Questions
-
-<!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
-"Observe only": things to note during the run with no dedicated effort. -->
 
 Main question: does dbt fit the pipeline as the layer that builds and audits its SQL (D1), with its glue below the thresholds of friction in Exit criteria?
 
@@ -115,10 +93,6 @@ Main question: does dbt fit the pipeline as the layer that builds and audits its
 - **Observe only:** how readable the compiled SQL and dbt's error messages are when a model fails.
 
 ### 1.4 Exit criteria
-
-<!-- Fixed before the first run; a later change is recorded in the Decision log.
-Derived from the standard that applies to this kind of question, named in the first line: e.g. DAMA data quality dimensions for a data source, a weighted decision matrix for a technology choice.
-Each criterion is measurable and says whether it is a hard cut or a guide. The timebox says what ends the run. State whether one variant meeting the criteria is enough. -->
 
 - **Standard:** fit-gap analysis of dbt against the decisions in force (ADRs and d007): each one is a fit, an adaptation (which decision changes, and its cost) or a gap; no ADR is fixed in advance, each is weighed by its impact.
 - **Timebox:** one day of work (T060.7 is ef3). The run ends when Q1–Q4 are answered, or at the first hard cut that fails: Q1 or Q2 failing ends it with no dbt (D1).
@@ -138,15 +112,11 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 ### 1.5 Out of scope
 
-<!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
-
 - The move to dbt v2, when its DuckDB adapter covers what D2 needs — T070
 
 ## 2. Method — how we find out
 
 ### 2.1 Approach
-
-<!-- The variants, options or probes compared, and what each one tells that the others do not. -->
 
 One variant, the shape of D1, probed in three parts; A runs first, since it tests the riskiest assumption at the lowest cost and its Gate ends the run with no dbt if it fails.
 
@@ -161,8 +131,6 @@ Q4 is part of B: the callback is registered on the same `dbtRunner` invocation t
 A rough worst-case estimate settles none of the guides, so each is measured within B: dbt-core starts and parses a small project in about 2–5 s, which may approach 15 s in a cold container; its Python process adds about 150–300 MB, close enough to 500 MB to need a figure; the glue is expected at 80–120 lines, counted on B's code.
 
 #### 2.1.1 Shared behaviour
-
-<!-- Optional. Rules every variant follows (schedules, formats, key layouts, logs), stated once so the steps can cite them. -->
 
 - **One dbt project** serves the three probes, on DuckDB 2.0 with `dbt-core` 1.12 and `dbt-duckdb` 1.11 (D2).
 - **Bronze is read from the real R2 bucket** with an R2 token scoped to read only, created for the spike and revoked at tear-down. **#1**
@@ -184,12 +152,6 @@ dbt unit tests on A's staging and quarantine models, with the base model's rows 
 
 ### 2.3 Decision log
 
-<!-- It logs decisions about the method, before and during the run, including changes of course. Oldest first.
-Entries follow .claude/rules/docs/decision-log.md (log only, change links).
-- Column Applies to: anchor link(s) to the section where the decision is applied, named in one or two words (e.g. Q1, Probe A, File layout).
-- Column Decided at: the Status phase where it was decided (Method, Steps), `<phase> review` when decided while reviewing that phase, or `Running step N` when decided during the run.
--->
-
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
 | 1 | [Shared behaviour](#211-shared-behaviour) | Probes read the real bronze bucket with a read-only R2 token and write Delta locally (least privilege) | Tests the real path layout the window relies on, with no write access to production data | Method |
@@ -199,8 +161,6 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 5 | [Step 8](#step-8--run-b-in-both-modes) | Step 8 is done with rows missing from the events recorded as a result ([F9](#f9-dbt-duckdb-reports-no-rows-affected)), not as a failed run; Q4's guide is missed on rows (negative result as evidence) | dbt-duckdb returns no row count anywhere, so a rerun would not change it; D4's fallback covers it | Running step 8 |
 
 ### 2.4 File layout
-
-<!-- Every file and folder the spike creates, as a tree with its purpose in one line. Captured data and outputs are marked as ignored by Git. The README is always included. -->
 
 ```text
 spikes/dbt-in-the-pipeline/
@@ -226,16 +186,8 @@ spikes/dbt-in-the-pipeline/
 The dbt project is shared by the three probes ([Shared behaviour](#211-shared-behaviour)), so it is not split into one subfolder per check; `shell_glue/` holds Probe B's script.
 
 ## 3. Steps
-<!-- Each step is one reviewable result, touching at most 2–3 files.
-- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- Commit: only in a step that changes committed files: the proposed message, following the Git conventions in CLAUDE.md.
-- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner.
-- Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>. -->
 
 ### 3.1 Prerequisites
-
-<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
 - **uv 0.13.5** on the local machine; it installs Python 3.13 for the spike. Verify: `uv --version`.
 - **R2 token for the spike,** in the Cloudflare dashboard: an R2 API token with Object Read only, scoped to the bronze bucket. Its access key ID, secret and the account's S3 endpoint go into `spikes/dbt-in-the-pipeline/.env`, once Step 1 has created `.env.example`. It is revoked at tear-down (#1).
@@ -253,13 +205,9 @@ Owner commands run from `spikes/dbt-in-the-pipeline/`; `<vars>` stands for the w
 
 #### Scope
 
-<!-- The result of the step. List the components and the files created or changed (code, tests, docs). A reviewer should know what the diff will contain from this section alone. -->
-
 The spike's Python environment, unlocked: `pyproject.toml`, `.env.example`, `.gitignore` under `spikes/dbt-in-the-pipeline/`. Nothing outside that folder.
 
 #### Reads
-
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
 
 - [D2](#d2-dbt-v1-dbt-core-112-with-dbt-duckdb): the release lines to pin.
 - [Shared behaviour](#211-shared-behaviour) and [File layout](#24-file-layout): what the folder holds and what Git ignores.
@@ -267,15 +215,11 @@ The spike's Python environment, unlocked: `pyproject.toml`, `.env.example`, `.gi
 
 #### Do
 
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
-
 1. Write `pyproject.toml`: `requires-python = ">=3.13,<3.14"`; dependencies `dbt-core~=1.12.0`, `dbt-duckdb~=1.11.0`, `duckdb~=2.0.0`, `deltalake` and `pyarrow` at their latest releases. No pin is relaxed to make resolution pass: a failure to resolve is Step 2's evidence.
 2. Write `.env.example` with empty `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT` and `R2_BUCKET`.
 3. Write `.gitignore` with `.env`, `out/`, `dbt_project/target/`, `dbt_project/logs/` and `.venv/`.
 
 #### Check
-
-<!-- command/s or verification with a yes/no result. -->
 
 The three files exist, and `git status` shows no other change.
 
@@ -521,8 +465,6 @@ The README covers A, B and C in run order, and the line count is reported.
 
 ## 4. Findings
 
-<!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
-
 ### F1. DuckDB 2.0 resolves with dbt-core 1.12 and dbt-duckdb 1.11
 
 Step 2 · 2026-11-17 · `uv sync`, `uv run dbt --version` and the import of `duckdb` and `deltalake`, run by the owner
@@ -646,50 +588,68 @@ Step 11 · 2026-11-17 · code lines of `shell_glue/run_batch.py`, counted with P
 
 ## 5. Conclusion
 
-<!-- Filled after the last step. Covers only the observed window. -->
-
-Observed window: `<from–to, UTC; what it does not cover>`
+Observed window: bronze of `bicing` / `station_status` from 2026-11-16 10:00 to 10:59 UTC (60 objects, 32,700 rows), processed on the owner's machine on 2026-11-17. It does not cover AMBici, other feeds, batches longer than one hour or a container on Modal.
 
 ### 5.1 Answers
 
-- **Q1. Title** `<answer>` (FN)
+- **Q1. Works on DuckDB 2.0:** yes. `dbt-core` 1.12.7 and `dbt-duckdb` 1.11.1 resolve with DuckDB 2.0.0 and build, with no patch, the base model reading from R2 only the objects of the window passed through `var()`, the enforced contract, a rule with severity `warn` that reports without failing the build, and the quarantine model. (F1, F3, F4, F5)
+- **Q2. Shell glue:** yes. `dbtRunner` returns each node's status, failures and execution time as values; the scratch table reaches `deltalake` as Arrow in the same process, opened only with `dbt-duckdb`'s connection config; the MERGE gives 32,700 rows in all seven runs. dbt adds 0.95 s and 36.4 MB to a run, and the glue is 71 lines. (F7, F8, F11, F12, F15)
+- **Q3. Unit tests:** yes. They pass and fail as written, with a readable diff on failure, and the suite runs locally in 1.52 s (median). dbt reads the column types of the mocked input from its relation in the scratch database, which must exist beforehand. (F13, F14)
+- **Q4. Events in the callback:** partly. `NodeStart` and `NodeFinished` carry each node's start, status, duration and failures; rows are missing, since `dbt-duckdb` reports none, and `num_failures` is left out when it is 0. No error event came up. (F9, F10)
+- **Observe only:** the compiled SQL is readable; a test's name keeps the raw var expression; the only error message observed, a failing unit test's diff, is readable. (F6, F13)
 
 ### 5.2 Exit criteria
 
-<!-- One result per criterion and variant. -->
-
 | Criterion | Kind | Result | Findings |
 |---|---|---|---|
+| Q1 · Works on DuckDB 2.0 | Hard cut | Met | F1, F4, F5 |
+| Q1 · Window in the file path | Hard cut | Met: 60 of 60 objects, all in the hour | F3 |
+| Q2 · Results as values | Hard cut | Met, from `dbtRunnerResult` | F7 |
+| Q2 · Hand-off to Delta | Hard cut | Met: 32,700 rows in each of seven runs | F8, F11 |
+| Q1–Q2 · No dbt internals | Hard cut | Met: only `dbt.cli.main` | F7 |
+| Q2 · Glue size | Guide | Met: 71 of 150 lines | F15 |
+| Q2 · Time per invocation | Guide | Met: 0.95 s of 15 s | F12 |
+| Q2 · Peak memory | Guide | Met: 36.4 MB of 500 MB | F12 |
+| Q3 · Unit tests run | Hard cut (D3) | Met | F13 |
+| Q3 · Test suite time | Guide | Met: 1.52 s of 30 s | F14 |
+| Q4 · Results in the callback | Guide | Missed on rows; status, duration and failures met | F9, F10 |
+
+Every hard cut is met and one guide is missed, so D1 stands; the extra cost is D4's fallback for rows: the shell counts them on the scratch table.
 
 ### 5.3 Verdict
 
-<!-- The answer to the main question in 2–3 sentences. -->
+Yes: dbt fits the pipeline as the layer that builds and audits its SQL (D1), on DuckDB 2.0 with `dbt-core` 1.12 and `dbt-duckdb` 1.11 (D2), with every hard cut met and the glue well below its guides of size, time and memory. D3 holds with dbt unit tests. D4 holds with the callback for status, duration and failures, while the shell counts each model's rows on the scratch table, since `dbt-duckdb` reports none.
 
 ### 5.4 Not verified
 
-<!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
-
-- `<item>` — `<risk>` — `<mitigation>`
+- **A cold container on Modal** — time and memory were measured locally; dbt may start more slowly on Modal — the margin is wide (0.95 s of 15 s), and each production run logs its duration.
+- **Several batches in one process** — each run here was a fresh process, and `dbt-duckdb` keeps its database open (F8), so a second `dbtRunner` invocation on a new scratch database in the same process, as a catch-up of several batches (ADR-0045) needs, is untested — the shell's integration test runs two batches in one process.
+- **Errors** — no error event or contract violation came up, so their events and how readable their messages are remain unknown — the integration test makes a model fail and a contract break, and checks the result and the log.
+- **Quarantine with real rows** — the quarantine held 0 rows on real data and is covered only by a unit test — the integration test's bronze fixtures include a malformed row.
+- **Batches longer than one hour, other systems and feeds** — only one hour of Bicing's `station_status` was read — dbt's own cost does not grow with the batch, whose work DuckDB does, and the glob follows the key layout of d004, shared by every system.
 
 ### 5.5 Production inputs
 
-<!-- Optional. What a later task must take into account when it builds, from any part of the spike: done when that task runs. Each one has a Destination: a design (with its task) or discarded with a reason. -->
-
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | | `<e.g. D1, #2, F3>` | |
+| P1 | Pins: `dbt-core` 1.12.7, `dbt-duckdb` 1.11.1 and DuckDB 2.0.x resolve together | D2, F1 | T060.1's design. TODO(T060.1) |
+| P2 | The shell creates the scratch database's folder before it invokes dbt | F2 | T060.1's design. TODO(T060.1) |
+| P3 | The shell reads dbt's scratch table in the same process only with `dbt-duckdb`'s connection config (`read_only=False`, empty config) | F8 | T060.1's design. TODO(T060.1) |
+| P4 | The callback turns `NodeStart` and `NodeFinished` into the pipeline's events (such as `model_started`, `model_built`, `rule_checked`); a missing `num_failures` means 0; the shell counts each model's rows on the scratch table | D4, F9, F10 | T060.1's design. TODO(T060.1) |
+| P5 | Each data test takes an explicit `name`, its `DQR` ID, since the generated name keeps the raw var expression; it answers [d007 › Rule names in code](../designs/d007-pipeline-design.md#carried-over-inputs) | F6 | T060.1's design. TODO(T060.1) |
+| P6 | dbt unit tests need their upstream relations to exist: CI builds them first with `dbt run --empty`, dbt's documented pattern, and the testing strategy gains its SQL (dbt) section | D3, F13 | T060.1's design. TODO(T060.1) |
+| P7 | The shell's integration test runs two batches in one process, a failing model and a contract violation, and checks the result and the log | [Not verified](#54-not-verified) | T060.1's design. TODO(T060.1) |
+| P8 | The bronze fixtures of the quarantine's integration test include a malformed row | [Not verified](#54-not-verified) | T060.5's design. TODO(T060.5) |
 
 ### 5.6 Records
 
-<!-- Documents this spike updates before it closes: ADRs from Decided at framing (each in its own commit), architecture, requirements, source cards and new tasks agreed with the owner. A decision that updates no document has no row. Commit: "Done", or "Pending" until delivered; the spike closes when every row is Done. Production inputs are not repeated here. -->
-
 | Output | From | Destination | Commit |
 |---|---|---|---|
-| `<ADR, requirement, source card or task>` | `<e.g. D1, F3>` | `<document and section>` | `<Done, or Pending>` |
+| ADR-0047: dbt builds and audits the pipeline's SQL, extending ADR-0025 and ADR-0046 | D1, D2, D4 | [ADR-0047](../decisions/0047-dbt-builds-and-audits-the-pipeline-sql.md) | Done |
+| dbt as the layer that builds and audits the SQL, citing ADR-0047 | D1 | [architecture.md](../architecture.md) › 4.1 Technology, 5. Building block view, 6.2 Pipeline run, 8. Cross-cutting concepts (Data quality), 12. Glossary (SQL model) | Done |
+| The runtime rules' runner is dbt, and the data-test tool is decided, citing ADR-0047 | D1 | [d007](../designs/d007-pipeline-design.md) › Carried-over inputs (Platform separation, dbt) | Done |
 
 ## 6. Sources
-
-<!-- Optional. Earlier spikes, benchmarks and documentation used. -->
 
 Read on 2026-11-17.
 
