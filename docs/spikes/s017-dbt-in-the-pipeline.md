@@ -18,7 +18,7 @@ Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current step: the step being executed, or —. -->
 
 - State: Draft 📝
-- Phase: [x] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
+- Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
 - Current step: —
 
@@ -148,19 +148,39 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 <!-- The variants, options or probes compared, and what each one tells that the others do not. -->
 
-| Variant | What it is | What it tells |
-|---|---|---|
-| | | |
+One variant, the shape of D1, probed in three parts; A runs first, since it tests the riskiest assumption at the lowest cost and its Gate ends the run with no dbt if it fails.
+
+| Probe | What it is | What it tells | Q |
+|---|---|---|---|
+| [A](#a-build-on-duckdb-20) | A minimal dbt project built with `dbt build` from the CLI | Whether dbt and `dbt-duckdb` work on DuckDB 2.0 with no patch | Q1 |
+| [B](#b-shell-glue) | A Python script that runs A's build through `dbtRunner` and publishes to Delta | The friction of the glue: results, hand-off, callback, lines, time and memory | Q2, Q4 |
+| [C](#c-unit-tests) | dbt unit tests on A's model | Whether dbt unit tests run on `dbt-duckdb`, and the suite's time | Q3 |
+
+Q4 is part of B: the callback is registered on the same `dbtRunner` invocation that Q2 measures, so a probe of its own would repeat that run and tell nothing more.
+
+A rough worst-case estimate settles none of the guides, so each is measured within B: dbt-core starts and parses a small project in about 2–5 s, which may approach 15 s in a cold container; its Python process adds about 150–300 MB, close enough to 500 MB to need a figure; the glue is expected at 80–120 lines, counted on B's code.
 
 #### 2.1.1 Shared behaviour
 
 <!-- Optional. Rules every variant follows (schedules, formats, key layouts, logs), stated once so the steps can cite them. -->
 
--
+- **One dbt project** serves the three probes, on DuckDB 2.0 with `dbt-core` 1.12 and `dbt-duckdb` 1.11 (D2).
+- **Bronze is read from the real R2 bucket** with an R2 token scoped to read only, created for the spike and revoked at tear-down. **#1**
+- **Nothing is written to R2:** the Delta table of B is a local folder. **#1**
 
-#### `<A>`. `<Title of variant, option or probe A>`
+#### A. Build on DuckDB 2.0
 
-<!-- Detailed description -->
+A dbt project with one staging model that reads bronze JSON with the batch's window in its file path through `var()`, with an enforced contract, one runtime rule as a test with its severity, and a quarantine model for the rows that break the schema. It is built with `dbt build` from the CLI on DuckDB 2.0, with `dbt-core` 1.12 and `dbt-duckdb` 1.11 (D2).
+
+#### B. Shell glue
+
+A Python script that invokes A's build through `dbtRunner` with the window in `--vars`, reads each model's and test's result as values, hands the scratch table to `deltalake` as Arrow for a MERGE into a Delta table, and registers a callback that records every event it receives.
+
+It measures what dbt adds to a run against a baseline: the same batch runs once as the SQL dbt compiled, executed directly on DuckDB and written to Delta, and once through `dbtRunner`. Each mode runs three times locally under `/usr/bin/time -l`; the median wall time and maximum resident set size of each mode are compared, and their difference is dbt's cost. The work DuckDB does is the same in both modes, so a small batch measures it. A local machine may be faster than a cold container on Modal; the Conclusion records this under Not verified. **#2**
+
+#### C. Unit tests
+
+dbt unit tests on A's model, one written to pass and one to fail, with input and expected rows by hand; the suite is timed locally.
 
 ### 2.3 Decision log
 
@@ -172,7 +192,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
-| `<N>` |  |  |  |  |
+| 1 | [Shared behaviour](#211-shared-behaviour) | Probes read the real bronze bucket with a read-only R2 token and write Delta locally (least privilege) | Tests the real path layout the window relies on, with no write access to production data | Method |
+| 2 | [Probe B](#b-shell-glue) | dbt's time and memory measured against a baseline without dbt, locally, median of three runs (A/B benchmark with a baseline) | Isolates dbt's own cost from DuckDB's and `deltalake`'s work, which the guides do not count | Method |
 
 ### 2.4 File layout
 
@@ -180,8 +201,22 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 ```text
 spikes/dbt-in-the-pipeline/
-├── README.md        Question, setup and commands, what each script does, link to the report
-└── <file>           <purpose>
+├── README.md                 Question, setup and commands per check, link to s017
+├── pyproject.toml            Pins Python, dbt-core 1.12, dbt-duckdb 1.11, DuckDB 2.0, deltalake
+├── uv.lock                   Locked dependencies
+├── .env.example              R2 read-only token variables, empty values
+├── .gitignore                Ignores .env, out/ and dbt's target/ and logs/
+├── dbt_project/              The one dbt project shared by A, B and C
+│   ├── dbt_project.yml
+│   ├── profiles.yml          DuckDB scratch database, httpfs to R2 from env vars
+│   └── models/staging/
+│       ├── stg_probe.sql             Probe A: reads bronze for the var() window
+│       ├── stg_probe_quarantine.sql  Probe A: rows that break the schema
+│       ├── stg_probe.yml             Probe A: contract and runtime rule with severity
+│       └── stg_probe_unit.yml        Probe C: unit tests, one passing, one failing
+├── shell_glue/
+│   └── run_batch.py          Probe B: --mode dbt|baseline; dbtRunner, callback, MERGE to Delta
+└── out/                      Ignored by Git: scratch database, local Delta table, events, timings
 ```
 
 ## 3. Steps
