@@ -190,7 +190,7 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 ### 5.5 Production inputs
 
-<!-- Optional. What a later task must take into account when it builds, from any part of the spike: done when that task runs. Each one has a Destination: a design (with its task) or discarded with a reason. -->
+<!-- Optional. What a later task must take into account when it builds, from any part of the spike: done when that task runs. Each one has a Destination: a design (with its task) with its `TODO(TNNN)` marker (CLAUDE.md › Pending items), or discarded with a reason. -->
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
