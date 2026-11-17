@@ -127,6 +127,16 @@ Both emitters send their events with OTLP over HTTP, the OpenTelemetry protocol,
 
 Rejected: Loki's own push API as the protocol for both. It is the most direct, with no caveat on JSON, but it is specific to Loki: a change of tool would rewrite the sending code of both components, with no gain the project needs at its volume.
 
+#### D5. Notifications in the Grafana app
+
+Every alert reaches the owner as a push in the Grafana mobile app, through IRM, with 3 users free on the Free tier. Which events and indicators alert, and how they are routed by severity, are set by T060.2; the SRE split between alerts that interrupt (page) and alerts reviewed later (ticket) is its starting point, carried as a production input.
+
+#### D6. Quality indicators reach the tool by push
+
+Grafana Cloud does not read the gold tables, for the reason D1 rejects reading R2 in place, so the values of the indicators the pipeline builds reach it in the events the pipeline sends (D3, D4); their history stays in gold. DQM10, the age of the published files, is measured from outside by a synthetic check that reads each file the page serves, following black-box monitoring: it sees what a visitor sees, including a file that failed its audit and was not deployed, a failed redeploy, or a stopped pipeline, none of which the heartbeat reports. DQM11 is built in the tool from capture's events within its 14-day retention; a longer window is queried with SQL over R2 (ADR-0036).
+
+Whether the pipeline sends the indicators' values as log events or as metrics is set by T060.2; log events, with one signal and one path, are its starting point, carried as a production input. Which indicators are charted and their thresholds are also set there.
+
 #### D`<N>`. `<Title of decision N>`
 
 <!-- In this order, so the reader finds what matters first:
