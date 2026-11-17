@@ -195,6 +195,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 1 | [Shared behaviour](#211-shared-behaviour) | Probes read the real bronze bucket with a read-only R2 token and write Delta locally (least privilege) | Tests the real path layout the window relies on, with no write access to production data | Method |
 | 2 | [Probe B](#b-shell-glue) | dbt's time and memory measured against a baseline without dbt, locally, median of three runs (A/B benchmark with a baseline) | Isolates dbt's own cost from DuckDB's and `deltalake`'s work, which the guides do not count | Method |
 | 3 | [Probe A](#a-build-on-duckdb-20), [Probe C](#c-unit-tests) | Bronze is read in a base model that the staging and quarantine models `ref()` (dbt base model, dbt style guide) | dbt unit tests mock only `ref()` and `source()` inputs; a `source` with `external_location` would add a `dbt-duckdb` unknown to Q1 | Steps review |
+| 4 | [Step 8](#step-8--run-b-in-both-modes) | The owner runs Step 8's commands from one wrapper script that writes their output, `/usr/bin/time` included, to `out/step8.log` (adaptation of the Step protocol: how the result is reported, not what runs) | Seven runs with long outputs; the commands and the measurement stay as planned, and the credentials stay with the owner | Running step 8 |
 
 ### 2.4 File layout
 
@@ -424,8 +425,8 @@ Run 1 passes every test, and the `create table` of `stg_probe` lists each column
 
 ### Step 8 — Run B in both modes
 
-- **Status:** 💤 todo
-- **Who:** Owner
+- **Status:** 🔄 in progress
+- **Who:** Owner **#4**
 - **Commit:** —
 - **Model:** —
 - **Gate:** each model's and test's status and failures reach the shell as values, the MERGE gives the expected rows, and the glue imports no dbt internals → if not, Q2 fails and the run ends with no dbt (D1).
