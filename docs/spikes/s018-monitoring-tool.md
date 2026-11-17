@@ -113,6 +113,20 @@ Scores (U: not stated for the free tier by the documentation):
 | C9 | 5 | 5: native OTLP/HTTP, plus JSON push to Loki | 4: native OTLP, protobuf | 4: OTLP; JSON U | 4: OTLP; JSON U |
 | **Total** | | **4.55** | **4.00** | **3.45** | **3.15** |
 
+#### D3. Each emitter sends its own copy
+
+Each component sends its run's events to Grafana Cloud's Loki itself, over HTTP, at the moment it writes them to R2, following agentless push: there is no collector between the emitter and the tool. The capture Worker makes one more `fetch` per run, well within the subrequests of the Workers free plan, and spends no CPU time while it waits; the pipeline does the same when it uploads its run's object. A failed send does not change the run's outcome, since R2 holds the record (D1). Capture's alerts then do not depend on the pipeline running. The cost is one more secret in the Worker, covered in D7.
+
+Rejected: the pipeline forwards capture's log objects from bronze to Loki in each run. It leaves the Worker unchanged and with no new secret, but capture's events would arrive up to 15 min late, and a stopped pipeline would also hide capture, coupling two failure domains that are independent today.
+
+#### D4. OTLP over HTTP with JSON encoding
+
+Both emitters send their events with OTLP over HTTP, the OpenTelemetry protocol, in its JSON encoding. ADR-0036 already follows OpenTelemetry's names, and the fallback tool of D2 also takes OTLP, so a change of tool changes the endpoint and the key, not the senders. JSON is one of the two encodings the OTLP specification defines, and lets the Worker send with a plain `fetch` and no protobuf library. How the common fields map to OTLP attributes and Loki labels is set in T060.2.
+
+- **What would change it:** Grafana documents JSON over OTLP for low-traffic testing; the estimated 200 MB a month is low traffic. If Grafana rejects or throttles it, the pipeline moves to protobuf with the official OpenTelemetry SDK, and the Worker to Loki's push API, which takes JSON.
+
+Rejected: Loki's own push API as the protocol for both. It is the most direct, with no caveat on JSON, but it is specific to Loki: a change of tool would rewrite the sending code of both components, with no gain the project needs at its volume.
+
 #### D`<N>`. `<Title of decision N>`
 
 <!-- In this order, so the reader finds what matters first:
@@ -145,15 +159,8 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 <!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
 
-- `<item>` — TNNN
-
-### 1.6 Open questions
-
-<!-- Optional. Unresolved questions about what to find out. Questions about how belong to Method. -->
-
-| Question | Notes |
-|---|---|
-| Which events does the page write? | The page is static ([ADR-0032](../decisions/0032-static-web-page-for-visualization.md)) and the pipeline publishes it ([ADR-0033](../decisions/0033-data-published-by-redeploying-static-assets.md)), so publish events are already the pipeline's. Errors in the visitor's browser (real user monitoring) would need an endpoint to reach R2 and the tool; settled before D3 |
+- Real user monitoring of the page: browser errors and load times sent to the tool; the page's health is measured from outside by a synthetic check (DQM10) — not planned
+- The platforms' own logs: R2 access logs and the Cloudflare and Modal platform logs — not planned
 
 ## 2. Method — how we find out
 
