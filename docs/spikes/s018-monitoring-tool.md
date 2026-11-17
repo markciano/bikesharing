@@ -193,11 +193,11 @@ Grafana Cloud on its Free tier shows and alerts on the logs of capture and the p
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | At account set-up, check on the Free tier: template variables and data links, the SLO app, Loki recording rules, a scripted k6 check asserting a file's age, the IRM heartbeat; two or more failing reopen D2 | D2 | T060.2 design — `TODO(T060.2): check Grafana Cloud Free tier features (s018 › P1)` |
-| P2 | At account set-up, check: tokens scoped to writing logs, a stack in an EU region, no payment method needed; then apply the controls of TH1–TH5 | D8 | T060.2 design — `TODO(T060.2): check and apply s018 security controls (s018 › P2)` |
-| P3 | Route alerts by urgency, starting from the SRE split between page and ticket | D5 | T060.2 design — `TODO(T060.2): route alerts by urgency (s018 › P3)` |
-| P4 | Send the indicators' values as log events, unless the design shows a reason for metrics | D6 | T060.2 design — `TODO(T060.2): choose the indicators' signal (s018 › P4)` |
-| P5 | Map the common fields of ADR-0036 to OTLP attributes and Loki labels; a failed send never changes a run's outcome | D3, D4 | T060.2 design — `TODO(T060.2): map log fields to OTLP and Loki (s018 › P5)` |
+| P1 | At account set-up, check on the Free tier: template variables and data links, the SLO app, Loki recording rules, a scripted k6 check asserting a file's age, the IRM heartbeat; two or more failing reopen D2 | D2 | `TODO(T060.2): check Grafana Cloud Free tier features` |
+| P2 | At account set-up, check: tokens scoped to writing logs, a stack in an EU region, no payment method needed; then apply the controls of TH1–TH5 | D8 | `TODO(T060.2): check and apply the monitoring security controls` |
+| P3 | Route alerts by urgency, starting from the SRE split between page and ticket | D5 | `TODO(T060.2): route alerts by urgency` |
+| P4 | Send the indicators' values as log events, unless the design shows a reason for metrics | D6 | `TODO(T060.2): choose the indicators' signal` |
+| P5 | Map the common fields of ADR-0036 to OTLP attributes and Loki labels; a failed send never changes a run's outcome | D3, D4 | `TODO(T060.2): map log fields to OTLP and Loki` |
 
 ### 2.4 Records
 
