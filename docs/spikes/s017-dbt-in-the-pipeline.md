@@ -20,7 +20,7 @@ Current step: the step being executed, or —. -->
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-17 · Finished: —
-- Current step: 11
+- Current step: —
 
 ## 1. Questions — what we need to know
 
@@ -496,7 +496,7 @@ Each run shows two passes and one failure; the median real time is set against t
 
 ### Step 11 — README
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: add the README of spike s017`
 - **Model:** sonnet · medium
@@ -636,6 +636,13 @@ Step 10 · 2026-11-17 · `/usr/bin/time -l`, three runs on the owner's machine
 
 - Real time 1.84 s, 1.52 s and 1.50 s: median 1.52 s, dbt's start-up included; dbt reports 0.21 s for the three tests themselves.
 - The guide of at most 30 s is met.
+
+### F15. The shell glue is 71 lines of Python
+
+Step 11 · 2026-11-17 · code lines of `shell_glue/run_batch.py`, counted with Python's `tokenize`
+
+- 98 code lines in all, without blank lines, comments and docstrings; 27 of them are `--mode baseline`'s (`run_baseline` and the names only it uses: `os`, `COMPILED`, `MODELS`), which the guide does not count. 71 remain for invocation, results, hand-off and callback.
+- The guide of at most 150 lines is met.
 
 ## 5. Conclusion
 
