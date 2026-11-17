@@ -20,7 +20,7 @@ Current step: the step being executed, or —. -->
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-17 · Finished: —
-- Current step: 2
+- Current step: 3
 
 ## 1. Questions — what we need to know
 
@@ -279,7 +279,7 @@ The three files exist, and `git status` shows no other change.
 
 ### Step 2 — Install and resolve versions
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `chore: lock the dependencies of spike s017` (`uv.lock`)
 - **Model:** —
@@ -521,12 +521,12 @@ The README covers A, B and C in run order, and the line count is reported.
 
 <!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
 
-### F1. `<one-line statement>`
+### F1. DuckDB 2.0 resolves with dbt-core 1.12 and dbt-duckdb 1.11
 
-Step N · YYYY-MM-DD · `<source of evidence>`
+Step 2 · 2026-11-17 · `uv sync`, `uv run dbt --version` and the import of `duckdb` and `deltalake`, run by the owner
 
-- `<evidence>`
-- Consequence: `<for variants, steps or questions>`
+- Locked versions: `dbt-core` 1.12.7, `dbt-duckdb` plugin 1.11.1, DuckDB 2.0.0, `deltalake` 1.6.6. dbt reports 1.12.7 and 1.11.1 as the latest releases of their lines.
+- Consequence: the Gate of Step 2 passes; Probes A, B and C run on these versions.
 
 ## 5. Conclusion
 
