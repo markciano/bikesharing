@@ -632,13 +632,13 @@ Yes: dbt fits the pipeline as the layer that builds and audits its SQL (D1), on 
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | Pins: `dbt-core` 1.12.7, `dbt-duckdb` 1.11.1 and DuckDB 2.0.x resolve together | D2, F1 | T060.1's design. TODO(T060.1) |
-| P2 | The shell creates the scratch database's folder before it invokes dbt | F2 | T060.1's design. TODO(T060.1) |
-| P3 | The shell reads dbt's scratch table in the same process only with `dbt-duckdb`'s connection config (`read_only=False`, empty config) | F8 | T060.1's design. TODO(T060.1) |
-| P4 | The callback turns `NodeStart` and `NodeFinished` into the pipeline's events (such as `model_started`, `model_built`, `rule_checked`); a missing `num_failures` means 0; the shell counts each model's rows on the scratch table | D4, F9, F10 | T060.1's design. TODO(T060.1) |
-| P5 | Each data test takes an explicit `name`, its `DQR` ID, since the generated name keeps the raw var expression; it answers [d007 › Rule names in code](../designs/d007-pipeline-design.md#carried-over-inputs) | F6 | T060.1's design. TODO(T060.1) |
-| P6 | dbt unit tests need their upstream relations to exist: CI builds them first with `dbt run --empty`, dbt's documented pattern, and the testing strategy gains its SQL (dbt) section | D3, F13 | T060.1's design. TODO(T060.1) |
-| P7 | The shell's integration test runs two batches in one process, a failing model and a contract violation, and checks the result and the log | [Not verified](#54-not-verified) | T060.1's design. TODO(T060.1) |
+| P1 | Pins: `dbt-core` 1.12.7, `dbt-duckdb` 1.11.1 and DuckDB 2.0.x resolve together | D2, F1 | [d008 › Carried-over inputs](../designs/d008-pipeline-platform-and-walking-skeleton.md#carried-over-inputs) |
+| P2 | The shell creates the scratch database's folder before it invokes dbt | F2 | [d008 › Carried-over inputs](../designs/d008-pipeline-platform-and-walking-skeleton.md#carried-over-inputs) |
+| P3 | The shell reads dbt's scratch table in the same process only with `dbt-duckdb`'s connection config (`read_only=False`, empty config) | F8 | [d008 › Carried-over inputs](../designs/d008-pipeline-platform-and-walking-skeleton.md#carried-over-inputs) |
+| P4 | The callback turns `NodeStart` and `NodeFinished` into the pipeline's events (such as `model_started`, `model_built`, `rule_checked`); a missing `num_failures` means 0; the shell counts each model's rows on the scratch table | D4, F9, F10 | [d008 › Carried-over inputs](../designs/d008-pipeline-platform-and-walking-skeleton.md#carried-over-inputs) |
+| P5 | Each data test takes an explicit `name`, its `DQR` ID, since the generated name keeps the raw var expression; it answers [d007 › Rule names in code](../designs/d007-pipeline-design.md#carried-over-inputs) | F6 | [d008 › Carried-over inputs](../designs/d008-pipeline-platform-and-walking-skeleton.md#carried-over-inputs) |
+| P6 | dbt unit tests need their upstream relations to exist: CI builds them first with `dbt run --empty`, dbt's documented pattern, and the testing strategy gains its SQL (dbt) section | D3, F13 | [d008 › Carried-over inputs](../designs/d008-pipeline-platform-and-walking-skeleton.md#carried-over-inputs) |
+| P7 | The shell's integration test runs two batches in one process, a failing model and a contract violation, and checks the result and the log | [Not verified](#54-not-verified) | [d008 › Carried-over inputs](../designs/d008-pipeline-platform-and-walking-skeleton.md#carried-over-inputs) |
 | P8 | The bronze fixtures of the quarantine's integration test include a malformed row | [Not verified](#54-not-verified) | T060.5's design. TODO(T060.5) |
 
 ### 5.6 Records
