@@ -20,7 +20,7 @@ Current step: the step being executed, or —. -->
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-17 · Finished: —
-- Current step: 8
+- Current step: 9
 
 ## 1. Questions — what we need to know
 
@@ -196,6 +196,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 2 | [Probe B](#b-shell-glue) | dbt's time and memory measured against a baseline without dbt, locally, median of three runs (A/B benchmark with a baseline) | Isolates dbt's own cost from DuckDB's and `deltalake`'s work, which the guides do not count | Method |
 | 3 | [Probe A](#a-build-on-duckdb-20), [Probe C](#c-unit-tests) | Bronze is read in a base model that the staging and quarantine models `ref()` (dbt base model, dbt style guide) | dbt unit tests mock only `ref()` and `source()` inputs; a `source` with `external_location` would add a `dbt-duckdb` unknown to Q1 | Steps review |
 | 4 | [Step 8](#step-8--run-b-in-both-modes) | The owner runs Step 8's commands from one wrapper script that writes their output, `/usr/bin/time` included, to `out/step8.log` (adaptation of the Step protocol: how the result is reported, not what runs) | Seven runs with long outputs; the commands and the measurement stay as planned, and the credentials stay with the owner | Running step 8 |
+| 5 | [Step 8](#step-8--run-b-in-both-modes) | Step 8 is done with rows missing from the events recorded as a result ([F9](#f9-dbt-duckdb-reports-no-rows-affected)), not as a failed run; Q4's guide is missed on rows (negative result as evidence) | dbt-duckdb returns no row count anywhere, so a rerun would not change it; D4's fallback covers it | Running step 8 |
 
 ### 2.4 File layout
 
@@ -425,7 +426,7 @@ Run 1 passes every test, and the `create table` of `stg_probe` lists each column
 
 ### Step 8 — Run B in both modes
 
-- **Status:** 🔄 in progress
+- **Status:** ✅ done **#5**
 - **Who:** Owner **#4**
 - **Commit:** —
 - **Model:** —
@@ -567,6 +568,58 @@ Step 6 · 2026-11-17 · `target/compiled/` and the build output, read by the own
 - The warning names the test and the path of its compiled SQL, which is enough to find the failing rows.
 - The generated test name embeds the unrendered default, `accepted_values_stg_probe_is_renting__False___var_accepted_true_false_`, and stays the same when the var changes, so it does not show the values tested.
 - No error message came up in this step, so how readable dbt errors are is not observed here.
+
+### F7. dbtRunner returns each node's status and failures as values
+
+Step 8 · 2026-11-17 · `shell_glue/run_batch.py --mode dbt`, four runs, run by the owner (`out/step8.log`, #4)
+
+- `dbtRunnerResult.result.results` holds one `RunResult` per node, the three models and the two tests, with `node.unique_id`, `status` (`success`, `pass`, `warn`), `failures` (`null` for models, a count for tests) and `execution_time`.
+- With `accepted` set to `[true]`, `accepted_values` returns `status: warn` and `failures: 1`, and `success` stays `true`.
+- The script imports from dbt only `dbt.cli.main` (`dbtRunner`, `dbtRunnerResult`).
+
+### F8. dbt-duckdb keeps its database open in the process after dbtRunner returns
+
+Step 8 · 2026-11-17 · first `--mode dbt` run, run by the owner
+
+- Opening `out/scratch.duckdb` again in the same process with `read_only=True` fails: `Can't open a connection to same database file with a different configuration than existing connections`.
+- dbt-duckdb opens the file with `read_only=False` and an empty config (`dbt/adapters/duckdb/environments/__init__.py`); a `duckdb.connect()` with the default config reuses that instance and reads `stg_probe`.
+- Consequence: the shell reads dbt's scratch table in the same process only with dbt-duckdb's connection config.
+
+### F9. dbt-duckdb reports no rows affected
+
+Step 8 · 2026-11-17 · `--mode dbt` runs and `out/events.jsonl`, run by the owner
+
+- `adapter_response` holds only `{"_message": "OK"}` for every model, so `rows_affected` is empty both in `RunResult` and in the `run_result` of `NodeFinished`.
+- Consequence: a model's row count does not reach the shell from dbt; the shell would count it on the scratch table.
+
+### F10. The callback receives each node's start, status, duration and failures
+
+Step 8 · 2026-11-17 · `out/events.jsonl` of the run with `accepted` set to `[true]`, run by the owner
+
+- `NodeStart` (5) marks each node's start, with `node_info`.
+- `NodeFinished` (5) carries, for models and tests alike, `node_info.unique_id`, `run_result.status`, `run_result.execution_time` and, when above 0, `run_result.num_failures`.
+- `LogTestResult` (2) carries a test's `status`, `execution_time` and `num_failures`; `LogModelResult` (3) a model's `status` and `execution_time`.
+- `MessageToDict` leaves out `num_failures` when it is 0, the protobuf default, so a passing test's event has no failures field.
+- No error event came up in these runs.
+
+### F11. The MERGE into Delta gives the expected rows in both modes
+
+Step 8 · 2026-11-17 · three runs per mode and one with `accepted` set to `[true]`, run by the owner
+
+- The Delta table `out/delta/stg_probe` holds 32,700 rows after each of the seven runs, the row count of `stg_probe` in F4; the MERGE on station key and capture time adds no duplicates.
+
+### F12. dbt adds about 1 s and 36 MB to a run
+
+Step 8 · 2026-11-17 · `/usr/bin/time -l`, three runs per mode on the owner's machine
+
+| Mode | Real time (median) | Maximum resident set size (median) |
+|---|---|---|
+| dbt | 2.70 s | 400.5 MB |
+| baseline | 1.75 s | 364.1 MB |
+| Difference | +0.95 s | +36.4 MB |
+
+- Both guides are met: at most 15 s and at most 500 MB.
+- Consequence: the Gate of Step 8 passes; Q2 holds, and the run continues with Probe C (Step 9).
 
 ## 5. Conclusion
 
