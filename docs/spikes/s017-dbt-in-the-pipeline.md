@@ -77,6 +77,14 @@ Option rejected: **v2** (Rust engine, released 2026-09-14, as the proprietary `d
 | `read_json` in staging models | Yes | Static analysis can fail |
 | Invoked from the shell, with results and a log callback | `dbtRunner` with callbacks | No callbacks or manifest injection; Python API in development |
 
+#### D3. SQL tested with dbt unit tests, Python with pytest
+
+Each tool tests its own side, following the standard of a dbt project and the test pyramid: dbt unit tests verify each SQL model's logic on its own, with input rows and expected rows written by hand and no real data read; pytest verifies the Python core and shell as today ([testing strategy › Python](../testing-strategy.md#python-srcbikesharing)), plus an integration test in which the shell runs dbt on bronze fixtures and writes Delta to a local folder. The testing strategy gains a section for SQL (dbt) with its five answers, and CI runs both. dbt unit tests are written before the model, as Python tests are before their code. The local budget of under 1 s ([s008 › F37](s008-testing-conventions.md#4-findings)) cannot hold for dbt, whose start-up alone takes longer: dbt tests get a budget of their own, measured in Q1, which also confirms that dbt unit tests run on `dbt-duckdb`.
+
+What would change it: Q1 finds that dbt unit tests do not run on `dbt-duckdb`. Then model logic is tested from pytest on the scratch database, as option B.
+
+Option rejected: **B. pytest only,** each test running `dbt build` on fixtures and asserting on the resulting tables. One tool, but every test pays dbt's start-up, and it tests several models together instead of one.
+
 <!-- In this order, so the reader finds what matters first:
 1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
 2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
