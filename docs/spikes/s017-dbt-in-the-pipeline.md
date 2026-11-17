@@ -20,7 +20,7 @@ Current step: the step being executed, or —. -->
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-17 · Finished: —
-- Current step: 4
+- Current step: 5
 
 ## 1. Questions — what we need to know
 
@@ -329,7 +329,7 @@ The three files exist, and `git status` shows no other change.
 
 ### Step 4 — Build the window from R2
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **Model:** —
@@ -527,6 +527,21 @@ Step 2 · 2026-11-17 · `uv sync`, `uv run dbt --version` and the import of `duc
 
 - Locked versions: `dbt-core` 1.12.7, `dbt-duckdb` plugin 1.11.1, DuckDB 2.0.0, `deltalake` 1.6.6. dbt reports 1.12.7 and 1.11.1 as the latest releases of their lines.
 - Consequence: the Gate of Step 2 passes; Probes A, B and C run on these versions.
+
+### F2. dbt-duckdb does not create the folder of its database file
+
+Step 4 · 2026-11-17 · `dbt build`, run by the owner
+
+- With `path: out/scratch.duckdb` and no `out/` folder, the first query fails: `IO Error: Cannot open file ".../out/scratch.duckdb": No such file or directory`. Neither DuckDB nor `dbt-duckdb` creates the parent folder.
+- Consequence: the folder is created before the first build (`mkdir out`), and the README lists it as a setup command. In the pipeline, the shell creates the database's folder before invoking dbt.
+
+### F3. dbt-duckdb reads from R2 only the objects of the window passed through var()
+
+Step 4 · 2026-11-17 · `dbt build` and `dbt show` on `base_probe_read`, run by the owner, window `bicing` / `station_status` / 2026-11-16 / 10 UTC
+
+- `dbt build` passes on DuckDB 2.0 with no patch: `PASS=1 WARN=0 ERROR=0`; the model builds in 2.85 s, the whole run in 3.07 s.
+- The model reads 60 objects, as many as the hour holds in the bucket, and 32,700 rows (545 stations per object). The first key is `…/20261116T100039Z.json.gz` and the last `…/20261116T105939Z.json.gz`, both in the hour.
+- Consequence: the Gate of Step 4 passes; Probe A continues with the contract, the rule and the quarantine (Step 5).
 
 ## 5. Conclusion
 
