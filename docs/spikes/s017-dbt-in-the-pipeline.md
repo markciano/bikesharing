@@ -18,7 +18,7 @@ Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current step: the step being executed, or —. -->
 
 - State: Draft 📝
-- Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
+- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
 - Current step: —
 
