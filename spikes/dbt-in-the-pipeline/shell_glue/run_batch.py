@@ -90,7 +90,7 @@ def run_baseline() -> Path:
     for model in MODELS:
         con.execute(f"CREATE TABLE {model} AS {(COMPILED / f'{model}.sql').read_text()}")
     tests = {
-        sql.stem: con.sql(f"SELECT count(*) FROM ({sql.read_text()})").fetchone()[0]
+        sql.stem: con.sql(f"SELECT count(*) FROM ({sql.read_text()})").fetchall()[0][0]
         for sql in sorted((COMPILED / "stg_probe.yml").glob("*.sql"))
     }
     con.close()
