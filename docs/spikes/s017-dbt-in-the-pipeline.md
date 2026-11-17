@@ -109,15 +109,6 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 - The move to dbt v2, when its DuckDB adapter covers what D2 needs — T070
 
-### 1.6 Open questions
-
-<!-- Optional. Unresolved questions about what to find out. Questions about how belong to Method. -->
-
-| Question | Notes |
-|---|---|
-| Where dbt applies, if anywhere, with `dbt-duckdb` on DuckDB 2.0; which data-test tool runs the runtime rules | From [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs); sources: [s011](s011-engine-pipeline-language.md) › inputs of D3, Out of scope; [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) › Scope; [d007 › Quality catalog](../designs/d007-pipeline-design.md#quality-catalog) |
-| How a late bronze object and a redriven batch reprocess their window under dbt's microbatch strategy, since a batch of bronze objects spans a time range of capture instants | From [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs); batches per [ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md) |
-
 ## 2. Method — how we find out
 
 ### 2.1 Approach
