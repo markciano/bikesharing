@@ -17,15 +17,16 @@ Tasks live in GitHub Issues (ADR-0034). Closed tasks up to T052 are in `docs/tas
 - **Working document:** a task of 2+ steps also has one, a design (to build or decide) or a spike report (to investigate), which is the source of truth from then on. A one-step task has only its issue.
 - **Group:** a parent issue with sub-issues, whose IDs are `TNNN.M`. A parent's title ends in `[parent]`, e.g. `T900 (ef8): Add station maps [parent]`.
 - **Order:** `blocked-by` shows it, between tasks and between groups. It informs and does not block.
+- **Labels:** each task takes the component it changes (`capture`, `pipeline`, `visualization`, `monitoring`) or, when it changes none, the repository area (`documentation`, `ci`); a task with a spike report also takes `spike`.
 
 ## Create a task
 
 1. Find the next free ID: the highest `TNNN` in the list below, plus one. A child takes the next `.M` of its parent.
-2. Propose the title, body, parent and dependencies to the owner. Create nothing without the owner's OK: the repository is public.
+2. Propose the title, body, labels, parent and dependencies to the owner. Create nothing without the owner's OK: the repository is public.
 3. Create it, adding `--parent` only for a child:
 
    ```bash
-   gh issue create --title 'TNNN (efM): task name' --body 'detail' --parent P
+   gh issue create --title 'TNNN (efM): task name' --body 'detail' --label L --parent P
    ```
 
 4. Add each dependency, where `N` and `M` are issue numbers:
