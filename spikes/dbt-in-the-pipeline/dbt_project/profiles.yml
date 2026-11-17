@@ -1,0 +1,19 @@
+# dbt-duckdb on a scratch database file, reading bronze on R2 through httpfs.
+# path is relative to the spike root, where every command runs.
+# The S3 secret comes from the four variables of .env; R2 wants the endpoint without its scheme.
+dbt_in_the_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: out/scratch.duckdb
+      threads: 1
+      extensions:
+        - httpfs
+      secrets:
+        - type: s3
+          key_id: "{{ env_var('R2_ACCESS_KEY_ID') }}"
+          secret: "{{ env_var('R2_SECRET_ACCESS_KEY') }}"
+          endpoint: "{{ env_var('R2_ENDPOINT') | replace('https://', '') }}"
+          region: auto
+          url_style: path
