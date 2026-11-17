@@ -1,9 +1,3 @@
-<!--
-Spike doc template. A spike is a time-boxed investigation of one task: it reaches the decisions a task needs, by analysis where possible and with evidence only where an unknown would change the choice. Its output is knowledge (decisions, answers, a verdict, inputs for designs and ADRs); its code is throwaway and lives in spikes/<name>/.
-Blocks: Questions (what we need to know), Method (how we find out), Steps, Findings (filled during execution), Conclusion (filled after the last step).
-Sections marked Optional are kept only when they apply.
--->
-
 # Spike: Monitoring tool
 
 - **Task:** T060.9
@@ -12,21 +6,14 @@ Sections marked Optional are kept only when they apply.
 
 ## Status
 
-<!-- State: Draft 📝 · Ready 🎬 · Running 🔄 · Concluded ✅.
-Phase: the blocks and the review completed.
-Started / Finished: UTC dates of the first step executed and of the Conclusion.
-Current step: the step being executed, or —. -->
-
-- State: Draft 📝
-- Phase: [x] Questions · Method, Steps and Steps review: not applicable · [ ] Conclusion
-- Started: — · Finished: —
+- State: Concluded ✅
+- Phase: [x] Questions · Method, Steps and Steps review: not applicable · [x] Conclusion
+- Started: — · Finished: 2026-11-18
 - Current step: —
 
 ## 1. Questions — what we need to know
 
 ### 1.1 Context
-
-<!-- 2–4 sentences: the decisions this spike takes, which of them depend on evidence and why, and the spikes or designs it builds on. -->
 
 Capture's logs live in R2 and the pipeline's will, queried with SQL from the owner's machine ([ADR-0036](../decisions/0036-log-convention-across-components.md)); nothing shows them as dashboards or alerts the owner, as [d007 › D4](../designs/d007-pipeline-design.md#d4-data-quality-in-four-classes) asks of T060.2 for failed runtime rules and indicators off target. This spike decides where the logs live, which tool shows and alerts on them, how events and quality indicators reach it, whether it takes over the heartbeat, and its security. Every decision was settled by documentation and analysis: the facts the documentation does not state for the chosen tool's free tier change no choice on their own, and T060.2 checks them when it sets up the account.
 
@@ -165,8 +152,6 @@ No Q: triage left no unknown that only a run could settle (Context).
 
 ### 1.4 Out of scope
 
-<!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
-
 - Real user monitoring of the page: browser errors and load times sent to the tool; the page's health is measured from outside by a synthetic check (DQM10) — not planned
 - The platforms' own logs: R2 access logs and the Cloudflare and Modal platform logs — not planned
 
@@ -174,13 +159,9 @@ No Q: triage left no unknown that only a run could settle (Context).
 
 ### 2.1 Verdict
 
-<!-- The answer to the main question in 2–3 sentences. -->
-
 Grafana Cloud on its Free tier shows and alerts on the logs of capture and the pipeline, while R2 stays their record: each component sends a copy of its run's events over OTLP/HTTP with JSON, and alerts reach the owner in the Grafana app. Quality indicators arrive in the pipeline's events, DQM10 is measured by a synthetic check from outside, and the heartbeat stays on Healthchecks.io as an independent failure domain.
 
 ### 2.2 Not verified
-
-<!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
 
 - The Free tier features behind four scores of Grafana Cloud (D2: C1, C3, C4, C5) — a dashboard, an SLO or the DQM10 check needs a workaround — T060.2 checks them at account set-up; two or more failing reopen D2 with New Relic as the fallback
 - The three account facts behind D8's controls: logs-write scoped tokens, an EU region, no payment method — a control is weaker than stated — T060.2 checks them at account set-up and adjusts D8's controls in its design
@@ -188,8 +169,6 @@ Grafana Cloud on its Free tier shows and alerts on the logs of capture and the p
 - Facts gathered from vendor pages on 2026-11-17 — free tiers change without notice — R2 holds the record (D1) and OTLP keeps a change of tool to an endpoint and a key (D4)
 
 ### 2.3 Production inputs
-
-<!-- Optional. What a later task must take into account when it builds, from any part of the spike: done when that task runs. Each one has a Destination: a design (with its task) with its `TODO(TNNN)` marker (CLAUDE.md › Pending items), or discarded with a reason. -->
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
@@ -201,8 +180,6 @@ Grafana Cloud on its Free tier shows and alerts on the logs of capture and the p
 
 ### 2.4 Records
 
-<!-- Documents this spike updates before it closes: ADRs from Decided at framing (each in its own commit), architecture, requirements, source cards and new tasks agreed with the owner. A decision that updates no document has no row. Commit: "Done", or "Pending" until delivered; the spike closes when every row is Done. Production inputs are not repeated here. -->
-
 | Output | From | Destination | Commit |
 |---|---|---|---|
 | [ADR-0048](../decisions/0048-grafana-cloud-as-monitoring-tool.md): Grafana Cloud as the monitoring tool | D2, D5 | `docs/decisions/` | Done |
@@ -210,8 +187,6 @@ Grafana Cloud on its Free tier shows and alerts on the logs of capture and the p
 | Architecture: the monitoring tool, the copy of log events and the alert path | D1–D7 | [architecture.md](../architecture.md) › §4.1, §7, §8 | Done |
 
 ## 3. Sources
-
-<!-- Optional. Earlier spikes, benchmarks and documentation used. -->
 
 - Grafana Cloud: <https://grafana.com/pricing/>, <https://grafana.com/docs/grafana-cloud/send-data/otlp/send-data-otlp/>, <https://grafana.com/docs/grafana-cloud/observe-and-act/send-data/otlp/otlp-format-considerations/>, <https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/>, <https://grafana.com/docs/grafana-cloud/testing/synthetic-monitoring/create-checks/checks/http/>, <https://grafana.com/docs/grafana-cloud/platform/mobile-app/get-started/>, <https://grafana.com/whats-new/2026-06-02-mfa-in-grafana-cloud/>
 - New Relic: <https://newrelic.com/pricing>, <https://docs.newrelic.com/docs/synthetics/synthetic-monitoring/using-monitors/monitor-limits/>, <https://docs.newrelic.com/docs/opentelemetry/best-practices/opentelemetry-otlp/>
