@@ -42,7 +42,7 @@ A runtime rule's severity follows who causes its failure ([d007 › D4](designs/
 | ID | Rule | Dimension | Severity |
 |---|---|---|---|
 | DQR11 | If a bronze feed adds or drops a field of those the model reads ([data-model.md › RDM2, RDM6](data-model.md#model-as-a-whole)), then the run shall log a schema drift ([d007 › D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)). | Validity | warn |
-| DQR12 | If a capture lists fewer stations than the recent median, by more than the threshold that the slice building this rule fixes, then the run shall log a volume drop ([d007 › D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)). TODO(T060.1): fix the threshold and the window of the median. | Completeness | warn |
+| DQR12 | If a capture lists fewer stations than the recent median, by more than the threshold that the slice building this rule fixes, then the run shall log a volume drop ([d007 › D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)). Threshold and window: [d008 › Open questions](designs/d008-pipeline-platform-and-walking-skeleton.md#17-open-questions). | Completeness | warn |
 | DQR13 | The rows a run adds to silver and gold shall match the items it reads from bronze, by count, or by total in a gold table that aggregates ([d007 › D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)). | Completeness | error |
 | DQR14 | Each file the pipeline publishes shall match its JSON Schema before it is deployed ([d007 › D2](designs/d007-pipeline-design.md#d2-visualization-after-all-slices), [D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)). | Validity | error |
 
