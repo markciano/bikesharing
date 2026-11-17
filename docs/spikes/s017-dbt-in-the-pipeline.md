@@ -20,7 +20,7 @@ Current step: the step being executed, or —. -->
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-17 · Finished: —
-- Current step: 9
+- Current step: 10
 
 ## 1. Questions — what we need to know
 
@@ -453,7 +453,7 @@ Below, `<run>` stands for `uv run --env-file .env /usr/bin/time -l python shell_
 
 ### Step 9 — Unit tests
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: add dbt unit tests to spike s017`
 - **Model:** sonnet · medium

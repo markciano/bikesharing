@@ -1,0 +1,79 @@
+# Probe C: dbt unit tests on stg_probe and stg_probe_quarantine, with the rows of base_probe_read mocked.
+# Input: hand-written rows given for ref('base_probe_read'); no bronze is read. Output: dbt's pass or fail per test.
+# Two tests are written to pass; the one named fails_on_purpose is written to fail, so the run shows a failing unit test.
+# The mocked rows are cast to base_probe_read's column types, so a malformed row is one with a required field missing (null),
+# which is what try_cast also yields for a value of the wrong type.
+version: 2
+
+unit_tests:
+  - name: stg_probe_keeps_valid_rows_typed
+    description: Two valid stations of one object come out unchanged, with the contract's types.
+    model: stg_probe
+    given:
+      - input: ref('base_probe_read')
+        rows:
+          - station_id: "1"
+            num_vehicles_available: 5
+            num_docks_available: 20
+            is_renting: true
+            captured_at: "2026-11-17 10:00:00"
+            source_key: raw/bicing/station_status/2026-11-17/20261117T100000Z.json.gz
+          - station_id: "2"
+            num_vehicles_available: 0
+            num_docks_available: 27
+            is_renting: false
+            captured_at: "2026-11-17 10:00:00"
+            source_key: raw/bicing/station_status/2026-11-17/20261117T100000Z.json.gz
+    expect:
+      rows:
+        - station_id: "1"
+          num_vehicles_available: 5
+          num_docks_available: 20
+          is_renting: true
+          captured_at: "2026-11-17 10:00:00"
+          source_key: raw/bicing/station_status/2026-11-17/20261117T100000Z.json.gz
+        - station_id: "2"
+          num_vehicles_available: 0
+          num_docks_available: 27
+          is_renting: false
+          captured_at: "2026-11-17 10:00:00"
+          source_key: raw/bicing/station_status/2026-11-17/20261117T100000Z.json.gz
+
+  - name: stg_probe_quarantine_keeps_malformed_row_with_failed_field
+    description: A station with no docks count goes to quarantine, named by its object, its station key and the field that failed.
+    model: stg_probe_quarantine
+    given:
+      - input: ref('base_probe_read')
+        rows:
+          - station_id: "3"
+            num_vehicles_available: 4
+            num_docks_available: null
+            is_renting: true
+            captured_at: "2026-11-17 10:00:00"
+            source_key: raw/bicing/station_status/2026-11-17/20261117T100000Z.json.gz
+    expect:
+      rows:
+        - source_key: raw/bicing/station_status/2026-11-17/20261117T100000Z.json.gz
+          raw_station_id: "3"
+          failed_field: num_docks_available
+
+  - name: stg_probe_fails_on_purpose_wrong_vehicle_count
+    description: Written to fail. The expected vehicle count (6) differs from the input (5), so the run shows how dbt reports a failing unit test.
+    model: stg_probe
+    given:
+      - input: ref('base_probe_read')
+        rows:
+          - station_id: "1"
+            num_vehicles_available: 5
+            num_docks_available: 20
+            is_renting: true
+            captured_at: "2026-11-17 10:00:00"
+            source_key: raw/bicing/station_status/2026-11-17/20261117T100000Z.json.gz
+    expect:
+      rows:
+        - station_id: "1"
+          num_vehicles_available: 6
+          num_docks_available: 20
+          is_renting: true
+          captured_at: "2026-11-17 10:00:00"
+          source_key: raw/bicing/station_status/2026-11-17/20261117T100000Z.json.gz
