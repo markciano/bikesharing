@@ -62,6 +62,21 @@ Fit-gap of dbt against the decisions in force (facts as of 2026-11-17, sources i
 | G7 | SQL tests ([testing strategy](../testing-strategy.md)) | Adaptation | dbt unit tests exist since dbt-core 1.8; their behaviour on `dbt-duckdb` is unconfirmed |
 | G8 | Logs ([ADR-0036](../decisions/0036-log-convention-across-components.md)) | Adaptation | A `dbtRunner` callback receives every event and can forward it to Python's logging |
 
+#### D2. dbt v1: `dbt-core` 1.12 with `dbt-duckdb`
+
+The pipeline uses dbt's v1 line, `dbt-core` 1.12 (Apache 2.0, supported until 2027-07-15) with the `dbt-duckdb` adapter, following the practice of running the stable, supported release line rather than a beta. It is the only line that covers today what D1 needs: a stable DuckDB adapter, extensions to read bronze on R2, `read_json` in staging models, and `dbtRunner` with callbacks for the shell.
+
+What would change it: v2's DuckDB adapter leaving beta with extensions and a Python API. Then the pipeline moves to v2 before v1.12's end of support; the move is bounded, since models are SQL with Jinja, though v2 parses them more strictly. T070 checks it, starting three months before that date.
+
+Option rejected: **v2** (Rust engine, released 2026-09-14, as the proprietary `dbt` or the Apache 2.0 `dbt-oss`), where new features land from now on. Its DuckDB adapter is in beta; its bundled driver loads no extensions without a system driver installed apart; its static analysis can fail on `read_json`; it has no callbacks and no manifest injection, and its Python API is in development. It fails three of D1's four needs, and no run could change that today.
+
+| Need (D1) | v1 | v2 |
+|---|---|---|
+| DuckDB adapter | `dbt-duckdb` 1.11.1, stable | Built in, beta |
+| Extensions (`httpfs`) to read bronze on R2 | Yes | Only with a system driver installed apart |
+| `read_json` in staging models | Yes | Static analysis can fail |
+| Invoked from the shell, with results and a log callback | `dbtRunner` with callbacks | No callbacks or manifest injection; Python API in development |
+
 <!-- In this order, so the reader finds what matters first:
 1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
 2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
@@ -92,7 +107,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 <!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
 
-- `<item>` — TNNN
+- The move to dbt v2, when its DuckDB adapter covers what D2 needs — T070
 
 ### 1.6 Open questions
 
