@@ -17,10 +17,10 @@ Phase: the blocks and the review completed.
 Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current step: the step being executed, or —. -->
 
-- State: Ready 🎬
+- State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
-- Started: — · Finished: —
-- Current step: —
+- Started: 2026-11-17 · Finished: —
+- Current step: 2
 
 ## 1. Questions — what we need to know
 
@@ -238,12 +238,13 @@ The dbt project is shared by the three probes ([Shared behaviour](#211-shared-be
 - **uv 0.13.5** on the local machine; it installs Python 3.13 for the spike. Verify: `uv --version`.
 - **R2 token for the spike,** in the Cloudflare dashboard: an R2 API token with Object Read only, scoped to the bronze bucket. Its access key ID, secret and the account's S3 endpoint go into `spikes/dbt-in-the-pipeline/.env`, once Step 1 has created `.env.example`. It is revoked at tear-down (#1).
 - **One hour of bronze:** the bucket name, and the `<source>`, `<feed>`, date and UTC hour of one complete hour of one system's station status, under the key layout of [d004](../designs/d004-bronze-data-capture.md) (`raw/<source>/<feed>/<YYYY-MM-DD>/<YYYYMMDDTHHMMSSZ>.json.gz`), with the number of objects in that hour, read in the dashboard; reported back as the window of Probe A.
+  - Window: bucket `bikesharing-bronze`, source `bicing`, feed `station_status`, date `2026-11-16`, hour `10` UTC, 60 objects.
 
 Owner commands run from `spikes/dbt-in-the-pipeline/`; `<vars>` stands for the window reported in Prerequisites, as `--vars '{"source": "…", "feed": "…", "date": "YYYY-MM-DD", "hour": "HH"}'`, and `<dbt>` for `uv run --env-file .env dbt` with `--project-dir dbt_project --profiles-dir dbt_project` after the subcommand.
 
 ### Step 1 — Spike environment
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: set up the environment of spike s017`
 - **Model:** sonnet · medium
