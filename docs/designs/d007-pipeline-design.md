@@ -252,7 +252,7 @@ Inputs about the how, left to this design by earlier spikes and designs; each go
 - **Pipeline version** ([ADR-0036](../decisions/0036-log-convention-across-components.md)): the value of the pipeline's `version` in its logs and rows (D5). TODO(T060.1)
 - **Log upload** ([ADR-0030](../decisions/archive/0030-pipeline-logs.md), archived): a failed upload of a run's logs does not hide the run's real outcome. TODO(T060.1)
 - **Fixtures and contracts** ([d004 › Out of scope](d004-bronze-data-capture.md#15-out-of-scope), [Step 2](d004-bronze-data-capture.md#step-2--contract-vectors)): fixture entries chosen for variety of records (empty, full or out-of-service stations); the consumer tests of the shared contract vectors, their `invalid` cases included; whether the pipeline gets a component folder of its own. TODO(T060.1)
-- **dbt** ([s011](../spikes/s011-engine-pipeline-language.md) › inputs of D3, Out of scope; [ADR-0025](../decisions/0025-sql-models-directed-by-python.md) › Scope): where dbt applies, if anywhere, with `dbt-duckdb` on DuckDB 2.0; the data-test tool ([Quality catalog](#quality-catalog)). A batch of bronze objects spans a time range of capture instants, which dbt's microbatch strategy could take; to check how a late object and a redriven batch reprocess their window. TODO(T060.7)
+- **dbt:** where dbt applies, if anywhere, and the data-test tool are investigated in [s017 › Open questions](../spikes/s017-dbt-in-the-pipeline.md#16-open-questions).
 
 ### 2.2 Decision summary
 
