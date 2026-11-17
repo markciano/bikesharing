@@ -85,6 +85,14 @@ What would change it: Q1 finds that dbt unit tests do not run on `dbt-duckdb`. T
 
 Option rejected: **B. pytest only,** each test running `dbt build` on fixtures and asserting on the resulting tables. One tool, but every test pays dbt's start-up, and it tests several models together instead of one.
 
+#### D4. dbt's events translated into the log convention
+
+The shell registers a callback on `dbtRunner` that receives each dbt event as it happens and forwards the relevant ones to Python's logging, which writes them in the convention of [ADR-0036](../decisions/0036-log-convention-across-components.md), with its common fields and an event name of the pipeline's own (such as `model_built` or `rule_checked`); dbt's `invocation_id` travels as a field of each event, and dbt writes no log of its own. The relevant events are a model started, a model finished with its status, rows and duration, a test finished with its failures, and errors. This follows the adapter pattern into one structured log stream, and keeps rule 7 of [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md): the callback lives in the shell and only logs. A run that hangs or is killed in the middle of dbt still shows in its log the model it had reached. Which dbt event types carry these data is unconfirmed; Q1 confirms it.
+
+What would change it: Q1 finds that the callback does not receive per-model and per-test results. Then the shell logs them from dbt's results once the invocation ends, and the log of a run killed inside dbt shows only that dbt started.
+
+Option rejected: **B. dbt's own JSON log kept apart,** uploaded as a second file per run. No glue, but its events carry neither `component`, `version` nor `run_id`, so the query across components of ADR-0036 does not see them, and they could be joined only by time.
+
 <!-- In this order, so the reader finds what matters first:
 1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
 2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
