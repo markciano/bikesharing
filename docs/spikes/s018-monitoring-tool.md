@@ -207,7 +207,7 @@ Grafana Cloud on its Free tier shows and alerts on the logs of capture and the p
 |---|---|---|---|
 | [ADR-0048](../decisions/0048-grafana-cloud-as-monitoring-tool.md): Grafana Cloud as the monitoring tool | D2, D5 | `docs/decisions/` | Done |
 | [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md): log events copied to the monitoring tool by each emitter over OTLP, extending ADR-0036 | D1, D3, D4 | `docs/decisions/` | Done |
-| Architecture: the monitoring tool, the copy of log events and the alert path | D1–D7 | `docs/architecture.md`, the sections that name observability | Pending |
+| Architecture: the monitoring tool, the copy of log events and the alert path | D1–D7 | [architecture.md](../architecture.md) › §4.1, §7, §8 | Done |
 
 ## 3. Sources
 
