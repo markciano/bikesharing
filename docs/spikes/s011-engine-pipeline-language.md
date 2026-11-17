@@ -26,8 +26,8 @@ What would change the engine:
 
 | Event | Where it shows | Action |
 |---|---|---|
-| The hand-off from DuckDB to `deltalake` fails on real data and a `CAST` does not fix it | First slice of T040 | Move to Polars |
-| A reference batch runs out of memory, even with smaller batches and spilling | First slice of T040, or the history load | Move to Polars, once confirmed that it copes |
+| The hand-off from DuckDB to `deltalake` fails on real data and a `CAST` does not fix it | T060.1 | Move to Polars |
+| A reference batch runs out of memory, even with smaller batches and spilling | T060.1, or the history load (T060.4) | Move to Polars, once confirmed that it copes |
 | DuckDB's reads break R2's quota and a lower cadence no longer meets [d002 › R3](../designs/d002-requirements.md#requirements) | R2 metrics in production | Re-evaluate, measuring Polars too |
 
 What would not change it:
@@ -48,7 +48,7 @@ Decisions taken on the way:
 - **MERGE on real volumes needs no run.** All surviving candidates hand it to `deltalake`, so it does not separate them. Silver averages about 80 MB of Parquet per day ([s010 › Q1](s010-storage-table-format.md#answers)), and about 300 MB at the ×3.8 break-even of vehicles' estimated bytes per row ([s010 › F24](s010-storage-table-format.md#4-findings)), so a MERGE bounded to one day stays near 3 GB in memory, assuming ×10 over Parquet.
 - **DuckDB's reads are not counted before choosing.** This replaces the mitigation in [s010 › Not verified](s010-storage-table-format.md#not-verified), because no count would change the choice. On demand, the pipeline uses 3.7% of R2's free Class B quota. The risk appears only at 24/7 every 10 minutes, which reaches €2 at ×2.1 reads per file ([s010 › F24](s010-storage-table-format.md#4-findings)), and a lower commit cadence reverses it. Its reads are measured in production through R2's per-bucket metrics.
 
-Inputs for T040:
+Inputs for T060 ([d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs)):
 
 - Choose between partition overwrite and a bounded MERGE, and confirm predicate overwrite on R2.
 - Use `to_arrow_table` or `to_arrow_reader`: DuckDB 2.0 removed `fetch_arrow_table` and similar methods after `con.execute()`.
@@ -159,11 +159,11 @@ What would change the form:
 
 | Event | Where it shows | Action |
 |---|---|---|
-| A transformation cannot be written in SQL | T040 | Only that step goes to Python, with the reason documented |
+| A transformation cannot be written in SQL | T060's children | Only that step goes to Python, with the reason documented |
 
 Robustness: without Team practice, SQL leads Mixed and the Python API 84 to 79 and 62, and without Learning curve 99 to 96 and 68. With Team practice inverted (SQL at 1, Python API at 5), SQL still leads the Python API 89 to 87. Team practice is a reasoned judgement, since no job-ad data exists per form and the survey figure measures SQL use in general, not in data teams. Learning curve reflects the owner's skills: very strong SQL, basic Python. Ibis, even if fixed, would score 86 against SQL's 109, so it is not worth waiting for. Rejected: Mixed (second; same as SQL unless an operation falls short), DuckDB's Python API (lower score; windows and joins still need SQL strings) and Ibis (fails C4).
 
-Inputs for T040:
+Inputs for T060 ([d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs)):
 
 - Check whether `con.sql()` accepts parameters: D1 reads batches through `con.sql()`, but the documentation read confirms parameters only for `execute()`.
 - Check whether parameters work in `read_json` file paths; the documentation read shows them only as values.
@@ -180,7 +180,7 @@ Needs the form must cover:
 | N3 | Use the same logic for the incremental batch and for a rebuild from bronze, changing only the data range | [d002 › R11, R13](../designs/d002-requirements.md#requirements) |
 | N4 | Be tested before the code is written, locally and with no infrastructure | [Testing strategy](../testing-strategy.md) |
 | N5 | Follow the practice of a company data team and show data engineering skills | [d002 › Context](../designs/d002-requirements.md#context) |
-| N6 | Leave T040 free to decide where dbt applies | 1.3 Out of scope |
+| N6 | Leave T060.7 free to decide where dbt applies | 1.3 Out of scope |
 | N7 | Let T042 add data quality rules at any layer and record their results as measures, without rewriting transformations; T042 decides where the rules live and their format | [d002 › Q2](../designs/d002-requirements.md#guiding-questions), [task T042](../tasks.md) |
 
 Candidates:
@@ -192,7 +192,7 @@ Candidates:
 | C | Ibis | Python library that writes transformations as DataFrames and translates them for the engine |
 | D | Mixed | SQL by default, Python only where SQL falls short |
 
-dbt is not a candidate: it manages SQL or Python rather than being a form of writing them, and T040 decides where it applies.
+dbt is not a candidate: it manages SQL or Python rather than being a form of writing them, and T060.7 decides where it applies.
 
 Hard cuts:
 
@@ -244,7 +244,7 @@ Scores (total = Σ score × weight, maximum 120, normalised to 0–10), with fac
 | # | Threat (STRIDE) | Impact | Control | Requirement |
 |---|---|---|---|---|
 | TH1 | A value from a feed or archive ends up inside a query (Tampering) | Unplanned SQL runs with the pipeline's token; `sql()` accepts several statements in one string | Run only SQL versioned in the repository; captured values never enter the query text | R19 |
-| TH2 | Unplanned SQL reads or writes beyond what the pipeline needs (Elevation of privilege) | DuckDB can reach local and remote files | Prevented by R19 and bounded by R15 and R17; restricting DuckDB's paths is hardening to try in T040 | None |
+| TH2 | Unplanned SQL reads or writes beyond what the pipeline needs (Elevation of privilege) | DuckDB can reach local and remote files | Prevented by R19 and bounded by R15 and R17; restricting DuckDB's paths is hardening to try in T060.1 | None |
 | TH3 | An altered extension or dependency, since DuckDB can download extensions at run time (Tampering) | Third-party code runs with the pipeline's credentials | Pinned versions ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)), installed ahead of the run; no downloads at run time | R20 |
 | TH4 | A malicious or corrupt `.7z`: decompression bomb or paths outside the folder (Denial of service, Tampering) | Full disk or overwritten files | Size limit and a bounded folder; the archive is rejected and recorded as a gap (R9) | R21 |
 | TH5 | Credentials end up in logs, queries or engine files (Information disclosure) | Same as a leaked credential in [ADR-0023](../decisions/0023-storage-security-baseline.md) | Credentials held only in memory, never in logs or query text | R22 |
@@ -262,9 +262,9 @@ Restricting DuckDB's paths (TH2) is not a requirement, because it may not be ach
 
 Risk kept: unplanned SQL could still touch local files if R19 were ever broken.
 
-No run is needed: the open checks go to T040, and none changes what is required.
+No run is needed: the open checks go to T060, and none changes what is required.
 
-Inputs for T040:
+Inputs for T060 ([d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs)):
 
 - Try restricting DuckDB's paths with `enable_external_access` on R2 and Delta, as hardening.
 - Disable `autoinstall_known_extensions` and `allow_community_extensions`, which are on by default. List the extensions the installed package already includes with `duckdb_extensions()`, and install the others ahead of the run.
@@ -284,8 +284,8 @@ Requirements transferred to [d002 › Requirements](../designs/d002-requirements
 
 ### 1.3 Out of scope
 
-- Partition overwrite or MERGE, batch size, commit cadence and state between batches (T040).
-- Where dbt applies, if anywhere: T040 decides it, and the owner wants to use it where it can be justified.
+- Partition overwrite or MERGE, batch size, commit cadence and state between batches ([d007](../designs/d007-pipeline-design.md) and its children).
+- Where dbt applies, if anywhere: T060.7 decides it, and the owner wants to use it where it can be justified.
 - Where the pipeline runs and what schedules it (T037).
 - Data quality checks beyond the basics (T042).
 
@@ -306,15 +306,15 @@ The single-node engine is DuckDB, with Polars as the fallback. The pipeline is S
 
 ### 2.3 Not verified
 
-- The hand-off from DuckDB to `deltalake` on real data — a type mismatch, or a failure that a `CAST` does not fix — the first slice of T040 tries it; D1 moves to Polars if it fails.
-- Memory on a reference batch — running out of memory even with smaller batches and spilling — the first slice of T040 or the history load measures it; D1 moves to Polars once confirmed that it copes.
-- `$name` parameters in `con.sql()` and in `read_json` file paths — less reuse across models — T040 checks them; D3 holds either way.
-- Restricting DuckDB's paths on R2 and Delta — unplanned SQL could touch local files if R19 were ever broken — T040 tries it as hardening.
+- The hand-off from DuckDB to `deltalake` on real data — a type mismatch, or a failure that a `CAST` does not fix — T060.1 tries it; D1 moves to Polars if it fails.
+- Memory on a reference batch — running out of memory even with smaller batches and spilling — T060.1 or the history load (T060.4) measures it; D1 moves to Polars once confirmed that it copes.
+- `$name` parameters in `con.sql()` and in `read_json` file paths — less reuse across models — T060.1 checks them; D3 holds either way.
+- Restricting DuckDB's paths on R2 and Delta — unplanned SQL could touch local files if R19 were ever broken — T060.1 tries it as hardening.
 
 ### 2.4 Follow-ups
 
 - ADRs to write, each in its own commit with its lines in `docs/architecture.md`: processing engine (D1), pipeline language (D3) and budget shares (D2).
-- T040 picks up the inputs listed in D1, D3 and D4.
+- T060 picks up the inputs listed in D1, D3 and D4, through [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs).
 - T037 works within the pipeline share and reviews TH9; T038 validates the visualization share.
 
 ## 3. Sources

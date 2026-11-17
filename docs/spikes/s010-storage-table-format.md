@@ -953,11 +953,11 @@ A full run of `measure_volume.py`; `output/volumes.json`; findings for the cost 
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | A MERGE that conflicts with a concurrent commit on the same partition raises `CommitFailedError` and is not auto-resolved; the pipeline retries it on a fresh table handle | Step 2 · `web-researcher` (delta-rs conflict checker) | Task T040 (Processing pipeline) design |
-| P2 | Tables are created before any concurrent writer (version-0 race on R2, delta-rs #3505), and concurrent writers do not use `schema_mode="merge"` (metadata changes are never retried, #3829 on R2) | Step 2 · `web-researcher` (delta-rs issues) | Task T040 (Processing pipeline) design |
-| P3 | The checkpoint interval N is tuned per table: it sets how many JSON commits each table load reads (2 Class B each) against how often a checkpoint is written | Step 8 · owner (#42) | Task T040 (Processing pipeline) design |
-| P4 | The cost model is recalibrated once the pipeline runs: R2's GraphQL Analytics metrics per bucket (#36) give the actual Class A, Class B and storage, which are compared with the model's prediction to adjust `params.toml` and re-run it | Step 8 · owner | Task T040 (Processing pipeline) design, once the pipeline runs; together with [D5](#d5-bronze-is-kept-indefinitely-reviewed-only-above-a-cost-threshold)'s TODO on recalibrating the Cloudflare alerts |
-| P5 | Running 24/7, the pipeline commits every 10 minutes or more: at 5 and 1 minutes Class B exceeds the free quota and the D2 gate ([F20](#4-findings)). This conflicts with the ≤ 5-minute freshness of Q1, Q2 and Q5 (`architecture.md` §1.1); ways to go below 10 minutes (e.g. more frequent optimize) are not analysed in the spike | Step 9 · owner (D2 gate) | Task T040 (Processing pipeline) design, which sets when the pipeline commits and resolves the tension with [d002](../designs/d002-requirements.md#requirements) R3 |
+| P1 | A MERGE that conflicts with a concurrent commit on the same partition raises `CommitFailedError` and is not auto-resolved; the pipeline retries it on a fresh table handle | Step 2 · `web-researcher` (delta-rs conflict checker) | [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs) › T060.1 |
+| P2 | Tables are created before any concurrent writer (version-0 race on R2, delta-rs #3505), and concurrent writers do not use `schema_mode="merge"` (metadata changes are never retried, #3829 on R2) | Step 2 · `web-researcher` (delta-rs issues) | [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs) › T060.1 |
+| P3 | The checkpoint interval N is tuned per table: it sets how many JSON commits each table load reads (2 Class B each) against how often a checkpoint is written | Step 8 · owner (#42) | [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs) › T060.1 |
+| P4 | The cost model is recalibrated once the pipeline runs: R2's GraphQL Analytics metrics per bucket (#36) give the actual Class A, Class B and storage, which are compared with the model's prediction to adjust `params.toml` and re-run it | Step 8 · owner | [d007 › Carried-over inputs](../designs/d007-pipeline-design.md#carried-over-inputs) › T060.1, once the pipeline runs; together with [D5](#d5-bronze-is-kept-indefinitely-reviewed-only-above-a-cost-threshold)'s TODO on recalibrating the Cloudflare alerts |
+| P5 | Running 24/7, the pipeline commits every 10 minutes or more: at 5 and 1 minutes Class B exceeds the free quota and the D2 gate ([F20](#4-findings)). This conflicts with the ≤ 5-minute freshness of Q1, Q2 and Q5 (`architecture.md` §1.1); ways to go below 10 minutes (e.g. more frequent optimize) are not analysed in the spike | Step 9 · owner (D2 gate) | [d007 › D3](../designs/d007-pipeline-design.md#d3-continuous-mode-with-a-15-minute-cadence), which sets when the pipeline commits and resolves the tension with [d002](../designs/d002-requirements.md#requirements) R3 |
 
 ## 5. Conclusion
 
@@ -1063,7 +1063,7 @@ Post-spike documentation work of T035, in a fresh session from the closed spike 
   - Operation metrics are sampled: the total matches an exact count within 0.02%, per-object counts do not ([F14](#4-findings)).
   - The dashboard's summary and charts disagree, and neither its day boundary nor an operation breakdown is documented ([#36](#decision-log)).
 
-No new tasks: every Production input has a destination in task T040.
+No new tasks: every Production input has a destination in T060's design ([d007](../designs/d007-pipeline-design.md)).
 
 ## Sources
 

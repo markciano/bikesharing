@@ -247,9 +247,9 @@ One STRIDE pass over D1–D11 keeps the threats with a real chance or a lasting 
 
 - Calculating and storing completeness and other quality answers (D7), from the questions and fields in D9 — T060 **[d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)**
 - Quality checks capture does not make: repeated failures of a static feed or an index, and HTTP 200 with frozen data (D10) — T060 **[d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)**
-- Fixture entries chosen for variety of records (empty, full or out-of-service stations), which only code that reads them can use ([Fixtures](#fixtures)) — T040
+- Fixture entries chosen for variety of records (empty, full or out-of-service stations), which only code that reads them can use ([Fixtures](#fixtures)) — T060.1
 - Citing the finding IDs of other documents with their source, such as s008's in `docs/testing-strategy.md` — T058
-- Whether the pipeline gets a component folder of its own, like `capture/`, instead of `src/` and `tests/` at the root — T040
+- Whether the pipeline gets a component folder of its own, like `capture/`, instead of `src/` and `tests/` at the root — T060.1
 - Centralising quality rules and targets, such as D6's, in one place — T060 **[d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)**
 - Bicing's HTTP 403s on `bicing/station_status` after `capture-v4` stopped, about 1.3 per hour with no retry (4.1, D8) — T059
 
