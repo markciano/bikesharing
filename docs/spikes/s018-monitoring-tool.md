@@ -51,6 +51,68 @@ Rejected:
 | N6 | Little to maintain for a single operator | ADR-0027, ADR-0030 |
 | N7 | Logs hold no credentials | [d002 › R22](../designs/d002-requirements.md#requirements) |
 
+#### D2. Monitoring tool
+
+Grafana Cloud on its Free tier is the monitoring tool, chosen by weighted decision matrix with 4.55 out of 5 against 4.00 for New Relic. It leads on dashboards, synthetic checks (DQM10) and heartbeats, and covers the alerts, SLOs, configuration as code and the phone use the project asks for, within 50 GB of logs a month, 250 times the estimated volume.
+
+- **What would change it:** four scores rest on facts the documentation does not state for the Free tier: template variables and data links (C1), the SLO app and Loki recording rules (C3), a scripted k6 check that asserts a file's age (C4), and the IRM heartbeat (C5). T060.2 checks them when it sets up the account. If two or more fail, the decision reopens with New Relic as the fallback. One failing alone does not reopen it: it costs at most 20 of the 55 points of the margin.
+- **What would not:** the free retention of 14 days, since R2 holds the record (D1).
+
+Rejected:
+
+- New Relic: 500 synthetic checks a month on its free edition allow one every 90 min at most, against the 15 min DQM10 needs; heartbeats only emulated.
+- Better Stack: 3-day free retention, and its app shows incidents but not dashboards.
+- Axiom: no synthetic check or SLOs, and alerts limited to Slack, Discord and email.
+- Datadog: its free plan includes no logs (K5).
+- Honeycomb: two triggers and no SLOs on its free plan, and no stated support for logs.
+
+Robust: no single unconfirmed fact changes the winner; all four failing together would tie it with New Relic at 4.00. No candidate reads R2 in place, so D1 stands. Facts gathered on 2026-11-17 from each vendor's pricing and documentation pages.
+
+Volume, worst case: 10 KB per run, deliberately high as in [ADR-0030](../decisions/archive/0030-pipeline-logs.md); capture every 5 min for two sources and the pipeline every 15 min ([d007 › D3](../designs/d007-pipeline-design.md#d3-continuous-mode-with-a-15-minute-cadence)) make about 670 runs a day, 7 MB a day, 200 MB a month.
+
+Hard cuts:
+
+| K | Cut | Origin |
+|---|---|---|
+| K1 | Receives JSON events over HTTP from the Worker and from Modal | D1 |
+| K2 | Queries the logs of all components together, filtered by the common fields | ADR-0036 |
+| K3 | Dashboards with saved views and drill-down, e.g. the daily count of `warn` and `error` leading to their logs | Owner |
+| K4 | Alerts on log queries (failed runtime rules of either severity) and on indicators off their target | d007 › D4 |
+| K5 | Free at the estimated volume with a 10× margin | d002 › R4, ADR-0026 |
+| K6 | Managed service (SaaS): self-hosting needs an always-on machine, with its cost and maintenance | D1 › N5, N6 |
+| K7 | Account with two-factor authentication: the tool's own, with an authenticator app (TOTP), or sign-in with GitHub with its two-factor authentication on, following delegated authentication (OIDC) | [d007 › D8](../designs/d007-pipeline-design.md#d8-pipeline-security-threats) |
+
+Criteria and anchors:
+
+| C | Criterion | Weight | 1 | 3 | 5 | Origin |
+|---|---|---|---|---|---|---|
+| C1 | Dashboards | 20 | Saved searches and basic charts only | Panels with charts over log queries, and drill-down links | 3, plus template variables and event markers (deploys) on charts | Owner, [ADR-0044](../decisions/0044-deployments-tagged-with-their-commit.md) |
+| C2 | Alerts | 20 | Email only, one notification per firing | Email plus one push or chat channel, and a resolved notification | 3, plus push in a mobile app, grouping and silences | d007 › D4 |
+| C3 | Metrics and SLOs | 15 | Counts at query time only, no stored series | Stored metrics, derived from logs or sent, with threshold alerts | 3, plus native SLO objects (target, error budget, burn rate) | d007 › D4 |
+| C4 | Synthetic check | 10 | None in the free tier | HTTP status code only | Asserts on body or header (e.g. a file's age) every 15 min or less, free | d007 › D4 (DQM10) |
+| C5 | Heartbeat | 10 | None in the free tier | Emulated by an alert on missing events for N minutes | Native cron monitor: ping URL, schedule, grace period, alert on missed or failed | [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) |
+| C6 | Configuration as code | 10 | UI only | JSON export and import by API | Official Terraform provider or declarative files for dashboards and alerts | Spec-driven development (CLAUDE.md) |
+| C7 | Phone use | 5 | Desktop web only | Responsive web, usable for dashboards | Official app with dashboards and alerts | [s013 › D5](s013-visualization-tool.md) |
+| C8 | Free retention | 5 | Under 7 days | 7 to 14 days | 30 days or more | D1: R2 holds the record |
+| C9 | OTLP ingest | 5 | Proprietary API only | OTLP through a collector or agent | Native OTLP/HTTP endpoint for logs; the Worker cannot run a collector | ADR-0036 |
+
+Hard cuts: Grafana Cloud, New Relic, Better Stack and Axiom pass; Axiom through sign-in with GitHub, since it has no two-factor authentication of its own on its free plan. Datadog fails K5. Honeycomb is not scored.
+
+Scores (U: not stated for the free tier by the documentation):
+
+| C | Weight | Grafana Cloud | New Relic | Better Stack | Axiom |
+|---|---|---|---|---|---|
+| C1 | 20 | 5 (U): panels over Loki, annotations; template variables and data links | 4 (U): facet linking, variables; deploy markers | 3: SQL dashboards; drill-down U | 4: charts, annotations |
+| C2 | 20 | 5: email, Telegram, Slack, webhook, resolved notices; app push through IRM, 3 users free | 5: email, Slack, webhook, app push, closed notices | 4: email and Slack free; app push | 3: Slack, Discord, email |
+| C3 | 15 | 4 (U): SLO app with no stated limit; recording rules | 4 (U): events-to-metrics, service levels | 3: metrics from logs; no SLOs | 2: monitors on queries only |
+| C4 | 10 | 4 (U): 100k executions a month; regex on headers; a scripted k6 check could compute an age | 2: 500 checks a month, one every 90 min at most | 3: keyword and status every 3 min | 1: none |
+| C5 | 10 | 4 (U): IRM heartbeat with an interval, grace not documented | 3: emulated by loss of signal | 5: 10 native heartbeats with grace | 3: emulated |
+| C6 | 10 | 5: Terraform for dashboards, rules, contact points, synthetic checks, SLOs | 5: Terraform covers all | 4: two providers; log alerts U | 5: Terraform |
+| C7 | 5 | 5: app with dashboards and alerts | 5: app with dashboards and alerts | 3: app for incidents only | 2 (U): not documented |
+| C8 | 5 | 3: 14 days | 3: 8 days (some pages state 30) | 1: 3 days | 5: 30 days |
+| C9 | 5 | 5: native OTLP/HTTP, plus JSON push to Loki | 4: native OTLP, protobuf | 4: OTLP; JSON U | 4: OTLP; JSON U |
+| **Total** | | **4.55** | **4.00** | **3.45** | **3.15** |
+
 #### D`<N>`. `<Title of decision N>`
 
 <!-- In this order, so the reader finds what matters first:
