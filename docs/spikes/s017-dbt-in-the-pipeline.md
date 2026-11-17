@@ -20,7 +20,7 @@ Current step: the step being executed, or —. -->
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-17 · Finished: —
-- Current step: 10
+- Current step: 11
 
 ## 1. Questions — what we need to know
 
@@ -479,7 +479,7 @@ Below, `<run>` stands for `uv run --env-file .env /usr/bin/time -l python shell_
 
 ### Step 10 — Run and time unit tests
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **Model:** —
@@ -620,6 +620,22 @@ Step 8 · 2026-11-17 · `/usr/bin/time -l`, three runs per mode on the owner's m
 
 - Both guides are met: at most 15 s and at most 500 MB.
 - Consequence: the Gate of Step 8 passes; Q2 holds, and the run continues with Probe C (Step 9).
+
+### F13. dbt unit tests pass and fail as written on dbt-duckdb
+
+Step 10 · 2026-11-17 · `dbt test --select test_type:unit`, three runs, run by the owner
+
+- Each run ends with `PASS=2 WARN=0 ERROR=1 SKIP=0 NO-OP=0 REUSED=0 TOTAL=3`: `stg_probe_keeps_valid_rows_typed` and `stg_probe_quarantine_keeps_malformed_row_with_failed_field` pass; `stg_probe_fails_on_purpose_wrong_vehicle_count` fails with `FAIL 1`.
+- The unit tests run against the scratch database left by the earlier steps, from which dbt reads the column types of the mocked `base_probe_read`; no bronze is read.
+- The run's summary names the failing unit test and its YAML file, then shows the diff of actual against expected rows, with the failing value as expected→actual (`6→5` under `num_vehicles_available`), later columns elided as `...`, and the path of the test's compiled SQL.
+- Consequence: the Gate of Step 10 passes; D3 holds with dbt unit tests.
+
+### F14. The dbt unit test suite runs locally in about 1.5 s
+
+Step 10 · 2026-11-17 · `/usr/bin/time -l`, three runs on the owner's machine
+
+- Real time 1.84 s, 1.52 s and 1.50 s: median 1.52 s, dbt's start-up included; dbt reports 0.21 s for the three tests themselves.
+- The guide of at most 30 s is met.
 
 ## 5. Conclusion
 
