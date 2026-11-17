@@ -7,8 +7,8 @@ Sections marked Optional are kept only when they apply.
 # Spike: Monitoring tool
 
 - **Task:** T060.9
-- **ADRs:** [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md), [ADR-0036](../decisions/0036-log-convention-across-components.md), [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md)
-- **Code:** `spikes/monitoring-tool/`
+- **ADRs:** [ADR-0023](../decisions/0023-storage-security-baseline.md), [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md), [ADR-0036](../decisions/0036-log-convention-across-components.md), [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md)
+- **Code:** none; every decision was taken at framing, with no run
 
 ## Status
 
@@ -18,7 +18,7 @@ Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current step: the step being executed, or —. -->
 
 - State: Draft 📝
-- Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
+- Phase: [x] Questions · Method, Steps and Steps review: not applicable · [ ] Conclusion
 - Started: — · Finished: —
 - Current step: —
 
@@ -27,6 +27,8 @@ Current step: the step being executed, or —. -->
 ### 1.1 Context
 
 <!-- 2–4 sentences: the decisions this spike takes, which of them depend on evidence and why, and the spikes or designs it builds on. -->
+
+Capture's logs live in R2 and the pipeline's will, queried with SQL from the owner's machine ([ADR-0036](../decisions/0036-log-convention-across-components.md)); nothing shows them as dashboards or alerts the owner, as [d007 › D4](../designs/d007-pipeline-design.md#d4-data-quality-in-four-classes) asks of T060.2 for failed runtime rules and indicators off target. This spike decides where the logs live, which tool shows and alerts on them, how events and quality indicators reach it, whether it takes over the heartbeat, and its security. Every decision was settled by documentation and analysis: the facts the documentation does not state for the chosen tool's free tier change no choice on their own, and T060.2 checks them when it sets up the account.
 
 ### 1.2 Decided at framing
 
@@ -66,7 +68,7 @@ Rejected:
 - Datadog: its free plan includes no logs (K5).
 - Honeycomb: two triggers and no SLOs on its free plan, and no stated support for logs.
 
-Robust: no single unconfirmed fact changes the winner; all four failing together would tie it with New Relic at 4.00. No candidate reads R2 in place, so D1 stands. Facts gathered on 2026-11-17 from each vendor's pricing and documentation pages.
+Robust: no single unconfirmed fact changes the winner; all four failing together would tie it with New Relic at 4.00. No candidate reads R2 in place, so D1 stands. Facts gathered on 2026-11-17 from each vendor's pricing and documentation pages (Sources).
 
 Volume, worst case: 10 KB per run, deliberately high as in [ADR-0030](../decisions/archive/0030-pipeline-logs.md); capture every 5 min for two sources and the pipeline every 15 min ([d007 › D3](../designs/d007-pipeline-design.md#d3-continuous-mode-with-a-15-minute-cadence)) make about 670 runs a day, 7 MB a day, 200 MB a month.
 
@@ -115,7 +117,7 @@ Scores (U: not stated for the free tier by the documentation):
 
 #### D3. Each emitter sends its own copy
 
-Each component sends its run's events to Grafana Cloud's Loki itself, over HTTP, at the moment it writes them to R2, following agentless push: there is no collector between the emitter and the tool. The capture Worker makes one more `fetch` per run, well within the subrequests of the Workers free plan, and spends no CPU time while it waits; the pipeline does the same when it uploads its run's object. A failed send does not change the run's outcome, since R2 holds the record (D1). Capture's alerts then do not depend on the pipeline running. The cost is one more secret in the Worker, covered in D7.
+Each component sends its run's events to Grafana Cloud's Loki itself, over HTTP, at the moment it writes them to R2, following agentless push: there is no collector between the emitter and the tool. The capture Worker makes one more `fetch` per run, well within the subrequests of the Workers free plan, and spends no CPU time while it waits; the pipeline does the same when it uploads its run's object. A failed send does not change the run's outcome, since R2 holds the record (D1). Capture's alerts then do not depend on the pipeline running. The cost is one more secret in the Worker, covered in D8.
 
 Rejected: the pipeline forwards capture's log objects from bronze to Loki in each run. It leaves the Worker unchanged and with no new secret, but capture's events would arrive up to 15 min late, and a stopped pipeline would also hide capture, coupling two failure domains that are independent today.
 
@@ -137,175 +139,83 @@ Grafana Cloud does not read the gold tables, for the reason D1 rejects reading R
 
 Whether the pipeline sends the indicators' values as log events or as metrics is set by T060.2; log events, with one signal and one path, are its starting point, carried as a production input. Which indicators are charted and their thresholds are also set there.
 
-#### D`<N>`. `<Title of decision N>`
+#### D7. The heartbeat stays on Healthchecks.io
 
-<!-- In this order, so the reader finds what matters first:
-1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
-2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
-3. The options rejected and how robust the result is.
-4. The evaluation behind it: the table or weighted matrix (needs, cuts, anchors and scores) if one was used. A security decision lists its threats in a table: `| # | Threat (STRIDE) | Impact | Control | Requirement |`, with IDs `TH1`, `TH2`… per document. -->
+The heartbeat of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) stays on Healthchecks.io, apart from the monitoring tool, following separate failure domains for alerting: the heartbeat reports when everything else is silent, and on Grafana Cloud an outage of the tool or its account would silence logs, alerts and heartbeat at once. ADR-0031 is unchanged.
+
+Rejected: Grafana IRM's heartbeat. It would save an account and a secret and put every notification in one app (D5), but it would make one provider a single point of failure for alerting, and its grace period and its place in the Free tier are not documented (D2, C5).
+
+#### D8. Monitoring tool security threats
+
+One STRIDE pass covers what this spike adds, as [d007 › D8](../designs/d007-pipeline-design.md#d8-pipeline-security-threats) sets for each child: a Grafana Cloud account, a write token in each emitter, and logs leaving for one more provider. Repudiation is covered by R2 as the record (D1) and the `version` of every event (ADR-0036). Three controls rest on facts not checked yet, which T060.2 checks when it creates the account: tokens scoped to writing logs only, a stack in an EU region, and a Free tier that needs no payment method.
+
+| # | Threat (STRIDE) | Impact | Control | Requirement |
+|---|---|---|---|---|
+| `TH1` | Spoofing: someone signs in to the owner's Grafana Cloud account | Logs read, alerts deleted or silenced | Two-factor authentication with TOTP (K7); the owner is the only user | d007 › D8 |
+| `TH2` | Tampering: the write token of the Worker or of the pipeline leaks | False events hide a failure or add noise | One token per emitter, scoped to writing logs, so one is revoked without the other; kept as a Worker secret and a Modal secret, never in code; R2's record is unchanged (D1) | d007 › D8 |
+| `TH3` | Information disclosure: logs leave for one more provider | What they hold is exposed | Logs hold no credentials (d002 › R22) and no visitor data (no real user monitoring); a stack in an EU region; only the owner reads them, with no public dashboards or shared snapshots | d002 › R22 |
+| `TH4` | Denial of wallet: a leaked token floods the ingest | Cost, or the quota used up | No payment method on the account, so the Free tier stops at its limit and bills nothing; the token is revoked | d002 › R4 |
+| `TH5` | Denial of service: Grafana Cloud is down | No logs or alerts in the tool | Capture and the pipeline do not depend on the send (D3); the heartbeat is apart (D7); R2 holds every event (D1) | d002 › R23 |
 
 ### 1.3 Questions
 
-<!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
-"Observe only": things to note during the run with no dedicated effort. -->
+Main question: which tool shows the logs of capture and the pipeline as dashboards and alerts the owner, within free tiers, and how do events and quality indicators reach it?
 
-Main question: `<one sentence>`
+No Q: triage left no unknown that only a run could settle (Context).
 
-- **Q1.** `<question>`
-- **Observe only:** `<item>`
-
-### 1.4 Exit criteria
-
-<!-- Fixed before the first run; a later change is recorded in the Decision log.
-Derived from the standard that applies to this kind of question, named in the first line: e.g. DAMA data quality dimensions for a data source, a weighted decision matrix for a technology choice.
-Each criterion is measurable and says whether it is a hard cut or a guide. The timebox says what ends the run. State whether one variant meeting the criteria is enough. -->
-
-- **Standard:** `<standard or pattern applied>`
-- **Timebox:** `<window, and what ends it>`
-- `<criterion>` — `<threshold>` — hard cut | guide
-
-### 1.5 Out of scope
+### 1.4 Out of scope
 
 <!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
 
 - Real user monitoring of the page: browser errors and load times sent to the tool; the page's health is measured from outside by a synthetic check (DQM10) — not planned
 - The platforms' own logs: R2 access logs and the Cloudflare and Modal platform logs — not planned
 
-## 2. Method — how we find out
+## 2. Conclusion
 
-### 2.1 Approach
-
-<!-- The variants, options or probes compared, and what each one tells that the others do not. -->
-
-| Variant | What it is | What it tells |
-|---|---|---|
-| | | |
-
-#### 2.1.1 Shared behaviour
-
-<!-- Optional. Rules every variant follows (schedules, formats, key layouts, logs), stated once so the steps can cite them. -->
-
--
-
-#### `<A>`. `<Title of variant, option or probe A>`
-
-<!-- Detailed description -->
-
-### 2.3 Decision log
-
-<!-- It logs decisions about the method, before and during the run, including changes of course. Oldest first.
-Entries follow .claude/rules/docs/decision-log.md (log only, change links).
-- Column Applies to: anchor link(s) to the section where the decision is applied, named in one or two words (e.g. Q1, Probe A, File layout).
-- Column Decided at: the Status phase where it was decided (Method, Steps), `<phase> review` when decided while reviewing that phase, or `Running step N` when decided during the run.
--->
-
-| # | Applies to | Decision | Reason | Decided at |
-|---|---|---|---|---|
-| `<N>` |  |  |  |  |
-
-### 2.4 File layout
-
-<!-- Every file and folder the spike creates, as a tree with its purpose in one line. Captured data and outputs are marked as ignored by Git. The README is always included. -->
-
-```text
-spikes/monitoring-tool/
-├── README.md        Question, setup and commands, what each script does, link to the report
-└── <file>           <purpose>
-```
-
-## 3. Steps
-<!-- Each step is one reviewable result, touching at most 2–3 files.
-- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- Commit: only in a step that changes committed files: the proposed message, following the Git conventions in CLAUDE.md.
-- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner.
-- Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>. -->
-
-### 3.1 Prerequisites
-
-<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
-
-### Step 1 — `<title>`
-
-- **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md.
-- **Model:** `<model · effort>` (or —)
-- **Gate:** `<condition>` → `<consequence>`
-
-#### Scope
-
-<!-- The result of the step. List the components and the files created or changed (code, tests, docs). A reviewer should know what the diff will contain from this section alone. -->
-
-#### Reads
-
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
-
-#### Do
-
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
-
-#### Check
-
-<!-- command/s or verification with a yes/no result. -->
-
-## 4. Findings
-
-<!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
-
-### F1. `<one-line statement>`
-
-Step N · YYYY-MM-DD · `<source of evidence>`
-
-- `<evidence>`
-- Consequence: `<for variants, steps or questions>`
-
-## 5. Conclusion
-
-<!-- Filled after the last step. Covers only the observed window. -->
-
-Observed window: `<from–to, UTC; what it does not cover>`
-
-### 5.1 Answers
-
-- **Q1. Title** `<answer>` (FN)
-
-### 5.2 Exit criteria
-
-<!-- One result per criterion and variant. -->
-
-| Criterion | Kind | Result | Findings |
-|---|---|---|---|
-
-### 5.3 Verdict
+### 2.1 Verdict
 
 <!-- The answer to the main question in 2–3 sentences. -->
 
-### 5.4 Not verified
+Grafana Cloud on its Free tier shows and alerts on the logs of capture and the pipeline, while R2 stays their record: each component sends a copy of its run's events over OTLP/HTTP with JSON, and alerts reach the owner in the Grafana app. Quality indicators arrive in the pipeline's events, DQM10 is measured by a synthetic check from outside, and the heartbeat stays on Healthchecks.io as an independent failure domain.
+
+### 2.2 Not verified
 
 <!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
 
-- `<item>` — `<risk>` — `<mitigation>`
+- The Free tier features behind four scores of Grafana Cloud (D2: C1, C3, C4, C5) — a dashboard, an SLO or the DQM10 check needs a workaround — T060.2 checks them at account set-up; two or more failing reopen D2 with New Relic as the fallback
+- The three account facts behind D8's controls: logs-write scoped tokens, an EU region, no payment method — a control is weaker than stated — T060.2 checks them at account set-up and adjusts D8's controls in its design
+- JSON over OTLP at the project's volume (D4) — Grafana rejects or throttles it — the fallback in D4
+- Facts gathered from vendor pages on 2026-11-17 — free tiers change without notice — R2 holds the record (D1) and OTLP keeps a change of tool to an endpoint and a key (D4)
 
-### 5.5 Production inputs
+### 2.3 Production inputs
 
 <!-- Optional. What a later task must take into account when it builds, from any part of the spike: done when that task runs. Each one has a Destination: a design (with its task) with its `TODO(TNNN)` marker (CLAUDE.md › Pending items), or discarded with a reason. -->
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | | `<e.g. D1, #2, F3>` | |
+| P1 | At account set-up, check on the Free tier: template variables and data links, the SLO app, Loki recording rules, a scripted k6 check asserting a file's age, the IRM heartbeat; two or more failing reopen D2 | D2 | T060.2 design — `TODO(T060.2): check Grafana Cloud Free tier features (s018 › P1)` |
+| P2 | At account set-up, check: tokens scoped to writing logs, a stack in an EU region, no payment method needed; then apply the controls of TH1–TH5 | D8 | T060.2 design — `TODO(T060.2): check and apply s018 security controls (s018 › P2)` |
+| P3 | Route alerts by urgency, starting from the SRE split between page and ticket | D5 | T060.2 design — `TODO(T060.2): route alerts by urgency (s018 › P3)` |
+| P4 | Send the indicators' values as log events, unless the design shows a reason for metrics | D6 | T060.2 design — `TODO(T060.2): choose the indicators' signal (s018 › P4)` |
+| P5 | Map the common fields of ADR-0036 to OTLP attributes and Loki labels; a failed send never changes a run's outcome | D3, D4 | T060.2 design — `TODO(T060.2): map log fields to OTLP and Loki (s018 › P5)` |
 
-### 5.6 Records
+### 2.4 Records
 
 <!-- Documents this spike updates before it closes: ADRs from Decided at framing (each in its own commit), architecture, requirements, source cards and new tasks agreed with the owner. A decision that updates no document has no row. Commit: "Done", or "Pending" until delivered; the spike closes when every row is Done. Production inputs are not repeated here. -->
 
 | Output | From | Destination | Commit |
 |---|---|---|---|
-| `<ADR, requirement, source card or task>` | `<e.g. D1, F3>` | `<document and section>` | `<Done, or Pending>` |
+| ADR: Grafana Cloud as the monitoring tool | D2, D5 | `docs/decisions/` | Pending |
+| ADR: log events copied to the monitoring tool by each emitter over OTLP, extending ADR-0036 | D1, D3, D4 | `docs/decisions/` | Pending |
+| Architecture: the monitoring tool, the copy of log events and the alert path | D1–D7 | `docs/architecture.md`, the sections that name observability | Pending |
 
-## 6. Sources
+## 3. Sources
 
 <!-- Optional. Earlier spikes, benchmarks and documentation used. -->
 
--
+- Grafana Cloud: <https://grafana.com/pricing/>, <https://grafana.com/docs/grafana-cloud/send-data/otlp/send-data-otlp/>, <https://grafana.com/docs/grafana-cloud/observe-and-act/send-data/otlp/otlp-format-considerations/>, <https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/>, <https://grafana.com/docs/grafana-cloud/testing/synthetic-monitoring/create-checks/checks/http/>, <https://grafana.com/docs/grafana-cloud/platform/mobile-app/get-started/>, <https://grafana.com/whats-new/2026-06-02-mfa-in-grafana-cloud/>
+- New Relic: <https://newrelic.com/pricing>, <https://docs.newrelic.com/docs/synthetics/synthetic-monitoring/using-monitors/monitor-limits/>, <https://docs.newrelic.com/docs/opentelemetry/best-practices/opentelemetry-otlp/>
+- Better Stack: <https://betterstack.com/pricing>, <https://betterstack.com/docs/uptime/cron-and-heartbeat-monitor/>
+- Axiom: <https://axiom.co/pricing>, <https://axiom.co/docs/reference/settings>
+- Datadog: <https://www.datadoghq.com/pricing/>
+- Honeycomb: <https://www.honeycomb.io/pricing>
