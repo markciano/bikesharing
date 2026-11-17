@@ -99,7 +99,9 @@ def run_baseline() -> Path:
 
 
 def publish(db: Path) -> None:
-    con = duckdb.connect(str(db), read_only=True)
+    # dbt-duckdb keeps scratch.duckdb open in this process with the default config; DuckDB
+    # rejects a second connection to the same file with another config, such as read_only.
+    con = duckdb.connect(str(db))
     table = con.sql("SELECT * FROM stg_probe").to_arrow_table()
     con.close()
     if not DeltaTable.is_deltatable(str(DELTA)):
