@@ -20,7 +20,7 @@ Current step: the step being executed, or —. -->
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-17 · Finished: —
-- Current step: 6
+- Current step: 7
 
 ## 1. Questions — what we need to know
 
@@ -375,7 +375,7 @@ The build passes; `objects` equals the number of objects of the hour reported in
 
 ### Step 6 — Build the full probe A
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **Model:** —
@@ -542,6 +542,30 @@ Step 4 · 2026-11-17 · `dbt build` and `dbt show` on `base_probe_read`, run by 
 - `dbt build` passes on DuckDB 2.0 with no patch: `PASS=1 WARN=0 ERROR=0`; the model builds in 2.85 s, the whole run in 3.07 s.
 - The model reads 60 objects, as many as the hour holds in the bucket, and 32,700 rows (545 stations per object). The first key is `…/20261116T100039Z.json.gz` and the last `…/20261116T105939Z.json.gz`, both in the hour.
 - Consequence: the Gate of Step 4 passes; Probe A continues with the contract, the rule and the quarantine (Step 5).
+
+### F4. dbt-duckdb enforces the model contract on DuckDB 2.0
+
+Step 6 · 2026-11-17 · `dbt build`, `dbt show` and the DDL in `target/run/`, run by the owner, window `bicing` / `station_status` / 2026-11-16 / 10 UTC
+
+- `dbt build` passes with no patch: `PASS=5 WARN=0 ERROR=0` (3 models, 2 data tests), the whole run in 1.78 s.
+- The DDL dbt runs for `stg_probe` is a `create table` with an explicit column list: each of the six columns with its contract type (`varchar`, `integer`, `boolean`, `timestamp`) and `not null`.
+- `stg_probe` holds 32,700 rows, as many as `base_probe_read` (F3); `stg_probe_quarantine` is built and holds 0 rows.
+
+### F5. A test with severity warn reports and does not fail the build
+
+Step 6 · 2026-11-17 · second `dbt build`, run by the owner, with `accepted` set to `[true]`
+
+- `accepted_values` on `is_renting` ends as `WARN 1` and the build ends `Completed with 1 warning`, `PASS=4 WARN=1 ERROR=0`; `not_null` on `station_id`, severity `error`, passes.
+- Consequence: the Gate of Step 6 passes; Q1 holds for Probe A, and the run continues with probe B (Step 7).
+
+### F6. Compiled SQL is readable; the test name keeps the raw var expression
+
+Step 6 · 2026-11-17 · `target/compiled/` and the build output, read by the owner (Observe)
+
+- The compiled SQL in `target/compiled/` is plain SQL with the `ref()` calls resolved to `"scratch"."main"."…"`, e.g. the inline query of `dbt show`.
+- The warning names the test and the path of its compiled SQL, which is enough to find the failing rows.
+- The generated test name embeds the unrendered default, `accepted_values_stg_probe_is_renting__False___var_accepted_true_false_`, and stays the same when the var changes, so it does not show the values tested.
+- No error message came up in this step, so how readable dbt errors are is not observed here.
 
 ## 5. Conclusion
 
