@@ -1,0 +1,46 @@
+# Probe A: the enforced contract of stg_probe and its runtime rules, with the severities of ADR-0042.
+# not_null on the station key fails with error (the pipeline's logic); accepted_values on is_renting warns (the provider's data).
+# The accepted values come from the var accepted, which defaults to the values in the Bicing source card.
+version: 2
+
+models:
+  - name: stg_probe
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: station_id
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests:
+          - not_null:
+              config:
+                severity: error
+      - name: num_vehicles_available
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: num_docks_available
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: is_renting
+        data_type: boolean
+        constraints:
+          - type: not_null
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: "{{ var('accepted', [true, false]) }}"
+                quote: false
+              config:
+                severity: warn
+      - name: captured_at
+        data_type: timestamp
+        constraints:
+          - type: not_null
+      - name: source_key
+        data_type: varchar
+        constraints:
+          - type: not_null

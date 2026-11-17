@@ -20,7 +20,7 @@ Current step: the step being executed, or —. -->
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-17 · Finished: —
-- Current step: 5
+- Current step: 6
 
 ## 1. Questions — what we need to know
 
@@ -347,7 +347,7 @@ The build passes; `objects` equals the number of objects of the hour reported in
 
 ### Step 5 — Contract, rule and quarantine
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: add the contract, a runtime rule and a quarantine model to spike s017`
 - **Model:** sonnet · medium
