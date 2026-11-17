@@ -30,7 +30,37 @@ Current step: the step being executed, or —. -->
 
 ### 1.2 Decided at framing
 
-#### D`<N>`. `<Title of decision N>`
+#### D1. dbt builds and audits, Python plans and publishes
+
+dbt runs every SQL model and runtime rule of the pipeline, for one batch at a time, in a scratch DuckDB database discarded at the end of the run. Python keeps what lies at the edges of the SQL: the core plans the batch ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)) and turns dbt's results into a verdict; the shell invokes dbt with the batch's window as variables and, only if the audit passes, writes the batch to Delta on R2 with `deltalake`. This is Write-Audit-Publish: dbt writes to the scratch database and audits it, the shell publishes. dbt replaces what the pipeline would otherwise build itself: the ordered runner of [ADR-0025](../decisions/0025-sql-models-directed-by-python.md), the parameters in bronze file paths that ADR-0025 left unconfirmed, the column schema checks, the runner of runtime rules of [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md) (rule 8), the scaffolding of SQL tests, and the table-level lineage written by hand ([ADR-0043](../decisions/0043-lineage-at-four-levels.md)). It depends on Q1: if its Gate fails, the pipeline has no dbt and ADR-0025 stands as it is.
+
+What would change it:
+
+- Q1's Gate fails: no dbt; ADR-0025 and ADR-0046 stand unchanged.
+- A `dbt-duckdb` release writes Delta with MERGE or partition overwrite and tests before it publishes: dbt could write Delta itself; weigh option B again.
+
+What would not: the lineage seam at the hand-off to Delta. dbt's lineage covers only the table level of ADR-0043, and exposures and sources can join the graph across the hand-off.
+
+Options rejected:
+
+- **B. dbt writes Delta itself,** through Python models or a custom materialization that calls `deltalake`: it writes to R2 while the batch is built, before its tests run, which is the opposite of Write-Audit-Publish; dbt's contracts do not apply to Python models, so the model that writes Delta has none; the writes, their credentials and retries move inside dbt, out of the shell of ADR-0046; no published example of such a materialization was found.
+- **No dbt:** the simplest, and reversible from D1, since dbt models stay `SELECT` statements; it keeps the fallback role, and loses the pieces dbt replaces.
+- **DuckLake instead of Delta,** which `dbt-duckdb` writes natively with MERGE: it reopens [ADR-0022](../decisions/0022-delta-lake-for-silver-and-gold.md) to gain a seamless lineage graph and incremental features that ADR-0045 already covers in its own way, adds a metadata database to run, and still neither tests before it publishes nor bounds batches in bytes.
+
+The result is robust to the facts gathered: both gaps, Delta writes and Write-Audit-Publish, close with the same split, and the only unknown left is the friction of the glue, which Q1 measures.
+
+Fit-gap of dbt against the decisions in force (facts as of 2026-11-17, sources in [Sources](#6-sources)):
+
+| # | Decision in force | Result | Fact |
+|---|---|---|---|
+| G1 | DuckDB 2.0 ([ADR-0024](../decisions/0024-duckdb-as-processing-engine.md)) | Unknown, Q1 | `dbt-duckdb` 1.11.1 does not cap DuckDB, but tests DuckDB 2.0 only in nightly CI, with no support statement |
+| G2 | Delta on R2 ([ADR-0022](../decisions/0022-delta-lake-for-silver-and-gold.md)) | Gap in dbt; fit with the shell writing | The `delta` plugin only reads; external models write parquet, csv or json, with no incremental; DuckDB's `delta` extension only appends |
+| G3 | Python directs ([ADR-0025](../decisions/0025-sql-models-directed-by-python.md), [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md)) | Fit | `dbtRunner` is a supported entry point, safe for sequential invocations in one process; its result objects are not a stable contract |
+| G4 | Bounded batches ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)) | Adaptation | Microbatch splits by time only and needs tables dbt manages; the core keeps planning batches and passes their capture range to dbt |
+| G5 | Write-Audit-Publish and quarantine ([ADR-0042](../decisions/0042-data-quality-classes-and-severity.md), d007 #1, #9) | Gap in dbt; fit with the shell publishing | dbt tests a model after materializing it and has no native WAP or quarantine; a quarantine model in SQL holds the failing rows |
+| G6 | Lineage ([ADR-0043](../decisions/0043-lineage-at-four-levels.md)) | Fit, table level only | dbt Core generates table-level lineage; column-level lineage is a paid feature |
+| G7 | SQL tests ([testing strategy](../testing-strategy.md)) | Adaptation | dbt unit tests exist since dbt-core 1.8; their behaviour on `dbt-duckdb` is unconfirmed |
+| G8 | Logs ([ADR-0036](../decisions/0036-log-convention-across-components.md)) | Adaptation | A `dbtRunner` callback receives every event and can forward it to Python's logging |
 
 <!-- In this order, so the reader finds what matters first:
 1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
@@ -54,7 +84,7 @@ Main question: `<one sentence>`
 Derived from the standard that applies to this kind of question, named in the first line: e.g. DAMA data quality dimensions for a data source, a weighted decision matrix for a technology choice.
 Each criterion is measurable and says whether it is a hard cut or a guide. The timebox says what ends the run. State whether one variant meeting the criteria is enough. -->
 
-- **Standard:** `<standard or pattern applied>`
+- **Standard:** fit-gap analysis of dbt against the decisions in force (ADRs and d007): each one is a fit, an adaptation (which decision changes, and its cost) or a gap; no ADR is fixed in advance, each is weighed by its impact.
 - **Timebox:** `<window, and what ends it>`
 - `<criterion>` — `<threshold>` — hard cut | guide
 
@@ -209,4 +239,15 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 <!-- Optional. Earlier spikes, benchmarks and documentation used. -->
 
--
+Read on 2026-11-17.
+
+- dbt versions and support: <https://docs.getdbt.com/docs/dbt-versions/core>; licensing of v1 and v2: <https://docs.getdbt.com/docs/dbt-licensing.md>
+- `dbt-duckdb`: <https://github.com/duckdb/dbt-duckdb>, its releases <https://github.com/duckdb/dbt-duckdb/releases>, its `delta` plugin <https://github.com/duckdb/dbt-duckdb/blob/master/dbt/adapters/duckdb/plugins/delta.py>, its configs <https://docs.getdbt.com/reference/resource-configs/duckdb-configs>
+- DuckDB `delta` extension: <https://duckdb.org/docs/2.0/core_extensions/delta>
+- delta-rs on S3-like storage: <https://delta-io.github.io/delta-rs/integrations/object-storage/s3-like>
+- Programmatic invocations: <https://docs.getdbt.com/reference/programmatic-invocations>
+- Microbatch: <https://docs.getdbt.com/docs/build/incremental-microbatch>
+- `dbt build`: <https://docs.getdbt.com/reference/commands/build>; WAP with dbt: <https://www.getdbt.com/blog/testing-is-not-enough-transforming-data-quality-with-write-audit-publish>
+- Model contracts: <https://docs.getdbt.com/docs/mesh/govern/model-contracts>
+- Logs and events: <https://docs.getdbt.com/reference/global-configs/logs>, <https://docs.getdbt.com/reference/events-logging>
+- Column-level lineage: <https://docs.getdbt.com/docs/explore/column-level-lineage.md>
