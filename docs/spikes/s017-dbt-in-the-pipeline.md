@@ -213,7 +213,7 @@ spikes/dbt-in-the-pipeline/
 │       ├── stg_probe.sql             Probe A: reads bronze for the var() window
 │       ├── stg_probe_quarantine.sql  Probe A: rows that break the schema
 │       ├── stg_probe.yml             Probe A: contract and runtime rule with severity
-│       └── stg_probe_unit.yml        Probe C: unit tests, one passing, one failing
+│       └── stg_probe_unit.yml        Probe C: unit tests, two passing, one failing on purpose
 ├── shell_glue/
 │   └── run_batch.py          Probe B: --mode dbt|baseline; dbtRunner, callback, MERGE to Delta
 └── out/                      Ignored by Git: scratch database, local Delta table, events, timings
@@ -231,29 +231,282 @@ spikes/dbt-in-the-pipeline/
 
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
-### Step 1 — `<title>`
+- **uv 0.13.5** on the local machine; it installs Python 3.13 for the spike. Verify: `uv --version`.
+- **R2 token for the spike,** in the Cloudflare dashboard: an R2 API token with Object Read only, scoped to the bronze bucket. Its access key ID, secret and the account's S3 endpoint go into `spikes/dbt-in-the-pipeline/.env`, once Step 1 has created `.env.example`. It is revoked at tear-down (#1).
+- **One hour of bronze:** the bucket name, and the `<source>`, `<feed>`, date and UTC hour of one complete hour of one system's station status, under the key layout of [d004](../designs/d004-bronze-data-capture.md) (`raw/<source>/<feed>/<YYYY-MM-DD>/<YYYYMMDDTHHMMSSZ>.json.gz`), with the number of objects in that hour, read in the dashboard; reported back as the window of Probe A.
+
+Owner commands run from `spikes/dbt-in-the-pipeline/`; `<vars>` stands for the window reported in Prerequisites, as `--vars '{"source": "…", "feed": "…", "date": "YYYY-MM-DD", "hour": "HH"}'`, and `<dbt>` for `uv run --env-file .env dbt` with `--project-dir dbt_project --profiles-dir dbt_project` after the subcommand.
+
+### Step 1 — Spike environment
 
 - **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md.
-- **Model:** `<model · effort>` (or —)
-- **Gate:** `<condition>` → `<consequence>`
+- **Who:** Claude
+- **Commit:** `chore: set up the environment of spike s017`
+- **Model:** sonnet · medium
 
 #### Scope
 
 <!-- The result of the step. List the components and the files created or changed (code, tests, docs). A reviewer should know what the diff will contain from this section alone. -->
 
+The spike's Python environment, unlocked: `pyproject.toml`, `.env.example`, `.gitignore` under `spikes/dbt-in-the-pipeline/`. Nothing outside that folder.
+
 #### Reads
 
 <!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
+
+- [D2](#d2-dbt-v1-dbt-core-112-with-dbt-duckdb): the release lines to pin.
+- [Shared behaviour](#211-shared-behaviour) and [File layout](#24-file-layout): what the folder holds and what Git ignores.
+- `spikes/execution-target/pyproject.toml`: the shape of an earlier spike's `pyproject.toml`, to follow it.
 
 #### Do
 
 <!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
+1. Write `pyproject.toml`: `requires-python = ">=3.13,<3.14"`; dependencies `dbt-core~=1.12.0`, `dbt-duckdb~=1.11.0`, `duckdb~=2.0.0`, `deltalake` and `pyarrow` at their latest releases. No pin is relaxed to make resolution pass: a failure to resolve is Step 2's evidence.
+2. Write `.env.example` with empty `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT` and `R2_BUCKET`.
+3. Write `.gitignore` with `.env`, `out/`, `dbt_project/target/`, `dbt_project/logs/` and `.venv/`.
+
 #### Check
 
 <!-- command/s or verification with a yes/no result. -->
+
+The three files exist, and `git status` shows no other change.
+
+### Step 2 — Install and resolve versions
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** `chore: lock the dependencies of spike s017` (`uv.lock`)
+- **Model:** —
+- **Gate:** `uv sync` resolves DuckDB 2.0 with `dbt-core` 1.12 and `dbt-duckdb` 1.11 → if not, Q1 fails and the run ends with no dbt (D1).
+
+#### Scope
+
+`uv.lock`, created by uv; `.env`, filled from Prerequisites and ignored by Git.
+
+#### Do
+
+1. Run `uv sync`.
+2. Copy `.env.example` to `.env` and fill it with the token of Prerequisites.
+3. Run `uv run python -c "import duckdb, deltalake; print(duckdb.__version__, deltalake.__version__)"` and `uv run dbt --version`.
+4. Report back: the output of the three commands, or the resolution error in full.
+
+#### Check
+
+`uv run dbt --version` lists `dbt-core` 1.12.x and `duckdb` plugin 1.11.x, and DuckDB prints 2.0.x.
+
+### Step 3 — Model reading the window
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: add the dbt project of spike s017 with a model reading one bronze hour`
+- **Model:** sonnet · medium
+
+#### Scope
+
+`dbt_project/dbt_project.yml`, `dbt_project/profiles.yml` and `dbt_project/models/staging/stg_probe.sql`. No contract, tests or quarantine yet (Step 5).
+
+#### Reads
+
+- [Probe A](#a-build-on-duckdb-20) and [Shared behaviour](#211-shared-behaviour).
+- [d004](../designs/d004-bronze-data-capture.md), the bronze tree at the top of its file layout: the key layout the window builds its glob from.
+- The station status feed's section of the source card of the reported system (`docs/sources/ambici.md` or `docs/sources/bicing.md`): the JSON document's shape and fields.
+
+#### Do
+
+1. Write `dbt_project.yml`: project `dbt_in_the_pipeline`, models materialized as tables, the vars `source`, `feed`, `date` and `hour` with no defaults.
+2. Write `profiles.yml`: `dbt-duckdb` on the file `../out/scratch.duckdb`, the `httpfs` extension, and an S3 secret for R2 from `env_var()` of the four variables of `.env.example`.
+3. Write `stg_probe.sql`: read with `read_json` the objects matching `s3://<bucket>/raw/{{ var('source') }}/{{ var('feed') }}/{{ var('date') }}/<date without dashes>T{{ var('hour') }}*.json.gz`, with `filename = true`; unnest the stations; select a station key, the counts and a categorical field of the feed, the capture time of the object, and the object's key as `source_key`.
+
+#### Check
+
+`<dbt> parse <vars>` ends with no error.
+
+### Step 4 — Build the window from R2
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **Model:** —
+- **Gate:** the model reads from R2 only the objects of the window passed through `var()` → if not, Q1 fails and the run ends with no dbt (D1).
+
+#### Do
+
+1. Run `<dbt> build <vars>`.
+2. Run `<dbt> show <vars> --inline "select count(*) as rows, count(distinct source_key) as objects, min(source_key) as first_key, max(source_key) as last_key from {{ ref('stg_probe') }}"`.
+3. Report back: the output of both commands, in full if the build fails.
+
+#### Check
+
+The build passes; `objects` equals the number of objects of the hour reported in Prerequisites, and `first_key` and `last_key` both lie in that hour.
+
+### Step 5 — Contract, rule and quarantine
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: add the contract, a runtime rule and a quarantine model to spike s017`
+- **Model:** sonnet · medium
+
+#### Scope
+
+`dbt_project/models/staging/stg_probe.yml` (new), `dbt_project/models/staging/stg_probe_quarantine.sql` (new), and `stg_probe.sql` (changed: it keeps only the rows that meet the schema).
+
+#### Reads
+
+- [Probe A](#a-build-on-duckdb-20) and Q1.
+- [ADR-0042](../decisions/0042-data-quality-classes-and-severity.md): the classes and severities that the rule's test and the quarantine follow.
+- The model written in Step 3.
+
+#### Do
+
+1. Update `stg_probe.sql` to cast each field with `try_cast` and keep only the rows whose required fields cast to a non-null value.
+2. Write `stg_probe_quarantine.sql`: the rows of the same read that fail those casts, with the object's key and the failed field.
+3. Write `stg_probe.yml`: an enforced contract on `stg_probe` with each column's type and `not_null` constraints on its required fields; `not_null` on the station key with severity `error`; `accepted_values` on the categorical field with severity `warn`, its values taken from a var `accepted` that defaults to the feed's values in its source card.
+
+#### Check
+
+`<dbt> parse <vars>` ends with no error.
+
+### Step 6 — Build the full probe A
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **Model:** —
+- **Gate:** the build passes on DuckDB 2.0 with the contract enforced, both tests run with their severities and the quarantine model built, with no patch to dbt or `dbt-duckdb` → if not, Q1 fails and the run ends with no dbt (D1).
+
+#### Do
+
+1. Run `<dbt> build <vars>`.
+2. Run it again with `accepted` reduced to one value: `<vars>` with `"accepted": ["<one value of the feed>"]` added.
+3. Run `<dbt> show <vars> --inline "select count(*) as quarantined from {{ ref('stg_probe_quarantine') }}"`.
+4. Report back: the output of the three commands.
+5. Note how readable the compiled SQL in `dbt_project/target/compiled/` and any error message are (Observe only).
+
+#### Check
+
+Run 1 passes every test; run 2 ends with `accepted_values` as a warning and the build still succeeds; the quarantine model exists, with any row count.
+
+### Step 7 — Shell glue
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: add the shell glue of spike s017 between dbt and Delta`
+- **Model:** sonnet · medium
+
+#### Scope
+
+`shell_glue/run_batch.py` (new). No change to the dbt project.
+
+#### Reads
+
+- [Probe B](#b-shell-glue), Q2, Q4 and the Q2 exit criteria, including No dbt internals.
+- [D4](#d4-dbts-events-translated-into-the-log-convention): which events matter.
+- dbt's documentation on programmatic invocations (`dbtRunner`, `dbtRunnerResult`, callbacks), through the `web-researcher`: the only dbt API the script may import.
+
+#### Do
+
+1. Write `run_batch.py` with `argparse`: `--mode dbt|baseline` and the four window arguments plus an optional `--accepted`.
+2. Implement `--mode dbt`: invoke `dbtRunner(callbacks=[…]).invoke(["build", …, "--vars", …])`; the callback appends each event's name, level and data fields to `out/events.jsonl`; from `dbtRunnerResult`, print as JSON per node its `unique_id`, status, failures, rows affected and execution time.
+3. Implement `--mode baseline`: execute on DuckDB, with no dbt, the compiled SQL of `stg_probe` read from `dbt_project/target/compiled/`, in a fresh scratch database.
+4. Implement the hand-off shared by both modes: read `stg_probe` from the scratch database as Arrow and MERGE it into the Delta table `out/delta/stg_probe` with `deltalake`, on the station key and capture time, creating the table on the first run; print the Delta table's row count.
+5. Import from dbt only `dbt.cli.main` (`dbtRunner`, `dbtRunnerResult`).
+
+#### Check
+
+`uv run python shell_glue/run_batch.py --help` lists both modes.
+
+### Step 8 — Run B in both modes
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **Model:** —
+- **Gate:** each model's and test's status and failures reach the shell as values, the MERGE gives the expected rows, and the glue imports no dbt internals → if not, Q2 fails and the run ends with no dbt (D1).
+
+Below, `<run>` stands for `uv run --env-file .env /usr/bin/time -l python shell_glue/run_batch.py` followed by the window arguments.
+
+#### Do
+
+1. Run `<dbt> compile <vars>`, so the baseline has its SQL.
+2. Run `<run> --mode dbt` three times.
+3. Run `<run> --mode baseline` three times.
+4. Run `<run> --mode dbt --accepted <one value of the feed>` once.
+5. Report back: for each of the seven runs, the JSON printed, the Delta row count, and `/usr/bin/time`'s real time and maximum resident set size; and `out/events.jsonl` (or its distinct event names, if large).
+
+#### Check
+
+- Every node of the build appears in the JSON with its status; run 4 shows `accepted_values` with failures above 0.
+- The Delta row count equals the row count of `stg_probe` from Step 4, and stays the same across the seven runs.
+- The median real time and RSS of each mode are computed, and their difference set against the Q2 guides.
+
+### Step 9 — Unit tests
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: add dbt unit tests to spike s017`
+- **Model:** sonnet · medium
+
+#### Scope
+
+`dbt_project/models/staging/stg_probe_unit.yml` (new). No change to the models.
+
+#### Reads
+
+- [Probe C](#c-unit-tests), Q3 and [D3](#d3-sql-tested-with-dbt-unit-tests-python-with-pytest).
+- The models and their YAML from Steps 3 and 5.
+
+#### Do
+
+1. Write a unit test on `stg_probe`: two hand-written input rows given as the result of its read, expected rows written by hand; it passes.
+2. Write a unit test on `stg_probe_quarantine`: one malformed row, expected in quarantine with its failed field; it passes.
+3. Write a unit test on `stg_probe` whose expected rows are wrong on purpose, named so that its failure reads as intended; it fails.
+
+#### Check
+
+`<dbt> parse <vars>` ends with no error.
+
+### Step 10 — Run and time unit tests
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **Model:** —
+- **Gate:** the two tests pass and the third fails, as written → if not, D3 moves to its option B, and the run continues.
+
+#### Do
+
+1. Run `/usr/bin/time -l uv run --env-file .env dbt test --select test_type:unit --project-dir dbt_project --profiles-dir dbt_project <vars>` three times.
+2. Report back: the output of each run and its real time.
+
+#### Check
+
+Each run shows two passes and one failure; the median real time is set against the Q3 guide.
+
+### Step 11 — README
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: add the README of spike s017`
+- **Model:** sonnet · medium
+
+#### Scope
+
+`README.md` (new). It also reports the glue's size for the Q2 guide.
+
+#### Reads
+
+- `.claude/rules/code/spikes.md`: the README's procedure shape.
+- Steps 1–10 of this document: each check's command, output and run time.
+
+#### Do
+
+1. Write `README.md` as a procedure: the question and a link to s017, the prerequisites, then one section per probe (A, B, C) in run order, each citing the decision it is evidence for (D1, D2, D3, D4).
+2. Count the lines of `shell_glue/run_batch.py` without blank lines, comments and docstrings, and report it for the Q2 guide.
+
+#### Check
+
+The README covers A, B and C in run order, and the line count is reported.
 
 ## 4. Findings
 
