@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 1, the list of concerns in dependency order, from Carried-over inputs and these items left by the Spec: where a one-off `modal run` from a branch writes, a bucket apart from production (R26, R27); where D8's end instant lives and how it is changed, a Modal Secret or the repository; whether T060.1 already sends the copy of events over OTLP or leaves it to T060.2 ([ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)); how an unreadable bronze object is excluded until T060.5 (D9, R22)
+- Current: Plan › 2, concern 4 (Bronze reading), open decision: how bronze bytes reach DuckDB, recommended the shell downloading each batch to a temporary folder that DuckDB reads with external access off and `allowed_directories`, against `httpfs`, which R29 rules out; then DuckDB's `memory_limit` against the container's, and duckdb#27806. Concerns left, in order: 5 transformation and rules in dbt; 6 publishing; 7 environments and configuration (where a one-off `modal run` writes, R26, R27; where D8's end instant lives, a Modal Secret or the repository); 8 run operation on Modal; 9 observability (whether T060.1 sends events over OTLP, [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)); 10 deploy script; 11 tests and CI; 12 cost recalibration, as a Done when check. Parked for Plan › 5: the `PostToolUse` hook and the Python and SQL rules in `.claude/rules/`
 
 ## 1. Spec — what and why
 
@@ -293,6 +293,23 @@ Options considered for the partitioning:
 - By UTC date, one partition per day: pros, the same reach per run; cons, a query for one local day touches two partitions, and the table carries a column used only to partition it.
 - By week or by month: pros, fewer partitions; cons, the same number of files a day, and each run's MERGE and read scan up to a week or a month.
 
+#### Bronze reading
+
+- **Discovery of pending objects:** the shell lists each system's `station_status` prefix through R2's S3 API, and the pending objects are the listed keys with no row in `processed_objects`. A run lists from 1 h before the most recent processed object, with `start-after`, which covers the delay between a capture's instant and the write of its object; the first run after local midnight lists the whole prefix, so that an object written later than that is processed too ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)); with no processed object, as on the first load, a run lists the whole prefix. Whether a run sweeps the whole prefix, and from which key it lists otherwise, is decided by the core. **#7**
+- **Explicit keys:** DuckDB reads each batch from the explicit list of its keys, never from a glob, so that it lists nothing itself.
+- **Unreadable objects:** until T060.5, an unreadable bronze object fails its batch (D9) and is excluded only by a versioned list in the repository, `pipeline/config/excluded_objects.txt`, one key per line with its reason; the core removes the listed keys from the pending objects. An exclusion is then a reviewed change deployed as a new code version, as D9 sets. The list is provisional: T060.5 replaces it with the set-aside and removes it, and the file carries a `TODO(T060.5):` marker saying so. **#8**
+
+Options considered for the discovery of pending objects:
+
+- Incremental listing with a daily full sweep (chosen), following incremental directory listing with a periodic backfill (e.g. Auto Loader's `cloudFiles.backfillInterval`): pros, a normal run lists one page per system, about 30,000 list requests a month after a year of bronze; cons, an object later than 1 h waits for the daily sweep.
+- A full listing in every run: pros, the simplest and exact in every run; cons, about 1,000 requests per run after a year, some 3 million a month, above R2's free Class A operations and growing with bronze.
+- R2 event notifications to a queue: pros, no listing; cons, a queue, its consumer on Modal and one more point of failure, out of proportion for this volume.
+
+Options considered for the exclusion of unreadable objects:
+
+- A versioned exclusion list in the repository (chosen), following a deny list in a fail-fast pipeline: pros, each exclusion is reviewed and traced by the deployed SHA; cons, a PR and a deployment to unblock the pipeline.
+- A manual `excluded` status in `processed_objects`, set by a script: pros, immediate; cons, a manual write to a production table outside review, and one more status for T060.5 to inherit.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -310,6 +327,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 4 | [Delta writes](#delta-writes) | A Delta control table records each processed bronze object, written after the batch's fact rows, following an idempotent sink with a progress log | It records objects with no rows and is what T060.5's set-aside extends | R20–R22 | Plan |
 | 5 | [Delta writes](#delta-writes) | The station stock is partitioned by local calendar date, following date partitioning of time-series facts on the column they are filtered by | Each run reads one day, and the table is read by local day | — | Plan |
 | 6 | [Delta writes](#delta-writes) | Compaction, VACUUM and retention are left to a scheduled maintenance job of their own, T072, following table maintenance apart from ingestion | Nothing reads past days before T041, and its frequency is set from production files | — | Plan |
+| 7 | [Bronze reading](#bronze-reading) | A run lists bronze from 1 h before its most recent processed object, and the whole prefix once a day, following incremental directory listing with a periodic backfill | The cost of listing stays flat as bronze grows, and no late object is left behind | R18 | Plan |
+| 8 | [Bronze reading](#bronze-reading) | Until T060.5, an unreadable bronze object is excluded only by a versioned list in the repository, following a deny list in a fail-fast pipeline | Each exclusion is reviewed and traced by the deployed SHA, with no manual write to production | R22 | Plan |
 
 ### 2.3 Architecture
 
