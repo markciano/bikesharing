@@ -91,7 +91,7 @@ Applies to a spike with steps, when Conclusion is the first unchecked item in Ph
 2. Go through 5. Conclusion of the template with the owner, part by part: discuss each part, and write it as its own edit once agreed.
 3. Tear-down: what is torn down and what is kept; a kept resource gets a Decision log entry. The owner runs the tear-down.
 4. Deliver each item in 5.6 Records, each ADR in its own commit, and mark it Done.
-5. With every record Done: check Conclusion in Phase, set State to Concluded ✅, Finished (UTC date) and Current step to —, and remove the template's comments. Tell the owner it is a commit point and propose `docs: conclude spike sNNN`.
+5. With every record Done: check Conclusion in Phase, set State to Concluded ✅, Finished (UTC date) and Current to —, and remove the template's comments. Tell the owner it is a commit point and propose `docs: conclude spike sNNN`.
 
 ## End of session
 
