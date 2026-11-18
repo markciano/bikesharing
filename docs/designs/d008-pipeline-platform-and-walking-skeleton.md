@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 2, concern 9 (observability). Left after it: 10 deploy script, 11 tests and CI (also whether dbt docs are generated in CI, and a contract in `contracts/` for capture storing the response body unchanged, gzip-compressed), 12 cost recalibration, as a Done when check. All settled except one asked sub-decision in 9: whether T060.1 already sends the events over OTLP or leaves it to T060.2 ([ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md))
+- Current: Plan › 2, concern 10 (deploy script). Left after it: 11 tests and CI (also whether dbt docs are generated in CI, and a contract in `contracts/` for capture storing the response body unchanged, gzip-compressed), 12 cost recalibration, as a Done when check. All settled.
 
 ## 1. Spec — what and why
 
@@ -401,6 +401,38 @@ Options considered for the end instant:
 - **Region:** the functions run in Modal's default region, on global capacity, not in `eu`, which costs 1.15x and lowers the credit's 540 hours to about 470. The region is revisited only if `duration_s` shows the run's time dominated by its requests to R2.
 - **Usage and spend limits:** the owner sets Modal's usage limit to the $30 monthly credit and its spend limit to $1 on the billing page, so that usage above the credit is bounded at $1 ([s012 › R28](../spikes/s012-execution-target.md#d3-pipeline-security)); the spend limit is checked in Done when (TH7).
 
+#### Observability
+
+- **Event convention:** the pipeline's events follow [ADR-0036](../decisions/0036-log-convention-across-components.md): JSON Lines with `ts`, `level`, `component`, `version`, `run_id` and `event` first. `component` is `pipeline`, `version` is the code version of D5, and `run_id` is a UUIDv7 that the shell generates with Python's standard library at the start of the run, so that the core and the rows' lineage do not depend on Modal (ADR-0046's rule 5) and run IDs sort by time. A one-off run carries the version `unreleased`.
+- **Events:** the core builds each event as a value with its own fields, and the shell writes it. The events are:
+
+  | Event | Level | Own fields |
+  |---|---|---|
+  | `run_started` | info | `end_instant`, `excluded_objects` |
+  | `objects_discovered` | info | per system: `listed`, `pending`, `full_sweep` |
+  | `stage_drained` | warn | `end_instant` (R19) |
+  | `batch_started` | info | `batch`, `objects`, `first_capture`, `last_capture` |
+  | `node_finished` | info | dbt's `node`, `status`, `duration_s`, `rows`, `num_failures` ([s017 › P4](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)) |
+  | `rule_checked` | info, warn or error by outcome | `rule` (its DQR ID), `severity`, `status`, `failures` |
+  | `volume_not_evaluated` | info | `system`, `capture_instant`, `captures_in_window` (DQR12) |
+  | `schema_drift_field` | warn | `system`, `field`, `change` (`added` or `dropped`) (DQR11) |
+  | `batch_committed` | info | `batch`, `rows_inserted`, `objects` |
+  | `batch_failed` | error | `batch`, `reason`, `error_type`, `error` (R20–R22) |
+  | `file_built` | info | `stations`, `data_instant` |
+  | `file_invalid` | error | `violations`, each with its path in the file (DQR14) |
+  | `page_deployed` | info | `tag`, `deploy_peak_memory_mb` |
+  | `page_deploy_failed` | error | `exit_code`, `output` (R31) |
+  | `heartbeat_failed` | warn | `signal`, `attempts`, `error_type` |
+  | `log_upload_failed` | warn | `error_type` (stdout only) |
+  | `run_finished` | info or error | `outcome`, `batches`, `rows_inserted`, `duration_s`, `peak_memory_mb` |
+
+- **Run measures:** `duration_s` is the run's wall-clock time, and `peak_memory_mb` the Python process's `ru_maxrss` from `RUSAGE_SELF`, in decimal MB ([s012 › D1](../spikes/s012-execution-target.md#d1-execution-platform)); `wrangler`'s own peak, from `RUSAGE_CHILDREN` once it exits, goes in `page_deployed`, since the container's limit counts both.
+- **Log object:** every event goes to stdout as it happens, which Modal keeps for its own retention, and is kept in memory for the run's object. At the run's end, whatever its outcome, the shell writes that object to `bikesharing-lakehouse` as `logs/pipeline/date=YYYY-MM-DD/<run_id>.jsonl` ([ADR-0035](../decisions/0035-cloud-resource-naming.md)); a lifecycle rule on `logs/pipeline/`, set by the owner, deletes it after 30 days. A failed upload is logged to stdout and does not change the run's outcome or its heartbeat signal. A run killed by its timeout or its memory limit writes no object, and its events stay only in Modal's logs; the heartbeat reports it.
+- **Heartbeat:** the run pings the Healthchecks.io check of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) with `/start` when it starts, so that the service measures its duration, then once with success (R14) or `/fail` (R15) as its last action, after the log upload. A failure ping carries the `run_finished` event and the failing event as its body. Each ping has a 10 s timeout and up to 3 attempts, 1 s and 2 s apart, following Healthchecks.io's advice to retry pings; a ping that still fails is logged as `heartbeat_failed` and does not change the outcome, since a missing signal alerts the owner anyway. The platform does not retry a run (D7), so the time limit before the failure signal is the 10-minute timeout. The check, with its period of 15 min and grace of 15 min (R17), is created by the owner.
+- **Secrets in events:** events are built only from their declared fields. An error's message passes through a redaction step that replaces the value of each secret the function holds with `***` before it is logged or sent in a ping, following log redaction at the sink, so that an exception that quotes a URL or a token leaks nothing (R24). The heartbeat's URL is never a field of an event.
+- **Copy to the monitoring tool:** T060.1 writes its events only to stdout and R2; the copy over OTLP of [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md) is sent from T060.2, which also maps the common fields to OTLP attributes and builds the alerts that read them. **#22**
+  - TODO(T060.2): send each run's events over OTLP after the log upload, as ADR-0049 sets, with the monitoring tool's token as a Modal Secret of the scheduled function only.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -433,6 +465,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 19 | [Publishing](#publishing) | A failed deployment keeps the committed batches and fails the run, following a heartbeat that reports the whole job's outcome | Until T060.2's alert on the file's age, the heartbeat is the only signal of a page that stops refreshing | R15, R31 | Plan |
 | 20 | [Environments and configuration](#environments-and-configuration) | One-off runs use a function of their own with only bronze's read-only token, writing to local disk, and the scheduled function requires the deployed code version, following least privilege per function | R26 and R27 hold by construction, within ADR-0035's single environment | R26, R27 | Plan |
 | 21 | [Environments and configuration](#environments-and-configuration) | D8's end instant is a constant in the repository, changed by a PR and a deployment per stage, following configuration as code | Each change is reviewed and traced by the SHA, as #8's deny list; about four changes in all | R18, R19 | Plan |
+| 22 | [Observability](#observability) | The copy of the events over OTLP (ADR-0049) is left to T060.2, following a walking skeleton that builds only the thinnest path | Nothing reads the copy before T060.2's alerts, and its field mapping is decided once, where ADR-0049 places it | — | Plan |
 
 ### 2.3 Architecture
 
