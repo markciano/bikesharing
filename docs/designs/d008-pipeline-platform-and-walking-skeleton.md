@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 2, concern 5 (transformation and rules in dbt), not started. Concerns left, in order: 5 transformation and rules in dbt; 6 publishing; 7 environments and configuration (where a one-off `modal run` writes, R26, R27; where D8's end instant lives, a Modal Secret or the repository); 8 run operation on Modal; 9 observability (whether T060.1 sends events over OTLP, [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)); 10 deploy script; 11 tests and CI; 12 cost recalibration, as a Done when check. Parked for Plan › 5: the `PostToolUse` hook and the Python and SQL rules in `.claude/rules/`
+- Current: Plan › 2, concern 5 (transformation and rules in dbt), #12 decided; open, in order: where each rule of D3 is checked (DQR2 by the insert-only MERGE, DQR12 needs the past 24 h from Delta, DQR14 goes to concern 6); DQR11, since `read_json` with explicit `columns` silently ignores new fields; severities and how an error stops the batch (R20); materialization and the hand-off to Delta. Concerns left, in order: 5 transformation and rules in dbt; 6 publishing; 7 environments and configuration (where a one-off `modal run` writes, R26, R27; where D8's end instant lives, a Modal Secret or the repository); 8 run operation on Modal; 9 observability (whether T060.1 sends events over OTLP, [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)); 10 deploy script; 11 tests and CI; 12 cost recalibration, as a Done when check. Parked for Plan › 5: the `PostToolUse` hook and the Python and SQL rules in `.claude/rules/`
 
 ## 1. Spec — what and why
 
@@ -323,6 +323,17 @@ Options considered for memory:
 - Explicit limits on both sides, DuckDB's a fraction of the container's (chosen), following engine memory set below the container's limit with headroom: pros, a batch too large spills or fails with DuckDB's own error, which the log records; cons, one more configuration value.
 - The container's limit only, with DuckDB's default of 80% of the memory it detects: pros, no configuration; cons, DuckDB may detect the host's memory instead of the container's, and the container is then killed with no final event.
 
+#### Transformation in dbt
+
+- **Project:** the dbt project is `pipeline/dbt/`, with its `dbt_project.yml` and a `profiles.yml` whose database is the run's scratch database: a DuckDB file on the container's local disk, created at the start of the run and removed at its end ([ADR-0047](../decisions/0047-dbt-builds-and-audits-the-pipeline-sql.md)).
+- **Bronze as an external source:** bronze is the source `bronze.station_status`, declared with `dbt-duckdb`'s `external_location` as a `read_json` over the batch's local files with the read schema of #11. The shell passes the list of files and the schema as dbt variables, together with the run's ID and code version. Models read bronze only through `source()`, so that dbt's lineage starts at bronze and unit tests replace the source with hand-written rows. The step that writes the source confirms that `external_location` renders dbt variables; if it does not, `stg_station_status` calls `read_json` with the variables, and unit tests start at the next model. **#12**
+- **Models:** `stg_station_status` types and renames the source's fields and applies D1's rules on measures and flags, with TR9's null; `station_stock` adds the local calendar keys and the lineage columns, at D1's grain.
+
+Options considered for how a batch enters dbt:
+
+- An external source over the batch's local files (chosen), following `dbt-duckdb`'s external sources: pros, reading bronze is part of dbt's graph, as ADR-0047 sets, and the shell keeps only I/O; cons, it depends on the adapter rendering variables in `external_location`.
+- The shell loads the batch into a table of the scratch database, which dbt reads as a source: pros, no dependency on the adapter's external sources; cons, the reading and its schema become Python code of the shell, dbt's lineage starts at an intermediate table, and the batch is held as a table before it is transformed.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -345,6 +356,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 9 | [Bronze reading](#bronze-reading) | The shell downloads each batch to a temporary local folder, the only path DuckDB may read, following least privilege with DuckDB's file sandbox (`enable_external_access`, `allowed_directories`) | DuckDB reaches no network, loads no extension and holds no R2 credential | R28, R29 | Plan |
 | 10 | [Bronze reading](#bronze-reading) | DuckDB's `memory_limit` is 60% of the container's hard limit, revised only when `peak_memory_mb` or a memory error calls for it, following engine memory set below the container's limit with headroom | A batch too large fails with an error the log records, not a container kill | — | Plan |
 | 11 | [Bronze reading](#bronze-reading) | Bronze is read with a declared schema, a constant of the core checked against the fixtures, following schema on read with an explicit schema rather than an inferred one | It avoids duckdb#27806, and a change in the source fails a batch instead of changing the schema unnoticed | R21 | Plan |
+| 12 | [Transformation in dbt](#transformation-in-dbt) | A batch enters dbt as an external source over its local files, following `dbt-duckdb`'s external sources and ADR-0047 | dbt's lineage starts at bronze, unit tests replace the source with rows, and the shell keeps only I/O | — | Plan |
 
 ### 2.3 Architecture
 
