@@ -96,7 +96,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Detailed plan organized by #### blocks.
 Block `3. Steps` is written using this plan. In a document-only task, Approach lists the main and supporting deliverables instead, each already written.
-If some block contains `options considered`, include them with pros and cons.
+A block may end with `Options considered`, with pros and cons, only for a decision asked of the owner, and listing only alternatives a later reader could reasonably propose again; an option that merely shapes the choice is left out, and a decision with none such has no Options considered.
 -->
 
 ### 2.2 Decision summary
