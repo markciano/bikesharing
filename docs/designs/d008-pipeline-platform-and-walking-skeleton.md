@@ -64,7 +64,7 @@ Rejected: totals per system, since its contract would be far from the one T041 c
 
 #### D3. Runtime rules checked by the skeleton
 
-The skeleton checks every runtime rule of [data-quality.md](../data-quality.md) that applies to what it builds, as [d007](d007-pipeline-design.md#13-requirements)'s R4 requires: DQR1 (one row per station and capture), DQR2 (no row updated or deleted), DQR13 (reconciliation) and DQR14 (the file's JSON Schema), of severity error; DQR11 (schema drift) and DQR12 (volume drop), of severity warn. The rules on the other facts (DQR3–DQR6) and on the dimensions (DQR7–DQR10) are checked by the child that builds their table.
+The skeleton checks every runtime rule of [data-quality.md](../data-quality.md) that applies to what it builds, as [d007 › R4](d007-pipeline-design.md#13-requirements) requires: DQR1 (one row per station and capture), DQR2 (no row updated or deleted), DQR13 (reconciliation) and DQR14 (the file's JSON Schema), of severity error; DQR11 (schema drift) and DQR12 (volume drop), of severity warn, whose failures are only logged until T060.2 builds their alerts. The rules on the other facts (DQR3–DQR6) and on the dimensions (DQR7–DQR10) are checked by the child that builds their table.
 
 #### D4. Volume drop against a rolling median
 
@@ -78,7 +78,7 @@ Rejected: a fixed minimum per system, since it needs an edit whenever a network 
 
 The pipeline's code version, written in every row and log event ([d007 › D5](d007-pipeline-design.md#d5-lineage-at-four-levels)) and as the tag of each page deployment ([d007 › D6](d007-pipeline-design.md#d6-deployments-tagged-with-their-commit)), is the full SHA of the Git commit its deployment was made from, the same SHA the deploy script tags the deployment with. A row then leads to its commit with no lookup, following Twelve-Factor's unique ID for each release; the full SHA avoids the ambiguity of a short one.
 
-The deploy script refuses to deploy from a working tree with uncommitted changes or from a commit that is not on the remote `main`, following GitHub Flow, where `main` is always deployable and what is deployed has passed its PR's checks. A row's SHA then always leads to reviewed code that stays in the history.
+The deploy script refuses to deploy from a working tree with uncommitted changes or from a commit that is not the latest of the remote `main`, as [d007 › D6](d007-pipeline-design.md#d6-deployments-tagged-with-their-commit) sets, following GitHub Flow, where `main` is always deployable and what is deployed has passed its PR's checks. A row's SHA then always leads to reviewed code that stays in the history.
 
 Rejected: refusing only uncommitted changes, since it lets unreviewed code reach production and its commit is lost if its branch is rebased.
 
@@ -90,15 +90,15 @@ Until T060.5 sets them from measured runs ([d007 › D7](d007-pipeline-design.md
 |---|---|---|
 | Timeout | 10 min | Below the 15-minute cadence; a run that hangs costs at most two thirds of the time |
 | Time budget | 7 min | The timeout less 3 min for one batch and the run's close, neither measured yet |
-| Batch bound | 360 objects | 3 h of `station_status` captures of both systems, one per minute each: a normal run of about 30 objects fits in one batch, and the first backlog advances 3 h per batch; far below the thousands of files at which `read_json` runs out of memory (Carried-over inputs › Reading many JSON files) |
+| Batch bound | 360 objects | 3 h of `station_status` captures of both systems, one per minute each: a normal run of about 30 objects fits in one batch, and the first backlog advances 3 h per batch; far below the thousands of files at which `read_json` runs out of memory ([Carried-over inputs › Reading many JSON files](#carried-over-inputs)) |
 
-The batch bound is confirmed, or lowered, by the memory of a reference batch on real data, measured before the first deployment (Carried-over inputs › DuckDB use), so that a batch fits in the container's memory with margin.
+The batch bound is confirmed, or lowered, by the memory of a reference batch on real data, measured before the first deployment ([Carried-over inputs › DuckDB use](#carried-over-inputs)), so that a batch fits in the container's memory with margin.
 
 Rejected: a 14-minute timeout with an 11-minute time budget, since it drains the first backlog sooner but doubles the worst-case cost before any run is measured.
 
 #### D7. Heartbeat with no platform retries
 
-The heartbeat of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) sends the failure signal on the first failed run: the platform does not retry a run, since the next scheduled run is its retry, as a failed batch stays pending ([d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches)), following the scheduled cycle as the retry of an idempotent pipeline. The monitor expects a signal every 15 min, the cadence, with 15 min of grace, which covers a run up to its 10-minute timeout (D6). The owner then learns of a failed run at once, of a run that hangs when it reaches its timeout, and of a run that never starts about 30 min after it was due.
+The heartbeat of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) sends the failure signal on the first failed run: the platform does not retry a run, since the next scheduled run is its retry, as a failed batch stays pending ([d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches)), following the scheduled cycle as the retry of an idempotent pipeline. The monitor expects a signal every 15 min, the cadence, with 15 min of grace, which covers a run up to its 10-minute timeout (D6). The owner then learns of a failed run at once, of a run that hangs when it reaches its timeout, and of a run that never starts about 30 min after the last signal.
 
 What would change it: alerts from transient failures that the next run resolves, frequent enough to be ignored, change the retries.
 
@@ -108,13 +108,13 @@ Rejected: one platform retry 1 min after a failure, since it can overlap the nex
 
 The first load of the bronze captured before the first deployment drains in three stages, following an incremental backfill with a check between stages: first the oldest day of captures, then the first week, then everything. The pipeline processes only the bronze objects captured up to a configured end instant, oldest first as in [d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches); the owner checks each stage's runtime rules, reconciliation, run time and memory, and moves the end instant forward for the next one. Once the last stage drains, the end instant is removed and the pipeline processes every object, as d007 › D7 sets. Each stage then exercises a larger volume only after the smaller one passed, in the same order and with the same code as any backlog.
 
-While an end instant is set, a run that finds no pending object captured up to it logs an event of severity warn, which alerts the owner like any warn rule ([d007](d007-pipeline-design.md#13-requirements)'s R10), following the completion notice of a backfill: the owner learns that a stage has drained when it is time to check it and move the end instant, and an end instant left set after the last stage cannot halt the pipeline unnoticed.
+While an end instant is set, a run that finds no pending object captured up to it logs an event of severity warn, following the completion notice of a backfill: it tells the owner that a stage has drained and that it is time to check it and move the end instant. Until T060.2 builds the alerts on warn events ([d007 › R10](d007-pipeline-design.md#13-requirements)), the owner reads it in the run's logs on Modal, and in the run's events on R2 when those are not enough; the end instant's removal after the last stage is checked in Done when.
 
-Rejected: draining each stage in one-off runs that take the end instant as an argument, with no end instant in the scheduled run, since a large stage would need many runs launched by hand within D6's time budget; draining the first load as any backlog, since a problem that only shows at volume would be found in the middle of it; stages from the most recent captures backwards, since the current file it gives earlier has no visitors until T041 ([d007 › D2](d007-pipeline-design.md#d2-visualization-after-all-slices)), the first backlog drains in under a day, and it reverses d007 › D7's order.
+Rejected: draining each stage in one-off runs that take the end instant as an argument, with no end instant in the scheduled run, since a large stage would need many runs launched by hand within D6's time budget; draining the first load as any backlog, since a problem that only shows at volume would be found in the middle of it; stages from the most recent captures backwards, since the current file it gives earlier has no visitors until T041 ([d007 › D2](d007-pipeline-design.md#d2-visualization-after-all-slices)), the first backlog is estimated to drain in under a day, and it reverses d007 › D7's order.
 
 #### D9. A failed batch halts the pipeline until T060.5
 
-Until T060.5 builds the set-aside with redrive and the quarantine table ([d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches)), a batch that fails a runtime rule of severity error, holds a row that fails its column's schema, or holds a bronze object that cannot be read fails the run and stays pending, following fail-fast: nothing of the batch is committed, the next run retries it, and the heartbeat sends the failure signal on every run until a new code version fixes it (D7). The pipeline then never commits a row a rule rejected, and while it halts the published file only grows older, with no visitors until T041 ([d007 › D2](d007-pipeline-design.md#d2-visualization-after-all-slices)). A rule of severity warn (DQR11, DQR12) does not halt it.
+Until T060.5 builds the set-aside with redrive and the quarantine table ([d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches)), a batch that fails a runtime rule of severity error on its rows (DQR1, DQR2, DQR13), holds a row that fails its column's schema, or holds a bronze object that cannot be read fails the run and stays pending, following fail-fast: nothing of the batch is committed, the next run retries it, and the heartbeat sends the failure signal on every run until a new code version fixes it (D7). The pipeline then never commits a row a rule rejected, and while it halts the published file only grows older, with no visitors until T041 ([d007 › D2](d007-pipeline-design.md#d2-visualization-after-all-slices)). This is a provisional state of [d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches), not a change to it: D7 rejects this halt since one faulty object would freeze the page, which cannot happen before T041, and T041 comes after T060.5. A rule of severity warn (DQR11, DQR12) does not halt it, and a file that fails DQR14 follows [d007 › R2](d007-pipeline-design.md#13-requirements): it is not deployed and the last file that passed is kept.
 
 Rejected: building the set-aside and the quarantine in T060.1, since it brings T060.5's scope forward into the skeleton.
 
@@ -126,15 +126,15 @@ Rejected: reusing ADR-0038's token on Modal, since one leak would force revoking
 
 | # | Threat (STRIDE) | Impact | Control | Requirement |
 |---|---|---|---|---|
-| `TH1` | Spoofing: someone sends a forged success signal to the heartbeat | A failed run does not alert the owner | The heartbeat's URL is a secret, never in the repository or the logs | R21 |
-| `TH2` | Tampering: a feed publishes values that act as code, SQL text or markup in the file | Corrupted tables, or a script in the page | Feed values are never interpolated into SQL; the file holds only D2's typed fields and passes its JSON Schema (DQR14) | R6, R7, R22 |
-| `TH3` | Tampering: unreviewed code writes to production | Rows with an unreviewed SHA in silver and gold, or in the page | D5 for deployments; a one-off run from a branch, such as D6's reference batch, neither writes to the production lakehouse nor deploys the page | R9, R23 |
-| `TH4` | Repudiation: a row or a deployment cannot be traced to its code | The code behind a wrong value cannot be found | The run's ID and the code version in every row and event, and the deployment's tag (D5) | R4, R8 |
-| `TH5` | Information disclosure: a secret shows in the run's events, copied to the monitoring tool, or in an error message | Credentials leak outside Modal | The run's events and errors never hold a secret's value; secrets reach the run only as Modal Secrets | R21 |
-| `TH6` | Information disclosure: the public file exposes internal fields, such as lineage or bronze keys | The internal structure is revealed | The file is built only from D2's explicit list of fields | R6 |
-| `TH7` | Denial of service: runaway runs or unbounded R2 requests drive up cost (denial of wallet) | The bill | D6's timeout, no platform retries (D7), no overlapping runs, and Modal's spend limit set by the owner | R10, R14, R16; the spend limit in Done when |
-| `TH8` | Elevation of privilege: the run's Cloudflare token leaks | It reaches every Worker of the account, capture's included | The pipeline's own token, Workers Editor with an expiry; the account-wide reach is residual risk | R24 |
-| `TH9` | Elevation of privilege: a DuckDB query reads local files or loads extensions as the data directs | The engine leaves the perimeter of R2 | DuckDB reaches only the pipeline's buckets and extensions installed ahead | R25 |
+| `TH1` | Spoofing: someone sends a forged success signal to the heartbeat | A failed run does not alert the owner | The heartbeat's URL is a secret, never in the repository or the logs | R24 |
+| `TH2` | Tampering: a feed publishes values that act as code, SQL text or markup in the file | Corrupted tables, or a script in the page | Feed values are never interpolated into SQL; the file holds only D2's typed fields and passes its JSON Schema (DQR14); escaping its values in the page belongs to T041 | R7, R8, R25 |
+| `TH3` | Tampering: unreviewed code writes to production | Rows with an unreviewed SHA in silver and gold, or in the page | D5 for deployments; a one-off run from a branch, such as D6's reference batch, neither writes to the production lakehouse nor deploys the page | R10, R26, R27 |
+| `TH4` | Repudiation: a row or a deployment cannot be traced to its code | The code behind a wrong value cannot be found | The run's ID and the code version in every row and event, and the deployment's tag (D5) | R5, R9 |
+| `TH5` | Information disclosure: a secret shows in the run's events, copied to the monitoring tool, or in an error message | Credentials leak outside Modal | The run's events and errors never hold a secret's value; secrets reach the run only as Modal Secrets | R23, R24 |
+| `TH6` | Information disclosure: the public file exposes internal fields, such as lineage or bronze keys | The internal structure is revealed | The file is built only from D2's explicit list of fields | R7 |
+| `TH7` | Denial of service: runaway runs or unbounded R2 requests drive up cost (denial of wallet) | The bill | D6's timeout, no platform retries (D7), no overlapping runs, and Modal's spend limit set by the owner | R11, R16, [d007 › R15](d007-pipeline-design.md#13-requirements); the spend limit in Done when |
+| `TH8` | Elevation of privilege: the run's Cloudflare token leaks | It reaches every Worker of the account, capture's included | The pipeline's own token, Workers Editor with an expiry; the account-wide reach is residual risk | Done when |
+| `TH9` | Elevation of privilege: a DuckDB query reads local files or loads extensions as the data directs | The engine leaves the perimeter of R2 | DuckDB reaches only the pipeline's buckets and loads no extension at run time | R28, R29 |
 
 ### 1.3 Requirements
 
@@ -149,29 +149,33 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 - **R1** The pipeline shall write one row of station stock per station and capture of AMBici and Bicing, keyed by system, `station_id` and capture instant in UTC. (D1)
 - **R2** The pipeline shall write each row's measures and flags as its source publishes them, following TR5–TR8, TR10 and TR53. (D1)
-- **R3** If a Bicing station is out of service, then the pipeline shall write its row following TR9. (D1)
-- **R4** The pipeline shall write in each row its local calendar keys, the run's ID and the code version. (D1, TH4)
-- **R5** When a run commits new station stock, the pipeline shall publish one file with the latest count of each station of both systems: per station, its system, `station_id`, vehicles and docks available, `is_renting`, `is_returning`, `last_reported` and capture instant; per file, the capture instant of its most recent data. (D2)
-- **R6** The pipeline shall build the published file only from the fields listed in R5. (D2, TH2, TH6)
-- **R7** The pipeline shall check, in every run, DQR1, DQR2, DQR13 and DQR14 with severity error, and DQR11 and DQR12 with severity warn, as [data-quality.md](../data-quality.md) states them. (D3, D4)
-- **R8** The pipeline shall use as its code version the full SHA of the Git commit its deployment was made from. (D5, TH4)
-- **R9** If the working tree has uncommitted changes, or its commit is not on the remote `main`, then the deploy script shall refuse to deploy. (D5, TH3)
-- **R10** If a run lasts 10 min, then the platform shall stop it. (D6, TH7)
-- **R11** When a run has lasted 7 min, the pipeline shall start no new batch and close the run. (D6)
-- **R12** The pipeline shall process at most 360 bronze objects per batch. (D6)
-- **R13** If a run fails, then the pipeline shall send the heartbeat's failure signal. (D7)
-- **R14** If a run fails, then the platform shall not retry it. (D7, TH7)
-- **R15** The heartbeat monitor shall expect a signal every 15 min, with 15 min of grace. (D7)
-- **R16** While a run is in progress, the platform shall not start another run. (TH7)
-- **R17** While an end instant is set, the pipeline shall process only the bronze objects captured up to it, oldest first. (D8)
-- **R18** While an end instant is set, when a run finds no pending object captured up to it, the pipeline shall log an event of severity warn. (D8)
-- **R19** If a batch fails a runtime rule of severity error, holds a row that fails its column's schema, or holds a bronze object that cannot be read, then the pipeline shall commit nothing of the batch, leave it pending and fail the run. (D9)
-- **R20** If a batch fails a runtime rule of severity warn, then the pipeline shall log it and commit the batch. (D9)
-- **R21** The pipeline shall not write a secret's value, the heartbeat's URL included, to its events or error messages. (TH1, TH5)
-- **R22** The pipeline shall pass feed values to SQL only as data or parameters, never as SQL text. (TH2)
-- **R23** While a run is a one-off run of code that is not deployed, the pipeline shall neither write to the production lakehouse nor deploy the page. (TH3)
-- **R24** The pipeline shall deploy the page with its own Cloudflare token, with the Workers Editor role and an expiry. (D10, TH8)
-- **R25** The pipeline shall let DuckDB reach only the pipeline's buckets and the extensions installed ahead. (TH9)
+- **R3** While a Bicing station is out of service, with `is_renting` and `is_returning` false, the pipeline shall write null as its `num_vehicles_available`, following TR9. (D1)
+- **R4** The pipeline shall write in each row its local calendar keys. (D1)
+- **R5** The pipeline shall write in each row the run's ID and the code version. (D1, TH4)
+- **R6** The pipeline shall publish one file with the latest count of each station of both systems, holding the fields D2 lists per station and per file. (D2)
+- **R7** The pipeline shall build the published file only from the fields D2 lists. (D2, TH2, TH6)
+- **R8** The pipeline shall check, in every run, DQR1, DQR2, DQR13 and DQR14 with severity error, and DQR11 and DQR12 with severity warn, as [data-quality.md](../data-quality.md) states them. (D3, D4)
+- **R9** The pipeline shall use as its code version the full SHA of the Git commit its deployment was made from. (D5, TH4)
+- **R10** If the working tree has uncommitted changes, or its commit is not the latest of the remote `main`, then the deploy script shall refuse to deploy. (D5, TH3)
+- **R11** The timeout of [d007 › R21](d007-pipeline-design.md#13-requirements) shall be 10 min. (D6, TH7)
+- **R12** The time budget of [d007 › R25](d007-pipeline-design.md#13-requirements) shall be 7 min. (D6)
+- **R13** The pipeline shall process at most 360 bronze objects per batch. (D6)
+- **R14** When a run ends without failing, the pipeline shall send the heartbeat's success signal. (D7)
+- **R15** If a run fails, then the pipeline shall send the heartbeat's failure signal. (D7)
+- **R16** If a run fails, then the platform shall not retry it. (D7, TH7)
+- **R17** The heartbeat monitor shall expect a signal every 15 min, with 15 min of grace. (D7)
+- **R18** While an end instant is set, the pipeline shall process only the bronze objects captured up to it, oldest first. (D8)
+- **R19** While an end instant is set, when a run finds no pending object captured up to it, the pipeline shall log an event of severity warn. (D8)
+- **R20** If a batch fails a runtime rule of severity error on its rows (DQR1, DQR2, DQR13), then the pipeline shall commit nothing of the batch, leave it pending and fail the run. (D9)
+- **R21** If a batch holds a row that fails its column's schema, then the pipeline shall commit nothing of the batch, leave it pending and fail the run. (D9)
+- **R22** If a batch holds a bronze object that cannot be read, then the pipeline shall commit nothing of the batch, leave it pending and fail the run. (D9)
+- **R23** The pipeline shall receive its secrets only as Modal Secrets. (TH5)
+- **R24** The pipeline shall not write a secret's value, the heartbeat's URL included, to its events or error messages. (TH1, TH5)
+- **R25** The pipeline shall pass feed values to SQL only as data or parameters, never as SQL text. (TH2)
+- **R26** While a run is a one-off run of code that is not deployed, the pipeline shall not write to the production lakehouse. (TH3)
+- **R27** While a run is a one-off run of code that is not deployed, the pipeline shall not deploy the page. (TH3)
+- **R28** The pipeline shall let DuckDB reach only the pipeline's buckets. (TH9)
+- **R29** The pipeline shall load no DuckDB extension at run time. (TH9)
 
 ### 1.4 Done when
 
@@ -179,6 +183,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 - Before the first deployment, the memory of a reference batch on real data confirms or lowers the batch bound (D6).
 - The owner has set Modal's spend limit (TH7).
+- The owner has created the pipeline's own Cloudflare token, with the Workers Editor role and an expiry, and the run deploys the page with it (D10, TH8).
 - The first load has drained through D8's three stages, each with its runtime rules, reconciliation, run time and memory checked before the next, and the end instant removed after the last (D8).
 - The pipeline runs on Modal every 15 min in production; its run time and memory are measured on the feeds' real volume, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them ([d007 › Children](d007-pipeline-design.md#16-children)).
 
@@ -191,7 +196,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - The set-aside of failed batches with redrive, and the quarantine table — T060.5
 - The split by vehicle type, in the station stock and in the file — T060.3
 - The review of DQR12's threshold, window and minimum of captures against production runs — T060.2
-- The page that shows the published file — T041
+- The page that shows the published file, and the escaping of its values in the page — T041
 
 ## 2. Plan — how
 

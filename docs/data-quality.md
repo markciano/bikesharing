@@ -6,13 +6,13 @@ The quality catalog of silver and gold: the runtime rules, checked on real data 
 
 Every run checks each column of silver and gold against its schema, the type, nullability and accepted values of its row in its table's worksheet. A schema carries no ID and is not repeated here ([d007 › #1](designs/d007-pipeline-design.md#22-decision-summary)).
 
-A row that fails its schema is quarantined: it is written to the quarantine table with the check it failed and the bronze object it comes from, the failure is logged in the run's events, and the rest of its batch publishes. When a new code version is deployed, each bronze object with rows in quarantine is processed again, adding only the rows silver and gold do not hold yet ([d007 › #1](designs/d007-pipeline-design.md#22-decision-summary)). DQR13 counts the quarantined rows as accounted for.
+A row that fails its schema is quarantined: it is written to the quarantine table with the check it failed and the bronze object it comes from, the failure is logged in the run's events, and the rest of its batch publishes. When a new code version is deployed, each bronze object with rows in quarantine is processed again, adding only the rows silver and gold do not hold yet ([d007 › #1](designs/d007-pipeline-design.md#22-decision-summary)). DQR13 counts the quarantined rows as accounted for. TODO(T060.5): until the quarantine table is built, a row that fails its schema halts its batch, which stays pending ([d008 › D9](designs/d008-pipeline-platform-and-walking-skeleton.md#d9-a-failed-batch-halts-the-pipeline-until-t0605)).
 
 ## Severity
 
 A runtime rule's severity follows who causes its failure ([d007 › D4](designs/d007-pipeline-design.md#d4-data-quality-in-four-classes)):
 
-- **error:** a rule on the pipeline's own logic. Following Write-Audit-Publish, a batch that fails commits nothing to silver and gold and is set aside until a new code version; a file that fails is not deployed, and the run ends with no failure signal. The page keeps the last file that passed, and the failure is logged in the run's events ([d007 › #9](designs/d007-pipeline-design.md#22-decision-summary)).
+- **error:** a rule on the pipeline's own logic. Following Write-Audit-Publish, a batch that fails commits nothing to silver and gold and is set aside until a new code version; a file that fails is not deployed, and the run ends with no failure signal. The page keeps the last file that passed, and the failure is logged in the run's events ([d007 › #9](designs/d007-pipeline-design.md#22-decision-summary)). TODO(T060.5): until batches can be set aside, a batch that fails stays pending and fails the run ([d008 › D9](designs/d008-pipeline-platform-and-walking-skeleton.md#d9-a-failed-batch-halts-the-pipeline-until-t0605)).
 - **warn:** a rule on a provider's data. The failure is logged and the batch is committed.
 
 ## Runtime rules
