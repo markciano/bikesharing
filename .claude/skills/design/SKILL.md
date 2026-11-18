@@ -39,7 +39,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 
 ## 2. Plan
 
-1. Propose the list of concerns to decide, in dependency order, marking each concern or sub-decision as asked or settled following `.claude/rules/docs/decision-log.md`; the owner adjusts it. A session that stops mid-concern keeps these marks in Current.
+1. Propose the list of concerns to decide, in dependency order, marking each concern or sub-decision as asked or settled following `.claude/rules/docs/decision-log.md`; the owner adjusts it. A session that ends before the last concern keeps, in Current, the concerns left and their marks.
 2. Take each concern in that order:
    - **Settled:** an earlier decision fixes it, or the applicable standard leaves one sound option. Explain in 2–3 lines what it fixes and what settles it, naming the decision or the standard, and write it to its section without asking; the owner approves it on the edit's diff.
    - **Asked:**
