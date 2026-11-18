@@ -15,12 +15,12 @@ Sections marked Optional are kept only when they apply.
 <!-- State: Draft 📝 · Ready 🎬 · Running 🔄 · Concluded ✅.
 Phase: the blocks and the review completed.
 Started / Finished: UTC dates of the first step executed and of the Conclusion.
-Current step: the step being executed, or —. -->
+Current: where work resumes, with only the context the next session needs: the step being executed, or the section of the report; — when concluded. -->
 
 - State: Draft 📝
 - Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
-- Current step: —
+- Current: —
 
 ## 1. Questions — what we need to know
 

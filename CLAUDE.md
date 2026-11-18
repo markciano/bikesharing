@@ -12,7 +12,7 @@ Data engineering portfolio project on public bike sharing in the Barcelona area 
 - Industry standards and best practices are the default: before proposing a solution, name the standard or pattern that applies. Deviating requires the owner's explicit OK, recorded as an ADR in `docs/decisions/` with the reason.
 - When a change alters documented behaviour, the document is updated in the same commit. Within a design, affected documents are planned in its File layout instead.
 - Source of truth: the approved working document (design or spike report). Code derives from it, never the other way round (spec-driven development).
-- State lives in the working document, not the session: decisions are written when approved (if small, accumulate 2-3); Status is updated at every stop.
+- State lives in the working document, not the session: decisions are written when approved (if small, accumulate 2-3); Status is updated when a session ends, with only the context the next session needs to resume.
 - Operational actions (accounts, consoles, billing, production deployments) are done by the owner.
 - Permissions are set in `.claude/settings.json`. Never work around an action it asks for or denies, including by reaching it through another tool (e.g. `gh` for a denied `git` command): report it.
 - A convention learned in a session (e.g. an owner's correction) is proposed as an edit to the rule, skill or template where it applies, not saved to Claude's memory; memory holds only facts about the local machine.
