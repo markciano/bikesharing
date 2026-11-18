@@ -50,7 +50,7 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 
 #### D1. First version of the station stock
 
-The skeleton writes the station stock of both systems, AMBici and Bicing, at its grain of one row per station and capture ([data-model.md › Grain](../data-model.md#grain), TR1), so that the run is measured on the real volume of both feeds and handles their differences from the first run. Each row holds its natural key (system, `station_id` and capture instant in UTC), the measures and flags kept as each source publishes them (TR5–TR8, TR10, TR53), with TR9's null for a Bicing station out of service, its local calendar keys ([ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md)) and its lineage, the run's ID and code version ([d007 › D5](d007-pipeline-design.md#d5-lineage-at-four-levels)). The TR rules are those of [data-model.md › Data contract › Station stock](../data-model.md#station-stock). Every row is written with its final meaning, following Kimball's practice that a fact row gains columns but does not change what it states: T060.8 adds the dimension keys and the rest of the columns without rewriting what the skeleton wrote.
+The skeleton writes the station stock of both systems, AMBici and Bicing, at its grain of one row per station and capture ([data-model.md › Grain](../data-model.md#grain), TR1), so that the run is measured on the real volume of both feeds and handles their differences from the first run. Each row holds its natural key (system, `station_id` and capture instant in UTC), the measures and flags kept as each source publishes them (TR5–TR8, TR10, TR53), with TR9's null for a Bicing station out of service, its local calendar keys ([ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md)) and its lineage, the run's ID and code version ([d007 › D5](d007-pipeline-design.md#d5-lineage-at-four-levels)). The TR rules are those of [data-model.md › Data contract › Station stock](../data-model.md#station-stock). Every row is written with its final meaning, following Kimball's practice that a fact row gains columns but does not change what it states: T060.8 adds the dimension keys and the rest of the columns without rewriting what the skeleton wrote; how it fills its new columns on the rows already written is decided by T060.8.
 
 Left to later children: the keys of the Station and System dimensions and the tables of Date and Time of day (T060.8); TR3, whether a row comes from the archive, and TR2 and TR4 on the archive (T060.4).
 
@@ -118,6 +118,24 @@ Until T060.5 builds the set-aside with redrive and the quarantine table ([d007 �
 
 Rejected: building the set-aside and the quarantine in T060.1, since it brings T060.5's scope forward into the skeleton.
 
+#### D10. Security of the skeleton
+
+The skeleton adds a run on Modal that holds secrets, a public file, a deployment of the page from the run and one-off runs from a branch. Its threats, from one STRIDE pass over D1–D9, are those below; the storage baseline of [ADR-0023](../decisions/0023-storage-security-baseline.md) (a token per component, bronze read-only for the pipeline, bucket lock, private buckets) applies as it stands and is not repeated. The pipeline holds its own Cloudflare token, with the Workers Editor role and an expiry, following ADR-0023's token per component: a leak on Modal is revoked without touching the token of local deployments. Its reach over every Worker of the account is accepted as residual risk until Cloudflare scopes a token to one Worker, as [ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md) accepts it.
+
+Rejected: reusing ADR-0038's token on Modal, since one leak would force revoking both.
+
+| # | Threat (STRIDE) | Impact | Control | Requirement |
+|---|---|---|---|---|
+| `TH1` | Spoofing: someone sends a forged success signal to the heartbeat | A failed run does not alert the owner | The heartbeat's URL is a secret, never in the repository or the logs | R21 |
+| `TH2` | Tampering: a feed publishes values that act as code, SQL text or markup in the file | Corrupted tables, or a script in the page | Feed values are never interpolated into SQL; the file holds only D2's typed fields and passes its JSON Schema (DQR14) | R6, R7, R22 |
+| `TH3` | Tampering: unreviewed code writes to production | Rows with an unreviewed SHA in silver and gold, or in the page | D5 for deployments; a one-off run from a branch, such as D6's reference batch, neither writes to the production lakehouse nor deploys the page | R9, R23 |
+| `TH4` | Repudiation: a row or a deployment cannot be traced to its code | The code behind a wrong value cannot be found | The run's ID and the code version in every row and event, and the deployment's tag (D5) | R4, R8 |
+| `TH5` | Information disclosure: a secret shows in the run's events, copied to the monitoring tool, or in an error message | Credentials leak outside Modal | The run's events and errors never hold a secret's value; secrets reach the run only as Modal Secrets | R21 |
+| `TH6` | Information disclosure: the public file exposes internal fields, such as lineage or bronze keys | The internal structure is revealed | The file is built only from D2's explicit list of fields | R6 |
+| `TH7` | Denial of service: runaway runs or unbounded R2 requests drive up cost (denial of wallet) | The bill | D6's timeout, no platform retries (D7), no overlapping runs, and Modal's spend limit set by the owner | R10, R14, R16; the spend limit in Done when |
+| `TH8` | Elevation of privilege: the run's Cloudflare token leaks | It reaches every Worker of the account, capture's included | The pipeline's own token, Workers Editor with an expiry; the account-wide reach is residual risk | R24 |
+| `TH9` | Elevation of privilege: a DuckDB query reads local files or loads extensions as the data directs | The engine leaves the perimeter of R2 | DuckDB reaches only the pipeline's buckets and extensions installed ahead | R25 |
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -129,34 +147,51 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 - Optional: Where <feature is included>, the <system> shall <response>.
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
-- **R1** `<EARS statement>` (D`<N>`)
+- **R1** The pipeline shall write one row of station stock per station and capture of AMBici and Bicing, keyed by system, `station_id` and capture instant in UTC. (D1)
+- **R2** The pipeline shall write each row's measures and flags as its source publishes them, following TR5–TR8, TR10 and TR53. (D1)
+- **R3** If a Bicing station is out of service, then the pipeline shall write its row following TR9. (D1)
+- **R4** The pipeline shall write in each row its local calendar keys, the run's ID and the code version. (D1, TH4)
+- **R5** When a run commits new station stock, the pipeline shall publish one file with the latest count of each station of both systems: per station, its system, `station_id`, vehicles and docks available, `is_renting`, `is_returning`, `last_reported` and capture instant; per file, the capture instant of its most recent data. (D2)
+- **R6** The pipeline shall build the published file only from the fields listed in R5. (D2, TH2, TH6)
+- **R7** The pipeline shall check, in every run, DQR1, DQR2, DQR13 and DQR14 with severity error, and DQR11 and DQR12 with severity warn, as [data-quality.md](../data-quality.md) states them. (D3, D4)
+- **R8** The pipeline shall use as its code version the full SHA of the Git commit its deployment was made from. (D5, TH4)
+- **R9** If the working tree has uncommitted changes, or its commit is not on the remote `main`, then the deploy script shall refuse to deploy. (D5, TH3)
+- **R10** If a run lasts 10 min, then the platform shall stop it. (D6, TH7)
+- **R11** When a run has lasted 7 min, the pipeline shall start no new batch and close the run. (D6)
+- **R12** The pipeline shall process at most 360 bronze objects per batch. (D6)
+- **R13** If a run fails, then the pipeline shall send the heartbeat's failure signal. (D7)
+- **R14** If a run fails, then the platform shall not retry it. (D7, TH7)
+- **R15** The heartbeat monitor shall expect a signal every 15 min, with 15 min of grace. (D7)
+- **R16** While a run is in progress, the platform shall not start another run. (TH7)
+- **R17** While an end instant is set, the pipeline shall process only the bronze objects captured up to it, oldest first. (D8)
+- **R18** While an end instant is set, when a run finds no pending object captured up to it, the pipeline shall log an event of severity warn. (D8)
+- **R19** If a batch fails a runtime rule of severity error, holds a row that fails its column's schema, or holds a bronze object that cannot be read, then the pipeline shall commit nothing of the batch, leave it pending and fail the run. (D9)
+- **R20** If a batch fails a runtime rule of severity warn, then the pipeline shall log it and commit the batch. (D9)
+- **R21** The pipeline shall not write a secret's value, the heartbeat's URL included, to its events or error messages. (TH1, TH5)
+- **R22** The pipeline shall pass feed values to SQL only as data or parameters, never as SQL text. (TH2)
+- **R23** While a run is a one-off run of code that is not deployed, the pipeline shall neither write to the production lakehouse nor deploy the page. (TH3)
+- **R24** The pipeline shall deploy the page with its own Cloudflare token, with the Workers Editor role and an expiry. (D10, TH8)
+- **R25** The pipeline shall let DuckDB reach only the pipeline's buckets and the extensions installed ahead. (TH9)
 
 ### 1.4 Done when
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
-- `<extra condition>`
+- Before the first deployment, the memory of a reference batch on real data confirms or lowers the batch bound (D6).
+- The owner has set Modal's spend limit (TH7).
+- The first load has drained through D8's three stages, each with its runtime rules, reconciliation, run time and memory checked before the next, and the end instant removed after the last (D8).
+- The pipeline runs on Modal every 15 min in production; its run time and memory are measured on the feeds' real volume, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them ([d007 › Children](d007-pipeline-design.md#16-children)).
 
 ### 1.5 Out of scope
 
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
-- `<item>` — TNNN
-
-### 1.6 Children
-
-<!-- Parent only. The child map, in build order: each child's scope (e.g. the business process it builds), the questions or requirements it closes, the children it depends on, and the condition that closes it. Each child has its own working document, which cites the parent's decisions instead of repeating them. Every open question and requirement of the parent is closed by the parent or by one child. The parent's Done when: its Open questions closed and its children created. -->
-
-| Child | Scope | Closes | Depends on | Done when |
-|---|---|---|---|---|
-| `TNNN.1` | | | — | |
-
-### 1.7 Open questions
-
-<!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
-
-| OQ | Question | Depends on | Notes |
-|---|---|---|---|
+- The keys of the Station and System dimensions, the station's attributes in the file and the tables of Date and Time of day — T060.8
+- TR3, whether a row comes from the archive, and TR2 and TR4 on the archive — T060.4
+- The set-aside of failed batches with redrive, and the quarantine table — T060.5
+- The split by vehicle type, in the station stock and in the file — T060.3
+- The review of DQR12's threshold, window and minimum of captures against production runs — T060.2
+- The page that shows the published file — T041
 
 ## 2. Plan — how
 
