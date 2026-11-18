@@ -8,7 +8,7 @@ Kind: a build task builds code or configuration and has every block. A document-
 # Design: Pipeline platform and walking skeleton
 
 - **Task:** T060.1
-- **Kind:** `<build | document-only | parent>`
+- **Kind:** build
 - **ADRs:** `<ADRs this design must respect, or "none">`
 - **New ADRs from this doc:** `<ADRs created during this design, or "none">`
 
@@ -21,6 +21,7 @@ Current step: the step being implemented, or —. A document-only task has no Cu
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
+- Next: Spec › Failure cases, over D1–D8
 
 ## 1. Spec — what and why
 
@@ -29,6 +30,8 @@ Current step: the step being implemented, or —. A document-only task has no Cu
 ### 1.1 Context
 
 <!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
+
+Capture writes the raw feeds of AMBici and Bicing to the bronze layer on R2 ([d004](d004-bronze-data-capture.md)), and [d007](d007-pipeline-design.md) decides how the pipeline builds silver and gold from it, one business process per child of T060 ([d007 › D1](d007-pipeline-design.md#d1-build-by-vertical-slice)). Nothing of the pipeline runs yet: it has no code base, no run on Modal, and the run time and memory on which the cadence, the batch bounds and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) depend have never been measured. This task builds the walking skeleton, the thinnest path from the real-time `station_status` feed to a published file, run on Modal, and the platform and patterns that T060.2, T060.5, T060.8 and the later children build on. Its scope, the requirements of d007 it closes and its closing condition are set in [d007 › Children](d007-pipeline-design.md#16-children).
 
 ### 1.2 Decided at framing
 
@@ -45,7 +48,63 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 | `TH1` | | | | |
 -->
 
-#### D`<N>`. `<Title of decision N>`
+#### D1. First version of the station stock
+
+The skeleton writes the station stock of both systems, AMBici and Bicing, at its grain of one row per station and capture ([data-model.md › Grain](../data-model.md#grain), TR1), so that the run is measured on the real volume of both feeds and handles their differences from the first run. Each row holds its natural key (system, `station_id` and capture instant in UTC), the measures and flags kept as each source publishes them (TR5–TR8, TR10, TR53), with TR9's null for a Bicing station out of service, its local calendar keys ([ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md)) and its lineage, the run's ID and code version ([d007 › D5](d007-pipeline-design.md#d5-lineage-at-four-levels)). The TR rules are those of [data-model.md › Data contract › Station stock](../data-model.md#station-stock). Every row is written with its final meaning, following Kimball's practice that a fact row gains columns but does not change what it states: T060.8 adds the dimension keys and the rest of the columns without rewriting what the skeleton wrote.
+
+Left to later children: the keys of the Station and System dimensions and the tables of Date and Time of day (T060.8); TR3, whether a row comes from the archive, and TR2 and TR4 on the archive (T060.4).
+
+Rejected: TR9 left to T060.8, taking "as published" literally, since the published file would show vehicles at closed stations and T060.8 would rewrite those rows from bronze; one system only, since the run would not be measured on the real volume.
+
+#### D2. Published file: the latest count of each station
+
+The skeleton publishes one file with the latest count of each station of both systems, the answer to [d002 › Q1](d002-requirements.md#guiding-questions) without its split by vehicle type: per station, its system, `station_id`, vehicles and docks available, `is_renting`, `is_returning`, `last_reported` and capture instant; per file, the capture instant of its most recent data, so that its age can be measured ([d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)) and the page can show it. Its JSON Schema is the contract of [d007 › D2](d007-pipeline-design.md#d2-visualization-after-all-slices). Following the walking skeleton, the file has its final shape from the first run, and later children only add fields to it, a backward-compatible change of the contract: T060.8 adds the station's attributes and the mark of a frozen count (DQM5), T060.3 the split by vehicle type.
+
+Rejected: totals per system, since its contract would be far from the one T041 consumes and T060.8 would change it in a breaking way.
+
+#### D3. Runtime rules checked by the skeleton
+
+The skeleton checks every runtime rule of [data-quality.md](../data-quality.md) that applies to what it builds, as [d007](d007-pipeline-design.md#13-requirements)'s R4 requires: DQR1 (one row per station and capture), DQR2 (no row updated or deleted), DQR13 (reconciliation) and DQR14 (the file's JSON Schema), of severity error; DQR11 (schema drift) and DQR12 (volume drop), of severity warn. The rules on the other facts (DQR3–DQR6) and on the dimensions (DQR7–DQR10) are checked by the child that builds their table.
+
+#### D4. Volume drop against a rolling median
+
+DQR12 flags a capture of a system that lists fewer than 90% of the median number of stations of that system's captures in the previous 24 h, following the volume monitors of data observability: a relative threshold over a rolling baseline. The margin covers the variation seen in Bicing's archive, 513 to 546 stations per snapshot, 5.5% below its usual 543 ([bicing › Content](../sources/bicing.md)), while AMBici holds 237 stations steadily ([ambici › Content](../sources/ambici.md)); 24 h covers one daily cycle. Both values are provisional, set before any production run; the rule, with its values, lives in [data-quality.md › Runs and published files](../data-quality.md#runs-and-published-files).
+
+What would change it: weeks of production runs that show legitimate drops above 10%, or real losses below it, change the threshold or the window, reviewed by T060.2.
+
+Rejected: a fixed minimum per system, since it needs an edit whenever a network changes and misses a drop that stays above it.
+
+#### D5. Code version: the deployed commit's SHA
+
+The pipeline's code version, written in every row and log event ([d007 › D5](d007-pipeline-design.md#d5-lineage-at-four-levels)) and as the tag of each page deployment ([d007 › D6](d007-pipeline-design.md#d6-deployments-tagged-with-their-commit)), is the full SHA of the Git commit its deployment was made from, the same SHA the deploy script tags the deployment with. A row then leads to its commit with no lookup, following Twelve-Factor's unique ID for each release; the full SHA avoids the ambiguity of a short one.
+
+#### D6. Provisional run bounds
+
+Until T060.5 sets them from measured runs ([d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches)), a run has these bounds, following a timeout as a generous backstop below the cadence, with a graceful shutdown before it:
+
+| Bound | Value | Why |
+|---|---|---|
+| Timeout | 10 min | Below the 15-minute cadence; a run that hangs costs at most two thirds of the time |
+| Time budget | 7 min | The timeout less 3 min for one batch and the run's close, neither measured yet |
+| Batch bound | 360 objects | 3 h of `station_status` captures of both systems, one per minute each: a normal run of about 30 objects fits in one batch, and the first backlog advances 3 h per batch; far below the thousands of files at which `read_json` runs out of memory (Carried-over inputs › Reading many JSON files) |
+
+The batch bound is confirmed, or lowered, by the memory of a reference batch on real data, measured before the first deployment (Carried-over inputs › DuckDB use), so that a batch fits in the container's memory with margin.
+
+Rejected: a 14-minute timeout with an 11-minute time budget, since it drains the first backlog sooner but doubles the worst-case cost before any run is measured.
+
+#### D7. Heartbeat with no platform retries
+
+The heartbeat of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) sends the failure signal on the first failed run: the platform does not retry a run, since the next scheduled run is its retry, as a failed batch stays pending ([d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches)), following the scheduled cycle as the retry of an idempotent pipeline. The monitor expects a signal every 15 min, the cadence, with 15 min of grace, which covers a run up to its 10-minute timeout (D6). The owner then learns of a failed run at once, of a run that hangs when it reaches its timeout, and of a run that never starts about 30 min after it was due.
+
+What would change it: alerts from transient failures that the next run resolves, frequent enough to be ignored, change the retries.
+
+Rejected: one platform retry 1 min after a failure, since it can overlap the next scheduled run, which then waits, and delays the alert of a real failure.
+
+#### D8. First load in chronological stages
+
+The first load of the bronze captured before the first deployment drains in three stages, following an incremental backfill with a check between stages: first the oldest day of captures, then the first week, then everything. The pipeline processes only the bronze objects captured up to a configured end instant, oldest first as in [d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches); the owner checks each stage's runtime rules, reconciliation, run time and memory, and moves the end instant forward for the next one. Once the last stage drains, the end instant is removed and the pipeline processes every object, as d007 › D7 sets. Each stage then exercises a larger volume only after the smaller one passed, in the same order and with the same code as any backlog.
+
+Rejected: draining the first load as any backlog, since a problem that only shows at volume would be found in the middle of it; stages from the most recent captures backwards, since the current file it gives earlier has no visitors until T041 ([d007 › D2](d007-pipeline-design.md#d2-visualization-after-all-slices)), the first backlog drains in under a day, and it reverses d007 › D7's order.
 
 ### 1.3 Requirements
 
@@ -86,8 +145,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ1 | Which runtime rules the skeleton checks, at least one of each severity | — | [d007 › Children](d007-pipeline-design.md#16-children), [D4](d007-pipeline-design.md#d4-data-quality-in-four-classes) name DQR12 as an example of severity warn |
-| OQ2 | If DQR12 is among them: its threshold and the window of its median | OQ1 | [data-quality.md › Runs and published files](../data-quality.md#runs-and-published-files) |
 
 ## 2. Plan — how
 
