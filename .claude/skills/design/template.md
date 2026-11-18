@@ -16,7 +16,7 @@ Kind: a build task builds code or configuration and has every block. A document-
 
 <!-- State: Draft 📝 · Ready for implementation 🎬 · In progress 🔄 · Complete ✅. A document-only task goes from Draft to Complete.
 Phase: the blocks and reviews completed. A document-only task shows only Spec · Plan · Plan review.
-Current: where work resumes, with only the context the next session needs: the step being implemented, or the block and section of the design; — when complete. A document-only task names the section. -->
+Current: where work resumes, with only the context the next session needs and the document does not already hold: the step being implemented, or the block and section of the design; — when complete. A document-only task names the section. -->
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
