@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current:
+- Current: Plan › 2, concern 8 (run operation on Modal). Left after it: 9 observability, 10 deploy script, 11 tests and CI (also whether dbt docs are generated in CI, and a contract in `contracts/` for capture storing the response body unchanged, gzip-compressed), 12 cost recalibration, as a Done when check. All settled except one asked sub-decision in 9: whether T060.1 already sends the events over OTLP or leaves it to T060.2 ([ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md))
 
 ## 1. Spec — what and why
 
