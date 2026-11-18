@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 2, concern 6 (publishing), not started: D2's file, DQR14 with its JSON Schema, and the page's deployment from the run. Concerns left after it, in order: 7 environments and configuration (where a one-off `modal run` writes, R26, R27; where D8's end instant lives, a Modal Secret or the repository); 8 run operation on Modal; 9 observability (whether T060.1 sends events over OTLP, [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)); 10 deploy script; 11 tests and CI; 12 cost recalibration, as a Done when check. Parked for Plan › 5: the `PostToolUse` hook and the Python and SQL rules in `.claude/rules/`. Parked for concern 11: whether dbt docs are generated in CI; a contract in `contracts/` for capture storing the response body unchanged, gzip-compressed
+- Current:
 
 ## 1. Spec — what and why
 
@@ -176,6 +176,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R28** The pipeline shall let DuckDB reach only the pipeline's buckets. (TH9)
 - **R29** The pipeline shall load no DuckDB extension at run time. (TH9)
 - **R30** If a write to the station stock reports a row updated or deleted, then the pipeline shall log DQR2's failure and fail the run. (D3, #13)
+- **R31** If the page's deployment fails, then the pipeline shall keep the batches committed in the run, log the failure and fail the run. (#19)
 
 ### 1.4 Done when
 
@@ -353,6 +354,27 @@ Options considered for DQR11:
 - The read schema with `not_null` tests on required fields: pros, no second read; cons, it misses added fields, half of DQR11, and a dropped optional field.
 - One read with the stations as JSON, typed in the staging model: pros, a single read; cons, the typing of #11 moves to hand-written SQL to save milliseconds.
 
+#### Publishing
+
+- **Source of the file:** the file is built from the lakehouse's committed state, not from the run's batches. After the run's last commit, the shell finds in `processed_objects` the most recent capture of each system, reads from `station_stock` only that capture's rows, pruned by local calendar date, and writes them as a Parquet file to a local folder of the run. The dbt model `latest_station_count` reads it as the source `lakehouse.latest_captures` and builds D2's fields. The file's stations are those listed by the latest capture of their system, so a system with no capture in the run keeps its earlier count, and a station the feed stops listing leaves the file.
+- **Contract:** the file is published as `latest-station-count.json`, a fixed name across runs ([s013 › P1](../spikes/s013-visualization-tool.md#55-production-inputs)). Its JSON Schema, named after it, is `contracts/latest-station-count.schema.json`, in draft 2020-12, shared by the pipeline, which produces the file, and the page, which consumes it. It declares D2's fields with their types and nullability, and `additionalProperties: false` at every level, so that DQR14 also rejects a field outside D2's list (R7). A child that adds a field to the file adds it to the schema in the same commit.
+- **Runtime check:** the core validates the built file against the schema with the `jsonschema` library before the shell deploys it. A file that fails DQR14 follows [d007 › R2](d007-pipeline-design.md#13-requirements): it is not deployed, the last file that passed stays published, and the run logs each violation with its path in the file.
+  - TODO(T060.2): check that the alert on the file's age covers a file that fails DQR14, which until then sends no failure signal.
+- **CI check:** the pipeline's contract test builds the file from the fixtures through the same models and validates it against the schema, together with one invalid file per kind of violation (a missing field, a wrong type, a field outside D2's list), which must fail.
+- **Deployment tool:** the run deploys the page with `wrangler deploy`, passing the run's code version as `--tag` (D5). Modal's image installs Node and `wrangler` at build time, both pinned in `pipeline/` with their lockfile ([ADR-0016](../decisions/0016-runtime-versions-pinned-per-component.md), [ADR-0017](../decisions/0017-dependencies-locked-per-component.md)), so a run installs nothing. The shell runs `wrangler` as a subprocess with the pipeline's Cloudflare token in its environment only, and reads its exit code and output. **#18**
+
+Options considered for the deployment tool:
+
+- `wrangler` in Modal's image (chosen), following deployment with the provider's official tool: pros, no deployment code of the project's own, and the same tool and behaviour as capture; cons, a second runtime in the image, with its updates and npm dependencies in a container that holds secrets.
+- The direct upload API called from Python: pros, a single runtime in the image; cons, the project maintains code against an API whose hash format and version tag are not confirmed ([Cloudflare source card](../sources/cloudflare.md)), and its failures differ from capture's.
+
+- **Failed deployment:** the deployment runs after the run's last commit, so a failed deployment leaves the committed batches in place. The run logs the failure with `wrangler`'s exit code and output, ends as failed, and the heartbeat sends the failure signal (R15). The next run builds the file again from the lakehouse and deploys it, so the scheduled cycle is the retry (D7). Every run deploys, with or without new batches, so a run after a failed deployment recovers the page even when it has nothing to process; at the 15-minute cadence that is about 2,900 deployments a month, below the 4,300–8,600 that [ADR-0033](../decisions/0033-data-published-by-redeploying-static-assets.md) assessed. **#19**
+
+Options considered for a failed deployment:
+
+- The run ends as failed (chosen), following a heartbeat that reports the whole job's outcome, publishing included: pros, the owner learns of it at once, an expired token included; cons, an outage of Cloudflare alerts on every run while it lasts.
+- The run ends with no failure, the error logged as an event: pros, no alerts from Cloudflare's outages; cons, until T060.2 builds the alert on the file's age, a broken deployment shows only in the logs and the page can stay frozen unnoticed.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -381,6 +403,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 15 | [Transformation in dbt](#transformation-in-dbt) | DQR11 compares the keys of each bronze object, read with no schema, with the read schema, following the schema monitors of data observability | It detects added and dropped fields, which the typed read ignores, at a cost of milliseconds | R8 | Plan |
 | 16 | [Transformation in dbt](#transformation-in-dbt) | Each rule's severity is the data test's own dbt configuration, and the core commits a batch only if no node fails or errors, following dbt's native test severity, as ADR-0047 sets | One source of severity per rule, and the core keeps a single rule over the statuses | R8, R20, R21 | Plan |
 | 17 | [Transformation in dbt](#transformation-in-dbt) | The audited table passes to `deltalake` whole as Arrow, following the DuckDB to Arrow to `deltalake` hand-off | The simplest hand-off fits the headroom of #10 with bounded batches; streaming waits for a measured need | — | Plan |
+| 18 | [Publishing](#publishing) | The run deploys the page with `wrangler`, installed in Modal's image at build time, following deployment with the provider's official tool | No deployment code of the project's own, and the same tool as capture; the second runtime costs only a pinned version | R6 | Plan |
+| 19 | [Publishing](#publishing) | A failed deployment keeps the committed batches and fails the run, following a heartbeat that reports the whole job's outcome | Until T060.2's alert on the file's age, the heartbeat is the only signal of a page that stops refreshing | R15, R31 | Plan |
 
 ### 2.3 Architecture
 
