@@ -21,7 +21,7 @@ Current step: the step being implemented, or —. A document-only task has no Cu
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Spec › Failure cases, over D1–D8
+- Next: Spec › Failure cases, FC1 closed as D9; left: DQR12 with less than 24 h of previous captures (D4), a deployment from uncommitted changes or a commit outside `main` (D5), the end instant left set after the first load (D8)
 
 ## 1. Spec — what and why
 
@@ -68,7 +68,7 @@ The skeleton checks every runtime rule of [data-quality.md](../data-quality.md) 
 
 #### D4. Volume drop against a rolling median
 
-DQR12 flags a capture of a system that lists fewer than 90% of the median number of stations of that system's captures in the previous 24 h, following the volume monitors of data observability: a relative threshold over a rolling baseline. The margin covers the variation seen in Bicing's archive, 513 to 546 stations per snapshot, 5.5% below its usual 543 ([bicing › Content](../sources/bicing.md)), while AMBici holds 237 stations steadily ([ambici › Content](../sources/ambici.md)); 24 h covers one daily cycle. Both values are provisional, set before any production run; the rule, with its values, lives in [data-quality.md › Runs and published files](../data-quality.md#runs-and-published-files).
+DQR12 flags a capture of a system that lists fewer than 90% of the median number of stations of that system's captures in the 24 h before its capture instant, following the volume monitors of data observability: a relative threshold over a rolling baseline. The window is set by the capture instant, not by the run, so that the stages of D8 compare each capture with its own past. With fewer than 60 captures of the system in the window, 1 h at one per minute, the rule is not evaluated for that capture and the run logs it as such, following the minimum baseline of those monitors; this happens only on the first day of captures or after a gap of more than 23 h, and a baseline of 1 h suffices since the daily variation stays inside the margin. The margin covers the variation seen in Bicing's archive, 513 to 546 stations per snapshot, 5.5% below its usual 543 ([bicing › Content](../sources/bicing.md)), while AMBici holds 237 stations steadily ([ambici › Content](../sources/ambici.md)); 24 h covers one daily cycle. The three values are provisional, set before any production run; the rule, with its values, lives in [data-quality.md › Runs and published files](../data-quality.md#runs-and-published-files).
 
 What would change it: weeks of production runs that show legitimate drops above 10%, or real losses below it, change the threshold or the window, reviewed by T060.2.
 
@@ -77,6 +77,10 @@ Rejected: a fixed minimum per system, since it needs an edit whenever a network 
 #### D5. Code version: the deployed commit's SHA
 
 The pipeline's code version, written in every row and log event ([d007 › D5](d007-pipeline-design.md#d5-lineage-at-four-levels)) and as the tag of each page deployment ([d007 › D6](d007-pipeline-design.md#d6-deployments-tagged-with-their-commit)), is the full SHA of the Git commit its deployment was made from, the same SHA the deploy script tags the deployment with. A row then leads to its commit with no lookup, following Twelve-Factor's unique ID for each release; the full SHA avoids the ambiguity of a short one.
+
+The deploy script refuses to deploy from a working tree with uncommitted changes or from a commit that is not on the remote `main`, following GitHub Flow, where `main` is always deployable and what is deployed has passed its PR's checks. A row's SHA then always leads to reviewed code that stays in the history.
+
+Rejected: refusing only uncommitted changes, since it lets unreviewed code reach production and its commit is lost if its branch is rebased.
 
 #### D6. Provisional run bounds
 
@@ -104,7 +108,15 @@ Rejected: one platform retry 1 min after a failure, since it can overlap the nex
 
 The first load of the bronze captured before the first deployment drains in three stages, following an incremental backfill with a check between stages: first the oldest day of captures, then the first week, then everything. The pipeline processes only the bronze objects captured up to a configured end instant, oldest first as in [d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches); the owner checks each stage's runtime rules, reconciliation, run time and memory, and moves the end instant forward for the next one. Once the last stage drains, the end instant is removed and the pipeline processes every object, as d007 › D7 sets. Each stage then exercises a larger volume only after the smaller one passed, in the same order and with the same code as any backlog.
 
-Rejected: draining the first load as any backlog, since a problem that only shows at volume would be found in the middle of it; stages from the most recent captures backwards, since the current file it gives earlier has no visitors until T041 ([d007 › D2](d007-pipeline-design.md#d2-visualization-after-all-slices)), the first backlog drains in under a day, and it reverses d007 › D7's order.
+While an end instant is set, a run that finds no pending object captured up to it logs an event of severity warn, which alerts the owner like any warn rule ([d007](d007-pipeline-design.md#13-requirements)'s R10), following the completion notice of a backfill: the owner learns that a stage has drained when it is time to check it and move the end instant, and an end instant left set after the last stage cannot halt the pipeline unnoticed.
+
+Rejected: draining each stage in one-off runs that take the end instant as an argument, with no end instant in the scheduled run, since a large stage would need many runs launched by hand within D6's time budget; draining the first load as any backlog, since a problem that only shows at volume would be found in the middle of it; stages from the most recent captures backwards, since the current file it gives earlier has no visitors until T041 ([d007 › D2](d007-pipeline-design.md#d2-visualization-after-all-slices)), the first backlog drains in under a day, and it reverses d007 › D7's order.
+
+#### D9. A failed batch halts the pipeline until T060.5
+
+Until T060.5 builds the set-aside with redrive and the quarantine table ([d007 › D7](d007-pipeline-design.md#d7-catch-up-in-bounded-batches)), a batch that fails a runtime rule of severity error, holds a row that fails its column's schema, or holds a bronze object that cannot be read fails the run and stays pending, following fail-fast: nothing of the batch is committed, the next run retries it, and the heartbeat sends the failure signal on every run until a new code version fixes it (D7). The pipeline then never commits a row a rule rejected, and while it halts the published file only grows older, with no visitors until T041 ([d007 › D2](d007-pipeline-design.md#d2-visualization-after-all-slices)). A rule of severity warn (DQR11, DQR12) does not halt it.
+
+Rejected: building the set-aside and the quarantine in T060.1, since it brings T060.5's scope forward into the skeleton.
 
 ### 1.3 Requirements
 
