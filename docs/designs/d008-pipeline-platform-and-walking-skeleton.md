@@ -165,7 +165,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R17** The heartbeat monitor shall expect a signal every 15 min, with 15 min of grace. (D7)
 - **R18** While an end instant is set, the pipeline shall process only the bronze objects captured up to it, oldest first. (D8)
 - **R19** While an end instant is set, when a run finds no pending object captured up to it, the pipeline shall log an event of severity warn. (D8)
-- **R20** If a batch fails a runtime rule of severity error on its rows (DQR1, DQR2, DQR13), then the pipeline shall commit nothing of the batch, leave it pending and fail the run. (D9)
+- **R20** If a batch fails a runtime rule of severity error on its rows (DQR1, DQR13), then the pipeline shall commit nothing of the batch, leave it pending and fail the run. (D9, #13)
 - **R21** If a batch holds a row that fails its column's schema, then the pipeline shall commit nothing of the batch, leave it pending and fail the run. (D9)
 - **R22** If a batch holds a bronze object that cannot be read, then the pipeline shall commit nothing of the batch, leave it pending and fail the run. (D9)
 - **R23** The pipeline shall receive its secrets only as Modal Secrets. (TH5)
@@ -175,6 +175,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R27** While a run is a one-off run of code that is not deployed, the pipeline shall not deploy the page. (TH3)
 - **R28** The pipeline shall let DuckDB reach only the pipeline's buckets. (TH9)
 - **R29** The pipeline shall load no DuckDB extension at run time. (TH9)
+- **R30** If a write to the station stock reports a row updated or deleted, then the pipeline shall log DQR2's failure and fail the run. (D3, #13)
 
 ### 1.4 Done when
 
@@ -326,8 +327,9 @@ Options considered for memory:
 #### Transformation in dbt
 
 - **Project:** the dbt project is `pipeline/dbt/`, with its `dbt_project.yml` and a `profiles.yml` whose database is the run's scratch database: a DuckDB file on the container's local disk, created at the start of the run and removed at its end ([ADR-0047](../decisions/0047-dbt-builds-and-audits-the-pipeline-sql.md)).
-- **Bronze as an external source:** bronze is the source `bronze.station_status`, declared with `dbt-duckdb`'s `external_location` as a `read_json` over the batch's local files with the read schema of #11. The shell passes the list of files and the schema as dbt variables, together with the run's ID and code version. Models read bronze only through `source()`, so that dbt's lineage starts at bronze and unit tests replace the source with hand-written rows. The step that writes the source confirms that `external_location` renders dbt variables; if it does not, `stg_station_status` calls `read_json` with the variables, and unit tests start at the next model. **#12**
+- **Bronze as an external source:** bronze is the source `bronze.station_status`, declared with `dbt-duckdb`'s `external_location` as a `read_json` over the batch's local files with the read schema of #11. The shell passes the list of files and the schema as dbt variables, together with the run's ID and code version. Models read bronze only through `source()`, so that dbt's lineage starts at bronze and unit tests replace the source with hand-written rows. The step that writes the source confirms that `external_location` renders dbt variables; if it does not, `stg_station_status` calls `read_json` with the variables and declares the source with dbt's `depends_on` comment, so that lineage still starts at bronze, and unit tests start at the next model. **#12**
 - **Models:** `stg_station_status` types and renames the source's fields and applies D1's rules on measures and flags, with TR9's null; `station_stock` adds the local calendar keys and the lineage columns, at D1's grain.
+- **Runtime rules:** DQR1 is a `unique` data test of `station_stock` on its natural key, and DQR13 a data test that compares the stations the source lists with the rows of `station_stock`; together with the insert-only MERGE (#4), they hold the grain across batches. DQR2 is the one rule of D3 that is not a dbt data test, since it concerns the Delta table's history, which dbt does not see: it holds by construction, as the MERGE has only an insert clause, and after each MERGE the shell checks that the metrics it returns report no row updated or deleted, logs DQR2's result and fails the run otherwise. The retention of T072 drops partitions in its own job, never in a run. **#13**
 
 Options considered for how a batch enters dbt:
 
@@ -357,6 +359,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 10 | [Bronze reading](#bronze-reading) | DuckDB's `memory_limit` is 60% of the container's hard limit, revised only when `peak_memory_mb` or a memory error calls for it, following engine memory set below the container's limit with headroom | A batch too large fails with an error the log records, not a container kill | — | Plan |
 | 11 | [Bronze reading](#bronze-reading) | Bronze is read with a declared schema, a constant of the core checked against the fixtures, following schema on read with an explicit schema rather than an inferred one | It avoids duckdb#27806, and a change in the source fails a batch instead of changing the schema unnoticed | R21 | Plan |
 | 12 | [Transformation in dbt](#transformation-in-dbt) | A batch enters dbt as an external source over its local files, following `dbt-duckdb`'s external sources and ADR-0047 | dbt's lineage starts at bronze, unit tests replace the source with rows, and the shell keeps only I/O | — | Plan |
+| 13 | [Transformation in dbt](#transformation-in-dbt) | DQR2 holds by the insert-only MERGE and is checked after each MERGE on the metrics it returns, following a guarantee by construction checked at runtime | The run checks it as D3 requires, and a code change that updates or deletes rows fails at its first run | R20, R30 | Plan |
 
 ### 2.3 Architecture
 
