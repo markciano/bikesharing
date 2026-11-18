@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 2, concern 12 (cost recalibration, as a Done when check), settled; then Plan › 4, File layout, which lists the edits to `docs/testing-strategy.md` planned in Tests and CI.
+- Current: Plan › 4, File layout; every concern is decided. It lists the edits to `docs/testing-strategy.md` planned in Tests and CI, and the TODO of [s010 › D5](../spikes/s010-storage-table-format.md#d5-bronze-is-kept-indefinitely-reviewed-only-above-a-cost-threshold) on the Cloudflare alerts, which Cost recalibration resolves.
 
 ## 1. Spec — what and why
 
@@ -187,6 +187,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - The owner has created the pipeline's own Cloudflare token, with the Workers Editor role and an expiry, and the run deploys the page with it (D10, TH8).
 - The first load has drained through D8's three stages, each with its runtime rules, reconciliation, run time and memory checked before the next, and the end instant removed after the last (D8).
 - The pipeline runs on Modal every 15 min in production; its run time and memory are measured on the feeds' real volume, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them ([d007 › Children](d007-pipeline-design.md#16-children)).
+- R2's operations and storage per bucket over 14 days of scheduled runs are compared with the cost model, the model is recalibrated, the classes of conditional PutObject, ListObjectsV2 and DeleteObjects are confirmed, and the owner has set Cloudflare's R2 alerts from the recalibrated figures ([Cost recalibration](#cost-recalibration)).
 
 ### 1.5 Out of scope
 
@@ -456,6 +457,14 @@ The pipeline follows [testing-strategy.md](../testing-strategy.md), whose Python
 - **dbt documentation:** not generated in CI, since nothing publishes it; `check-pipeline.sh` runs `dbt parse`, which fails on the same errors in the project's YAML, and the owner generates the documentation locally when needed.
 - **Check script:** `pipeline/scripts/check-pipeline.sh` runs ruff, mypy, import-linter, `dbt parse`, `dbt run --empty` with dbt's unit tests, and pytest, in that order, so that the fastest checks fail first.
 - **CI job:** `pipeline` in `.github/workflows/ci.yml`, following [ci.md](../../.claude/rules/code/ci.md): `working-directory: pipeline`, `astral-sh/setup-uv` with its cache, `uv sync --locked`, and `bash scripts/check-pipeline.sh`. Its path filter holds `pipeline/**`, `.github/workflows/ci.yml` and the two contract files it reads. `ci-passed` needs the new job.
+
+#### Cost recalibration
+
+- **Window:** the first 14 days of scheduled runs after D8's last stage, so that the first load's backlog does not inflate the figures and two weekly cycles are covered.
+- **Measures:** per bucket, `bikesharing-bronze` and `bikesharing-lakehouse`, the Class A and Class B operations and the storage over the window, from R2's GraphQL Analytics API, with the query of [s010 › Step 5](../spikes/s010-storage-table-format.md#step-5--run-probe-a-and-verify-the-analysis). Operation metrics are sampled, so only totals per class and bucket are compared ([s010 › F14](../spikes/s010-storage-table-format.md#4-findings)).
+- **Operation classes:** the same query, grouped by `actionType`, confirms the class of conditional PutObject, ListObjectsV2 and DeleteObjects, which R2's pricing page does not name; a sampled count is enough to tell the class of an operation type.
+- **Comparison:** the measured totals, scaled to a month, are compared with the prediction of s010's cost model for 24/7 at 15 min; `params.toml` is adjusted where they differ and the model is run again, in `spikes/storage-table-format/`, the code it was built with ([s010 › P4](../spikes/s010-storage-table-format.md#production-inputs)). The prediction, the measure and the new monthly cost go in Close.
+- **Alerts:** the owner sets Cloudflare's alerts on the total monthly R2 bill (€2, the review trigger of [s010 › D5](../spikes/s010-storage-table-format.md#d5-bronze-is-kept-indefinitely-reviewed-only-above-a-cost-threshold)), Class A operations and storage from the recalibrated model's figures.
 
 ### 2.2 Decision summary
 
