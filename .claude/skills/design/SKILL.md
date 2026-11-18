@@ -39,12 +39,14 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 
 ## 2. Plan
 
-1. Propose the list of concerns to decide, in dependency order; the owner adjusts it. What reaches the owner and what is logged follow `.claude/rules/docs/decision-log.md`.
-2. For each concern:
-   - what is being decided and why it matters, in 2–3 lines;
-   - the options, each with its practical consequence;
-   - the recommendation marked, with a one-line reason and the standard or pattern that applies.
-3. Once the owner picks, write **Options considered** (only if alternatives were weighed) and one row in **Decision summary**.
+1. Propose the list of concerns to decide, in dependency order, marking each concern or sub-decision as asked or settled following `.claude/rules/docs/decision-log.md`; the owner adjusts it. A session that stops mid-concern keeps these marks in Current.
+2. Take each concern in that order:
+   - **Settled:** an earlier decision fixes it, or the applicable standard leaves one sound option. Explain in 2–3 lines what it fixes and what settles it, naming the decision or the standard, and write it to its section without asking; the owner approves it on the edit's diff.
+   - **Asked:**
+     - what is being decided and why it matters, in 2–3 lines;
+     - the options, each with its practical consequence;
+     - the recommendation marked, with a one-line reason and the standard or pattern that applies.
+3. Once the owner picks, write one row in **Decision summary** and, where the template's Approach comment allows it, **Options considered**.
    A cross-cutting decision becomes an **ADR**: write it during the Plan from [adr-template.md](adr-template.md); the owner approves it on the edit's diff. Link it in the header.
 4. With every concern decided, write **File layout**, then **Components** and **Test plan** when they apply. A change to the overall structure also updates CLAUDE.md › Project structure; ask the owner.
 5. **Rule documents and document-only deliverables.** Every file in File layout that states rules or decisions (ADRs, `.claude/rules/`, skills, templates, `CLAUDE.md`) is written and approved now, one per message, on the edit's diff. Implementation builds the remaining files and verifies them against these; a mismatch is fixed in the design, not in the build.
