@@ -16,12 +16,11 @@ Kind: a build task builds code or configuration and has every block. A document-
 
 <!-- State: Draft 📝 · Ready for implementation 🎬 · In progress 🔄 · Complete ✅. A document-only task goes from Draft to Complete.
 Phase: the blocks and reviews completed. A document-only task shows only Spec · Plan · Plan review.
-Current step: the step being implemented, or —. A document-only task has no Current step. -->
+Current: where work resumes, with only the context the next session needs: the step being implemented, or the block and section of the design; — when complete. A document-only task names the section. -->
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current step: —
-- Next: Plan › 1, the list of concerns in dependency order, from Carried-over inputs and these items left by the Spec: where a one-off `modal run` from a branch writes, a bucket apart from production (R26, R27); where D8's end instant lives and how it is changed, a Modal Secret or the repository; whether T060.1 already sends the copy of events over OTLP or leaves it to T060.2 ([ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)); how an unreadable bronze object is excluded until T060.5 (D9, R22)
+- Current: Plan › 1, the list of concerns in dependency order, from Carried-over inputs and these items left by the Spec: where a one-off `modal run` from a branch writes, a bucket apart from production (R26, R27); where D8's end instant lives and how it is changed, a Modal Secret or the repository; whether T060.1 already sends the copy of events over OTLP or leaves it to T060.2 ([ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)); how an unreadable bronze object is excluded until T060.5 (D9, R22)
 
 ## 1. Spec — what and why
 
