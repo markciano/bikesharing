@@ -375,6 +375,23 @@ Options considered for a failed deployment:
 - The run ends as failed (chosen), following a heartbeat that reports the whole job's outcome, publishing included: pros, the owner learns of it at once, an expired token included; cons, an outage of Cloudflare alerts on every run while it lasts.
 - The run ends with no failure, the error logged as an event: pros, no alerts from Cloudflare's outages; cons, until T060.2 builds the alert on the file's age, a broken deployment shows only in the logs and the page can stay frozen unnoticed.
 
+#### Environments and configuration
+
+- **One environment:** the pipeline runs only in production, as [ADR-0035](../decisions/0035-cloud-resource-naming.md) sets; there are no development buckets or Modal environments.
+- **One-off runs:** `modal_app.py` holds two functions. The scheduled function is the only one with the lakehouse's read-write token and the pipeline's Cloudflare token attached, and it refuses to start unless the code version that the deploy script sets in the image is present (D5). The one-off function, used for runs from a branch such as D6's reference batch, has only bronze's read-only token attached: it writes its Delta tables to the container's local disk, removed at its end, and never deploys the page. R26 and R27 then hold because the one-off function has no credential to break them. **#20**
+- **End instant:** D8's end instant is a constant of the core, an instant in UTC or none, changed by a PR and a deployment at each stage and removed after the last one; the code version in each row then traces the end instant it was processed under. **#21**
+- **Secrets and settings:** secrets reach the run only as Modal Secrets (R23), one per credential so that each function attaches only its own: bronze's read-only R2 token, the lakehouse's read-write R2 token, the pipeline's Cloudflare token and the heartbeat's URL. Every other setting, such as the account ID, the bucket names of ADR-0035 and the page's Worker name, is a constant of the code, reviewed and traced like the end instant.
+
+Options considered for one-off runs:
+
+- A one-off function with no write credentials (chosen), following least privilege per function: pros, R26 and R27 hold by construction, within ADR-0035's single environment; cons, one more function in `modal_app.py`, and a one-off run does not exercise writes to R2.
+- A development environment, with a Modal environment and buckets of its own: pros, a one-off run writes to R2 as production does; cons, it changes ADR-0035, and adds buckets, tokens and a second set of configuration to create and pay for.
+
+Options considered for the end instant:
+
+- A constant in the repository (chosen), following configuration as code: pros, each change is reviewed and traced by the deployed SHA, as #8's deny list is; cons, a PR and a deployment per stage, about four in all.
+- An environment variable in a Modal Secret, following Twelve-Factor's configuration in the environment: pros, a change applies at the next run with no deployment; cons, it is neither reviewed nor traced, and a secret holds a value that is not secret.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -405,6 +422,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 17 | [Transformation in dbt](#transformation-in-dbt) | The audited table passes to `deltalake` whole as Arrow, following the DuckDB to Arrow to `deltalake` hand-off | The simplest hand-off fits the headroom of #10 with bounded batches; streaming waits for a measured need | — | Plan |
 | 18 | [Publishing](#publishing) | The run deploys the page with `wrangler`, installed in Modal's image at build time, following deployment with the provider's official tool | No deployment code of the project's own, and the same tool as capture; the second runtime costs only a pinned version | R6 | Plan |
 | 19 | [Publishing](#publishing) | A failed deployment keeps the committed batches and fails the run, following a heartbeat that reports the whole job's outcome | Until T060.2's alert on the file's age, the heartbeat is the only signal of a page that stops refreshing | R15, R31 | Plan |
+| 20 | [Environments and configuration](#environments-and-configuration) | One-off runs use a function of their own with only bronze's read-only token, writing to local disk, and the scheduled function requires the deployed code version, following least privilege per function | R26 and R27 hold by construction, within ADR-0035's single environment | R26, R27 | Plan |
+| 21 | [Environments and configuration](#environments-and-configuration) | D8's end instant is a constant in the repository, changed by a PR and a deployment per stage, following configuration as code | Each change is reviewed and traced by the SHA, as #8's deny list; about four changes in all | R18, R19 | Plan |
 
 ### 2.3 Architecture
 
