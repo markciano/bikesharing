@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 2, concern 10 (deploy script). Left after it: 11 tests and CI (also whether dbt docs are generated in CI, and a contract in `contracts/` for capture storing the response body unchanged, gzip-compressed), 12 cost recalibration, as a Done when check. All settled.
+- Current: Plan › 2, concern 11 (tests and CI), which also covers whether dbt docs are generated in CI and a contract in `contracts/` for capture storing the response body unchanged, gzip-compressed. Left after it: 12 cost recalibration, as a Done when check. All settled.
 
 ## 1. Spec — what and why
 
@@ -432,6 +432,15 @@ Options considered for the end instant:
 - **Secrets in events:** events are built only from their declared fields. An error's message passes through a redaction step that replaces the value of each secret the function holds with `***` before it is logged or sent in a ping, following log redaction at the sink, so that an exception that quotes a URL or a token leaks nothing (R24). The heartbeat's URL is never a field of an event.
 - **Copy to the monitoring tool:** T060.1 writes its events only to stdout and R2; the copy over OTLP of [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md) is sent from T060.2, which also maps the common fields to OTLP attributes and builds the alerts that read them. **#22**
   - TODO(T060.2): send each run's events over OTLP after the log upload, as ADR-0049 sets, with the monitoring tool's token as a Modal Secret of the scheduled function only.
+
+#### Deploy script
+
+- **Script:** `pipeline/scripts/deploy.sh` deploys the Modal app `bikesharing-pipeline` ([ADR-0035](../decisions/0035-cloud-resource-naming.md)) and is the only way to deploy it, as [d007 › D6](d007-pipeline-design.md#d6-deployments-tagged-with-their-commit) sets. The owner runs it from the local machine until T066 runs it from CI on merge to `main`; it takes no arguments, so both run it the same way.
+- **Checks before deploying:** the script fetches `origin/main` and refuses to deploy, with a message naming the cause, if `git status --porcelain` lists any change, untracked files included, or `HEAD` is not `origin/main` (R10). It does not run the checks again: the commit is on `main`, so its PR's checks passed (GitHub Flow).
+- **Code version:** the script reads the full SHA with `git rev-parse HEAD` and passes it to `modal_app.py` in an environment variable, which the image stores as an environment variable of the container; the scheduled function reads it as the code version and refuses to start without it (#20). Every row and event of the deployment then carries that SHA (R9).
+- **Tag:** the script runs `modal deploy --tag <SHA> modal_app.py` through the `platform` dependency group. The step that writes the script confirms on a temporary app, `bikesharing-t0601-tag-probe`, where Modal's tag shows (`modal app history --json`), its length limit, and whether Modal records the Git commit itself; the tag is kept either way, since it names the commit whatever the deployment's origin. The same step confirms `wrangler deploy --tag` on a temporary Worker with static assets, `bikesharing-t0601-tag-probe`, for the page's deployment (#18). If a tag cannot hold 40 characters, the deployment is not tagged with a short SHA: the finding goes back to this design, since D5 rejects a short SHA. Both temporary resources are deleted when the task closes.
+- **Post-deploy smoke test:** once deployed, the script invokes the deployed scheduled function once and waits for it, following a smoke test of the deployed release in production. It passes when the run ends without failing, which a normal run reaches in well under its 10-minute timeout, and fails the script otherwise, printing the run's ID so that its events can be read. The run is a normal production run: it is idempotent (#4), waits for a scheduled run in progress (`max_containers=1`) and sends its heartbeat signal like any other.
+- **Going back:** a faulty deployment is undone by a PR that reverts its commit, merged and deployed like any other, following GitHub Flow's roll forward; the script never deploys an older commit, so a row's SHA always names what `main` held when it ran.
 
 ### 2.2 Decision summary
 
