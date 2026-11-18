@@ -296,7 +296,8 @@ Options considered for the partitioning:
 #### Bronze reading
 
 - **Discovery of pending objects:** the shell lists each system's `station_status` prefix through R2's S3 API, and the pending objects are the listed keys with no row in `processed_objects`. A run lists from 1 h before the most recent processed object, with `start-after`, which covers the delay between a capture's instant and the write of its object; the first run after local midnight lists the whole prefix, so that an object written later than that is processed too ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)); with no processed object, as on the first load, a run lists the whole prefix. Whether a run sweeps the whole prefix, and from which key it lists otherwise, is decided by the core. **#7**
-- **Explicit keys:** DuckDB reads each batch from the explicit list of its keys, never from a glob, so that it lists nothing itself.
+- **Batch reading:** the shell downloads each batch's objects, by their explicit keys, to a temporary folder on the container's local disk, and DuckDB reads that batch's files with `read_json` from their explicit list, never from a glob. The folder is removed when the batch ends, whatever its outcome. DuckDB runs with `enable_external_access = false`, `allowed_directories` set to that folder and `lock_configuration = true`, so it reaches no network and no other file, loads no extension and holds no R2 credential (R28, R29). The step that writes the download confirms that files on the container's local disk do not count against its memory, by writing one larger than the container's memory; if they do, the batch size is set so that the batch's files fit beside DuckDB's limit. **#9**
+- **Memory:** the Modal function sets its memory reservation equal to a hard limit, and the shell sets DuckDB's `memory_limit` to 60% of that limit, a value it receives as configuration from `modal_app.py`; the rest is left to Python, the Arrow hand-off to `deltalake` and dbt. DuckDB spills to a folder on the container's local disk, set with `temp_directory`; the step that writes DuckDB's configuration confirms that spilling and dbt's scratch database work with external access off. A memory error is not retried. Both values change only when `peak_memory_mb` nears the container's limit, or DuckDB raises memory errors while the container has room left. **#10**
 - **Unreadable objects:** until T060.5, an unreadable bronze object fails its batch (D9) and is excluded only by a versioned list in the repository, `pipeline/config/excluded_objects.txt`, one key per line with its reason; the core removes the listed keys from the pending objects. An exclusion is then a reviewed change deployed as a new code version, as D9 sets. The list is provisional: T060.5 replaces it with the set-aside and removes it, and the file carries a `TODO(T060.5):` marker saying so. **#8**
 
 Options considered for the discovery of pending objects:
@@ -309,6 +310,17 @@ Options considered for the exclusion of unreadable objects:
 
 - A versioned exclusion list in the repository (chosen), following a deny list in a fail-fast pipeline: pros, each exclusion is reviewed and traced by the deployed SHA; cons, a PR and a deployment to unblock the pipeline.
 - A manual `excluded` status in `processed_objects`, set by a script: pros, immediate; cons, a manual write to a production table outside review, and one more status for T060.5 to inherit.
+
+Options considered for how bronze reaches DuckDB:
+
+- The shell downloads each batch to a local folder, the only path DuckDB may read (chosen), following least privilege with DuckDB's file sandbox: pros, DuckDB keeps its JSON reader, reaches no network and holds no credential, and tests read local fixtures through the same code path; cons, the batch takes local disk, and the download is code of the shell.
+- The shell reads the objects into memory and hands DuckDB an Arrow table: pros, DuckDB touches no file; cons, the JSON parsing and its schema move to Python, and the batch is held in memory as bytes, Python objects and Arrow at once.
+- DuckDB reads R2 with `httpfs`, installed in the image and loaded explicitly, with a secret scoped to bronze: pros, no download and no local folder; cons, it breaks R29, and DuckDB gets network access and an R2 credential, and tests need a simulated R2.
+
+Options considered for memory:
+
+- Explicit limits on both sides, DuckDB's a fraction of the container's (chosen), following engine memory set below the container's limit with headroom: pros, a batch too large spills or fails with DuckDB's own error, which the log records; cons, one more configuration value.
+- The container's limit only, with DuckDB's default of 80% of the memory it detects: pros, no configuration; cons, DuckDB may detect the host's memory instead of the container's, and the container is then killed with no final event.
 
 ### 2.2 Decision summary
 
@@ -329,6 +341,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 6 | [Delta writes](#delta-writes) | Compaction, VACUUM and retention are left to a scheduled maintenance job of their own, T072, following table maintenance apart from ingestion | Nothing reads past days before T041, and its frequency is set from production files | — | Plan |
 | 7 | [Bronze reading](#bronze-reading) | A run lists bronze from 1 h before its most recent processed object, and the whole prefix once a day, following incremental directory listing with a periodic backfill | The cost of listing stays flat as bronze grows, and no late object is left behind | R18 | Plan |
 | 8 | [Bronze reading](#bronze-reading) | Until T060.5, an unreadable bronze object is excluded only by a versioned list in the repository, following a deny list in a fail-fast pipeline | Each exclusion is reviewed and traced by the deployed SHA, with no manual write to production | R22 | Plan |
+| 9 | [Bronze reading](#bronze-reading) | The shell downloads each batch to a temporary local folder, the only path DuckDB may read, following least privilege with DuckDB's file sandbox (`enable_external_access`, `allowed_directories`) | DuckDB reaches no network, loads no extension and holds no R2 credential | R28, R29 | Plan |
+| 10 | [Bronze reading](#bronze-reading) | DuckDB's `memory_limit` is 60% of the container's hard limit, revised only when `peak_memory_mb` or a memory error calls for it, following engine memory set below the container's limit with headroom | A batch too large fails with an error the log records, not a container kill | — | Plan |
 
 ### 2.3 Architecture
 
