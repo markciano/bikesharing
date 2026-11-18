@@ -19,9 +19,9 @@ Phase: the blocks and reviews completed. A document-only task shows only Spec ·
 Current step: the step being implemented, or —. A document-only task has no Current step. -->
 
 - State: Draft 📝
-- Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current step: —
-- Next: Spec › Failure cases, FC1 closed as D9; left: DQR12 with less than 24 h of previous captures (D4), a deployment from uncommitted changes or a commit outside `main` (D5), the end instant left set after the first load (D8)
+- Next: Plan › 1, the list of concerns in dependency order, from Carried-over inputs and these items left by the Spec: where a one-off `modal run` from a branch writes, a bucket apart from production (R26, R27); where D8's end instant lives and how it is changed, a Modal Secret or the repository; whether T060.1 already sends the copy of events over OTLP or leaves it to T060.2 ([ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)); how an unreadable bronze object is excluded until T060.5 (D9, R22)
 
 ## 1. Spec — what and why
 
