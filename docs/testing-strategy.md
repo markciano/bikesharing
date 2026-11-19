@@ -14,13 +14,21 @@ Each component design applies the five answers below. "Paper" marks a statement 
 
 ### Components
 
-#### Python (`src/bikesharing/`)
+#### Python (`pipeline/`)
 
 1. **When:** unit tests are written before the code (red, green, refactor), one or more for every requirement verified by Test, at the lowest level that can verify it (F20, F22); requirements that no test can verify use Inspection, Analysis or Demonstration (IADT).
-2. **Type:** unit for logic; integration when behaviour crosses a file or format boundary (file fixture → records) (F11, F25); contract, consumer side, when the code reads another component's output (F35); e2e on paper (F25).
+2. **Type:** unit for the functional core's decisions, with no I/O; integration when behaviour crosses a file, format or process boundary (file fixture → records, Delta tables on a local path, dbt run by the shell) (F11, F25); contract, consumer side when the code reads another component's output and producer side when it writes one (F35); e2e on paper (F25).
 3. **Format:** files `test_<module>.py`, functions `test_<behaviour>_<condition>` (F26); Arrange–Act–Assert, one concept per test, no shared state (F23); assertions on outputs, not internals (F21); shared fixtures in `conftest.py`, function-scoped (F27); current time passed as a parameter, fixed UTC in tests (F29); no network, recorded fixtures (ADR-0037) and edge cases by hand (F28); pytest, coverage reported without threshold, source set in `[tool.coverage.run] source` (F24).
-4. **Where:** `tests/unit/` mirroring `src/`, `tests/integration/`, `tests/e2e/`, `tests/fixtures/`; one `conftest.py` in `tests/`, plus one per level when needed (F25, F27).
-5. **Runs:** locally before each commit via `/implement`, under 1 s (F37); every level in the PR run (F39) and again in the `main` run (F40).
+4. **Where:** `pipeline/tests/unit/` mirroring `pipeline/src/`, `pipeline/tests/integration/`, `pipeline/tests/e2e/`, `pipeline/tests/fixtures/`; one `conftest.py` in `pipeline/tests/`, plus one per level when needed (F25, F27).
+5. **Runs:** locally before each commit through `pipeline/scripts/check-pipeline.sh`, which runs ruff, mypy, import-linter, SQLFluff, `dbt parse`, dbt's unit tests and pytest, fastest first; pytest alone under 1 s at s008 (F37). The Claude Code hook `.claude/hooks/python-lint.sh` formats and lints each edited Python file. Every level in the `pipeline` job of the PR run (F39) and again in the `main` run (F40).
+
+#### SQL in dbt (`pipeline/dbt/`)
+
+1. **When:** a model's unit tests are written before the model, as in Python; its contract and data tests are written with it.
+2. **Type:** unit, dbt unit tests on hand-written rows that replace the model's inputs, for each model's logic. Model contracts (enforced) and data tests are runtime checks of every production `dbt build`, not test levels; the shell's integration tests cover them by running dbt on fixtures (Python above). Static check: SQLFluff.
+3. **Format:** unit tests in the YAML beside the models (`given` rows → `expect` rows), one concept each; data tests named after the rule they check (e.g. a DQR ID); project generic tests in `tests/generic/`; SQLFluff configured in `pipeline/pyproject.toml`.
+4. **Where:** each layer's YAML in `pipeline/dbt/models/` (e.g. `silver/silver.yml`), and `pipeline/dbt/tests/generic/`.
+5. **Runs:** in `check-pipeline.sh`: `dbt parse`, then `dbt run --empty` to build the upstream relations with no rows, then the unit tests selected by `test_type:unit` ([s017 › P6](spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)). The Claude Code hook `.claude/hooks/sql-lint.sh` fixes and lints each edited `.sql` file. In the `pipeline` job of the PR run and the `main` run.
 
 #### Cloudflare Worker (JS, `capture/`)
 
