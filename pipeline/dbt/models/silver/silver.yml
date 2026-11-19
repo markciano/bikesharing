@@ -42,6 +42,100 @@ models:
       station out of service (TR6–TR10, TR53).
     columns: *staging_columns
 
+  - name: station_stock
+    description: >-
+      The station stock of both systems, one row per station and capture (TR1), with
+      its measures and flags as each system's staging model holds them, its local
+      calendar keys and the run's ID and code version as lineage.
+    config:
+      materialized: table
+      contract: {enforced: true}
+    data_tests:
+      - unique_combination_of_columns:
+          name: DQR1
+          arguments:
+            combination_of_columns: [system, station_id, captured_at]
+          config:
+            severity: error
+            meta:
+              catalog_entry: docs/data-quality.md#facts
+      - count_matches_listed_items:
+          name: DQR13
+          arguments:
+            sources:
+              - source('ambici', 'station_status')
+              - source('bicing', 'station_status')
+            items: data.stations
+          config:
+            severity: error
+            meta:
+              catalog_entry: docs/data-quality.md#runs-and-published-files
+    columns:
+      - name: system
+        description: The bike sharing system, taken from the object's bronze key.
+        data_type: varchar
+        constraints: [{type: not_null}]
+      - name: station_id
+        description: The station's ID in its system.
+        data_type: varchar
+        constraints: [{type: not_null}]
+      - name: captured_at
+        description: The capture instant, in UTC, taken from the object's bronze key.
+        data_type: timestamp with time zone
+        constraints: [{type: not_null}]
+      - name: local_date
+        description: The date of `captured_at` in `Europe/Madrid` (ADR-0041).
+        data_type: date
+        constraints: [{type: not_null}]
+      - name: local_minute
+        description: >-
+          The minute of the day, 0 to 1439, of `captured_at` in `Europe/Madrid`
+          (ADR-0041).
+        data_type: smallint
+        constraints: [{type: not_null}]
+      - name: num_vehicles_available
+        description: >-
+          Vehicles available to rent, as published (TR10); null at an out-of-service
+          Bicing station (TR9).
+        data_type: integer
+      - name: num_docks_available
+        description: Docks available to return a vehicle, as published.
+        data_type: integer
+      - name: num_vehicles_disabled
+        description: Vehicles that cannot be rented, as published; null for AMBici (TR8).
+        data_type: integer
+      - name: num_docks_disabled
+        description: Docks that cannot be used, as published; null for AMBici (TR8).
+        data_type: integer
+      - name: is_installed
+        description: Whether the station is installed, as published (TR6).
+        data_type: boolean
+        constraints: [{type: not_null}]
+      - name: is_renting
+        description: Whether the station rents vehicles, as published (TR6).
+        data_type: boolean
+        constraints: [{type: not_null}]
+      - name: is_returning
+        description: Whether the station accepts returns, as published (TR6).
+        data_type: boolean
+        constraints: [{type: not_null}]
+      - name: last_reported
+        description: The station's last report instant, in UTC, as published (TR7).
+        data_type: timestamp with time zone
+        constraints: [{type: not_null}]
+      - name: last_updated
+        description: The response's publication instant, in UTC (TR53).
+        data_type: timestamp with time zone
+        constraints: [{type: not_null}]
+      - name: run_id
+        description: The ID of the run that wrote the row (ADR-0043).
+        data_type: varchar
+        constraints: [{type: not_null}]
+      - name: code_version
+        description: The code version of the run that wrote the row (ADR-0043).
+        data_type: varchar
+        constraints: [{type: not_null}]
+
 unit_tests:
   # Verifies TR5, TR6, TR7, TR8, TR53
   - name: stg_ambici__station_status_converts_and_renames
@@ -215,3 +309,91 @@ unit_tests:
       rows:
         - {station_id: "245", num_vehicles_available: null, num_docks_available: 0}
         - {station_id: "396", num_vehicles_available: 14, num_docks_available: 12}
+
+  # Verifies d008 R1
+  - name: station_stock_unions_both_systems
+    description: >-
+      Each row of both staging models is a row of the stock, with its measures and
+      flags, keyed by system, station and capture instant: the same station ID and
+      instant in both systems are two rows.
+    model: station_stock
+    given:
+      - input: ref('stg_ambici__station_status')
+        rows:
+          - {system: ambici, station_id: "1", captured_at: "2026-10-19 08:57:45+00",
+             num_vehicles_available: 5, num_docks_available: 10,
+             num_vehicles_disabled: null, num_docks_disabled: null,
+             is_installed: true, is_renting: true, is_returning: true,
+             last_reported: "2026-10-19 08:55:00+00",
+             last_updated: "2026-10-19 08:56:58+00"}
+      - input: ref('stg_bicing__station_status')
+        rows:
+          - {system: bicing, station_id: "1", captured_at: "2026-10-19 08:57:45+00",
+             num_vehicles_available: null, num_docks_available: 0,
+             num_vehicles_disabled: 0, num_docks_disabled: 2,
+             is_installed: false, is_renting: false, is_returning: false,
+             last_reported: "2025-10-16 06:18:25.125+00",
+             last_updated: "2026-10-19 08:57:40+00"}
+    expect:
+      rows:
+        - {system: ambici, station_id: "1", captured_at: "2026-10-19 08:57:45+00",
+           num_vehicles_available: 5, num_docks_available: 10,
+           num_vehicles_disabled: null, num_docks_disabled: null,
+           is_installed: true, is_renting: true, is_returning: true,
+           last_reported: "2026-10-19 08:55:00+00",
+           last_updated: "2026-10-19 08:56:58+00"}
+        - {system: bicing, station_id: "1", captured_at: "2026-10-19 08:57:45+00",
+           num_vehicles_available: null, num_docks_available: 0,
+           num_vehicles_disabled: 0, num_docks_disabled: 2,
+           is_installed: false, is_renting: false, is_returning: false,
+           last_reported: "2025-10-16 06:18:25.125+00",
+           last_updated: "2026-10-19 08:57:40+00"}
+
+  # Verifies d008 R4
+  - name: station_stock_keys_captures_by_local_day_and_minute
+    description: >-
+      A capture's local date and minute are those of `Europe/Madrid`, on both sides
+      of a local midnight in summer time (UTC+2) and in standard time (UTC+1).
+    model: station_stock
+    given:
+      - input: ref('stg_ambici__station_status')
+        rows:
+          - {system: ambici, station_id: "1", captured_at: "2026-07-15 21:59:00+00"}
+          - {system: ambici, station_id: "1", captured_at: "2026-07-15 22:00:00+00"}
+          - {system: ambici, station_id: "1", captured_at: "2026-11-19 22:59:00+00"}
+          - {system: ambici, station_id: "1", captured_at: "2026-11-19 23:00:00+00"}
+      - input: ref('stg_bicing__station_status')
+        rows: []
+    expect:
+      rows:
+        - {captured_at: "2026-07-15 21:59:00+00", local_date: "2026-07-15",
+           local_minute: 1439}
+        - {captured_at: "2026-07-15 22:00:00+00", local_date: "2026-07-16",
+           local_minute: 0}
+        - {captured_at: "2026-11-19 22:59:00+00", local_date: "2026-11-19",
+           local_minute: 1439}
+        - {captured_at: "2026-11-19 23:00:00+00", local_date: "2026-11-20",
+           local_minute: 0}
+
+  # Verifies d008 R5
+  - name: station_stock_carries_run_id_and_code_version
+    description: >-
+      Each row carries the run's ID and code version that dbt receives as variables.
+    model: station_stock
+    overrides:
+      vars:
+        run_id: run-20261119T120000Z
+        code_version: 4553811a0c9e2b7f1d3e5a6b8c0d2e4f6a8b0c1d
+    given:
+      - input: ref('stg_ambici__station_status')
+        rows:
+          - {system: ambici, station_id: "1", captured_at: "2026-10-19 08:57:45+00"}
+      - input: ref('stg_bicing__station_status')
+        rows:
+          - {system: bicing, station_id: "1", captured_at: "2026-10-22 07:42:19+00"}
+    expect:
+      rows:
+        - {system: ambici, run_id: run-20261119T120000Z,
+           code_version: 4553811a0c9e2b7f1d3e5a6b8c0d2e4f6a8b0c1d}
+        - {system: bicing, run_id: run-20261119T120000Z,
+           code_version: 4553811a0c9e2b7f1d3e5a6b8c0d2e4f6a8b0c1d}

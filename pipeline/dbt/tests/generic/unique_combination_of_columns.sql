@@ -1,0 +1,14 @@
+-- Fails on each combination of the given columns that more than one row holds: the
+-- uniqueness of a key of several columns, which dbt's built-in `unique` does not
+-- take, named after the test of dbt Labs' package since the project adds no dbt
+-- package (d008, Transformation in dbt).
+{% test unique_combination_of_columns(model, combination_of_columns) %}
+
+    select
+        {{ combination_of_columns | join(', ') }},
+        count(*) as row_count
+    from {{ model }}
+    group by {{ combination_of_columns | join(', ') }}
+    having count(*) > 1
+
+{% endtest %}

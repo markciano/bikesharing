@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 13.
+- Current: Step 14.
 
 ## 1. Spec — what and why
 
@@ -1922,7 +1922,7 @@ Bronze as dbt sources, and one staging model per system.
 
 ### Step 13 — Station stock
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s13 add the station stock with its contract and grain rules`
 - **R:** R1, R4, R5, R8
