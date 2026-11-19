@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 14.
+- Current: Step 15.
 
 ## 1. Spec — what and why
 
@@ -1956,7 +1956,7 @@ Bronze as dbt sources, and one staging model per system.
 
 ### Step 14 — Volume and schema drift
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s14 add the batch's volume and schema drift audits`
 - **R:** R8

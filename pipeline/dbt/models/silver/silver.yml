@@ -136,6 +136,74 @@ models:
         data_type: varchar
         constraints: [{type: not_null}]
 
+  - name: capture_volume
+    description: >-
+      Each capture of the batch against the median number of stations of its system's
+      captures in the 24 h before it, from the history and the batch's own earlier
+      captures: the audit of DQR12, and the station count the shell records per
+      object.
+    config:
+      contract: {enforced: true}
+    data_tests:
+      - has_no_rows:
+          name: DQR12
+          config:
+            severity: warn
+            where: "status = 'drop'"
+            meta:
+              catalog_entry: docs/data-quality.md#runs-and-published-files
+    columns:
+      - name: system
+        description: The bike sharing system, taken from the object's bronze key.
+        data_type: varchar
+      - name: captured_at
+        description: The capture instant, in UTC, taken from the object's bronze key.
+        data_type: timestamp with time zone
+      - name: station_count
+        description: The number of stations the capture lists; 0 if none.
+        data_type: integer
+      - name: captures_in_window
+        description: The captures of its system in the 24 h before the capture.
+        data_type: integer
+      - name: median_station_count
+        description: >-
+          The median `station_count` of those captures; null if there are none.
+        data_type: double
+      - name: status
+        description: >-
+          `drop` below 90% of the median, `not_evaluated` with fewer than 60 captures
+          in the window, `ok` otherwise.
+        data_type: varchar
+
+  - name: schema_drift
+    description: >-
+      The fields each bronze object of the batch adds to or drops from its system's
+      read schema, one row per field: the audit of DQR11.
+    config:
+      contract: {enforced: true}
+    data_tests:
+      - has_no_rows:
+          name: DQR11
+          config:
+            severity: warn
+            meta:
+              catalog_entry: docs/data-quality.md#runs-and-published-files
+    columns:
+      - name: system
+        description: The bike sharing system, taken from the object's bronze key.
+        data_type: varchar
+      - name: captured_at
+        description: The capture instant, in UTC, taken from the object's bronze key.
+        data_type: timestamp with time zone
+      - name: field
+        description: The station field added or dropped.
+        data_type: varchar
+      - name: change
+        description: >-
+          `added` for a field some station carries that the read schema does not
+          declare, `dropped` for a declared field no station carries.
+        data_type: varchar
+
 unit_tests:
   # Verifies TR5, TR6, TR7, TR8, TR53
   - name: stg_ambici__station_status_converts_and_renames
@@ -397,3 +465,249 @@ unit_tests:
            code_version: 4553811a0c9e2b7f1d3e5a6b8c0d2e4f6a8b0c1d}
         - {system: bicing, run_id: run-20261119T120000Z,
            code_version: 4553811a0c9e2b7f1d3e5a6b8c0d2e4f6a8b0c1d}
+
+  # Verifies DQR12
+  - name: capture_volume_flags_a_drop_below_90_percent_of_the_median
+    description: >-
+      Against a median of 237 stations, whose mean is 191, a capture of 214 is `ok`
+      and one of 213 is a `drop`; the second's window holds the first, a capture of
+      the batch.
+    model: capture_volume
+    given:
+      - input: source('ambici', 'station_status')
+        format: sql
+        rows: |
+          select
+              null::bigint as last_updated,
+              null::integer as ttl,
+              null::varchar as version,
+              {
+                  'stations': (
+                      select list({'station_id': i::varchar})
+                      from range(214) as r (i)
+                  )
+              } as data,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz'
+                  as filename
+          union all
+          select
+              null::bigint as last_updated,
+              null::integer as ttl,
+              null::varchar as version,
+              {
+                  'stations': (
+                      select list({'station_id': i::varchar})
+                      from range(213) as r (i)
+                  )
+              } as data,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085845Z.json.gz'
+                  as filename
+      - input: source('bicing', 'station_status')
+        format: sql
+        rows: &no_bicing_objects |
+          select
+              null::varchar as last_updated,
+              null::integer as ttl,
+              null::varchar as version,
+              null::struct(stations struct(station_id varchar)[]) as data,
+              null::varchar as filename
+          limit 0
+      - input: source('lakehouse', 'capture_history')
+        format: sql
+        rows: |
+          select
+              'key-' || i::varchar as key,
+              'ambici' as system,
+              'station_status' as feed,
+              '2026-10-19 07:57:45+00'::timestamptz + i * interval '1 minute'
+                  as captured_at,
+              (case when i < 20 then 100 else 237 end)::integer as station_count,
+              'processed' as status,
+              'run-0' as run_id,
+              'check' as code_version
+          from range(60) as r (i)
+    expect:
+      rows:
+        - {system: ambici, captured_at: "2026-10-19 08:57:45+00", station_count: 214,
+           captures_in_window: 60, median_station_count: 237.0, status: ok}
+        - {system: ambici, captured_at: "2026-10-19 08:58:45+00", station_count: 213,
+           captures_in_window: 61, median_station_count: 237.0, status: drop}
+
+  # Verifies DQR12
+  - name: capture_volume_does_not_evaluate_with_fewer_than_60_captures_in_24_h
+    description: >-
+      A capture with 59 captures of its system in the 24 h before it, one more being
+      older, is `not_evaluated`; so is a capture whose system has none, with a null
+      median, though the other system has some.
+    model: capture_volume
+    given:
+      - input: source('ambici', 'station_status')
+        format: sql
+        rows: |
+          select
+              null::bigint as last_updated,
+              null::integer as ttl,
+              null::varchar as version,
+              {'stations': [{'station_id': '1'}]} as data,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz'
+                  as filename
+      - input: source('bicing', 'station_status')
+        format: sql
+        rows: |
+          select
+              null::varchar as last_updated,
+              null::integer as ttl,
+              null::varchar as version,
+              {'stations': [{'station_id': '1'}]} as data,
+              '/work/bronze/raw/bicing/station_status/2026-10-22/20261022T074219Z.json.gz'
+                  as filename
+      - input: source('lakehouse', 'capture_history')
+        format: sql
+        rows: |
+          select
+              'key-' || i::varchar as key,
+              'ambici' as system,
+              'station_status' as feed,
+              '2026-10-19 07:58:45+00'::timestamptz + i * interval '1 minute'
+                  as captured_at,
+              237 as station_count,
+              'processed' as status,
+              'run-0' as run_id,
+              'check' as code_version
+          from range(59) as r (i)
+          union all
+          select
+              'key-old' as key,
+              'ambici' as system,
+              'station_status' as feed,
+              '2026-10-18 08:56:45+00'::timestamptz as captured_at,
+              237 as station_count,
+              'processed' as status,
+              'run-0' as run_id,
+              'check' as code_version
+    expect:
+      rows:
+        - {system: ambici, captured_at: "2026-10-19 08:57:45+00",
+           captures_in_window: 59, median_station_count: 237.0, status: not_evaluated}
+        - {system: bicing, captured_at: "2026-10-22 07:42:19+00",
+           captures_in_window: 0, median_station_count: null, status: not_evaluated}
+
+  # Verifies DQR12
+  - name: capture_volume_counts_a_capture_listing_no_station_as_0
+    description: >-
+      A capture whose list of stations is empty, or missing, counts 0 stations.
+    model: capture_volume
+    given:
+      - input: source('ambici', 'station_status')
+        format: sql
+        rows: |
+          select
+              null::bigint as last_updated,
+              null::integer as ttl,
+              null::varchar as version,
+              {
+                  'stations': []::struct(station_id varchar)[]
+              } as data,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz'
+                  as filename
+          union all
+          select
+              null::bigint as last_updated,
+              null::integer as ttl,
+              null::varchar as version,
+              null::struct(stations struct(station_id varchar)[]) as data,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085845Z.json.gz'
+                  as filename
+      - input: source('bicing', 'station_status')
+        format: sql
+        rows: *no_bicing_objects
+      - input: source('lakehouse', 'capture_history')
+        format: sql
+        rows: |
+          select
+              null::varchar as key,
+              null::varchar as system,
+              null::varchar as feed,
+              null::timestamptz as captured_at,
+              null::integer as station_count,
+              null::varchar as status,
+              null::varchar as run_id,
+              null::varchar as code_version
+          limit 0
+    expect:
+      rows:
+        - {captured_at: "2026-10-19 08:57:45+00", station_count: 0}
+        - {captured_at: "2026-10-19 08:58:45+00", station_count: 0}
+
+  # Verifies DQR11
+  - name: schema_drift_names_fields_added_and_dropped_per_object
+    description: >-
+      A field one station carries that the read schema does not declare is `added`
+      in its object; a declared field no station of an object carries is `dropped`
+      in that object.
+    model: schema_drift
+    overrides:
+      vars:
+        station_fields:
+          ambici: [is_renting, num_docks_available, station_id]
+          bicing: [station_id]
+    given:
+      - input: source('ambici', 'station_status_raw')
+        format: sql
+        rows: |
+          select
+              '{"data": {"stations": [
+                  {"station_id": "1", "is_renting": true,
+                   "num_docks_available": 3, "new_field": 1},
+                  {"station_id": "2", "is_renting": true, "num_docks_available": 4}
+              ]}}'::json as json,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz'
+                  as filename
+          union all
+          select
+              '{"data": {"stations": [
+                  {"station_id": "1", "is_renting": true}
+              ]}}'::json as json,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085845Z.json.gz'
+                  as filename
+      - input: source('bicing', 'station_status_raw')
+        format: sql
+        rows: &no_bicing_raw_objects |
+          select
+              null::json as json,
+              null::varchar as filename
+          limit 0
+    expect:
+      rows:
+        - {system: ambici, captured_at: "2026-10-19 08:57:45+00", field: new_field,
+           change: added}
+        - {system: ambici, captured_at: "2026-10-19 08:58:45+00",
+           field: num_docks_available, change: dropped}
+
+  # Verifies DQR11
+  - name: schema_drift_raises_none_for_a_field_some_stations_omit
+    description: >-
+      A declared field that only some stations of an object carry, as GBFS's optional
+      fields, is neither added nor dropped.
+    model: schema_drift
+    overrides:
+      vars:
+        station_fields:
+          ambici: [is_renting, num_docks_available, station_id]
+          bicing: [station_id]
+    given:
+      - input: source('ambici', 'station_status_raw')
+        format: sql
+        rows: |
+          select
+              '{"data": {"stations": [
+                  {"station_id": "1", "is_renting": true, "num_docks_available": 3},
+                  {"station_id": "2", "is_renting": true}
+              ]}}'::json as json,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz'
+                  as filename
+      - input: source('bicing', 'station_status_raw')
+        format: sql
+        rows: *no_bicing_raw_objects
+    expect:
+      rows: []
