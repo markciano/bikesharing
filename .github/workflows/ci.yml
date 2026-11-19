@@ -18,6 +18,7 @@ jobs:
       pull-requests: read
     outputs:
       capture: ${{ steps.filter.outputs.capture }}
+      pipeline: ${{ steps.filter.outputs.pipeline }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -27,6 +28,12 @@ jobs:
             capture:
               - 'capture/**'
               - 'contracts/**'
+              - '.github/workflows/ci.yml'
+            pipeline:
+              - 'pipeline/**'
+              - 'contracts/bronze-keys.json'
+              - 'contracts/latest-station-count.schema.json'
+              - 'contracts/latest-station-count.json'
               - '.github/workflows/ci.yml'
 
   docs:
@@ -59,10 +66,27 @@ jobs:
       - run: npm ci
       - run: npx vitest run
 
+  pipeline:
+    needs: changes
+    if: needs.changes.outputs.pipeline == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v7
+      # uv installs the Python of pipeline/.python-version.
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: bash scripts/check-pipeline.sh
+
   # The only required check. `if: always()` keeps it from being skipped when a
   # job fails; a job skipped by its path filter passes.
   ci-passed:
-    needs: [changes, docs, capture]
+    needs: [changes, docs, capture, pipeline]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
