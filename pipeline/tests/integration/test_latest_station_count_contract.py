@@ -19,7 +19,7 @@ def test_schema_is_a_valid_draft_2020_12_schema() -> None:
     Draft202012Validator.check_schema(SCHEMA)
 
 
-# Verifies d008 R7
+# Verifies DQR14
 @pytest.mark.parametrize(
     "case", VECTORS["valid"], ids=[case["name"] for case in VECTORS["valid"]]
 )
@@ -27,7 +27,7 @@ def test_valid_file_passes_the_schema(case: dict[str, Any]) -> None:
     assert list(VALIDATOR.iter_errors(case["file"])) == []
 
 
-# Verifies d008 R7
+# Verifies DQR14
 @pytest.mark.parametrize(
     "case", VECTORS["invalid"], ids=[case["reason"] for case in VECTORS["invalid"]]
 )

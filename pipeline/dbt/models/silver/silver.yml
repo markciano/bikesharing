@@ -43,7 +43,7 @@ models:
     columns: *staging_columns
 
 unit_tests:
-  # Verifies d008 R2
+  # Verifies TR5, TR6, TR7, TR8, TR53
   - name: stg_ambici__station_status_converts_and_renames
     description: >-
       Each station of an object is a row with its system and capture instant from the
@@ -95,6 +95,7 @@ unit_tests:
            is_installed: true, is_renting: true, is_returning: false,
            last_reported: "2026-10-19 08:50:00+00", last_updated: "2026-10-19 08:56:58+00"}
 
+  # Verifies TR10
   - name: stg_ambici__station_status_keeps_counts_out_of_service
     description: >-
       An AMBici station with `is_renting` and `is_returning` false keeps its counts as
@@ -127,7 +128,7 @@ unit_tests:
       rows:
         - {station_id: "7", num_vehicles_available: 4, num_docks_available: 6}
 
-  # Verifies d008 R2
+  # Verifies TR6, TR7, TR8, TR53
   - name: stg_bicing__station_status_converts
     description: >-
       Each station of an object is a row with its system and capture instant from the
@@ -168,7 +169,7 @@ unit_tests:
            last_reported: "2026-10-22 07:41:04.255+00",
            last_updated: "2026-10-22 07:42:19+00"}
 
-  # Verifies d008 R3
+  # Verifies TR9, TR10
   - name: stg_bicing__station_status_nulls_vehicles_out_of_service
     description: >-
       A Bicing station with `is_renting` and `is_returning` false has null vehicles
