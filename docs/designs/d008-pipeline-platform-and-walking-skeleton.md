@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 12.
+- Current: Step 13.
 
 ## 1. Spec — what and why
 
@@ -1882,7 +1882,7 @@ The events of a run as values, their redaction and the log object's key.
 
 ### Step 12 — Sources and staging models
 
-- **Status:** 🔄 in progress
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s12 add bronze as dbt sources and a staging model per system`
 - **R:** R2, R3, R25

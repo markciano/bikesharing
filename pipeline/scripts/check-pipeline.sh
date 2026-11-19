@@ -24,6 +24,10 @@ dbt_dirs=(--project-dir dbt --profiles-dir dbt)
 echo "== uv sync"
 uv sync --locked
 
+# dbt's variables, as the shell passes them, over the bronze fixtures copied to the
+# throwaway work folder and empty Parquet inputs.
+dbt_dirs+=(--vars "$(uv run python scripts/dbt_check_vars.py "$work")")
+
 echo "== ruff format"
 uv run ruff format --check .
 echo "== ruff check"

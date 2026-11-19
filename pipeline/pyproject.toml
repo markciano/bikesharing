@@ -79,3 +79,27 @@ templater = "dbt"
 [tool.sqlfluff.templater.dbt]
 project_dir = "dbt"
 profiles_dir = "dbt"
+
+# dbt's variables, which the dbt templater takes only from here. They are
+# placeholders: compiling a model needs them to render its sources, and their values
+# do not change the model's SQL. The run's values come from the shell, and the
+# checks' from scripts/dbt_check_vars.py (d008, Tests and CI).
+[tool.sqlfluff.templater.dbt.context]
+run_id = "lint"
+code_version = "lint"
+capture_history_file = "capture_history.parquet"
+latest_captures_file = "latest_captures.parquet"
+
+[tool.sqlfluff.templater.dbt.context.bronze_files]
+ambici = ["ambici.json.gz"]
+bicing = ["bicing.json.gz"]
+
+[tool.sqlfluff.templater.dbt.context.read_columns.ambici]
+data = "VARCHAR"
+
+[tool.sqlfluff.templater.dbt.context.read_columns.bicing]
+data = "VARCHAR"
+
+[tool.sqlfluff.templater.dbt.context.station_fields]
+ambici = ["station_id"]
+bicing = ["station_id"]
