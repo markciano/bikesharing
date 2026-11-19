@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 23.
+- Current: Step 24.
 
 ## 1. Spec — what and why
 
@@ -2245,7 +2245,7 @@ Events to stdout and to the run's log object, and the pings to Healthchecks.io.
 
 ### Step 23 — Publishing
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s23 publish the file by deploying the page with wrangler`
 - **R:** R31
