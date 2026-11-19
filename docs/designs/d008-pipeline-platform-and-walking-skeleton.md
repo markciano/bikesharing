@@ -10,7 +10,7 @@ Kind: a build task builds code or configuration and has every block. A document-
 - **Task:** T060.1
 - **Kind:** build
 - **ADRs:** `<ADRs this design must respect, or "none">`
-- **New ADRs from this doc:** `<ADRs created during this design, or "none">`
+- **New ADRs from this doc:** [ADR-0050](../decisions/0050-contract-tests-by-contract-kind-with-native-schemas.md)
 
 ## Status
 
@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 4, Test plan (2.6).
+- Current: Plan › 5, rule documents: `docs/testing-strategy.md` (Python section moved to `pipeline/`, new SQL in dbt section, the `pipeline` CI job; its Contract section already follows ADR-0050), then `CLAUDE.md` › Project structure. The owner asks, before each document, which convention it follows.
 
 ## 1. Spec — what and why
 
@@ -530,7 +530,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 26 | [Publishing](#publishing) | The page's component, `web/`, is created now with only the Worker's `wrangler.jsonc` and the pins of Node and `wrangler`, which Modal's image copies, following one folder per component in a monorepo; **refines #18** | The Worker deploys the page with its data, so its configuration and tool belong to the page, and T041 only adds | R6 | Plan |
 | 27 | [Transformation in dbt](#transformation-in-dbt) | The SQL files follow dbt Labs' style guide, stated in `.claude/rules/code/sql.md` and checked by SQLFluff with its default rules, following the style guide and the linter it recommends | A tool checks the SQL's style, as s016 › D2 does for Python | — | Plan |
 | 28 | [Components](#25-components), [Publishing](#publishing) | The dbt model contracts of the models the shell reads, the schemas of the Delta tables and the published file's JSON Schema are exact in this design, following spec-driven development, dbt's model contracts and consumer-driven contracts | They are the interfaces between dbt, the shell, the persisted tables and the page, fixed before any production data exists or any consumer is built | R7, R21 | Plan |
-| 29 | [Publishing](#publishing), [Tests and CI](#tests-and-ci) | The published file's contract carries shared vectors in `contracts/` beside its JSON Schema, a valid file and one invalid file per kind of violation, following `testing.md`'s shared test vectors | The pipeline and the page test against the same cases, and an invalid case that passes shows a gap in the schema | R7 | Plan |
+| 29 | [Publishing](#publishing), [Tests and CI](#tests-and-ci) | The published file's contract carries shared vectors in `contracts/` beside its JSON Schema, a valid file and one invalid file per kind of violation, following ADR-0050, which supersedes ADR-0015's ODCS schema | The pipeline and the page test against the same cases, and an invalid case that passes shows a gap in the schema | R7 | Plan |
 
 ### 2.3 Architecture
 
@@ -560,6 +560,9 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   ├── latest-station-count.schema.json     (new)       JSON Schema (draft 2020-12) of the published file, D2's fields, `additionalProperties: false` (DQR14)
 │   └── latest-station-count.json            (new)       Shared vectors of the schema: one `valid` file and one `invalid` file per kind of violation, each with its `reason` (#29)
 ├── docs/
+│   ├── decisions/
+│   │   ├── 0050-contract-tests-by-contract-kind-with-native-schemas.md (new) Data-shape contracts as the boundary's native schema with shared vectors; supersedes ADR-0015
+│   │   └── archive/0015-contract-tests-by-contract-kind.md (moved) Superseded by ADR-0050; links to it updated
 │   └── testing-strategy.md                  (modified)  Python section moves to `pipeline/` with `check-pipeline.sh`; new section for SQL in dbt; the pipeline's CI job
 ├── pipeline/
 │   ├── .python-version                      (new)       Exact patch of Python 3.14 (#3)

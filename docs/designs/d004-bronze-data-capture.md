@@ -405,7 +405,7 @@ The schedule uses `scheduledTime` and the keys use the actual start; the two dif
 
 #### Tests and contracts
 
-Shared contract vectors live in a top-level `contracts/` folder, owned by neither component; every CI job that reads them runs on any change to `contracts/**` ([ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md)).
+Shared contract vectors live in a top-level `contracts/` folder, owned by neither component; every CI job that reads them runs on any change to `contracts/**` ([ADR-0015](../decisions/archive/0015-contract-tests-by-contract-kind.md)).
 
 What local tests cannot verify, and what covers it (**DL9**, **DL21**):
 

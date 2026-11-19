@@ -13,7 +13,7 @@ Tests run against recorded source responses, never live APIs ([testing strategy]
 - More than one component needs fixtures: capture, in JavaScript, and the pipeline, in Python.
 - Each component owns its runtimes, dependencies and tests in its own folder ([ADR-0016](0016-runtime-versions-pinned-per-component.md), [ADR-0017](0017-dependencies-locked-per-component.md)); `tests/` at the root is the pipeline's.
 - Components need the same responses in different forms: capture serves them as a source sends them, the pipeline reads them as bronze stores them.
-- What two components must agree on is fixed by shared contract vectors, not by shared test data ([ADR-0015](0015-contract-tests-by-contract-kind.md)).
+- What two components must agree on is fixed by shared contract vectors, not by shared test data ([ADR-0015](archive/0015-contract-tests-by-contract-kind.md)).
 
 ## Considered Options
 
@@ -59,7 +59,7 @@ Why not the others:
 - A shared folder: it couples the tests of two components through data that is not a contract.
 - Keep `tests/fixtures/`: it makes one component depend on another's test folder.
 
-**Scope:** Which source data may be committed for tests, and where. It does not cover contract vectors, which are not source data ([ADR-0015](0015-contract-tests-by-contract-kind.md)), nor how each component's tests use the fixtures.
+**Scope:** Which source data may be committed for tests, and where. It does not cover contract vectors, which are not source data ([ADR-0015](archive/0015-contract-tests-by-contract-kind.md)), nor how each component's tests use the fixtures.
 
 ### The rule
 

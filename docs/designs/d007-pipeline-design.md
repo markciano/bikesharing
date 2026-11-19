@@ -46,7 +46,7 @@ Rejected: a split by layer (silver, then gold), since silver would be built with
 
 #### D2. Visualization after all slices
 
-Each slice ends at a published file, not at a page. The public page (T041) is built once every business process publishes, so it is designed as a whole. Without a page, a slice is validated by data tests on its silver and gold tables, by reconciling its row counts from bronze to silver to gold, and by one acceptance query on gold per question it closes, checked on real data. Each published file has a fixed contract, a JSON Schema checked by a contract test ([ADR-0015](../decisions/0015-contract-tests-by-contract-kind.md)) in CI and by a runtime rule before every publish (D4), which is what T041 builds on.
+Each slice ends at a published file, not at a page. The public page (T041) is built once every business process publishes, so it is designed as a whole. Without a page, a slice is validated by data tests on its silver and gold tables, by reconciling its row counts from bronze to silver to gold, and by one acceptance query on gold per question it closes, checked on real data. Each published file has a fixed contract, a JSON Schema checked by a contract test ([ADR-0050](../decisions/0050-contract-tests-by-contract-kind-with-native-schemas.md)) in CI and by a runtime rule before every publish (D4), which is what T041 builds on.
 
 What would change it: if T041 needs a file shaped differently, the contract and its test change in T041.
 

@@ -1,9 +1,12 @@
 ---
-status: accepted
+status: superseded
 date: 2026-10-21
+superseded-by: 0050-contract-tests-by-contract-kind-with-native-schemas
 ---
 
 # Contract tests by contract kind: test vectors or ODCS schema
+
+Superseded on 2026-11-19 by T060.1: the first data-shape contract, a JSON document, uses its native schema with shared vectors instead of ODCS ([ADR-0050](../0050-contract-tests-by-contract-kind-with-native-schemas.md)).
 
 ## Context and Problem Statement
 
