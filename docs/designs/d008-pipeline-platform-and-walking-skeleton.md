@@ -1840,7 +1840,7 @@ The published document from `latest_station_count`'s rows, and its validation ag
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** `d008.s11 - feat: add the pipeline's functional core and the published file's contract` (Steps 5–11)
+- **Commit:** `feat: d008.s11 add the run's events, their redaction and the log object's key`
 - **R:** R24
 - **Model:** sonnet · high
 - **Review:** code and security
@@ -1871,7 +1871,7 @@ The events of a run as values, their redaction and the log object's key.
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 15)
+- **Commit:** `feat: d008.s12 add bronze as dbt sources and a staging model per system`
 - **R:** R2, R3, R25
 - **Model:** opus · high
 - **Review:** no
@@ -1911,7 +1911,7 @@ Bronze as dbt sources, and one staging model per system.
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 15)
+- **Commit:** `feat: d008.s13 add the station stock with its contract and grain rules`
 - **R:** R1, R4, R5, R8
 - **Model:** opus · high
 - **Review:** no
@@ -1945,7 +1945,7 @@ Bronze as dbt sources, and one staging model per system.
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 15)
+- **Commit:** `feat: d008.s14 add the batch's volume and schema drift audits`
 - **R:** R8
 - **Model:** opus · high
 - **Review:** no
@@ -1979,7 +1979,7 @@ The batch's audits of DQR12 and DQR11, with their warn tests.
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** `d008.s15 - feat: add the dbt models of the station stock and the published file` (Steps 12–15)
+- **Commit:** `feat: d008.s15 add the latest station count and the published file as an exposure`
 - **R:** R6
 - **Model:** sonnet · high
 - **Review:** code
@@ -2012,7 +2012,7 @@ The gold model in the shape of the published file, and the file as dbt's exposur
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 21)
+- **Commit:** `feat: d008.s16 add the DuckDB session with its sandbox and memory settings`
 - **R:** R25, R28, R29
 - **Model:** opus · high
 - **Review:** security
@@ -2044,7 +2044,7 @@ DuckDB's connection with its sandbox and memory settings, and the reads of the s
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 21)
+- **Commit:** `feat: d008.s17 add the R2 adapter for listing, batch download and log upload`
 - **R:** —
 - **Model:** sonnet · high
 - **Review:** no
@@ -2077,7 +2077,7 @@ Whether files on the container's local disk count against its memory needs a Mod
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** — (committed with Step 21)
+- **Commit:** `docs: d008.s18 record the listing probe against R2`
 - **R:** —
 - **Model:** —
 - **Review:** no
@@ -2104,7 +2104,7 @@ The confirmation that `obstore`'s `list` with `offset` returns the keys after it
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 21)
+- **Commit:** `feat: d008.s19 add the Delta tables with the insert-only MERGE and the control table`
 - **R:** R20
 - **Model:** opus · high
 - **Review:** code
@@ -2135,7 +2135,7 @@ Table creation, the insert-only MERGE, `processed_objects`, the retry on conflic
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 21)
+- **Commit:** `feat: d008.s20 run dbt build in process and return its node statuses`
 - **R:** R8
 - **Model:** sonnet · high
 - **Review:** no
@@ -2165,7 +2165,7 @@ Table creation, the insert-only MERGE, `processed_objects`, the retry on conflic
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** `d008.s21 - feat: add the pipeline shell's adapters` (Steps 16–21)
+- **Commit:** `feat: d008.s21 add the event log and the heartbeat pings`
 - **R:** R14, R15
 - **Model:** sonnet · high
 - **Review:** code
@@ -2198,7 +2198,7 @@ Events to stdout and to the run's log object, and the pings to Healthchecks.io.
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 26)
+- **Commit:** `build: d008.s22 add the page's component with the Worker's deployment configuration`
 - **R:** —
 - **Model:** sonnet · medium
 - **Review:** no
@@ -2232,7 +2232,7 @@ Events to stdout and to the run's log object, and the pings to Healthchecks.io.
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 26)
+- **Commit:** `feat: d008.s23 publish the file by deploying the page with wrangler`
 - **R:** R31
 - **Model:** sonnet · high
 - **Review:** security
@@ -2262,7 +2262,7 @@ The file's writing to the assets directory and `wrangler deploy` as a subprocess
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 26)
+- **Commit:** `feat: d008.s24 run the pipeline end to end with the exclusion list`
 - **R:** R6, R7, R8, R14, R15, R20, R21, R22, R31
 - **Model:** opus · high
 - **Review:** code
@@ -2297,7 +2297,7 @@ A run end to end over local fixtures and tables, and the exclusion list.
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** — (committed with Step 26)
+- **Commit:** `feat: d008.s25 add the Modal app with its image, functions and secrets`
 - **R:** R11, R16, R23, R26, R27
 - **Model:** sonnet · high
 - **Review:** security
@@ -2329,7 +2329,7 @@ The platform module, with its image, both functions and their secrets, and ADR-0
 
 - **Status:** 💤 todo
 - **Who:** Claude
-- **Commit:** `d008.s26 - feat: add the pipeline's run, platform module and deploy script` (Steps 22–26)
+- **Commit:** `build: d008.s26 add the deploy script with its refusals, tag and smoke test`
 - **R:** R9, R10
 - **Model:** sonnet · high
 - **Review:** code and security
@@ -2360,7 +2360,7 @@ The only deployment path, with its refusals, its tag and its smoke test.
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** `d008.s27 - docs: record the platform probes of d008`
+- **Commit:** `docs: d008.s27 record the platform probes`
 - **R:** R16
 - **Model:** —
 - **Review:** no
@@ -2392,7 +2392,7 @@ The confirmations on Modal and Cloudflare that the Plan leaves to the build, eac
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** `d008.s28 - docs: record the reference batch of d008`; if the bound is lowered, that change goes first in its own commit, `d008.s28 - fix: lower the batch bound to <N> objects`
+- **Commit:** `docs: d008.s28 record the reference batch`; if the bound is lowered, that change goes first in its own commit, `fix: d008.s28 lower the batch bound to <N> objects`
 - **R:** —
 - **Model:** —
 - **Review:** no
@@ -2419,7 +2419,7 @@ D6's reference batch: a one-off run, from the task's branch, of one full batch o
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** one per stage, `d008.s29 - feat: move the end instant to <stage>`, and the closing one, `d008.s29 - docs: record the production checks of d008`
+- **Commit:** one per stage, `feat: d008.s29 move the end instant to <stage>`, and the closing one, `docs: d008.s29 record the production checks`
 - **R:** R9, R17
 - **Model:** —
 - **Review:** no
