@@ -1,0 +1,58 @@
+[
+  {
+    "key": "raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz",
+    "source": "ambici",
+    "feed": "station_status",
+    "captured_at": "2026-10-19T08:57:45Z",
+    "variety": "the capture before station 563557729 is removed"
+  },
+  {
+    "key": "raw/ambici/station_status/2026-10-19/20261019T085845Z.json.gz",
+    "source": "ambici",
+    "feed": "station_status",
+    "captured_at": "2026-10-19T08:58:45Z",
+    "variety": "the capture after station 563557729 is removed"
+  },
+  {
+    "key": "raw/ambici/station_status/2026-10-19/20261019T085945Z.json.gz",
+    "source": "ambici",
+    "feed": "station_status",
+    "captured_at": "2026-10-19T08:59:45Z",
+    "variety": "a station with a field outside the read schema",
+    "derived": "`added_field` added to the first station"
+  },
+  {
+    "key": "raw/bicing/station_status/2026-10-22/20261022T074219Z.json.gz",
+    "source": "bicing",
+    "feed": "station_status",
+    "captured_at": "2026-10-22T07:42:19Z",
+    "variety": "a station out of service (245), and the capture before station 396 is removed",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "key": "raw/bicing/station_status/2026-10-22/20261022T074319Z.json.gz",
+    "source": "bicing",
+    "feed": "station_status",
+    "captured_at": "2026-10-22T07:43:19Z",
+    "variety": "the capture after station 396 is removed",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "key": "raw/bicing/station_status/2026-10-22/20261022T074419Z.json.gz",
+    "source": "bicing",
+    "feed": "station_status",
+    "captured_at": "2026-10-22T07:44:19Z",
+    "variety": "a station without GBFS's optional fields",
+    "derived": "num_vehicles_disabled, num_docks_disabled removed from the first station",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  },
+  {
+    "key": "raw/bicing/station_status/2026-10-22/20261022T074519Z.json.gz",
+    "source": "bicing",
+    "feed": "station_status",
+    "captured_at": "2026-10-22T07:45:19Z",
+    "variety": "a station with a field outside the read schema",
+    "derived": "`added_field` added to the first station",
+    "attribution": "Bicing GBFS feed (system_id bike_barcelona), Barcelona. The feed has no licence fields (CC0 by the GBFS 3.0 default); attributed as good practice."
+  }
+]
