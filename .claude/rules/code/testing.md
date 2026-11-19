@@ -13,7 +13,9 @@ Reasons and per-component detail: [testing strategy](../../../docs/testing-strat
 
 - Follow the test pyramid.
 - Every requirement has a verification method in its design's Test plan (IADT: Inspection, Analysis, Demonstration, Test); those verified by Test have at least one test, at the lowest level that can verify it.
-  - A test that verifies a Test plan row says so in a comment above it, `Verifies <design ID> <R>` (e.g. `Verifies d004 R7`, after `//` or `#`): a traceability tag, cited by requirement since that is what the Test plan lists.
+  - A test that verifies a Test plan row says so in a comment above it (after `//` or `#`), a traceability tag:
+    - `Verifies <rule ID>` when the test checks a rule of a catalog, such as a transformation rule of `docs/data-model.md` or a data quality rule of `docs/data-quality.md` (e.g. `Verifies TR9`, `Verifies DQR14`), since the catalog outlives the design;
+    - `Verifies <design ID> <R>` otherwise (e.g. `Verifies d004 R7`), cited by requirement since that is what the Test plan lists.
 - Tests verify observable behaviour, not implementation details.
 - Tests are written first (TDD: red, green, refactor).
 - Arrange–Act–Assert; one concept per test; no shared state or order dependency between tests.

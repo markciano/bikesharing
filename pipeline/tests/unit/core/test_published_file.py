@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
+
 from bikesharing.core.published_file import (
     build_published_file,
     validate_published_file,
@@ -125,14 +126,14 @@ def test_build_published_file_raises_on_an_instant_without_time_zone() -> None:
         build_published_file([_row(captured_at=datetime(2026, 10, 18, 12, 0))])
 
 
-# Verifies d008 R7
+# Verifies DQR14
 def test_build_published_file_from_gold_rows_passes_the_schema() -> None:
     rows = [_row("ambici", "1"), _row("bicing", "1", num_docks_available=None)]
 
     assert validate_published_file(build_published_file(rows), SCHEMA) == []
 
 
-# Verifies d008 R7
+# Verifies DQR14
 @pytest.mark.parametrize(
     ("document", "path"),
     [
