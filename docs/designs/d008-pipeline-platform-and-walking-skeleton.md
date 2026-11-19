@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 16.
+- Current: Step 17.
 
 ## 1. Spec — what and why
 
@@ -2023,7 +2023,7 @@ The gold model in the shape of the published file, and the file as dbt's exposur
 
 ### Step 16 — DuckDB session
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s16 add the DuckDB session with its sandbox and memory settings`
 - **R:** R25, R28, R29
@@ -2168,8 +2168,9 @@ Table creation, the insert-only MERGE, `processed_objects`, the retry on conflic
 #### Do
 
 1. Confirm what a bronze source does with an empty list of files, as in a batch with no object of one system; if the build fails, stop and report it as a deviation.
-2. Write `pipeline/tests/integration/test_dbt_runner.py`.
-3. Implement `pipeline/src/bikesharing/shell/dbt_runner.py`.
+2. Confirm that `duckdb_session.connect` opens the scratch database once `dbt_build` returns, in the same process: Step 16 found that DuckDB reuses an instance of the same file still open in the process, whose locked configuration refuses `apply_sandbox` ("the configuration has been locked"); if it fails, stop and report it as a deviation.
+3. Write `pipeline/tests/integration/test_dbt_runner.py`.
+4. Implement `pipeline/src/bikesharing/shell/dbt_runner.py`.
 
 #### Check
 
@@ -2384,7 +2385,7 @@ The only deployment path, with its refusals, its tag and its smoke test.
 The confirmations on Modal and Cloudflare that the Plan leaves to the build, each on a temporary resource; Claude writes the probes to the scratchpad and records each result in its section of this design.
 
 - **Memory kill:** a temporary app with a function that exceeds its hard limit, deployed, invoked once and stopped: whether Modal retries it ([Run operation on Modal](#run-operation-on-modal) › Timeout and retries).
-- **Local disk:** a temporary app, run once with `modal run`, with a function of `one_off_run`'s `cpu` and `memory` that writes a file larger than the container's memory to its local disk: whether local disk counts against memory ([Bronze reading](#bronze-reading) › Batch reading).
+- **Local disk:** a temporary app, run once with `modal run`, with a function of `one_off_run`'s `cpu` and `memory` that writes a file larger than the container's memory to its local disk: whether local disk counts against memory ([Bronze reading](#bronze-reading) › Batch reading). The same function records the `threads` DuckDB detects in the container, since Step 16 found that the memory a sort needs grows with DuckDB's threads: with 14 threads, 128 MiB fell short where 256 MiB spilled ([Bronze reading](#bronze-reading) › Memory).
 - **Modal's tag:** `modal deploy --tag` on `bikesharing-t0601-tag-probe` with a 40-character tag: where it shows in `modal app history --json`, its length limit, and whether Modal records the Git commit ([Deploy script](#deploy-script) › Tag).
 - **wrangler's tag:** `wrangler deploy --tag` with a 40-character tag on a temporary Worker of static assets, `bikesharing-t0601-tag-probe` (#18).
 
