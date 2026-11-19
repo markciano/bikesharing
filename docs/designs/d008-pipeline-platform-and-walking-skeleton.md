@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 15.
+- Current: Step 16.
 
 ## 1. Spec — what and why
 
@@ -1990,7 +1990,7 @@ The batch's audits of DQR12 and DQR11, with their warn tests.
 
 ### Step 15 — Latest station count and exposure
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s15 add the latest station count and the published file as an exposure`
 - **R:** R6
