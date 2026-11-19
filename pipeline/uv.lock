@@ -248,6 +248,7 @@ name = "bikesharing"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "arro3-core" },
     { name = "dbt-core" },
     { name = "dbt-duckdb" },
     { name = "deltalake" },
@@ -273,6 +274,7 @@ platform = [
 
 [package.metadata]
 requires-dist = [
+    { name = "arro3-core", specifier = ">=0.9.1" },
     { name = "dbt-core", specifier = "==1.12.7" },
     { name = "dbt-duckdb", specifier = "==1.11.1" },
     { name = "deltalake", specifier = ">=1.6.6" },
