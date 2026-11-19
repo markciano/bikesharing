@@ -144,6 +144,18 @@ def test_a_refused_connection_reports_only_the_exception_type() -> None:
     assert CHECK_ID not in repr(result)
 
 
+# Verifies d008 R24
+@pytest.mark.parametrize("url", [f"hc-ping.com/{CHECK_ID}", ""])
+def test_a_malformed_url_is_one_failed_attempt_that_does_not_quote_it(url: str) -> None:
+    slept: list[float] = []
+
+    result = ping(url, "success", delays_s=(1.0, 2.0), sleep=slept.append)
+
+    assert result == PingFailure(signal="success", attempts=1, error_type="ValueError")
+    assert CHECK_ID not in repr(result)
+    assert slept == []
+
+
 def test_an_attempt_that_exceeds_the_timeout_counts_as_failed(stub: _Stub) -> None:
     stub.response_delay_s = 0.3
 

@@ -1339,7 +1339,7 @@ def deploy_page(web_dir: Path, *, tag: str, account_id: str, api_token: str) -> 
 
 - **Responsibility:** pings Healthchecks.io with its retries ([Observability](#observability)).
 - **Location:** `pipeline/src/bikesharing/shell/heartbeat.py`
-- **Contract:** sends a POST with `urllib.request` from the standard library to `<url>/start`, `<url>` or `<url>/fail` by signal, with `body`, a timeout of `timeout_s` per attempt, and one more attempt after each delay in `delays_s`. It returns `None` once a ping gets a 2xx response, and a `PingFailure` after the last attempt fails, with the exception's type name only, never its message, which may quote the URL (R24).
+- **Contract:** sends a POST with `urllib.request` from the standard library to `<url>/start`, `<url>` or `<url>/fail` by signal, with `body`, a timeout of `timeout_s` per attempt, and one more attempt after each delay in `delays_s`. It returns `None` once a ping gets a 2xx response, and a `PingFailure` after the last attempt fails, or after a single attempt if the URL has no scheme, which no retry fixes, with the exception's type name only, never its message, which may quote the URL (R24).
 
 ```python
 import time
