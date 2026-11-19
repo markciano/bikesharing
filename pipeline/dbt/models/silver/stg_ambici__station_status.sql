@@ -12,14 +12,7 @@ stations as (
 
     select
         source.last_updated,
-        -- The local path ends with the object's bronze key, which holds its
-        -- system and capture instant (ADR-0012, Collectors decoupled by output
-        -- contract).
-        regexp_extract(
-            source.filename,
-            'raw/([a-z]+)/[a-z_]+/[0-9-]+/(\d{8}T\d{6}Z)\.json\.gz$',
-            ['system', 'run_id']
-        ) as bronze_key,
+        {{ bronze_key('source.filename') }} as bronze_key,
         unnest(source.data.stations) as station
     from source
 
@@ -41,9 +34,7 @@ final as (
         -- unknown, not zero (d005 D15, Disabled vehicles and docks).
         null::integer as num_vehicles_disabled,
         null::integer as num_docks_disabled,
-        timezone(
-            'UTC', strptime(stations.bronze_key.run_id, '%Y%m%dT%H%M%SZ')
-        ) as captured_at,
+        stations.bronze_key.captured_at,
         to_timestamp(stations.station.last_reported) as last_reported,
         to_timestamp(stations.last_updated) as last_updated
     from stations
