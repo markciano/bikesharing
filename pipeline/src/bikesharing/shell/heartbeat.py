@@ -75,13 +75,19 @@ def ping(
     -------
     PingFailure | None
         None once an attempt gets a 2xx response; a ``PingFailure`` after the
-        last attempt fails.
+        last attempt fails, or after a single attempt if ``url`` is malformed
+        (no scheme), which no retry fixes.
     """
-    request = urllib.request.Request(
-        url.rstrip("/") + _PATH_SUFFIX[signal],
-        data=body.encode("utf-8"),
-        method="POST",
-    )
+    try:
+        request = urllib.request.Request(
+            url.rstrip("/") + _PATH_SUFFIX[signal],
+            data=body.encode("utf-8"),
+            method="POST",
+        )
+    except ValueError as error:
+        # A URL with no scheme is a setting error that no retry fixes, and the
+        # error's message quotes the whole URL, so only its type is reported.
+        return PingFailure(signal=signal, attempts=1, error_type=type(error).__name__)
     error_type = ""
     attempts = 0
     for delay in (None, *delays_s):
