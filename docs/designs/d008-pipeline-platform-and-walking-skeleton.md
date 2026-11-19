@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 20.
+- Current: Step 21.
 
 ## 1. Spec — what and why
 
@@ -1212,7 +1212,7 @@ models:
 
 - **Responsibility:** runs `dbt build` in process with the batch's variables and returns its node statuses as values (#12, #16).
 - **Location:** `pipeline/src/bikesharing/shell/dbt_runner.py`
-- **Contract:** runs `dbtRunner` with `build --select <select> --exclude-resource-type unit_test`, without fail-fast, and calls `on_node` for each node as it finishes. `profiles.yml` reads the scratch database, the allowed directory, the spill folder and the memory limit with `env_var()` from `BIKESHARING_SCRATCH_DATABASE`, `BIKESHARING_ALLOWED_DIRECTORY`, `BIKESHARING_TEMP_DIRECTORY` and `BIKESHARING_MEMORY_LIMIT`, set by `dbt_build` from `paths`, and passes them to `duckdb_session`'s `Plugin`, which applies `connect`'s settings (DI6). `scratch_database` and `temp_directory` lie inside `allowed_directory`, the run's work folder, which every batch of the run shares (#9). The variables are, for `silver`, `bronze_files`, `read_columns` and `station_fields`, each a mapping keyed by system, and `capture_history_file`, `run_id` and `code_version`; for `gold`, `latest_captures_file`. A dbt invocation that fails outside its nodes, such as a parse error, raises `DbtInvocationError`.
+- **Contract:** runs `dbtRunner` with `build --select <select> --exclude-resource-type unit_test`, without fail-fast, and calls `on_node` for each node as it finishes. `profiles.yml` reads the scratch database, the allowed directory, the spill folder and the memory limit with `env_var()` from `BIKESHARING_SCRATCH_DATABASE`, `BIKESHARING_ALLOWED_DIRECTORY`, `BIKESHARING_TEMP_DIRECTORY` and `BIKESHARING_MEMORY_LIMIT`, set by `dbt_build` from `paths`, and passes them to `duckdb_session`'s `Plugin`, which applies `connect`'s settings (DI6). `scratch_database` and `temp_directory` lie inside `allowed_directory`, the run's work folder, which every batch of the run shares (#9). dbt parses the whole project, so every call passes all the variables, whichever layer it selects: `bronze_files`, `read_columns` and `station_fields`, each a mapping keyed by system (DuckDB reads no empty list of files, so a system with no object in the batch lists one empty file of the work folder, which reads as no rows), and `capture_history_file`, `latest_captures_file`, `run_id` and `code_version`; the paths of the two Parquet files are fixed in the work folder at the run's start, and the file of a layer not yet built is not read. When `dbt_build` ends, whatever its outcome, it releases dbt-duckdb's connection, which would keep the scratch database open with its configuration locked, so that the shell reopens it with `connect`. A dbt invocation that fails outside its nodes, such as a parse error, raises `DbtInvocationError`.
 
 ```python
 from collections.abc import Callable, Mapping
@@ -2146,7 +2146,7 @@ Table creation, the insert-only MERGE, `processed_objects`, the retry on conflic
 
 ### Step 20 — dbt runner
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s20 run dbt build in process and return its node statuses`
 - **R:** R8
