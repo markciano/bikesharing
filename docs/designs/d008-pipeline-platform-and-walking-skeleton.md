@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 5. P11's sample is at `~/Documents/projects/bikesharing-tmp/raw`, UTC folders 2026-11-16 and 2026-11-17, which hold the local day 2026-11-17.
+- Current: Step 11.
 
 ## 1. Spec — what and why
 
@@ -613,13 +613,14 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   │   ├── check-pipeline.sh                (new)       ruff, mypy, import-linter, SQLFluff, `dbt parse`, `dbt run --empty` with unit tests, pytest
 │   │   ├── dbt_check_vars.py                (new)       dbt's variables for the checks, over the fixtures and empty Parquet inputs ([Tests and CI](#tests-and-ci) › Check script)
 │   │   ├── deploy.sh                        (new)       The only deployment path ([Deploy script](#deploy-script))
-│   │   └── smoke_test.py                    (new)       Invokes the deployed scheduled function once and waits for it ([Deploy script](#deploy-script))
+│   │   ├── smoke_test.py                    (new)       Invokes the deployed scheduled function once and waits for it ([Deploy script](#deploy-script))
+│   │   └── trim_fixtures.py                 (new)       Writes the bronze fixtures from a local sample: trimmed captures and derived edge cases (ADR-0037)
 │   └── tests/
 │       ├── conftest.py                      (new)       Shared fixtures: local bronze folder, local Delta path
 │       ├── unit/core/                       (new)       One test module per core module, mirroring `src/`; consumer of `contracts/bronze-keys.json`
 │       ├── integration/                     (new)       Read schema, two-batch run, re-run, stop between commits, unreadable object, DuckDB's sandbox, published file and its contract, failed page deployment, heartbeat pings, the deploy script's refusals (R10); rule 5 without Modal's SDK
 │       └── fixtures/
-│           └── bronze/                      (new)       Gzip `station_status` objects of both systems, chosen for variety (ADR-0037)
+│           └── bronze/                      (new)       Gzip `station_status` objects of both systems, chosen for variety, and `manifest.json` with each one's provenance (ADR-0037)
 └── web/                                     (new)       The page's component; T041 adds the page, its tests and its CI job (#26)
     ├── .nvmrc                               (new)       Node version installed in Modal's image for `wrangler`
     ├── package.json                         (new)       `wrangler`, pinned exactly
@@ -1637,7 +1638,7 @@ The pipeline's checks in one script, run by its CI job, and rule 5 of ADR-0046 a
 
 ### Step 5 — Bronze fixtures and read schema
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** — (committed with Step 11)
 - **R:** —
@@ -1648,7 +1649,9 @@ The pipeline's checks in one script, run by its CI job, and rule 5 of ADR-0046 a
 
 The bronze fixtures of both systems and the read schema of `station_status` per system.
 
-- `pipeline/tests/fixtures/bronze/` (new): `station_status` objects of both systems from P11's sample, kept at their bronze keys, gzip-compressed and trimmed to a few stations each: a Bicing station out of service, a station without GBFS's optional fields, two consecutive captures with a station added or removed, and an object with a field outside the read schema. If no sampled object carries such a field, that fixture is a copy of a captured object with one field added, and its test says so.
+- `pipeline/tests/fixtures/bronze/` (new): `station_status` objects of both systems from the 13 days of the capture spike's sample (`spikes/cloudflare-capture-spike/data/V4/raw`, 2026-10-14 to 2026-10-26), kept at their bronze keys, gzip-compressed and trimmed to a few stations each: a Bicing station out of service, a station without GBFS's optional fields, two consecutive captures with a station added or removed, and an object with a field outside the read schema. A variety no sampled object carries is a copy of a captured object with the field added or removed, marked as derived in the manifest.
+- `pipeline/tests/fixtures/bronze/manifest.json` (new): each fixture's key, capture date, source key if derived, and Bicing's attribution (ADR-0037).
+- `pipeline/scripts/trim_fixtures.py` (new): writes the fixtures and the manifest from the sample folder given as its argument.
 - `pipeline/src/bikesharing/core/read_schema.py` (new): [`bikesharing.core.read_schema`](#bikesharingcoreread_schema).
 - `pipeline/tests/unit/core/test_read_schema.py` (new): each system's schema declares its source card's fields with their types.
 
@@ -1675,7 +1678,7 @@ The read of the fixtures with each schema is an integration test of Step 16, sin
 
 ### Step 6 — Settings and discovery
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** — (committed with Step 11)
 - **R:** —
@@ -1712,7 +1715,7 @@ The run's constants and the core's decisions on what a run lists and which objec
 
 ### Step 7 — Batching
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** — (committed with Step 11)
 - **R:** R12, R13, R18, R19
@@ -1742,7 +1745,7 @@ The batches of a run, the time budget and the end of a stage.
 
 ### Step 8 — Verdict
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** — (committed with Step 11)
 - **R:** R8, R30
@@ -1772,7 +1775,7 @@ The verdict over dbt's node statuses and DQR2's check on a MERGE's metrics.
 
 ### Step 9 — Contract of the published file
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** — (committed with Step 11)
 - **R:** R7
@@ -1805,7 +1808,7 @@ The published file's schema and its shared vectors, tested before the file is bu
 
 ### Step 10 — Published file in the core
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** — (committed with Step 11)
 - **R:** R7
@@ -2472,3 +2475,4 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 | DI2 | [Runtime and dependencies](#runtime-and-dependencies), [Step 1](#step-1--python-project), [Step 4](#step-4--check-script-and-ci-job) | The `dev` group adds `pytest-cov`, `pyproject.toml` sets `[tool.coverage.run] source = ["bikesharing"]`, and `check-pipeline.sh` runs pytest with `--cov` | `python.md` › Testing: line coverage is reported, never enforced | Step 1 |
 | DI3 | [3.1 Prerequisites](#31-prerequisites) › P1, [Step 1](#step-1--python-project), [Step 4](#step-4--check-script-and-ci-job) | Local uv is 0.13.5, Homebrew's stable release, instead of 0.13.9, and Python is 3.14.9, the latest patch uv 0.13.5 downloads, instead of 3.14.10 | The machine's package manager keeps local tools; patches of 0.13 share the lockfile format, and CI's `setup-uv` pins no version | Step 1 |
 | DI4 | `pipeline/dbt/dbt_project.yml`, `.gitignore` | dbt's anonymous usage telemetry is off (`send_anonymous_usage_stats: false`), and dbt's `.user.yml` is ignored by Git | Minimal data egress: the pipeline sends nothing to a third party its design does not name | Step 4 |
+| DI5 | [2.4 File layout](#24-file-layout), [Step 5](#step-5--bronze-fixtures-and-read-schema) | The fixtures come from the capture spike's 13 days, are written by `pipeline/scripts/trim_fixtures.py` and listed with their provenance in `manifest.json`; a variety absent from the sample is a derived copy of a captured object | ADR-0037's rule (committed trimming script, provenance per fixture), as capture does; P11's one day lacks AMBici's station changes | Step 5 |
