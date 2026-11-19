@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 21.
+- Current: Step 22.
 
 ## 1. Spec — what and why
 
@@ -2178,7 +2178,7 @@ Table creation, the insert-only MERGE, `processed_objects`, the retry on conflic
 
 ### Step 21 — Event log and heartbeat
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s21 add the event log and the heartbeat pings`
 - **R:** R14, R15
