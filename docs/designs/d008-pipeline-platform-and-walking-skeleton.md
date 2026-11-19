@@ -1036,15 +1036,16 @@ def upload_log(store: ObjectStore, key: str, body: str) -> None: ...
 
 - **Responsibility:** opens DuckDB with its sandbox and memory settings, and reads the scratch database after `dbt build` (#9, #10, #17).
 - **Location:** `pipeline/src/bikesharing/shell/duckdb_session.py`
-- **Contract:** `connect` sets `memory_limit`, `temp_directory`, `allowed_directories`, `autoinstall_known_extensions = false`, `autoload_known_extensions = false`, `enable_external_access = false` and, last, `lock_configuration = true` (R28, R29). The readers query the scratch database's relations by name, with parameters, never with feed values in SQL text (R25); `station_stock` returns the relation, exported as an Arrow stream with no copy in DuckDB. `station_counts` reads `capture_volume`, which counts a capture that lists no station as 0, for `processed_objects`' `station_count` (#14).
+- **Contract:** `apply_sandbox` sets, on an open connection, `memory_limit`, `temp_directory`, `allowed_directories`, `autoinstall_known_extensions = false`, `autoload_known_extensions = false`, `enable_external_access = false` and, last, `lock_configuration = true` (R28, R29). `connect` opens the scratch database and calls it; `Plugin`, the dbt-duckdb plugin `profiles.yml` declares, calls it once on dbt's connection, with the values the profile passes as its `config`. **DI6** The readers query the scratch database's relations by name, with parameters, never with feed values in SQL text (R25); `station_stock` returns the relation, exported as an Arrow stream with no copy in DuckDB. `station_counts` reads `capture_volume`, which counts a capture that lists no station as 0, for `processed_objects`' `station_count` (#14).
 
 ```python
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
+from dbt.adapters.duckdb.plugins import BasePlugin
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
 
 from bikesharing.core.settings import System
@@ -1063,6 +1064,18 @@ class DriftField:
     system: System
     field: str
     change: Literal["added", "dropped"]
+
+def apply_sandbox(
+    con: DuckDBPyConnection,
+    *,
+    memory_limit: str,
+    temp_directory: str,
+    allowed_directories: Sequence[str],
+) -> None: ...
+
+class Plugin(BasePlugin):
+    def initialize(self, plugin_config: dict[str, Any]) -> None: ...
+    def configure_connection(self, conn: DuckDBPyConnection) -> None: ...
 
 def connect(
     database: Path,
@@ -1199,7 +1212,7 @@ models:
 
 - **Responsibility:** runs `dbt build` in process with the batch's variables and returns its node statuses as values (#12, #16).
 - **Location:** `pipeline/src/bikesharing/shell/dbt_runner.py`
-- **Contract:** runs `dbtRunner` with `build --select <select> --exclude-resource-type unit_test`, without fail-fast, and calls `on_node` for each node as it finishes. `profiles.yml` reads the scratch database, the allowed directory, the spill folder and the memory limit with `env_var()` from `BIKESHARING_SCRATCH_DATABASE`, `BIKESHARING_ALLOWED_DIRECTORY`, `BIKESHARING_TEMP_DIRECTORY` and `BIKESHARING_MEMORY_LIMIT`, set by `dbt_build` from `paths`, and applies `connect`'s settings. `scratch_database` and `temp_directory` lie inside `allowed_directory`, the run's work folder, which every batch of the run shares (#9). The variables are, for `silver`, `bronze_files`, `read_columns` and `station_fields`, each a mapping keyed by system, and `capture_history_file`, `run_id` and `code_version`; for `gold`, `latest_captures_file`. A dbt invocation that fails outside its nodes, such as a parse error, raises `DbtInvocationError`.
+- **Contract:** runs `dbtRunner` with `build --select <select> --exclude-resource-type unit_test`, without fail-fast, and calls `on_node` for each node as it finishes. `profiles.yml` reads the scratch database, the allowed directory, the spill folder and the memory limit with `env_var()` from `BIKESHARING_SCRATCH_DATABASE`, `BIKESHARING_ALLOWED_DIRECTORY`, `BIKESHARING_TEMP_DIRECTORY` and `BIKESHARING_MEMORY_LIMIT`, set by `dbt_build` from `paths`, and passes them to `duckdb_session`'s `Plugin`, which applies `connect`'s settings (DI6). `scratch_database` and `temp_directory` lie inside `allowed_directory`, the run's work folder, which every batch of the run shares (#9). The variables are, for `silver`, `bronze_files`, `read_columns` and `station_fields`, each a mapping keyed by system, and `capture_history_file`, `run_id` and `code_version`; for `gold`, `latest_captures_file`. A dbt invocation that fails outside its nodes, such as a parse error, raises `DbtInvocationError`.
 
 ```python
 from collections.abc import Callable, Mapping
@@ -1869,7 +1882,7 @@ The events of a run as values, their redaction and the log object's key.
 
 ### Step 12 — Sources and staging models
 
-- **Status:** 💤 todo
+- **Status:** 🔄 in progress
 - **Who:** Claude
 - **Commit:** `feat: d008.s12 add bronze as dbt sources and a staging model per system`
 - **R:** R2, R3, R25
@@ -2476,3 +2489,4 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 | DI3 | [3.1 Prerequisites](#31-prerequisites) › P1, [Step 1](#step-1--python-project), [Step 4](#step-4--check-script-and-ci-job) | Local uv is 0.13.5, Homebrew's stable release, instead of 0.13.9, and Python is 3.14.9, the latest patch uv 0.13.5 downloads, instead of 3.14.10 | The machine's package manager keeps local tools; patches of 0.13 share the lockfile format, and CI's `setup-uv` pins no version | Step 1 |
 | DI4 | `pipeline/dbt/dbt_project.yml`, `.gitignore` | dbt's anonymous usage telemetry is off (`send_anonymous_usage_stats: false`), and dbt's `.user.yml` is ignored by Git | Minimal data egress: the pipeline sends nothing to a third party its design does not name | Step 4 |
 | DI5 | [2.4 File layout](#24-file-layout), [Step 5](#step-5--bronze-fixtures-and-read-schema) | The fixtures come from the capture spike's 13 days, are written by `pipeline/scripts/trim_fixtures.py` and listed with their provenance in `manifest.json`; a variety absent from the sample is a derived copy of a captured object | ADR-0037's rule (committed trimming script, provenance per fixture), as capture does; P11's one day lacks AMBici's station changes | Step 5 |
+| DI6 | [`bikesharing.shell.duckdb_session`](#bikesharingshellduckdb_session), [`bikesharing.shell.dbt_runner`](#bikesharingshelldbt_runner), `pipeline/dbt/profiles.yml` | dbt's connection takes DuckDB's sandbox and memory settings from a dbt-duckdb plugin, `Plugin` in `duckdb_session`, applied once per database with the function `connect` also uses, following the adapter's plugin hook for connection setup | dbt-duckdb applies a profile's `settings` again on every cursor, which a sandboxed or locked DuckDB refuses, and `config_options` cannot set `allowed_directories`; D10's settings and their order stay as designed | Step 12 |
