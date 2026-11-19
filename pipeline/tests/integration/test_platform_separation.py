@@ -17,7 +17,13 @@ def test_modal_import_fails_in_default_environment() -> None:
 
 
 @pytest.mark.parametrize(
-    "module", ["bikesharing", "bikesharing.core", "bikesharing.shell"]
+    "module",
+    [
+        "bikesharing",
+        "bikesharing.core",
+        "bikesharing.core.settings",
+        "bikesharing.shell",
+    ],
 )
 def test_package_imports_without_modal(module: str) -> None:
     imported = importlib.import_module(module)
