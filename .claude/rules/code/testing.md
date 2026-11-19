@@ -1,14 +1,13 @@
 ---
 paths:
-  - "src/**"
-  - "tests/**"
+  - "pipeline/**"
   - "capture/**"
   - "contracts/**"
 ---
 
 # Testing rules (all languages)
 
-Reasons and per-component detail: [testing strategy](../../../docs/testing-strategy.md); read only the section of the component you touch. Tool-specific rules are in `python.md` and `cloudflare-worker.md`.
+Reasons and per-component detail: [testing strategy](../../../docs/testing-strategy.md); read only the section of the component you touch. Tool-specific rules are in `python.md`, `sql.md` and `cloudflare-worker.md`.
 
 ## Principles
 

@@ -544,13 +544,13 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 ├── CLAUDE.md                                (modified)  Project structure: `pipeline/` replaces `src/bikesharing/` and `tests/`; adds `web/`; `scripts/` keeps only the shared helpers
 ├── .gitignore                               (modified)  Ignores dbt's `target/` and `logs/` under `pipeline/dbt/`, and `web/public/`
 ├── .claude/
-│   ├── settings.json                        (modified)  Registers the Python and SQL lint hooks
+│   ├── settings.json                        (modified)  Registers the Python and SQL lint hooks; allows `uv run --directory pipeline pytest` and its variants with arguments, the test command of `python.md`
 │   ├── hooks/
 │   │   ├── python-lint.sh                   (new)       `ruff format` and `ruff check --fix` on the edited file through `uv run --project pipeline`; reports what remains on stderr with exit 2 (s016 › P3)
 │   │   └── sql-lint.sh                      (new)       `sqlfluff fix` and `sqlfluff lint` on the edited `.sql` file under `pipeline/dbt/`; reports what remains on stderr with exit 2 (#27)
 │   └── rules/code/
-│       ├── general.md                       (modified)  `paths`: `pipeline/**` instead of `src/**` and `tests/**`
-│       ├── testing.md                       (modified)  `paths`: `pipeline/**` instead of `src/**` and `tests/**`
+│       ├── general.md                       (modified)  `paths`: `pipeline/**` instead of `src/**` and `tests/**`; names `sql.md` among the language rules
+│       ├── testing.md                       (modified)  `paths`: `pipeline/**` instead of `src/**` and `tests/**`; names `sql.md` among the language rules
 │       ├── python.md                        (modified)  `paths` under `pipeline/`; test levels under `pipeline/tests/`; `modal_app.py` as the only importer of `modal`
 │       └── sql.md                           (new)       SQL conventions on `pipeline/dbt/**` (#27)
 ├── .github/workflows/
