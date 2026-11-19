@@ -2034,9 +2034,9 @@ The gold model in the shape of the published file, and the file as dbt's exposur
 
 DuckDB's connection with its sandbox and memory settings, and the reads of the scratch database.
 
-- `pipeline/src/bikesharing/shell/duckdb_session.py` (new): [`bikesharing.shell.duckdb_session`](#bikesharingshellduckdb_session).
+- `pipeline/src/bikesharing/shell/duckdb_session.py` (modified): [`bikesharing.shell.duckdb_session`](#bikesharingshellduckdb_session); it already holds `apply_sandbox` and `Plugin` (DI6), and `connect` calls `apply_sandbox`.
 - `pipeline/tests/conftest.py` (new): the shared fixtures, a local bronze folder and a local Delta path.
-- `pipeline/tests/integration/test_duckdb_session.py` (new): each system's fixtures read with its schema (#11), a file outside the allowed folder refused (R28), an extension load refused (R29), and a spill to the temporary folder with external access off (#10).
+- `pipeline/tests/integration/test_duckdb_session.py` (modified): it already tests `apply_sandbox`, with a file outside the allowed folder refused (R28) and an extension load refused (R29), and `Plugin`; it adds `connect`, each system's fixtures read with its schema (#11), and a spill to the temporary folder with external access off (#10).
 
 #### Reads
 
@@ -2167,8 +2167,9 @@ Table creation, the insert-only MERGE, `processed_objects`, the retry on conflic
 
 #### Do
 
-1. Write `pipeline/tests/integration/test_dbt_runner.py`.
-2. Implement `pipeline/src/bikesharing/shell/dbt_runner.py`.
+1. Confirm what a bronze source does with an empty list of files, as in a batch with no object of one system; if the build fails, stop and report it as a deviation.
+2. Write `pipeline/tests/integration/test_dbt_runner.py`.
+3. Implement `pipeline/src/bikesharing/shell/dbt_runner.py`.
 
 #### Check
 
