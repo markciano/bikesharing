@@ -607,7 +607,7 @@ def to_json_line(event: Event, context: RunContext, secrets: Collection[str]) ->
         ``component``, ``version``, ``run_id`` and ``event`` first, then the
         event's own fields in their order. Every instant is written in RFC 3339
         with milliseconds, in UTC with ``Z``, and every occurrence of a secret
-        in any string value is replaced with ``***``.
+        in any string, a mapping's keys included, is replaced with ``***``.
 
     Raises
     ------
@@ -703,7 +703,10 @@ def _encoded(value: FieldValue, secrets: Sequence[str]) -> object:
     if isinstance(value, str):
         return _redacted(value, secrets)
     if isinstance(value, Mapping):
-        return {key: _encoded(item, secrets) for key, item in value.items()}
+        return {
+            _redacted(key, secrets): _encoded(item, secrets)
+            for key, item in value.items()
+        }
     if isinstance(value, Sequence):
         return [_encoded(item, secrets) for item in value]
     return value

@@ -332,6 +332,16 @@ def test_to_json_line_redacts_secrets_in_nested_values() -> None:
     assert json.loads(line)["violations"][0]["message"] == "leaked *** here"
 
 
+# Verifies d008 R24
+def test_to_json_line_redacts_secrets_in_mapping_keys() -> None:
+    event = Event(TS, "info", "probe", {"by_target": {HEARTBEAT_URL: 1}})
+
+    line = events.to_json_line(event, CONTEXT, [HEARTBEAT_URL])
+
+    assert HEARTBEAT_URL not in line
+    assert json.loads(line)["by_target"] == {"***": 1}
+
+
 def test_peak_memory_mb_converts_kib_to_decimal_mb() -> None:
     assert events.peak_memory_mb(1_000_000) == pytest.approx(1024.0)
 
