@@ -264,7 +264,7 @@ Options considered for the platform module:
 
 #### Runtime and dependencies
 
-- **Python:** `pipeline/.python-version` holds the exact patch of 3.14, with `requires-python = ">=3.14,<3.15"`; if `uv sync --locked` or the tests fail on 3.14, both move to 3.13.17 and the cause is recorded as a finding; since `uuid.uuid7()` is new in 3.14, the shell then generates the run ID with a function of its own that follows RFC 9562's UUIDv7 layout.
+- **Python:** `pipeline/.python-version` holds the exact patch of 3.14, with `requires-python = ">=3.14,<3.15"`; if `uv sync --locked` or the tests fail on 3.14, both move to 3.13.18 and the cause is recorded as a finding; since `uuid.uuid7()` is new in 3.14, the shell then generates the run ID with a function of its own that follows RFC 9562's UUIDv7 layout.
 - **Python on Modal:** the image is built from the official `python:<patch>-slim-bookworm` image, whose patch `modal_app.py` reads from `.python-version` at deploy time, so production runs the patch that passed CI. **#3**
 - **Manifest and lockfile:** `pyproject.toml` declares the runtime dependencies (DuckDB on its pinned 2.0.x patch, `dbt-core` 1.12.7, `dbt-duckdb` 1.11.1, `deltalake`, `obstore` and `jsonschema`) and two dependency groups: `dev` (pytest, ruff, mypy, import-linter, SQLFluff with its dbt templater) and `platform` (Modal's SDK). `uv.lock` locks them all. `mashumaro>=3.15` is a constraint on a transitive dependency of dbt, set in `[tool.uv] constraint-dependencies`, against the truncation of float model versions below 3.15.
 - **S3 client:** the shell reaches R2's S3 API with `obstore`, through an `S3Store` with the account's endpoint and the credentials passed explicitly, never read from the environment or a profile; it lists, downloads each batch's objects concurrently and uploads the run's log object. Tests use its `LocalStore` over local folders, through the same code. The step that writes `r2.py` confirms against R2 that `list`'s `offset` returns the keys after it, as `start-after` does (#7); the core sorts the keys it receives, since `obstore` does not guarantee their order. **#25**
@@ -1429,30 +1429,162 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
-### Step 1 — `<Title>`
+| # | Prerequisite | Version or value | Verification |
+|---|---|---|---|
+| P1 | uv on the local machine, upgraded if older | 0.13.9 | `uv --version` prints `uv 0.13.9` |
+| P2 | Node on the local machine, through fnm, for `web/` | 26.12.1, as `capture/.nvmrc` | `node --version` prints `v26.12.1` with `web/`'s pin active |
+| P3 | Modal's usage limit and spend limit, on the existing account's billing page ([Run operation on Modal](#run-operation-on-modal)) | Starter plan; usage limit $30; spend limit $1 | the billing page shows the plan and both limits |
+| P4 | Modal's CLI authenticated on the local machine, with `uv run --group platform modal token new` if it is not | the existing account | `uv run --group platform modal profile current` names the account |
+| P5 | R2 bucket `bikesharing-lakehouse` ([ADR-0035](../decisions/0035-cloud-resource-naming.md)), with a lifecycle rule on the prefix `logs/pipeline/` ([Observability](#observability)) | objects deleted 30 days after creation | the bucket's settings list the rule with its prefix and age |
+| P6 | R2 API token `bikesharing-pipeline-bronze-read` | Object Read, on `bikesharing-bronze` only | R2's API tokens page shows its permission and bucket |
+| P7 | R2 API token `bikesharing-pipeline-lakehouse-write` | Object Read & Write, on `bikesharing-lakehouse` only | R2's API tokens page shows its permission and bucket |
+| P8 | Cloudflare API token `bikesharing-pipeline-deploy` ([ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md)) | Workers Editor, with an expiry date | the API tokens page shows its role and expiry |
+| P9 | Healthchecks.io check of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) | period 15 min, grace 15 min | the check's page shows both values |
+| P10 | Modal Secrets, each with the environment variables that [`modal_app`](#modal_app) names: `bikesharing-pipeline-bronze-read` from P6, `bikesharing-pipeline-lakehouse-write` from P7, `bikesharing-pipeline-deploy` from P8, `bikesharing-pipeline-heartbeat` with P9's ping URL | four Secrets | `uv run --group platform modal secret list` lists the four names |
+| P11 | A sample of bronze `station_status` objects in a local folder outside the repository, as the source of the fixtures ([Tests and CI](#tests-and-ci)), downloaded with the owner's own tool and bronze's read-only token | one full local day of each system, at their bronze keys as relative paths | the folder holds both systems' prefixes with about 96 objects a day each; its path is given at Step 5 |
+
+### Step 1 — Python project
 
 - **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md, including `<dNNN.sN - >` at the begining of the message, for the design and the step number.
-- **R:** R1, R3 (or —)
-- **Model:** `<model · effort>` (or —)
-- **Review:** `<code | security | code and security | no>`
+- **Who:** Claude
+- **Commit:** — (committed with Step 4)
+- **R:** —
+- **Model:** sonnet · high
+- **Review:** no
 
 #### Scope
 
-<!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
+The pipeline's Python project, installable and with its lint and import contracts configured, with no code yet.
+
+- `pipeline/.python-version` (new): `3.14.10`.
+- `pipeline/pyproject.toml` (new): metadata, `requires-python = ">=3.14,<3.15"`, build backend for the `src/` layout, runtime dependencies, groups `dev` and `platform`, `[tool.uv] default-groups = ["dev"]` and the `mashumaro>=3.15` constraint; ruff, mypy, import-linter (rules 1–3) and SQLFluff configuration.
+- `pipeline/uv.lock` (new).
+- `pipeline/src/bikesharing/__init__.py`, `core/__init__.py`, `shell/__init__.py` (new): module docstrings only.
+- `.gitignore` (modified): dbt's `target/` and `logs/` under `pipeline/dbt/`, and `web/public/`.
 
 #### Reads
 
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
+- [Runtime and dependencies](#runtime-and-dependencies), this design: the versions, groups and constraint the manifest declares.
+- [Component structure](#component-structure), this design: ADR-0046's rules 1–4 as import-linter contracts and the check of `include_external_packages`.
+- [Transformation in dbt](#transformation-in-dbt) › SQL conventions, this design: SQLFluff's dialect and templater.
+- [s016 › D2](../spikes/s016-code-workflow.md): the defaults policy that the comment in `[tool.ruff]` and `[tool.mypy]` states.
+- `.claude/rules/code/dependencies.md` and `python.md`: how dependencies are added and what the Python rule expects of the configuration.
 
 #### Do
 
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
+1. Write `pipeline/.python-version` with `3.14.10`.
+2. Write `pipeline/pyproject.toml` with the metadata, `requires-python`, the build backend, `default-groups`, the `mashumaro` constraint and the tool configuration; import-linter's root packages are `bikesharing` only, since `modal_app` and rule 4 come with Step 24.
+3. Add the runtime dependencies with `uv add --directory pipeline`: `duckdb==2.0.0`, `dbt-core==1.12.7`, `dbt-duckdb==1.11.1`, `deltalake`, `obstore`, `jsonschema`.
+4. Add the `dev` group with `uv add --directory pipeline --dev`: `pytest`, `ruff`, `mypy`, `import-linter`, `sqlfluff`, `sqlfluff-templater-dbt`.
+5. Add the `platform` group with `uv add --directory pipeline --group platform modal`.
+6. Write the three `__init__.py` files.
+7. Run import-linter once with a temporary `import duckdb` in `core/__init__.py` to confirm that rule 2's forbidden contract on an external package fails; remove the import. If it does not fail, record it as a finding and fall back to PyTestArch, as Component structure sets.
+8. Update `.gitignore`.
 
 #### Check
 
-<!-- command/s or verification with a yes/no result. -->
+- `uv sync --directory pipeline --locked` ends without error on Python 3.14.10; if it fails on 3.14, both pins move to 3.13.18 and the cause is recorded as a finding ([Runtime and dependencies](#runtime-and-dependencies)).
+- `uv run --directory pipeline lint-imports` reports every contract kept.
+
+### Step 2 — Lint hooks
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 4)
+- **R:** —
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+Claude Code's lint hooks for Python and for dbt's SQL, and the permission for the pipeline's test command.
+
+- `.claude/hooks/python-lint.sh` (new): `ruff format` and `ruff check --fix` on the edited `.py` file under `pipeline/`, through `uv run --project pipeline`; what remains goes to stderr with exit 2.
+- `.claude/hooks/sql-lint.sh` (new): `sqlfluff fix` and `sqlfluff lint` on the edited `.sql` file under `pipeline/dbt/`; what remains goes to stderr with exit 2.
+- `.claude/settings.json` (modified): both hooks as `PostToolUse` on `Edit` and `Write`; `uv run --directory pipeline pytest` and its variants with arguments allowed.
+
+#### Reads
+
+- `.claude/hooks/markdown-lint.sh`: the existing hook's input parsing, path filter and exit codes, which both hooks follow.
+- [s016 › P3](../spikes/s016-code-workflow.md): the Python hook's behaviour.
+- `.claude/rules/code/python.md` › the test command: the exact form allowed in `settings.json`.
+
+#### Do
+
+1. Write `.claude/hooks/python-lint.sh`.
+2. Write `.claude/hooks/sql-lint.sh`; since SQLFluff's dbt templater needs dbt's profile, it sets the `BIKESHARING_*` variables of [`bikesharing.shell.dbt_runner`](#bikesharingshelldbt_runner) to a temporary folder, as `check-pipeline.sh` does.
+3. Update `.claude/settings.json`.
+
+#### Check
+
+- An edit to a scratch `.py` file under `pipeline/src/` with an unused import is fixed by the hook, and one with an error ruff cannot fix makes the hook exit 2 with the error on stderr.
+- An edit to a `.md` file still runs only the Markdown hook.
+
+### Step 3 — Empty dbt project
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 4)
+- **R:** —
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+The dbt project with no models, parsed against the run's scratch database.
+
+- `pipeline/dbt/dbt_project.yml` (new): the project, its profile, `models/silver/` and `models/gold/` with views as the default materialization ([Transformation in dbt](#transformation-in-dbt) › Materialization).
+- `pipeline/dbt/profiles.yml` (new): a `duckdb` target whose path, allowed directory, temporary directory and memory limit come from `env_var()` with the four `BIKESHARING_*` variables, with `enable_external_access: false` and `lock_configuration: true` among its settings (#9, #10).
+
+#### Reads
+
+- [`bikesharing.shell.dbt_runner`](#bikesharingshelldbt_runner) › Contract, this design: the variables `profiles.yml` reads.
+- [Bronze reading](#bronze-reading) › Batch reading and Memory, this design: DuckDB's settings.
+- `dbt-duckdb`'s README, profile settings: how `settings` and `path` are declared.
+
+#### Do
+
+1. Write `pipeline/dbt/dbt_project.yml`.
+2. Write `pipeline/dbt/profiles.yml`.
+
+#### Check
+
+- `env BIKESHARING_SCRATCH_DATABASE=<tmp>/scratch.duckdb BIKESHARING_ALLOWED_DIRECTORY=<tmp> BIKESHARING_TEMP_DIRECTORY=<tmp>/spill BIKESHARING_MEMORY_LIMIT=1GiB uv run --directory pipeline dbt parse --project-dir dbt --profiles-dir dbt` ends without error, with `<tmp>` a folder in the scratchpad.
+
+### Step 4 — Check script and CI job
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `d008.s4 - build: add the pipeline component with its checks and CI job` (Steps 1–4)
+- **R:** —
+- **Model:** sonnet · high
+- **Review:** code
+
+#### Scope
+
+The pipeline's checks in one script, run by its CI job, and rule 5 of ADR-0046 as a test.
+
+- `pipeline/scripts/check-pipeline.sh` (new): ruff format check, ruff check, mypy, import-linter, SQLFluff, `dbt parse`, `dbt run --empty` with dbt's unit tests, and pytest, in that order; it runs from any folder, and sets the `BIKESHARING_*` variables to a temporary folder it removes at its end.
+- `pipeline/tests/integration/test_platform_separation.py` (new): `modal` cannot be imported, and `bikesharing` imports without it; Step 6 extends it to `bikesharing.core.settings`.
+- `.github/workflows/ci.yml` (modified): job `pipeline` ([Tests and CI](#tests-and-ci) › CI job); `ci-passed` needs it.
+
+#### Reads
+
+- [Tests and CI](#tests-and-ci) › Check script, CI job and Platform separation, this design.
+- `.claude/rules/code/ci.md`: the recipe of a component's job and its path filter.
+- `.github/workflows/ci.yml`: the `capture` job and `ci-passed`, which the new job mirrors.
+- `docs/testing-strategy.md` › Python: the levels and the command the script runs.
+
+#### Do
+
+1. Write `pipeline/tests/integration/test_platform_separation.py`.
+2. Write `pipeline/scripts/check-pipeline.sh`.
+3. Update `.github/workflows/ci.yml`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0, with pytest passing on Python 3.14.10; if a test fails on 3.14 for a cause of the runtime, both pins move to 3.13.18 and the cause is recorded as a finding.
+- The `pipeline` job's path filter lists `pipeline/**`, `.github/workflows/ci.yml` and the three contract files, and `ci-passed` lists `pipeline` among its needs.
 
 ## 4. Close
 
