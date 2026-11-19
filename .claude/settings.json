@@ -24,14 +24,16 @@
       "Edit(/CLAUDE.md)",
       "Edit(/docs/decisions/**)",
 
-      "Bash(gh issue create *)", "Bash(gh issue edit *)", "Bash(gh issue close *)"
+      "Bash(gh issue create *)", "Bash(gh issue edit *)", "Bash(gh issue close *)",
+
+      "Bash(git add *)", "Bash(git commit *)"
     ],
     "deny": [
       "Read(.env)",
       "Edit(.env)",
       "Edit(**/raw/**)",
 
-      "Bash(git add *)", "Bash(git commit *)", "Bash(git merge *)", "Bash(git rebase *)",
+      "Bash(git merge *)", "Bash(git rebase *)",
       "Bash(git cherry-pick *)", "Bash(git revert *)", "Bash(git tag *)",
 
       "Bash(git checkout *)", "Bash(git switch *)", "Bash(git restore *)", "Bash(git reset *)",
