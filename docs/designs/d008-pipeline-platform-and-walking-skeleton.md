@@ -610,7 +610,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   └── tests/
 │       ├── conftest.py                      (new)       Shared fixtures: local bronze folder, local Delta path
 │       ├── unit/core/                       (new)       One test module per core module, mirroring `src/`; consumer of `contracts/bronze-keys.json`
-│       ├── integration/                     (new)       Read schema, two-batch run, re-run, stop between commits, DuckDB's sandbox, published file and its contract; rule 5 without Modal's SDK
+│       ├── integration/                     (new)       Read schema, two-batch run, re-run, stop between commits, unreadable object, DuckDB's sandbox, published file and its contract, failed page deployment, heartbeat pings; rule 5 without Modal's SDK
 │       └── fixtures/
 │           ├── bronze/                      (new)       Gzip `station_status` objects of both systems, chosen for variety (ADR-0037)
 │           └── latest-station-count/        (new)       One invalid file per kind of violation
