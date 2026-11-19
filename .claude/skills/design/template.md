@@ -179,7 +179,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 
 - **Status:** 💤 todo
 - **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md, including `<dNNN.sN - >` at the begining of the message, for the design and the step number.
+- **Commit:** following the Git conventions in CLAUDE.md, with the design and step ID first in the description: `<type>: dNNN.sN <description>`.
 - **R:** R1, R3 (or —)
 - **Model:** `<model · effort>` (or —)
 - **Review:** `<code | security | code and security | no>`
