@@ -14,7 +14,7 @@
       "Bash(ls)", "Bash(ls *)", "Bash(grep *)",
 
       "Bash(npm test)", "Bash(npm test *)",
-      "Bash(uv run pytest)", "Bash(uv run pytest *)",
+      "Bash(uv run --directory pipeline pytest)", "Bash(uv run --directory pipeline pytest *)",
 
       "Bash(node --version)", "Bash(python3 --version)", "Bash(duckdb --version)"
     ],
@@ -45,7 +45,11 @@
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/markdown-lint.sh" }]
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/markdown-lint.sh" },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/python-lint.sh" },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/sql-lint.sh" }
+        ]
       }
     ]
   }

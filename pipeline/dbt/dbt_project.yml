@@ -1,0 +1,18 @@
+# The pipeline's transformation from bronze to silver and gold, built in the run's
+# scratch database (d008, Transformation in dbt).
+name: bikesharing
+version: "1.0.0"
+profile: bikesharing
+
+flags:
+  # dbt sends usage telemetry to dbt Labs by default; the pipeline sends nothing
+  # to a third party that its design does not name.
+  send_anonymous_usage_stats: false
+
+models:
+  bikesharing:
+    # Views by default: each is read once by its tests; a model read again, such as
+    # station_stock, sets its own materialization (d008, Transformation in dbt).
+    +materialized: view
+    silver: {}
+    gold: {}

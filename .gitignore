@@ -36,6 +36,7 @@ htmlcov/
 # dbt
 pipeline/dbt/target/
 pipeline/dbt/logs/
+pipeline/dbt/.user.yml
 
 # The page's file, written by each run
 web/public/

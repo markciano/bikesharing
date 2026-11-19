@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 2. P4 and P10 follow Step 1, since they need the `platform` group; P11's sample is at `~/Documents/projects/bikesharing-tmp/raw`, local day 2026-11-17.
+- Current: Step 5. P11's sample is at `~/Documents/projects/bikesharing-tmp/raw`, UTC folders 2026-11-16 and 2026-11-17, which hold the local day 2026-11-17.
 
 ## 1. Spec — what and why
 
@@ -1537,7 +1537,7 @@ The pipeline's Python project, installable and with its lint and import contract
 
 ### Step 2 — Lint hooks
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** — (committed with Step 4)
 - **R:** —
@@ -1571,7 +1571,7 @@ Claude Code's lint hooks for Python and for dbt's SQL, and the permission for th
 
 ### Step 3 — Empty dbt project
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** — (committed with Step 4)
 - **R:** —
@@ -1602,7 +1602,7 @@ The dbt project with no models, parsed against the run's scratch database.
 
 ### Step 4 — Check script and CI job
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `d008.s4 - build: add the pipeline component with its checks and CI job` (Steps 1–4)
 - **R:** —
@@ -2471,3 +2471,4 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 | DI1 | [3.1 Prerequisites](#31-prerequisites) › P6, P7 | The pipeline's R2 tokens expire after one year, as its Cloudflare token does | Credential rotation (NIST SP 800-53 IA-5): a leaked token stops working within a year; an expired one fails the run and the heartbeat alerts | Step 1 |
 | DI2 | [Runtime and dependencies](#runtime-and-dependencies), [Step 1](#step-1--python-project), [Step 4](#step-4--check-script-and-ci-job) | The `dev` group adds `pytest-cov`, `pyproject.toml` sets `[tool.coverage.run] source = ["bikesharing"]`, and `check-pipeline.sh` runs pytest with `--cov` | `python.md` › Testing: line coverage is reported, never enforced | Step 1 |
 | DI3 | [3.1 Prerequisites](#31-prerequisites) › P1, [Step 1](#step-1--python-project), [Step 4](#step-4--check-script-and-ci-job) | Local uv is 0.13.5, Homebrew's stable release, instead of 0.13.9, and Python is 3.14.9, the latest patch uv 0.13.5 downloads, instead of 3.14.10 | The machine's package manager keeps local tools; patches of 0.13 share the lockfile format, and CI's `setup-uv` pins no version | Step 1 |
+| DI4 | `pipeline/dbt/dbt_project.yml`, `.gitignore` | dbt's anonymous usage telemetry is off (`send_anonymous_usage_stats: false`), and dbt's `.user.yml` is ignored by Git | Minimal data egress: the pipeline sends nothing to a third party its design does not name | Step 4 |
