@@ -7,12 +7,12 @@ bikesharing:
     run:
       type: duckdb
       path: "{{ env_var('BIKESHARING_SCRATCH_DATABASE') }}"
-      settings:
-        memory_limit: "{{ env_var('BIKESHARING_MEMORY_LIMIT') }}"
-        temp_directory: "{{ env_var('BIKESHARING_TEMP_DIRECTORY') }}"
-        allowed_directories: ["{{ env_var('BIKESHARING_ALLOWED_DIRECTORY') }}"]
-        autoinstall_known_extensions: false
-        autoload_known_extensions: false
-        enable_external_access: false
-        # Last, so that nothing the run does can lift the settings above.
-        lock_configuration: true
+      # The plugin applies the sandbox once, on the database's connection: the
+      # profile's own settings would be applied again on every cursor, which the
+      # locked sandbox refuses (d008 DI6).
+      plugins:
+        - module: bikesharing.shell.duckdb_session
+          config:
+            memory_limit: "{{ env_var('BIKESHARING_MEMORY_LIMIT') }}"
+            temp_directory: "{{ env_var('BIKESHARING_TEMP_DIRECTORY') }}"
+            allowed_directory: "{{ env_var('BIKESHARING_ALLOWED_DIRECTORY') }}"
