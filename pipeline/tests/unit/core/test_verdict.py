@@ -3,6 +3,7 @@
 from typing import Literal
 
 import pytest
+
 from bikesharing.core.verdict import (
     MergeMetrics,
     NodeResult,

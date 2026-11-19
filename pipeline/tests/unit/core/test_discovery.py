@@ -7,6 +7,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
+
 from bikesharing.core.discovery import (
     BronzeObject,
     InvalidBronzeKey,
