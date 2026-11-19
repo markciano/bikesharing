@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 5, rule documents: `docs/testing-strategy.md` (Python section moved to `pipeline/`, new SQL in dbt section, the `pipeline` CI job; its Contract section already follows ADR-0050), then `CLAUDE.md` › Project structure. The owner asks, before each document, which convention it follows.
+- Current: Plan › 5, rule documents: `docs/testing-strategy.md` (Python section moved to `pipeline/`, new SQL in dbt section, the `pipeline` CI job; its Contract section already follows ADR-0050), then `CLAUDE.md` › Project structure.
 
 ## 1. Spec — what and why
 
@@ -188,6 +188,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - The first load has drained through D8's three stages, each with its runtime rules, reconciliation, run time and memory checked before the next, and the end instant removed after the last (D8).
 - The pipeline runs on Modal every 15 min in production; its run time and memory are measured on the feeds' real volume, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them ([d007 › Children](d007-pipeline-design.md#16-children)).
 - R2's operations and storage per bucket over 14 days of scheduled runs are compared with the cost model, the model is recalibrated, the classes of conditional PutObject, ListObjectsV2 and DeleteObjects are confirmed, and the owner has set Cloudflare's R2 alerts from the recalibrated figures ([Cost recalibration](#cost-recalibration)).
+- The `pull_request` run's wall-clock is measured again with the `pipeline` job and updated in [testing-strategy.md › Moving tests](../testing-strategy.md#moving-tests); if it passes 10 min, the slowest group moves as that section sets.
 
 ### 1.5 Out of scope
 
