@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "bikesharing-web",
+  "compatibility_date": "2026-11-06",
+  // Static assets only: the run writes latest-station-count.json here and redeploys (d008 Publishing, Worker configuration)
+  "assets": {
+    "directory": "./public"
+  }
+}

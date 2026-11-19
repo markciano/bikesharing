@@ -1,0 +1,7 @@
+{
+  "name": "bikesharing-web",
+  "private": true,
+  "dependencies": {
+    "wrangler": "4.165.0"
+  }
+}

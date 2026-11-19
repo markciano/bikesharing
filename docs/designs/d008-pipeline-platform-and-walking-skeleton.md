@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 22.
+- Current: Step 23.
 
 ## 1. Spec — what and why
 
@@ -2211,7 +2211,7 @@ Events to stdout and to the run's log object, and the pings to Healthchecks.io.
 
 ### Step 22 — Page component
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `build: d008.s22 add the page's component with the Worker's deployment configuration`
 - **R:** —
