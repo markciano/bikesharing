@@ -1,14 +1,13 @@
 ---
 paths:
-  - "src/**"
-  - "tests/**"
+  - "pipeline/**"
   - "capture/**"
   - "scripts/**"
 ---
 
 # Code rules (all languages)
 
-Language-specific format (docstring or JSDoc style) is in `python.md` and `cloudflare-worker.md`; test rules are in `testing.md`.
+Language-specific format (docstring, JSDoc or dbt description) is in `python.md`, `sql.md` and `cloudflare-worker.md`; test rules are in `testing.md`.
 
 ## Code comments
 
