@@ -1401,19 +1401,14 @@ def one_off_run() -> None: ...
 | R30 | Test | DQR2's check fails on a MERGE's metrics with a row updated or deleted | unit |
 | R31 | Test | A deployment whose stand-in for `wrangler` exits with an error keeps the run's commits, logs `page_deploy_failed` and fails the run | integration |
 
-### 2.7 Breaking changes
-
-<!-- Optional. Shared models or interfaces this design changes, and how their dependants are handled. -->
-
-| File | Why it breaks | Strategy |
-|---|---|---|
-| | | |
-
-### 2.8 What does not change
+### 2.7 What does not change
 
 <!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
 
--
+- `capture/` and its CI job: the pipeline reads bronze as capture writes it ([d004](d004-bronze-data-capture.md)).
+- `contracts/bronze-keys.json`: the pipeline is only its consumer; a key the discovery cannot parse is fixed in the pipeline, not in the contract.
+- `bikesharing-bronze`: the pipeline only reads it, with a read-only token; no object is moved, rewritten or deleted, the excluded ones included (#8).
+- `scripts/lint-docs.sh` and the `docs` CI job.
 
 ## 3. Steps
 
