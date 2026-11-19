@@ -12,14 +12,7 @@ stations as (
 
     select
         source.last_updated,
-        -- The local path ends with the object's bronze key, which holds its
-        -- system and capture instant (ADR-0012, Collectors decoupled by output
-        -- contract).
-        regexp_extract(
-            source.filename,
-            'raw/([a-z]+)/[a-z_]+/[0-9-]+/(\d{8}T\d{6}Z)\.json\.gz$',
-            ['system', 'run_id']
-        ) as bronze_key,
+        {{ bronze_key('source.filename') }} as bronze_key,
         unnest(source.data.stations) as station
     from source
 
@@ -40,9 +33,7 @@ final as (
         -- published whatever the session's time zone.
         stations.station.last_reported::timestamptz as last_reported,
         stations.last_updated::timestamptz as last_updated,
-        timezone(
-            'UTC', strptime(stations.bronze_key.run_id, '%Y%m%dT%H%M%SZ')
-        ) as captured_at,
+        stations.bronze_key.captured_at,
         -- A station neither renting nor returning is out of service: the
         -- vehicles it lists cannot be rented, so they are not stock (d005 D16,
         -- Vehicles at an out-of-service station).
