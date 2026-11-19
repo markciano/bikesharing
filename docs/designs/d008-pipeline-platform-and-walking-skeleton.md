@@ -19,8 +19,8 @@ Phase: the blocks and reviews completed. A document-only task shows only Spec ·
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
 - State: Draft 📝
-- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 5, rule documents: `docs/testing-strategy.md` (Python section moved to `pipeline/`, new SQL in dbt section, the `pipeline` CI job; its Contract section already follows ADR-0050), then `CLAUDE.md` › Project structure.
+- Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Current: Plan review.
 
 ## 1. Spec — what and why
 
