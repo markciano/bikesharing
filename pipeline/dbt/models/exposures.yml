@@ -1,0 +1,13 @@
+exposures:
+  - name: latest_station_count_file
+    label: latest-station-count.json
+    type: application
+    description: >-
+      The file the run publishes with the latest count of each station of both
+      systems, deployed with the public page. Its contract is the JSON Schema
+      `contracts/latest-station-count.schema.json`, which the core validates the
+      file against before the shell deploys it (d008, Publishing).
+    owner:
+      name: bikesharing pipeline
+    depends_on:
+      - ref('latest_station_count')
