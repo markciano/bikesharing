@@ -1,0 +1,216 @@
+# Silver models: each system's staging model and, unioned, the station stock
+# (d008, Transformation in dbt).
+models:
+  - name: stg_ambici__station_status
+    description: >-
+      AMBici's station status, one row per station and capture: its fields cast,
+      its instants converted from POSIX seconds to UTC, its measures named as GBFS
+      3.0 names them, and null as the disabled counts AMBici does not publish
+      (TR5–TR8, TR53).
+    columns: &staging_columns
+      - name: system
+        description: The bike sharing system, taken from the object's bronze key.
+      - name: station_id
+        description: The station's ID in its system.
+      - name: captured_at
+        description: The capture instant, in UTC, taken from the object's bronze key.
+      - name: num_vehicles_available
+        description: >-
+          Vehicles available to rent, as published (TR10); null at an out-of-service
+          Bicing station (TR9).
+      - name: num_docks_available
+        description: Docks available to return a vehicle, as published.
+      - name: num_vehicles_disabled
+        description: Vehicles that cannot be rented, as published; null for AMBici (TR8).
+      - name: num_docks_disabled
+        description: Docks that cannot be used, as published; null for AMBici (TR8).
+      - name: is_installed
+        description: Whether the station is installed, as published (TR6).
+      - name: is_renting
+        description: Whether the station rents vehicles, as published (TR6).
+      - name: is_returning
+        description: Whether the station accepts returns, as published (TR6).
+      - name: last_reported
+        description: The station's last report instant, in UTC, as published (TR7).
+      - name: last_updated
+        description: The response's publication instant, in UTC (TR53).
+
+  - name: stg_bicing__station_status
+    description: >-
+      Bicing's station status, one row per station and capture: its fields cast, its
+      RFC 3339 instants converted to UTC, and null as the vehicles available at a
+      station out of service (TR6–TR10, TR53).
+    columns: *staging_columns
+
+unit_tests:
+  # Verifies d008 R2
+  - name: stg_ambici__station_status_converts_and_renames
+    description: >-
+      Each station of an object is a row with its system and capture instant from the
+      bronze key, its POSIX instants in UTC, `num_bikes_available` as
+      `num_vehicles_available`, and null disabled counts.
+    model: stg_ambici__station_status
+    given:
+      - input: source('ambici', 'station_status')
+        format: sql
+        rows: |
+          select
+              1792400218::bigint as last_updated,
+              60 as ttl,
+              '2.3' as version,
+              {
+                  'stations': [
+                      {
+                          'station_id': '1',
+                          'num_bikes_available': 5,
+                          'num_docks_available': 10,
+                          'is_installed': true,
+                          'is_renting': true,
+                          'is_returning': true,
+                          'last_reported': 1792400100::bigint
+                      },
+                      {
+                          'station_id': '2',
+                          'num_bikes_available': 0,
+                          'num_docks_available': 3,
+                          'is_installed': true,
+                          'is_renting': true,
+                          'is_returning': false,
+                          'last_reported': 1792399800::bigint
+                      }
+                  ]
+              } as data,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz'
+                  as filename
+    expect:
+      rows:
+        - {system: ambici, station_id: "1", captured_at: "2026-10-19 08:57:45+00",
+           num_vehicles_available: 5, num_docks_available: 10,
+           num_vehicles_disabled: null, num_docks_disabled: null,
+           is_installed: true, is_renting: true, is_returning: true,
+           last_reported: "2026-10-19 08:55:00+00", last_updated: "2026-10-19 08:56:58+00"}
+        - {system: ambici, station_id: "2", captured_at: "2026-10-19 08:57:45+00",
+           num_vehicles_available: 0, num_docks_available: 3,
+           num_vehicles_disabled: null, num_docks_disabled: null,
+           is_installed: true, is_renting: true, is_returning: false,
+           last_reported: "2026-10-19 08:50:00+00", last_updated: "2026-10-19 08:56:58+00"}
+
+  - name: stg_ambici__station_status_keeps_counts_out_of_service
+    description: >-
+      An AMBici station with `is_renting` and `is_returning` false keeps its counts as
+      published, since TR9's null applies to Bicing only (TR10).
+    model: stg_ambici__station_status
+    given:
+      - input: source('ambici', 'station_status')
+        format: sql
+        rows: |
+          select
+              1792400218::bigint as last_updated,
+              60 as ttl,
+              '2.3' as version,
+              {
+                  'stations': [
+                      {
+                          'station_id': '7',
+                          'num_bikes_available': 4,
+                          'num_docks_available': 6,
+                          'is_installed': true,
+                          'is_renting': false,
+                          'is_returning': false,
+                          'last_reported': 1792400100::bigint
+                      }
+                  ]
+              } as data,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz'
+                  as filename
+    expect:
+      rows:
+        - {station_id: "7", num_vehicles_available: 4, num_docks_available: 6}
+
+  # Verifies d008 R2
+  - name: stg_bicing__station_status_converts
+    description: >-
+      Each station of an object is a row with its system and capture instant from the
+      bronze key, its RFC 3339 instants in UTC with their milliseconds, and its
+      disabled counts as published.
+    model: stg_bicing__station_status
+    given:
+      - input: source('bicing', 'station_status')
+        format: sql
+        rows: |
+          select
+              '2026-10-22T07:42:19Z' as last_updated,
+              0 as ttl,
+              '3.0' as version,
+              {
+                  'stations': [
+                      {
+                          'station_id': '1',
+                          'num_vehicles_available': 10,
+                          'num_vehicles_disabled': 2,
+                          'num_docks_available': 34,
+                          'num_docks_disabled': 1,
+                          'is_installed': true,
+                          'is_renting': true,
+                          'is_returning': true,
+                          'last_reported': '2026-10-22T07:41:04.255Z'
+                      }
+                  ]
+              } as data,
+              '/work/bronze/raw/bicing/station_status/2026-10-22/20261022T074219Z.json.gz'
+                  as filename
+    expect:
+      rows:
+        - {system: bicing, station_id: "1", captured_at: "2026-10-22 07:42:19+00",
+           num_vehicles_available: 10, num_docks_available: 34,
+           num_vehicles_disabled: 2, num_docks_disabled: 1,
+           is_installed: true, is_renting: true, is_returning: true,
+           last_reported: "2026-10-22 07:41:04.255+00",
+           last_updated: "2026-10-22 07:42:19+00"}
+
+  # Verifies d008 R3
+  - name: stg_bicing__station_status_nulls_vehicles_out_of_service
+    description: >-
+      A Bicing station with `is_renting` and `is_returning` false has null vehicles
+      available (TR9); a station with only one of them false keeps its count (TR10).
+    model: stg_bicing__station_status
+    given:
+      - input: source('bicing', 'station_status')
+        format: sql
+        rows: |
+          select
+              '2026-10-22T07:42:19Z' as last_updated,
+              0 as ttl,
+              '3.0' as version,
+              {
+                  'stations': [
+                      {
+                          'station_id': '245',
+                          'num_vehicles_available': 3,
+                          'num_vehicles_disabled': 0,
+                          'num_docks_available': 0,
+                          'num_docks_disabled': 0,
+                          'is_installed': false,
+                          'is_renting': false,
+                          'is_returning': false,
+                          'last_reported': '2025-10-16T06:18:25.125Z'
+                      },
+                      {
+                          'station_id': '396',
+                          'num_vehicles_available': 14,
+                          'num_vehicles_disabled': 6,
+                          'num_docks_available': 12,
+                          'num_docks_disabled': 0,
+                          'is_installed': true,
+                          'is_renting': false,
+                          'is_returning': true,
+                          'last_reported': '2026-10-22T07:41:00.987Z'
+                      }
+                  ]
+              } as data,
+              '/work/bronze/raw/bicing/station_status/2026-10-22/20261022T074219Z.json.gz'
+                  as filename
+    expect:
+      rows:
+        - {station_id: "245", num_vehicles_available: null, num_docks_available: 0}
+        - {station_id: "396", num_vehicles_available: 14, num_docks_available: 12}

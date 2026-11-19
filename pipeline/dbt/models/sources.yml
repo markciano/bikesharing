@@ -1,0 +1,161 @@
+# The batch's bronze objects and the lakehouse's Parquet inputs, each read from the
+# local files the shell passes as dbt variables (d008 #12, Transformation in dbt).
+# dbt-duckdb formats each external_location with string.Template ($name), not
+# str.format, so that the braces of DuckDB's struct literals reach the SQL as written.
+sources:
+  - name: ambici
+    description: >-
+      AMBici's bronze objects of the batch, as captured: GBFS 2.3, with POSIX times.
+    tables:
+      - name: station_status
+        description: >-
+          One row per `station_status` object of the batch, read with AMBici's declared
+          read schema, so that a field of another type fails the batch.
+        config:
+          meta:
+            external_location: >-
+              read_json({{ var('bronze_files')['ambici'] }},
+              columns = {{ var('read_columns')['ambici'] }}, filename = true)
+            formatter: template
+        columns:
+          - name: last_updated
+            description: The response's publication instant, in POSIX seconds.
+          - name: ttl
+            description: The seconds the response is valid for.
+          - name: version
+            description: The GBFS version of the response.
+          - name: data
+            description: The list of stations, each a struct of its declared fields.
+          - name: filename
+            description: >-
+              The object's local path, which ends with its bronze key, from which the
+              staging model takes its system and capture instant.
+      - name: station_status_raw
+        description: >-
+          The same objects read with no schema, one JSON value each, so that the
+          fields a station carries can be compared with the read schema (DQR11).
+        config:
+          meta:
+            external_location: >-
+              read_json_objects({{ var('bronze_files')['ambici'] }}, filename = true)
+            formatter: template
+        columns:
+          - name: json
+            description: The object as published.
+          - name: filename
+            description: The object's local path, which ends with its bronze key.
+
+  - name: bicing
+    description: >-
+      Bicing's bronze objects of the batch, as captured: GBFS 3.0, with RFC 3339
+      times.
+    tables:
+      - name: station_status
+        description: >-
+          One row per `station_status` object of the batch, read with Bicing's declared
+          read schema, so that a field of another type fails the batch.
+        config:
+          meta:
+            external_location: >-
+              read_json({{ var('bronze_files')['bicing'] }},
+              columns = {{ var('read_columns')['bicing'] }}, filename = true)
+            formatter: template
+        columns:
+          - name: last_updated
+            description: The response's publication instant, as an RFC 3339 string.
+          - name: ttl
+            description: The seconds the response is valid for.
+          - name: version
+            description: The GBFS version of the response.
+          - name: data
+            description: The list of stations, each a struct of its declared fields.
+          - name: filename
+            description: >-
+              The object's local path, which ends with its bronze key, from which the
+              staging model takes its system and capture instant.
+      - name: station_status_raw
+        description: >-
+          The same objects read with no schema, one JSON value each, so that the
+          fields a station carries can be compared with the read schema (DQR11).
+        config:
+          meta:
+            external_location: >-
+              read_json_objects({{ var('bronze_files')['bicing'] }}, filename = true)
+            formatter: template
+        columns:
+          - name: json
+            description: The object as published.
+          - name: filename
+            description: The object's local path, which ends with its bronze key.
+
+  - name: lakehouse
+    description: >-
+      Committed state of the lakehouse that a run needs in dbt, which the shell reads
+      with deltalake and writes as Parquet files to the run's work folder.
+    tables:
+      - name: capture_history
+        description: >-
+          The rows of `processed_objects` captured in the 24 h before the batch's first
+          capture: the history of DQR12's median.
+        config:
+          meta:
+            external_location: "read_parquet('{{ var('capture_history_file') }}')"
+            formatter: template
+        columns:
+          - name: key
+            description: The object's bronze key.
+          - name: system
+            description: The bike sharing system, `ambici` or `bicing`.
+          - name: feed
+            description: The GBFS feed of the object.
+          - name: captured_at
+            description: The object's capture instant, in UTC.
+          - name: station_count
+            description: The number of stations the object lists; 0 if none.
+          - name: status
+            description: The object's processing status.
+          - name: run_id
+            description: The ID of the run that processed the object.
+          - name: code_version
+            description: The commit SHA of the code that processed the object.
+      - name: latest_captures
+        description: >-
+          The rows of `station_stock` of each system's latest committed capture, from
+          which the published file is built.
+        config:
+          meta:
+            external_location: "read_parquet('{{ var('latest_captures_file') }}')"
+            formatter: template
+        columns:
+          - name: system
+            description: The bike sharing system, `ambici` or `bicing`.
+          - name: station_id
+            description: The station's ID in its system.
+          - name: captured_at
+            description: The capture instant, in UTC.
+          - name: local_date
+            description: The capture's calendar date in `Europe/Madrid`.
+          - name: local_minute
+            description: The capture's minute of the day in `Europe/Madrid`, 0 to 1439.
+          - name: num_vehicles_available
+            description: Vehicles available to rent; null at an out-of-service Bicing station.
+          - name: num_docks_available
+            description: Docks available to return a vehicle.
+          - name: num_vehicles_disabled
+            description: Vehicles at the station that cannot be rented; null for AMBici.
+          - name: num_docks_disabled
+            description: Docks at the station that cannot be used; null for AMBici.
+          - name: is_installed
+            description: Whether the station is installed, as published.
+          - name: is_renting
+            description: Whether the station rents vehicles, as published.
+          - name: is_returning
+            description: Whether the station accepts returns, as published.
+          - name: last_reported
+            description: The station's last report instant, in UTC, as published.
+          - name: last_updated
+            description: The response's publication instant, in UTC.
+          - name: run_id
+            description: The ID of the run that wrote the row.
+          - name: code_version
+            description: The commit SHA of the code that wrote the row.
