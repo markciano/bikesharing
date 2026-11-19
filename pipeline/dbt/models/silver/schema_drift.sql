@@ -90,13 +90,28 @@ added as (
 
 ),
 
+-- An object that lists no station has nothing to compare: it would drop every
+-- declared field. Its empty feed is the volume audit's finding (DQR12).
+listing_objects as (
+
+    select distinct
+        stations.system,
+        stations.captured_at
+    from stations
+
+),
+
 dropped as (
 
     select
-        system,
-        captured_at,
-        field
+        declared.system,
+        declared.captured_at,
+        declared.field
     from declared
+    inner join listing_objects
+        on
+            declared.system = listing_objects.system
+            and declared.captured_at = listing_objects.captured_at
     except
     select
         system,
