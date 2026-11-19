@@ -19,8 +19,8 @@ Phase: the blocks and reviews completed. A document-only task shows only Spec ·
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
 - State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
-- Current: Steps › Prerequisites. They include the lifecycle rule on `logs/pipeline/` and Modal's $30 usage limit, owner actions that no requirement or Done when item checks.
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [ ] Steps review
+- Current: Steps review.
 
 ## 1. Spec — what and why
 
@@ -1473,7 +1473,7 @@ The pipeline's Python project, installable and with its lint and import contract
 #### Do
 
 1. Write `pipeline/.python-version` with `3.14.10`.
-2. Write `pipeline/pyproject.toml` with the metadata, `requires-python`, the build backend, `default-groups`, the `mashumaro` constraint and the tool configuration; import-linter's root packages are `bikesharing` only, since `modal_app` and rule 4 come with Step 24.
+2. Write `pipeline/pyproject.toml` with the metadata, `requires-python`, the build backend, `default-groups`, the `mashumaro` constraint and the tool configuration; import-linter's root packages are `bikesharing` only, since `modal_app` and rule 4 come with Step 25.
 3. Add the runtime dependencies with `uv add --directory pipeline`: `duckdb==2.0.0`, `dbt-core==1.12.7`, `dbt-duckdb==1.11.1`, `deltalake`, `obstore`, `jsonschema`.
 4. Add the `dev` group with `uv add --directory pipeline --dev`: `pytest`, `ruff`, `mypy`, `import-linter`, `sqlfluff`, `sqlfluff-templater-dbt`.
 5. Add the `platform` group with `uv add --directory pipeline --group platform modal`.
@@ -1585,6 +1585,807 @@ The pipeline's checks in one script, run by its CI job, and rule 5 of ADR-0046 a
 
 - `bash pipeline/scripts/check-pipeline.sh` exits 0, with pytest passing on Python 3.14.10; if a test fails on 3.14 for a cause of the runtime, both pins move to 3.13.18 and the cause is recorded as a finding.
 - The `pipeline` job's path filter lists `pipeline/**`, `.github/workflows/ci.yml` and the three contract files, and `ci-passed` lists `pipeline` among its needs.
+
+### Step 5 — Bronze fixtures and read schema
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 11)
+- **R:** —
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+The bronze fixtures of both systems and the read schema of `station_status` per system.
+
+- `pipeline/tests/fixtures/bronze/` (new): `station_status` objects of both systems from P11's sample, kept at their bronze keys, gzip-compressed and trimmed to a few stations each: a Bicing station out of service, a station without GBFS's optional fields, two consecutive captures with a station added or removed, and an object with a field outside the read schema. If no sampled object carries such a field, that fixture is a copy of a captured object with one field added, and its test says so.
+- `pipeline/src/bikesharing/core/read_schema.py` (new): [`bikesharing.core.read_schema`](#bikesharingcoreread_schema).
+- `pipeline/tests/unit/core/test_read_schema.py` (new): each system's schema declares its source card's fields with their types.
+
+The read of the fixtures with each schema is an integration test of Step 16, since reading needs DuckDB.
+
+#### Reads
+
+- [`bikesharing.core.read_schema`](#bikesharingcoreread_schema), this design: the module's contract.
+- [Bronze reading](#bronze-reading) › Read schema, this design: one schema per system and feed, from the field dictionary.
+- `station_status`'s field dictionary in [AMBici](../sources/ambici.md) and [Bicing](../sources/bicing.md)'s source cards.
+- [Tests and CI](#tests-and-ci) › Fixtures, this design, and [ADR-0037](../decisions/0037-test-fixtures-per-component.md): what the fixtures hold.
+
+#### Do
+
+1. Search P11's sample, at the path the owner gives, for an object of each kind of variety.
+2. Write the trimmed fixtures to `pipeline/tests/fixtures/bronze/`.
+3. Write `pipeline/tests/unit/core/test_read_schema.py`.
+4. Implement `pipeline/src/bikesharing/core/read_schema.py`.
+
+#### Check
+
+- `uv run --directory pipeline pytest tests/unit/core/test_read_schema.py` passes.
+- The fixtures folder holds every kind of variety listed in Scope, for its system.
+
+### Step 6 — Settings and discovery
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 11)
+- **R:** R18
+- **Model:** sonnet · high
+- **Review:** no
+
+#### Scope
+
+The run's constants and the core's decisions on what a run lists and which objects are pending.
+
+- `pipeline/src/bikesharing/core/settings.py` (new): [`bikesharing.core.settings`](#bikesharingcoresettings), with the owner's account ID and, as `END_INSTANT`, the end of the local day of the oldest bronze capture, D8's first stage.
+- `pipeline/src/bikesharing/core/discovery.py` (new): [`bikesharing.core.discovery`](#bikesharingcorediscovery).
+- `pipeline/tests/unit/core/test_discovery.py` (new): the listing's start key and full sweep (#7), the pending objects after the exclusion list (#8), the end instant (R18), and the consumer of `contracts/bronze-keys.json`.
+- `pipeline/tests/integration/test_platform_separation.py` (modified): `bikesharing.core.settings` loads without Modal's SDK.
+
+#### Reads
+
+- [`bikesharing.core.settings`](#bikesharingcoresettings) and [`bikesharing.core.discovery`](#bikesharingcorediscovery), this design: the contracts.
+- [Bronze reading](#bronze-reading) › Discovery of pending objects and Unreadable objects, this design.
+- [D8](#d8-first-load-in-chronological-stages), this design: the first stage's end instant.
+- `contracts/bronze-keys.json` and [testing.md](../../.claude/rules/code/testing.md) › Contracts between components: the vectors the consumer test reads.
+
+#### Do
+
+1. Ask the owner for the Cloudflare account ID and the local date of the oldest bronze capture.
+2. Write `pipeline/tests/unit/core/test_discovery.py`.
+3. Implement `pipeline/src/bikesharing/core/settings.py`.
+4. Implement `pipeline/src/bikesharing/core/discovery.py`.
+5. Update `pipeline/tests/integration/test_platform_separation.py`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0.
+
+### Step 7 — Batching
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 11)
+- **R:** R12, R13, R19
+- **Model:** sonnet · high
+- **Review:** no
+
+#### Scope
+
+The batches of a run, the time budget and the end of a stage.
+
+- `pipeline/src/bikesharing/core/batching.py` (new): [`bikesharing.core.batching`](#bikesharingcorebatching).
+- `pipeline/tests/unit/core/test_batching.py` (new): batches of at most the bound (R13), no batch opened once the budget is spent (R12), and `stage_drained` with an end instant and no pending object up to it (R19), with small bounds and a fixed UTC time.
+
+#### Reads
+
+- [`bikesharing.core.batching`](#bikesharingcorebatching), this design: the contract.
+- [D6](#d6-provisional-run-bounds), this design: the bounds the settings hold.
+
+#### Do
+
+1. Write `pipeline/tests/unit/core/test_batching.py`.
+2. Implement `pipeline/src/bikesharing/core/batching.py`.
+
+#### Check
+
+- `uv run --directory pipeline pytest tests/unit/core/test_batching.py` passes.
+
+### Step 8 — Verdict
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 11)
+- **R:** R8, R30
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+The verdict over dbt's node statuses and DQR2's check on a MERGE's metrics.
+
+- `pipeline/src/bikesharing/core/verdict.py` (new): [`bikesharing.core.verdict`](#bikesharingcoreverdict).
+- `pipeline/tests/unit/core/test_verdict.py` (new): a batch commits only with no node in `fail` or `error`, `warn` stops nothing, each node maps to its rule (R8), and DQR2 fails on a row updated or deleted (R30).
+
+#### Reads
+
+- [`bikesharing.core.verdict`](#bikesharingcoreverdict), this design: the contract.
+- [Transformation in dbt](#transformation-in-dbt) › Runtime rules and Severity and verdict, this design.
+
+#### Do
+
+1. Write `pipeline/tests/unit/core/test_verdict.py`.
+2. Implement `pipeline/src/bikesharing/core/verdict.py`.
+
+#### Check
+
+- `uv run --directory pipeline pytest tests/unit/core/test_verdict.py` passes.
+
+### Step 9 — Events
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 11)
+- **R:** R24
+- **Model:** sonnet · high
+- **Review:** no
+
+#### Scope
+
+The events of a run as values, their redaction and the log object's key.
+
+- `pipeline/src/bikesharing/core/events.py` (new): [`bikesharing.core.events`](#bikesharingcoreevents).
+- `pipeline/tests/unit/core/test_events.py` (new): each event's common fields in ADR-0036's order and its own fields, the redaction of each secret's value in an error's message, the heartbeat's URL included (R24), and the log object's key.
+
+#### Reads
+
+- [`bikesharing.core.events`](#bikesharingcoreevents), this design: the contract.
+- [Observability](#observability), this design: the event table, run measures and redaction.
+- [ADR-0036](../decisions/0036-log-convention-across-components.md): the common fields and their order.
+
+#### Do
+
+1. Write `pipeline/tests/unit/core/test_events.py`.
+2. Implement `pipeline/src/bikesharing/core/events.py`.
+
+#### Check
+
+- `uv run --directory pipeline pytest tests/unit/core/test_events.py` passes.
+
+### Step 10 — Contract of the published file
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 11)
+- **R:** R7
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+The published file's schema and its shared vectors, tested before the file is built ([testing.md](../../.claude/rules/code/testing.md) › Contracts between components).
+
+- `contracts/latest-station-count.schema.json` (new): JSON Schema, draft 2020-12, of D2's fields, with `additionalProperties: false` at every level.
+- `contracts/latest-station-count.json` (new): one `valid` file and one `invalid` file per kind of violation (a missing field, a wrong type, a field outside D2's list), each with its `reason`.
+- `pipeline/tests/integration/test_latest_station_count_contract.py` (new): the `valid` file passes the schema and each `invalid` file fails it; Step 24 adds the file built from the fixtures.
+
+#### Reads
+
+- [Publishing](#publishing) › Contract, this design.
+- [D2](#d2-published-file-the-latest-count-of-each-station), this design: the file's fields.
+- [ADR-0050](../decisions/0050-contract-tests-by-contract-kind-with-native-schemas.md): data-shape contracts as a native schema with vectors.
+
+#### Do
+
+1. Write `contracts/latest-station-count.schema.json`.
+2. Write `contracts/latest-station-count.json`.
+3. Write `pipeline/tests/integration/test_latest_station_count_contract.py`.
+
+#### Check
+
+- `uv run --directory pipeline pytest tests/integration/test_latest_station_count_contract.py` passes.
+
+### Step 11 — Published file in the core
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `d008.s11 - feat: add the pipeline's functional core and the published file's contract` (Steps 5–11)
+- **R:** R7
+- **Model:** sonnet · high
+- **Review:** code and security
+
+#### Scope
+
+The published document from `latest_station_count`'s rows, and its validation against the schema (DQR14).
+
+- `pipeline/src/bikesharing/core/published_file.py` (new): [`bikesharing.core.published_file`](#bikesharingcorepublished_file).
+- `pipeline/tests/unit/core/test_published_file.py` (new): the document built from rows, and each violation reported with its path in the file.
+
+#### Reads
+
+- [`bikesharing.core.published_file`](#bikesharingcorepublished_file), this design: the contract.
+- [Publishing](#publishing) › Runtime check, this design.
+
+#### Do
+
+1. Write `pipeline/tests/unit/core/test_published_file.py`.
+2. Implement `pipeline/src/bikesharing/core/published_file.py`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0.
+
+### Step 12 — Sources and staging models
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 15)
+- **R:** R2, R3, R25
+- **Model:** opus · high
+- **Review:** no
+
+#### Scope
+
+Bronze as dbt sources, and one staging model per system.
+
+- `pipeline/dbt/models/sources.yml` (new): `ambici` and `bicing`, each with `station_status` and `station_status_raw` over the batch's local files, and `lakehouse.capture_history` and `lakehouse.latest_captures` over the Parquet files the shell writes.
+- `pipeline/dbt/models/silver/stg_ambici__station_status.sql` (new): AMBici's casts, conversions to UTC, renames and TR8's nulls.
+- `pipeline/dbt/models/silver/stg_bicing__station_status.sql` (new): Bicing's casts, conversions and TR9's null.
+- `pipeline/dbt/models/silver/silver.yml` (new): both models' descriptions and dbt unit tests (R2, R3).
+
+#### Reads
+
+- [Transformation in dbt](#transformation-in-dbt) › Bronze as external sources and Models, this design.
+- [dbt model contracts](#dbt-model-contracts), this design: the `silver.yml` block.
+- [D1](#d1-first-version-of-the-station-stock), this design: the rules on measures and flags.
+- [sql.md](../../.claude/rules/code/sql.md): the SQL conventions.
+
+#### Do
+
+1. Write `pipeline/dbt/models/sources.yml`; confirm that `external_location` renders dbt variables, and if it does not, apply the fallback of #12 (each staging model calls `read_json` with the variables and declares its source with `depends_on`), recording it as a finding.
+2. Write the unit tests in `pipeline/dbt/models/silver/silver.yml`.
+3. Write both staging models.
+4. Confirm that SQLFluff's dbt templater lints them with `dbt-core` 1.12.7; if it does not, switch `[tool.sqlfluff]` to the Jinja templater, as #27 sets, and record it as a finding.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0, with both staging models' unit tests passing.
+
+### Step 13 — Station stock
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 15)
+- **R:** R1, R4, R5, R8
+- **Model:** opus · high
+- **Review:** no
+
+#### Scope
+
+`station_stock` at D1's grain, with its contract, calendar keys, lineage and the rules on its grain.
+
+- `pipeline/dbt/models/silver/station_stock.sql` (new): the union of both staging models, the local calendar keys and the lineage columns, materialized as a table.
+- `pipeline/dbt/models/silver/silver.yml` (modified): its contract, DQR1 and DQR13 with their `name`, severity and `meta`, and unit tests (R1, R4, R5).
+- `pipeline/dbt/tests/generic/` (new): the generic test DQR13 needs.
+
+#### Reads
+
+- [Transformation in dbt](#transformation-in-dbt) › Models, Rule traceability, Runtime rules and Materialization, this design.
+- [dbt model contracts](#dbt-model-contracts), this design: `station_stock`'s columns.
+- DQR1 and DQR13 in [data-quality.md](../data-quality.md).
+- [ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md) and [ADR-0043](../decisions/0043-lineage-at-four-levels.md): calendar keys and lineage columns.
+
+#### Do
+
+1. Write the unit tests and data tests in `pipeline/dbt/models/silver/silver.yml`.
+2. Write the generic test in `pipeline/dbt/tests/generic/`.
+3. Write `pipeline/dbt/models/silver/station_stock.sql`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0.
+
+### Step 14 — Volume and schema drift
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 15)
+- **R:** R8
+- **Model:** opus · high
+- **Review:** no
+
+#### Scope
+
+The batch's audits of DQR12 and DQR11, with their warn tests.
+
+- `pipeline/dbt/models/silver/capture_volume.sql` (new): each capture against its system's 24 h median, with `ok`, `drop` or `not_evaluated` (#14).
+- `pipeline/dbt/models/silver/schema_drift.sql` (new): the fields added and dropped per object (#15).
+- `pipeline/dbt/models/silver/silver.yml` (modified): both models, DQR12 and DQR11 with severity warn, and unit tests.
+- `pipeline/dbt/tests/generic/` (modified): the generic tests DQR11 and DQR12 need.
+
+#### Reads
+
+- [Transformation in dbt](#transformation-in-dbt) › Volume drop and Schema drift, this design.
+- [D4](#d4-volume-drop-against-a-rolling-median), this design.
+- DQR11 and DQR12 in [data-quality.md](../data-quality.md).
+
+#### Do
+
+1. Write the unit tests and data tests in `pipeline/dbt/models/silver/silver.yml`.
+2. Write the generic tests in `pipeline/dbt/tests/generic/`.
+3. Write `capture_volume.sql` and `schema_drift.sql`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0.
+
+### Step 15 — Latest station count and exposure
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `d008.s15 - feat: add the dbt models of the station stock and the published file` (Steps 12–15)
+- **R:** R6
+- **Model:** sonnet · high
+- **Review:** code
+
+#### Scope
+
+The gold model in the shape of the published file, and the file as dbt's exposure.
+
+- `pipeline/dbt/models/gold/latest_station_count.sql` (new): D2's fields from `lakehouse.latest_captures`.
+- `pipeline/dbt/models/gold/gold.yml` (new): its contract and unit tests (R6).
+- `pipeline/dbt/models/exposures.yml` (new): the published file as an exposure of type `application` (#24).
+
+#### Reads
+
+- [Publishing](#publishing) › Source of the file, this design.
+- [dbt model contracts](#dbt-model-contracts), this design: the `gold.yml` block.
+- [D2](#d2-published-file-the-latest-count-of-each-station), this design.
+
+#### Do
+
+1. Write the unit tests in `pipeline/dbt/models/gold/gold.yml`.
+2. Write `latest_station_count.sql`.
+3. Write `pipeline/dbt/models/exposures.yml`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0.
+
+### Step 16 — DuckDB session
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 21)
+- **R:** R25, R28, R29
+- **Model:** opus · high
+- **Review:** security
+
+#### Scope
+
+DuckDB's connection with its sandbox and memory settings, and the reads of the scratch database.
+
+- `pipeline/src/bikesharing/shell/duckdb_session.py` (new): [`bikesharing.shell.duckdb_session`](#bikesharingshellduckdb_session).
+- `pipeline/tests/conftest.py` (new): the shared fixtures, a local bronze folder and a local Delta path.
+- `pipeline/tests/integration/test_duckdb_session.py` (new): each system's fixtures read with its schema (#11), a file outside the allowed folder refused (R28), an extension load refused (R29), and a spill to the temporary folder with external access off (#10).
+
+#### Reads
+
+- [`bikesharing.shell.duckdb_session`](#bikesharingshellduckdb_session), this design: the contract.
+- [Bronze reading](#bronze-reading) › Batch reading, Memory and Read schema, this design.
+
+#### Do
+
+1. Write `pipeline/tests/conftest.py`.
+2. Write `pipeline/tests/integration/test_duckdb_session.py`.
+3. Implement `pipeline/src/bikesharing/shell/duckdb_session.py`.
+
+#### Check
+
+- `uv run --directory pipeline pytest tests/integration/test_duckdb_session.py` passes.
+
+### Step 17 — R2 adapter
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 21)
+- **R:** —
+- **Model:** sonnet · high
+- **Review:** no
+
+#### Scope
+
+Listing, batch download and log upload over R2's S3 API, tested through `LocalStore`.
+
+- `pipeline/src/bikesharing/shell/r2.py` (new): [`bikesharing.shell.r2`](#bikesharingshellr2).
+- `pipeline/tests/integration/test_r2.py` (new): listing after a key, concurrent download of explicit keys to a folder, and the log object's upload, on `LocalStore` over local folders.
+
+Whether files on the container's local disk count against its memory needs a Modal container, so Step 27 confirms it.
+
+#### Reads
+
+- [`bikesharing.shell.r2`](#bikesharingshellr2), this design: the contract.
+- [Runtime and dependencies](#runtime-and-dependencies) › S3 client, this design.
+- `obstore`'s documentation of `list` with `offset`, `S3Store` and `LocalStore`.
+
+#### Do
+
+1. Write `pipeline/tests/integration/test_r2.py`.
+2. Implement `pipeline/src/bikesharing/shell/r2.py`.
+
+#### Check
+
+- `uv run --directory pipeline pytest tests/integration/test_r2.py` passes.
+
+### Step 18 — Listing probe against R2
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** — (committed with Step 21)
+- **R:** —
+- **Model:** —
+- **Review:** no
+
+#### Scope
+
+The confirmation that `obstore`'s `list` with `offset` returns the keys after it on R2, as `start-after` does (#25). Claude writes a throwaway script to the scratchpad that lists one day of AMBici's `station_status` prefix in `bikesharing-bronze` from a key in the middle of the day with `r2.py`'s listing; the owner runs it with bronze's read-only token in their shell's environment. Claude records the result in [Runtime and dependencies](#runtime-and-dependencies) › S3 client.
+
+#### Reads
+
+- [Runtime and dependencies](#runtime-and-dependencies) › S3 client, this design.
+
+#### Do
+
+1. Write the probe script to the scratchpad (Claude).
+2. Run it with bronze's read-only token (owner).
+3. Update the S3 client item with the result (Claude).
+
+#### Check
+
+- The listing holds only keys after the given one; if it does not, the finding goes back to this design before Step 19.
+
+### Step 19 — Delta tables
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 21)
+- **R:** R20
+- **Model:** opus · high
+- **Review:** code
+
+#### Scope
+
+Table creation, the insert-only MERGE, `processed_objects`, the retry on conflict and the Parquet inputs of dbt.
+
+- `pipeline/src/bikesharing/shell/delta.py` (new): [`bikesharing.shell.delta`](#bikesharingshelldelta).
+- `pipeline/tests/integration/test_delta.py` (new): tables created with their schemas, a batch merged twice that adds no row (#4), the MERGE's metrics returned for DQR2, a conflict retried on a fresh handle, and the history and latest captures written as Parquet.
+
+#### Reads
+
+- [`bikesharing.shell.delta`](#bikesharingshelldelta), this design: the contract.
+- [Delta writes](#delta-writes), this design.
+- `deltalake`'s documentation of the storage options for R2: the name of the conditional put option.
+
+#### Do
+
+1. Write `pipeline/tests/integration/test_delta.py`.
+2. Implement `pipeline/src/bikesharing/shell/delta.py`, with the conditional put option `deltalake`'s documentation names, `conditional_put` or `aws_conditional_put`; record which in [Delta writes](#delta-writes) › Conditional put.
+
+#### Check
+
+- `uv run --directory pipeline pytest tests/integration/test_delta.py` passes.
+
+### Step 20 — dbt runner
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 21)
+- **R:** R8
+- **Model:** sonnet · high
+- **Review:** no
+
+#### Scope
+
+`dbt build` in process with the batch's variables, returning its node statuses.
+
+- `pipeline/src/bikesharing/shell/dbt_runner.py` (new): [`bikesharing.shell.dbt_runner`](#bikesharingshelldbt_runner).
+- `pipeline/tests/integration/test_dbt_runner.py` (new): a build over the fixtures returns every node with its status and calls `on_node` for each, a failing data test ends in `fail` without stopping the others, and a parse error raises `DbtInvocationError`.
+
+#### Reads
+
+- [`bikesharing.shell.dbt_runner`](#bikesharingshelldbt_runner), this design: the contract.
+- [s017 › P4, P7](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs): the node fields and the two-batch run in one process.
+
+#### Do
+
+1. Write `pipeline/tests/integration/test_dbt_runner.py`.
+2. Implement `pipeline/src/bikesharing/shell/dbt_runner.py`.
+
+#### Check
+
+- `uv run --directory pipeline pytest tests/integration/test_dbt_runner.py` passes.
+
+### Step 21 — Event log and heartbeat
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `d008.s21 - feat: add the pipeline shell's adapters` (Steps 16–21)
+- **R:** R14, R15
+- **Model:** sonnet · high
+- **Review:** code
+
+#### Scope
+
+Events to stdout and to the run's log object, and the pings to Healthchecks.io.
+
+- `pipeline/src/bikesharing/shell/event_log.py` (new): [`bikesharing.shell.event_log`](#bikesharingshellevent_log).
+- `pipeline/src/bikesharing/shell/heartbeat.py` (new): [`bikesharing.shell.heartbeat`](#bikesharingshellheartbeat).
+- `pipeline/tests/integration/test_heartbeat.py` (new): `/start` then success (R14), `/fail` with its body (R15), and a ping retried and then given up, against a local stub of the check, with small timeouts.
+- `pipeline/tests/integration/test_event_log.py` (new): each event to stdout as it happens and all of them in the log object.
+
+#### Reads
+
+- [`bikesharing.shell.event_log`](#bikesharingshellevent_log) and [`bikesharing.shell.heartbeat`](#bikesharingshellheartbeat), this design: the contracts.
+- [Observability](#observability) › Log object and Heartbeat, this design.
+
+#### Do
+
+1. Write both test modules.
+2. Implement `event_log.py`.
+3. Implement `heartbeat.py`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0.
+
+### Step 22 — Page component
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 26)
+- **R:** —
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+`web/` with only what the page's deployment needs (#26).
+
+- `web/.nvmrc` (new): `26.12.1`.
+- `web/package.json` (new): `"private": true` and `wrangler` 4.165.0, pinned exactly.
+- `web/package-lock.json` (new).
+- `web/wrangler.jsonc` (new): the Worker `bikesharing-web` of static assets only ([ADR-0035](../decisions/0035-cloud-resource-naming.md)), its compatibility date and the assets directory `public/`.
+
+#### Reads
+
+- [Publishing](#publishing) › Worker configuration, this design.
+- [cloudflare-worker.md](../../.claude/rules/code/cloudflare-worker.md) and [dependencies.md](../../.claude/rules/code/dependencies.md).
+- `capture/wrangler.jsonc` and `capture/package.json`: the existing Worker's configuration, which the new one mirrors.
+
+#### Do
+
+1. Write `web/.nvmrc`.
+2. Install `wrangler` with `npm install --save-exact wrangler@4.165.0` in `web/`.
+3. Write `web/wrangler.jsonc`.
+
+#### Check
+
+- `npm ci --prefix web` installs `wrangler` 4.165.0 from the lockfile.
+
+### Step 23 — Publishing
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 26)
+- **R:** R31
+- **Model:** sonnet · high
+- **Review:** security
+
+#### Scope
+
+The file's writing to the assets directory and `wrangler deploy` as a subprocess.
+
+- `pipeline/src/bikesharing/shell/publishing.py` (new): [`bikesharing.shell.publishing`](#bikesharingshellpublishing).
+- `pipeline/tests/integration/test_publishing.py` (new): the file written to the assets directory, `wrangler` called with `--config` and `--tag` and the token in its environment only, and a stand-in for `wrangler` that exits with an error returned as a failed deployment with its exit code and output (R31).
+
+#### Reads
+
+- [`bikesharing.shell.publishing`](#bikesharingshellpublishing), this design: the contract.
+- [Publishing](#publishing) › Deployment tool and Failed deployment, this design.
+
+#### Do
+
+1. Write `pipeline/tests/integration/test_publishing.py`.
+2. Implement `pipeline/src/bikesharing/shell/publishing.py`.
+
+#### Check
+
+- `uv run --directory pipeline pytest tests/integration/test_publishing.py` passes.
+
+### Step 24 — Run end to end
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 26)
+- **R:** R6, R7, R8, R20, R21, R22
+- **Model:** opus · high
+- **Review:** code
+
+#### Scope
+
+A run end to end over local fixtures and tables, and the exclusion list.
+
+- `pipeline/src/bikesharing/shell/run.py` (new): [`bikesharing.shell.run`](#bikesharingshellrun).
+- `pipeline/config/excluded_objects.txt` (new): empty, with its format and its `TODO(T060.5):` marker (#8).
+- `pipeline/tests/integration/test_run.py` (new): two batches in one process with a failing model and a contract violation, checking the tables and the log (R8, R20, R21); a run that stops between its two commits; a batch with an unreadable object (R22); an excluded key never processed; and the published file built from the tables, a system with no capture keeping its earlier count (R6).
+- `pipeline/tests/integration/test_latest_station_count_contract.py` (modified): the file built from the fixtures through the same models passes the schema (R7, [Publishing](#publishing) › CI check).
+
+#### Reads
+
+- [`bikesharing.shell.run`](#bikesharingshellrun), this design: the contract.
+- [Tests and CI](#tests-and-ci) › Integration, shell, this design.
+- [D9](#d9-a-failed-batch-halts-the-pipeline-until-t0605), this design.
+
+#### Do
+
+1. Write `pipeline/config/excluded_objects.txt`.
+2. Write `pipeline/tests/integration/test_run.py`.
+3. Update `pipeline/tests/integration/test_latest_station_count_contract.py`.
+4. Implement `pipeline/src/bikesharing/shell/run.py`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0.
+
+### Step 25 — Modal app
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** — (committed with Step 26)
+- **R:** R11, R16, R23, R26, R27
+- **Model:** sonnet · high
+- **Review:** security
+
+#### Scope
+
+The platform module, with its image, both functions and their secrets, and ADR-0046's rule 4.
+
+- `pipeline/modal_app.py` (new): [`modal_app`](#modal_app).
+- `pipeline/pyproject.toml` (modified): `modal_app` among import-linter's root packages, and rule 4's contract.
+
+#### Reads
+
+- [`modal_app`](#modal_app), this design: the contract.
+- [Run operation on Modal](#run-operation-on-modal) and [Environments and configuration](#environments-and-configuration), this design.
+- Modal's documentation of `Image.from_registry`, `add_local_dir`, `add_local_python_source`, `Secret.from_name` and `Cron`.
+
+#### Do
+
+1. Implement `pipeline/modal_app.py`.
+2. Update import-linter's configuration in `pipeline/pyproject.toml`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0, with rule 4's contract kept.
+- `modal_app.py` declares the scheduled function with `timeout=600`, `max_containers=1` and no `retries`, and the one-off function with bronze's Secret only (R11, R16, R23, R26, R27).
+
+### Step 26 — Deploy script
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `d008.s26 - feat: add the pipeline's run, platform module and deploy script` (Steps 22–26)
+- **R:** R9, R10
+- **Model:** sonnet · high
+- **Review:** code and security
+
+#### Scope
+
+The only deployment path, with its refusals, its tag and its smoke test.
+
+- `pipeline/scripts/deploy.sh` (new): [Deploy script](#deploy-script).
+- `pipeline/tests/integration/test_deploy_script.py` (new): in a temporary Git repository with a stand-in for `modal`, the script refuses an uncommitted change, an untracked file and a commit other than `origin/main`, each with its cause, and never calls the stand-in (R10).
+
+#### Reads
+
+- [Deploy script](#deploy-script), this design.
+
+#### Do
+
+1. Write `pipeline/tests/integration/test_deploy_script.py`.
+2. Write `pipeline/scripts/deploy.sh`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` exits 0.
+
+### Step 27 — Platform probes
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** `d008.s27 - docs: record the platform probes of d008`
+- **R:** R16
+- **Model:** —
+- **Review:** no
+
+#### Scope
+
+The confirmations on Modal and Cloudflare that the Plan leaves to the build, each on a temporary resource; Claude writes the probes to the scratchpad and records each result in its section of this design.
+
+- **Memory kill:** a temporary app with a function that exceeds its hard limit, deployed, invoked once and stopped: whether Modal retries it ([Run operation on Modal](#run-operation-on-modal) › Timeout and retries).
+- **Local disk:** a one-off run of `one_off_run` that writes a file larger than the container's memory to its work folder: whether local disk counts against memory ([Bronze reading](#bronze-reading) › Batch reading).
+- **Modal's tag:** `modal deploy --tag` on `bikesharing-t0601-tag-probe` with a 40-character tag: where it shows in `modal app history --json`, its length limit, and whether Modal records the Git commit ([Deploy script](#deploy-script) › Tag).
+- **wrangler's tag:** `wrangler deploy --tag` with a 40-character tag on a temporary Worker of static assets, `bikesharing-t0601-tag-probe` (#18).
+
+#### Reads
+
+- The sections each probe names, this design.
+
+#### Do
+
+1. Write the probes to the scratchpad (Claude).
+2. Run each probe (owner).
+3. Record each result in its section (Claude).
+
+#### Check
+
+- Each probe's section states its result; a tag that cannot hold 40 characters goes back to this design before Step 28, as D5 sets.
+
+### Step 28 — Reference batch
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** `d008.s28 - docs: record the reference batch of d008`
+- **R:** —
+- **Model:** —
+- **Review:** no
+
+#### Scope
+
+D6's reference batch: a one-off run, from the task's branch, of one full batch of 360 objects of real bronze, whose `peak_memory_mb` and `duration_s` confirm or lower the batch bound before the first deployment. Claude records the measures in Close › Implemented and, if the bound is lowered, changes `MAX_OBJECTS_PER_BATCH`.
+
+#### Reads
+
+- [D6](#d6-provisional-run-bounds) and [Run operation on Modal](#run-operation-on-modal) › Container size, this design.
+
+#### Do
+
+1. Run `one_off_run` on Modal from the task's branch (owner).
+2. Read `run_finished`'s `peak_memory_mb` and `duration_s` in Modal's logs (owner).
+3. Record the measures and, if needed, lower `MAX_OBJECTS_PER_BATCH` in `pipeline/src/bikesharing/core/settings.py` (Claude).
+
+#### Check
+
+- `peak_memory_mb` leaves margin below the container's 4 GiB, and the run ends within its time budget; otherwise the bound is lowered and the run repeated.
+
+### Step 29 — Production rollout
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** one per stage, `d008.s29 - feat: move the end instant to <stage>`, and the closing one, `d008.s29 - docs: record the production checks of d008`
+- **R:** R9, R17
+- **Model:** —
+- **Review:** no
+
+#### Scope
+
+The first deployment, D8's stages and the checks of [Done when](#14-done-when) that need production data. The PR that ships the code carries `Refs #N`; each stage's PR moves `END_INSTANT` from a branch recreated from `main`; the closing PR, after the 14 days of [Cost recalibration](#cost-recalibration), records the checks and carries `Closes #N`.
+
+#### Reads
+
+- [D8](#d8-first-load-in-chronological-stages), [Done when](#14-done-when), [Deploy script](#deploy-script) and [Cost recalibration](#cost-recalibration), this design.
+
+#### Do
+
+1. Merge the task's PR and run `pipeline/scripts/deploy.sh` (owner); its smoke test's `run_started` and rows carry the SHA of `origin/main` (R9).
+2. Check each stage when `stage_drained` is logged: runtime rules, reconciliation, run time and memory (owner); move `END_INSTANT` to the end of the first week, then to none, each by a PR and a deployment (Claude writes, owner merges and deploys).
+3. Check the Healthchecks.io check's period and grace (R17), the spend limit and the pipeline's Cloudflare token (owner).
+4. Measure R2's operations and storage over 14 days, recalibrate the cost model and set Cloudflare's R2 alerts ([Cost recalibration](#cost-recalibration)).
+5. Measure the `pull_request` run's wall-clock and update [testing-strategy.md › Moving tests](../testing-strategy.md#moving-tests) (Claude).
+6. Delete both `bikesharing-t0601-tag-probe` resources (owner).
+
+#### Check
+
+- Every item of [Done when](#14-done-when) holds.
 
 ## 4. Close
 
