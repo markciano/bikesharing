@@ -1,0 +1,89 @@
+{
+  "contract": "d008 D2 published file latest-station-count.json: the latest count of each station of AMBici and Bicing, as contracts/latest-station-count.schema.json declares it",
+  "valid": [
+    {
+      "name": "both systems, with a measure the source publishes as null",
+      "file": {
+        "data_instant": "2026-10-18T12:00:00Z",
+        "stations": [
+          {
+            "system": "ambici",
+            "station_id": "1",
+            "num_vehicles_available": 7,
+            "num_docks_available": 13,
+            "is_renting": true,
+            "is_returning": true,
+            "last_reported": "2026-10-18T11:58:42Z",
+            "captured_at": "2026-10-18T11:59:00Z"
+          },
+          {
+            "system": "bicing",
+            "station_id": "42",
+            "num_vehicles_available": null,
+            "num_docks_available": 0,
+            "is_renting": false,
+            "is_returning": false,
+            "last_reported": "2026-10-18T11:59:30.5Z",
+            "captured_at": "2026-10-18T12:00:00Z"
+          }
+        ]
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "file": {
+        "data_instant": "2026-10-18T12:00:00Z",
+        "stations": [
+          {
+            "system": "ambici",
+            "station_id": "1",
+            "num_vehicles_available": 7,
+            "is_renting": true,
+            "is_returning": true,
+            "last_reported": "2026-10-18T11:58:42Z",
+            "captured_at": "2026-10-18T11:59:00Z"
+          }
+        ]
+      },
+      "reason": "missing field: a station has no num_docks_available"
+    },
+    {
+      "file": {
+        "data_instant": "2026-10-18T12:00:00Z",
+        "stations": [
+          {
+            "system": "ambici",
+            "station_id": "1",
+            "num_vehicles_available": 7,
+            "num_docks_available": 13,
+            "is_renting": "true",
+            "is_returning": true,
+            "last_reported": "2026-10-18T11:58:42Z",
+            "captured_at": "2026-10-18T11:59:00Z"
+          }
+        ]
+      },
+      "reason": "wrong type: is_renting is a string, not a boolean"
+    },
+    {
+      "file": {
+        "data_instant": "2026-10-18T12:00:00Z",
+        "stations": [
+          {
+            "system": "ambici",
+            "station_id": "1",
+            "name": "Plaça de Catalunya",
+            "num_vehicles_available": 7,
+            "num_docks_available": 13,
+            "is_renting": true,
+            "is_returning": true,
+            "last_reported": "2026-10-18T11:58:42Z",
+            "captured_at": "2026-10-18T11:59:00Z"
+          }
+        ]
+      },
+      "reason": "field outside D2's list: a station carries name"
+    }
+  ]
+}

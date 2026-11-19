@@ -1,66 +1,38 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Latest station count",
-  "description": "The published file latest-station-count.json: the latest count of each station of AMBici and Bicing, produced by the pipeline and read by the page.",
   "type": "object",
-  "required": ["data_instant", "stations"],
   "additionalProperties": false,
+  "required": ["data_instant", "stations"],
   "properties": {
-    "data_instant": {
-      "$ref": "#/$defs/instant",
-      "description": "Capture instant of the file's most recent data, in UTC."
-    },
+    "data_instant": {"$ref": "#/$defs/instant"},
     "stations": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/station" }
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "system", "station_id", "num_vehicles_available", "num_docks_available",
+          "is_renting", "is_returning", "last_reported", "captured_at"
+        ],
+        "properties": {
+          "system": {"enum": ["ambici", "bicing"]},
+          "station_id": {"type": "string", "minLength": 1},
+          "num_vehicles_available": {"type": ["integer", "null"], "minimum": 0},
+          "num_docks_available": {"type": ["integer", "null"], "minimum": 0},
+          "is_renting": {"type": "boolean"},
+          "is_returning": {"type": "boolean"},
+          "last_reported": {"$ref": "#/$defs/instant"},
+          "captured_at": {"$ref": "#/$defs/instant"}
+        }
+      }
     }
   },
   "$defs": {
     "instant": {
       "type": "string",
-      "format": "date-time",
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
-    },
-    "count": {
-      "type": ["integer", "null"],
-      "minimum": 0
-    },
-    "station": {
-      "type": "object",
-      "required": [
-        "system",
-        "station_id",
-        "num_vehicles_available",
-        "num_docks_available",
-        "is_renting",
-        "is_returning",
-        "last_reported",
-        "captured_at"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "system": { "enum": ["ambici", "bicing"] },
-        "station_id": { "type": "string", "minLength": 1 },
-        "num_vehicles_available": {
-          "$ref": "#/$defs/count",
-          "description": "Vehicles available for rental; null while a Bicing station is out of service."
-        },
-        "num_docks_available": {
-          "$ref": "#/$defs/count",
-          "description": "Free docks; null where the source publishes none."
-        },
-        "is_renting": { "type": "boolean" },
-        "is_returning": { "type": "boolean" },
-        "last_reported": {
-          "$ref": "#/$defs/instant",
-          "description": "The station's last_reported as its source publishes it, in UTC."
-        },
-        "captured_at": {
-          "$ref": "#/$defs/instant",
-          "description": "Capture instant of the station's count, in UTC."
-        }
-      }
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
     }
   }
 }
