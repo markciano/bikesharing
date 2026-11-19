@@ -74,9 +74,9 @@ Data engineering portfolio project on public bike sharing in the Barcelona area 
 │   ├── sources/            Source cards
 │   └── spikes/             Spike reports per system
 ├── capture/                Capture Worker (JS), with its own src/, test/ and scripts/
-├── contracts/              Shared contract vectors between components
-├── src/bikesharing/        Pipeline code
-├── scripts/                Helper scripts
-├── tests/                  Pipeline tests: unit/, integration/, fixtures/
+├── contracts/              Shared contract files between components (vectors and schemas)
+├── pipeline/               Pipeline (Python and dbt), with its own src/, dbt/, tests/ and scripts/
+├── web/                    Public page (Cloudflare Worker)
+├── scripts/                Repo-wide helper scripts
 └── spikes/                 Throwaway investigation code
 ```
