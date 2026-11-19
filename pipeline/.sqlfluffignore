@@ -1,0 +1,3 @@
+# dbt's generated SQL: compiled models and installed packages, not project sources.
+dbt/target/
+dbt/dbt_packages/
