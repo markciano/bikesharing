@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 17.
+- Current: Step 18, run by the owner.
 
 ## 1. Spec — what and why
 
@@ -2055,7 +2055,7 @@ DuckDB's connection with its sandbox and memory settings, and the reads of the s
 
 ### Step 17 — R2 adapter
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s17 add the R2 adapter for listing, batch download and log upload`
 - **R:** —
