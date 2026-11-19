@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 11.
+- Current: Step 12.
 
 ## 1. Spec — what and why
 
@@ -1838,7 +1838,7 @@ The published document from `latest_station_count`'s rows, and its validation ag
 
 ### Step 11 — Events
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s11 add the run's events, their redaction and the log object's key`
 - **R:** R24
