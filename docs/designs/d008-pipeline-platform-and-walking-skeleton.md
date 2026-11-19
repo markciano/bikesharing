@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 4, Components: whether the dbt models get contracts in 2.5.
+- Current: Plan › 4, Test plan (2.6).
 
 ## 1. Spec — what and why
 
@@ -308,7 +308,7 @@ Options considered for the partitioning:
 - **Discovery of pending objects:** the shell lists each system's `station_status` prefix through R2's S3 API, and the pending objects are the listed keys with no row in `processed_objects`. A run lists from 1 h before the most recent processed object, with `start-after`, which covers the delay between a capture's instant and the write of its object; the first run after local midnight lists the whole prefix, so that an object written later than that is processed too ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)); with no processed object, as on the first load, a run lists the whole prefix. Whether a run sweeps the whole prefix, and from which key it lists otherwise, is decided by the core. **#7**
 - **Batch reading:** the shell downloads each batch's objects, by their explicit keys, to a temporary folder on the container's local disk, and DuckDB reads that batch's files with `read_json` from their explicit list, never from a glob. The folder is removed when the batch ends, whatever its outcome. DuckDB runs with `enable_external_access = false`, `allowed_directories` set to that folder and `lock_configuration = true`, so it reaches no network and no other file, loads no extension and holds no R2 credential (R28, R29). The step that writes the download confirms that files on the container's local disk do not count against its memory, by writing one larger than the container's memory; if they do, the batch size is set so that the batch's files fit beside DuckDB's limit. **#9**
 - **Memory:** the Modal function sets its memory reservation equal to a hard limit, and the shell sets DuckDB's `memory_limit` to 60% of that limit, a value it receives as configuration from `modal_app.py`; the rest is left to Python, the Arrow hand-off to `deltalake` and dbt. DuckDB spills to a folder on the container's local disk, set with `temp_directory`; the step that writes DuckDB's configuration confirms that spilling and dbt's scratch database work with external access off. A memory error is not retried. Both values change only when `peak_memory_mb` nears the container's limit, or DuckDB raises memory errors while the container has room left. **#10**
-- **Read schema:** `read_json` reads each batch with an explicit `columns` schema and without `union_by_name`, so that DuckDB infers no schema file by file, which is what exhausts its memory over thousands of files in duckdb#27806; a row that does not fit the schema fails its batch (R21). The schema is a constant of `bikesharing.core`, declared from GBFS's `station_status` and the source cards ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)), and a test reads the bronze fixtures with it. If a 2.0.x patch carrying the upstream fix is released, the pin moves to it, but the reading does not depend on it. **#11**
+- **Read schema:** `read_json` reads each batch with an explicit `columns` schema and without `union_by_name`, so that DuckDB infers no schema file by file, which is what exhausts its memory over thousands of files in duckdb#27806; a row that does not fit the schema fails its batch (R21). There is one schema per system and feed, a constant of `bikesharing.core` declared from that feed's field dictionary in its system's source card ([AMBici](../sources/ambici.md), [Bicing](../sources/bicing.md)), since each provider publishes its own GBFS version and departs from it in its own way; a child that reads another feed adds that feed's schemas. A test reads each system's bronze fixtures with its schema. If a 2.0.x patch carrying the upstream fix is released, the pin moves to it, but the reading does not depend on it. **#11**
 - **Unreadable objects:** until T060.5, an unreadable bronze object fails its batch (D9) and is excluded only by a versioned list in the repository, `pipeline/config/excluded_objects.txt`, one key per line with its reason; the core removes the listed keys from the pending objects. An exclusion is then a reviewed change deployed as a new code version, as D9 sets. The list is provisional: T060.5 replaces it with the set-aside and removes it, and the file carries a `TODO(T060.5):` marker saying so. **#8**
 
 Options considered for the discovery of pending objects:
@@ -336,20 +336,20 @@ Options considered for memory:
 #### Transformation in dbt
 
 - **Project:** the dbt project is `pipeline/dbt/`, with its `dbt_project.yml` and a `profiles.yml` whose database is the run's scratch database: a DuckDB file on the container's local disk, created at the start of the run and removed at its end ([ADR-0047](../decisions/0047-dbt-builds-and-audits-the-pipeline-sql.md)).
-- **Bronze as an external source:** bronze is the source `bronze.station_status`, declared with `dbt-duckdb`'s `external_location` as a `read_json` over the batch's local files with the read schema of #11. The shell passes the list of files and the schema as dbt variables, together with the run's ID and code version. Models read bronze only through `source()`, so that dbt's lineage starts at bronze and unit tests replace the source with hand-written rows. The step that writes the source confirms that `external_location` renders dbt variables; if it does not, `stg_station_status` calls `read_json` with the variables and declares the source with dbt's `depends_on` comment, so that lineage still starts at bronze, and unit tests start at the next model. **#12**
-- **Models:** the models are grouped in one folder per layer of [ADR-0018](../decisions/0018-medallion-architecture.md), `models/silver/` and `models/gold/`. In silver, `stg_station_status` types and renames the source's fields and applies D1's rules on measures and flags, with TR9's null; `station_stock` adds the local calendar keys and the lineage columns, at D1's grain; `capture_volume` and `schema_drift` audit the batch (#14, #15). In gold, `latest_station_count` holds D2's fields in the shape of the published file, under a dbt model contract ([Publishing](#publishing)). The published file is a dbt exposure of type `application` in `models/exposures.yml`, which depends on `latest_station_count`, so that dbt's lineage ends at the file. **#24**
+- **Bronze as external sources:** each system's bronze is a source of its own, `ambici.station_status` and `bicing.station_status`, since AMBici publishes GBFS 2.3 and Bicing GBFS 3.0. Each is declared with `dbt-duckdb`'s `external_location` as a `read_json` over the batch's local files of its system, with its system's read schema of #11. The shell passes the files and the read schemas as dbt variables keyed by system, together with the run's ID and code version. Models read bronze only through `source()`, so that dbt's lineage starts at bronze and unit tests replace the sources with hand-written rows. The step that writes the sources confirms that `external_location` renders dbt variables; if it does not, each staging model calls `read_json` with the variables and declares its source with dbt's `depends_on` comment, so that lineage still starts at bronze, and unit tests start at the next model. **#12**
+- **Models:** the models are grouped in one folder per layer of [ADR-0018](../decisions/0018-medallion-architecture.md), `models/silver/` and `models/gold/`. In silver, following dbt Labs' project structure, one staging model per source, `stg_ambici__station_status` and `stg_bicing__station_status`, casts its source's fields, converts its instants to UTC timestamps, renames its measures as GBFS 3.0 names them (TR5) and applies D1's rules on measures and flags: TR8's nulls in AMBici's, TR9's null in Bicing's. `station_stock` unions both, in the columns of its contract, and adds the local calendar keys and the lineage columns, at D1's grain; `capture_volume` and `schema_drift` audit the batch (#14, #15). In gold, `latest_station_count` holds D2's fields in the shape of the published file, under a dbt model contract ([Publishing](#publishing)). The published file is a dbt exposure of type `application` in `models/exposures.yml`, which depends on `latest_station_count`, so that dbt's lineage ends at the file. **#24**
 - **SQL conventions:** the SQL files follow dbt Labs' SQL style guide, and `.claude/rules/code/sql.md`, on `pipeline/dbt/**`, states it with what is the project's own: one model per file, sources read only through `source()` and models through `ref()`, each data test's `name` as its DQR ID, and a model contract on every model the shell or a consumer reads. SQLFluff checks them with the `duckdb` dialect and its default rules, s016 › D2's policy, configured in `[tool.sqlfluff]` of `pyproject.toml`, with the dbt templater; the step that configures it confirms the templater supports `dbt-core` 1.12.7, and falls back to the Jinja templater otherwise. A `PostToolUse` hook on `.sql` edits under `pipeline/dbt/` runs `sqlfluff fix` and `sqlfluff lint` on the edited file and reports what remains on stderr with exit 2, as the Python hook does (s016 › P3). **#27**
 - **Rule traceability:** each runtime rule's data test takes its catalog ID as `name` and, in `meta`, the link to its entry in [data-quality.md](../data-quality.md), so that dbt's documentation shows the rule beside its model.
 - **Runtime rules:** DQR1 is a `unique` data test of `station_stock` on its natural key, and DQR13 a data test that compares the stations the source lists with the rows of `station_stock`; together with the insert-only MERGE (#4), they hold the grain across batches. DQR2 is the one rule of D3 that is not a dbt data test, since it concerns the Delta table's history, which dbt does not see: it holds by construction, as the MERGE has only an insert clause, and after each MERGE the shell checks that the metrics it returns report no row updated or deleted, logs DQR2's result and fails the run otherwise. The retention of T072 drops partitions in its own job, never in a run. **#13**
 - **Volume drop:** DQR12 is a data test of severity warn on the model `capture_volume`, with one row per capture of the batch: its system, capture instant and number of stations, the median number of stations of its system's captures in the 24 h before its capture instant, and its status, `ok`, `drop`, or `not_evaluated` with fewer than 60 captures in that window. The median takes the history and the batch's own earlier captures, so that the stages of D8 compare each capture with its own past. The test fails on `drop`, and the shell logs each `not_evaluated` capture. The history is the source `lakehouse.capture_history`: the rows of `processed_objects` captured in the 24 h before the batch's first capture, which the shell reads with `deltalake` and writes as a Parquet file to the batch's folder. A capture that lists no station is counted as 0. **#14**
-- **Schema drift:** DQR11 is a data test of severity warn on the model `schema_drift`, which compares the fields each bronze object carries with the read schema of #11, since a read with explicit `columns` ignores a new field and turns a missing one into nulls. The source `bronze.station_status_raw` reads the batch's same local files with `read_json_objects`, with no schema; per object, `schema_drift` takes the union of the stations' keys with `json_keys`, so that GBFS's optional fields, present in some stations only, raise no drift. A declared field missing from every station of an object is dropped, and a field present in any station but not declared is added. The test fails when any field is added or dropped, and the shell logs each field with its system. **#15**
+- **Schema drift:** DQR11 is a data test of severity warn on the model `schema_drift`, which compares the fields each bronze object carries with the read schema of #11, since a read with explicit `columns` ignores a new field and turns a missing one into nulls. The sources `ambici.station_status_raw` and `bicing.station_status_raw` read each system's same local files with `read_json_objects`, with no schema; per object, `schema_drift` takes the union of the stations' keys with `json_keys`, so that GBFS's optional fields, present in some stations only, raise no drift, and compares it with its system's declared fields. A declared field missing from every station of an object is dropped, and a field present in any station but not declared is added. The test fails when any field is added or dropped, and the shell logs each field with its system. **#15**
 - **Severity and verdict:** each data test declares in its own configuration the severity its rule has in the catalog, `error` or `warn`. The shell collects the status of every node of `dbt build` as values, and the core commits the batch only if no node ends in `fail` or `error`, which includes a model that fails its contract (R21); each `warn` is logged as an event and stops nothing. dbt runs without fail-fast, so that one run logs every failing rule of the batch. **#16**
-- **Materialization:** `stg_station_status`, `capture_volume` and `schema_drift` are views, read once by their tests; `station_stock` is a table of the scratch database, read by its tests and then by the hand-off, so that it is computed once.
+- **Materialization:** the staging models, `capture_volume` and `schema_drift` are views, read once by their tests; `station_stock` is a table of the scratch database, read by its tests and then by the hand-off, so that it is computed once.
 - **Hand-off to Delta:** once the core's verdict lets the batch commit, the shell opens the scratch database with the configuration of #9 and #10, reads `station_stock` whole as an Arrow table with `con.sql()`, counts its rows from it, and passes it to the MERGE of `deltalake`. The Arrow table sits outside DuckDB's `memory_limit`, in the headroom #10 leaves: under 2 MB in a normal run, about 100 MB for a first-load batch of 1,000 objects. If `peak_memory_mb` shows the hand-off as the run's peak, it moves to a stream of record batches. **#17**
 
 Options considered for how a batch enters dbt:
 
-- An external source over the batch's local files (chosen), following `dbt-duckdb`'s external sources: pros, reading bronze is part of dbt's graph, as ADR-0047 sets, and the shell keeps only I/O; cons, it depends on the adapter rendering variables in `external_location`.
+- One external source per system over the batch's local files (chosen), following `dbt-duckdb`'s external sources: pros, reading bronze is part of dbt's graph, as ADR-0047 sets, and the shell keeps only I/O; cons, it depends on the adapter rendering variables in `external_location`.
 - The shell loads the batch into a table of the scratch database, which dbt reads as a source: pros, no dependency on the adapter's external sources; cons, the reading and its schema become Python code of the shell, dbt's lineage starts at an intermediate table, and the batch is held as a table before it is transformed.
 
 Options considered for DQR12's history:
@@ -440,7 +440,7 @@ Options considered for the end instant:
   | `batch_started` | info | `batch`, `objects`, `first_capture`, `last_capture` |
   | `node_finished` | info | dbt's `node`, `status`, `duration_s`, `rows`, `num_failures` ([s017 › P4](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)) |
   | `rule_checked` | info, warn or error by outcome | `rule` (its DQR ID), `severity`, `status`, `failures` |
-  | `volume_not_evaluated` | info | `system`, `capture_instant`, `captures_in_window` (DQR12) |
+  | `volume_not_evaluated` | info | `system`, `captured_at`, `captures_in_window` (DQR12) |
   | `schema_drift_field` | warn | `system`, `field`, `change` (`added` or `dropped`) (DQR11) |
   | `batch_committed` | info | `batch`, `rows_inserted`, `objects` |
   | `batch_failed` | error | `batch`, `reason`, `error_type`, `error` (R20–R22) |
@@ -473,7 +473,7 @@ Options considered for the end instant:
 The pipeline follows [testing-strategy.md](../testing-strategy.md), whose Python section moves to `pipeline/` and which gains a section for SQL in dbt ([s017 › P6](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)). The levels are:
 
 - **Unit, core:** `pipeline/tests/unit/`, pytest, no I/O. They cover the core's decisions as values: which prefix a run lists and from which key (#7), the pending objects after the exclusion list (#8), the batches and the time budget (R12, R13), the end instant and `stage_drained` (R18, R19), the verdict over dbt's node statuses (#16), DQR2's check on a MERGE's metrics (R30), the events and their redaction (R24), and the file's validation against its schema (DQR14).
-- **Unit, dbt:** dbt unit tests in `pipeline/dbt/`, on hand-written rows that replace the sources, for each model's logic: D1's rules and TR9's null in `stg_station_status`, the calendar keys and lineage of `station_stock`, the median, `drop` and `not_evaluated` of `capture_volume`, the fields added and dropped of `schema_drift`, and D2's fields of `latest_station_count`. dbt builds the upstream relations first with `dbt run --empty` ([s017 › P6](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)).
+- **Unit, dbt:** dbt unit tests in `pipeline/dbt/`, on hand-written rows that replace the sources, for each model's logic: the casts, conversions and renames of each staging model, with TR8's nulls in AMBici's and TR9's null in Bicing's, the union of both in `station_stock`, the calendar keys and lineage of `station_stock`, the median, `drop` and `not_evaluated` of `capture_volume`, the fields added and dropped of `schema_drift`, and D2's fields of `latest_station_count`. dbt builds the upstream relations first with `dbt run --empty` ([s017 › P6](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)).
 - **Integration, shell:** `pipeline/tests/integration/`, on bronze fixtures in a local folder and Delta tables on a local path, with no network. They cover the read schema over the fixtures (#11), the shell's run of two batches in one process with a failing model and a contract violation, checking the tables and the log ([s017 › P7](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)), a batch processed twice that adds no row (#4), a run that stops between its two commits, DuckDB refusing a file outside its folder and an extension load (R28, R29), and the published file built from the tables.
 - **Contract:** consumer of `contracts/bronze-keys.json`, the keys the discovery parses; producer of `contracts/latest-station-count.schema.json`, with its invalid files ([Publishing](#publishing)). The content of a bronze object has no contract file: the read schema (#11), DQR11 and the failure of an unreadable object (R22) check it in every run, and capture's own tests check that it stores the response body unchanged ([d004](d004-bronze-data-capture.md)).
 - **End to end:** none in CI. The one-off run of D6's reference batch on Modal, on real bronze, is the end-to-end check before the first deployment, and the deploy script's smoke test the one after each deployment ([Deploy script](#deploy-script)).
@@ -512,8 +512,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 8 | [Bronze reading](#bronze-reading) | Until T060.5, an unreadable bronze object is excluded only by a versioned list in the repository, following a deny list in a fail-fast pipeline | Each exclusion is reviewed and traced by the deployed SHA, with no manual write to production | R22 | Plan |
 | 9 | [Bronze reading](#bronze-reading) | The shell downloads each batch to a temporary local folder, the only path DuckDB may read, following least privilege with DuckDB's file sandbox (`enable_external_access`, `allowed_directories`) | DuckDB reaches no network, loads no extension and holds no R2 credential | R28, R29 | Plan |
 | 10 | [Bronze reading](#bronze-reading) | DuckDB's `memory_limit` is 60% of the container's hard limit, revised only when `peak_memory_mb` or a memory error calls for it, following engine memory set below the container's limit with headroom | A batch too large fails with an error the log records, not a container kill | — | Plan |
-| 11 | [Bronze reading](#bronze-reading) | Bronze is read with a declared schema, a constant of the core checked against the fixtures, following schema on read with an explicit schema rather than an inferred one | It avoids duckdb#27806, and a change in the source fails a batch instead of changing the schema unnoticed | R21 | Plan |
-| 12 | [Transformation in dbt](#transformation-in-dbt) | A batch enters dbt as an external source over its local files, following `dbt-duckdb`'s external sources and ADR-0047 | dbt's lineage starts at bronze, unit tests replace the source with rows, and the shell keeps only I/O | — | Plan |
+| 11 | [Bronze reading](#bronze-reading) | Bronze is read with a declared schema per system and feed, a constant of the core taken from its source card and checked against the fixtures, following schema on read with an explicit schema rather than an inferred one | It avoids duckdb#27806, a change in the source fails a batch instead of changing the schema unnoticed, and DQR11 compares each object with what its own system publishes | R21 | Plan |
+| 12 | [Transformation in dbt](#transformation-in-dbt) | A batch enters dbt as one external source per system over its local files, each with its own staging model, unioned in silver, following `dbt-duckdb`'s external sources, dbt Labs' staging model per source, and ADR-0047 | dbt's lineage starts at bronze, each system's GBFS version is read and cast in its own model, unit tests replace the sources with rows, and the shell keeps only I/O | — | Plan |
 | 13 | [Transformation in dbt](#transformation-in-dbt) | DQR2 holds by the insert-only MERGE and is checked after each MERGE on the metrics it returns, following a guarantee by construction checked at runtime | The run checks it as D3 requires, and a code change that updates or deletes rows fails at its first run | R20, R30 | Plan |
 | 14 | [Transformation in dbt](#transformation-in-dbt) | DQR12's history is each capture's station count, kept in `processed_objects` and read by dbt as a second external source, following per-load metrics in the control table, as data observability's volume monitors keep them | Each run reads about 2,900 counts instead of a day of fact rows, and a capture with no rows counts as a drop | R8 | Plan |
 | 15 | [Transformation in dbt](#transformation-in-dbt) | DQR11 compares the keys of each bronze object, read with no schema, with the read schema, following the schema monitors of data observability | It detects added and dropped fields, which the typed read ignores, at a cost of milliseconds | R8 | Plan |
@@ -529,6 +529,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 25 | [Runtime and dependencies](#runtime-and-dependencies) | The shell reaches R2 with `obstore`, following a minimal dependency footprint where secrets are held and tests against a real local implementation | One wheel with no Python dependencies in the container, and integration tests run the production code on `LocalStore` | — | Plan |
 | 26 | [Publishing](#publishing) | The page's component, `web/`, is created now with only the Worker's `wrangler.jsonc` and the pins of Node and `wrangler`, which Modal's image copies, following one folder per component in a monorepo; **refines #18** | The Worker deploys the page with its data, so its configuration and tool belong to the page, and T041 only adds | R6 | Plan |
 | 27 | [Transformation in dbt](#transformation-in-dbt) | The SQL files follow dbt Labs' style guide, stated in `.claude/rules/code/sql.md` and checked by SQLFluff with its default rules, following the style guide and the linter it recommends | A tool checks the SQL's style, as s016 › D2 does for Python | — | Plan |
+| 28 | [Components](#25-components) | The dbt model contracts of the models the shell reads, and the schemas of the Delta tables, are exact in this design, following spec-driven development and dbt's model contracts | They are the interfaces between dbt, the shell and the persisted tables, fixed before any production data exists | R21 | Plan |
 
 ### 2.3 Architecture
 
@@ -590,10 +591,11 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   │   ├── dbt_project.yml                  (new)       dbt project
 │   │   ├── profiles.yml                     (new)       The run's scratch database
 │   │   ├── models/
-│   │   │   ├── sources.yml                  (new)       `bronze.station_status`, `bronze.station_status_raw`, `lakehouse.capture_history`, `lakehouse.latest_captures`
+│   │   │   ├── sources.yml                  (new)       `ambici` and `bicing`, each with `station_status` and `station_status_raw`; `lakehouse.capture_history`, `lakehouse.latest_captures`
 │   │   │   ├── exposures.yml                (new)       The published file as an exposure of `latest_station_count` (#24)
 │   │   │   ├── silver/
-│   │   │   │   ├── stg_station_status.sql   (new)       Typing, renaming, D1's rules and TR9's null
+│   │   │   │   ├── stg_ambici__station_status.sql (new) AMBici's casts, conversions, renames and TR8's nulls
+│   │   │   │   ├── stg_bicing__station_status.sql (new) Bicing's casts, conversions and TR9's null
 │   │   │   │   ├── station_stock.sql        (new)       Station stock at D1's grain, with calendar keys and lineage
 │   │   │   │   ├── capture_volume.sql       (new)       Captures against their 24 h median (DQR12)
 │   │   │   │   ├── schema_drift.sql         (new)       Fields added and dropped per object (DQR11)
@@ -623,7 +625,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 <!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
-Each contract is the module's public interface in stub form (PEP 484): what other modules import and its tests exercise. Names starting with `_` are private to their module and free to the implementation. Every `datetime` is timezone-aware in UTC, and every value object is a frozen dataclass with slots.
+Each contract of a Python module is its public interface in stub form (PEP 484): what other modules import and its tests exercise. Names starting with `_` are private to their module and free to the implementation. Every `datetime` is timezone-aware in UTC, and every value object is a frozen dataclass with slots. The dbt models' contracts are dbt model contracts, in dbt's YAML.
 
 #### `bikesharing.core.settings`
 
@@ -739,16 +741,56 @@ def stage_drained(
 
 #### `bikesharing.core.read_schema`
 
-- **Responsibility:** the read schema of `station_status`, passed to dbt as variables (#11, #12, #15).
+- **Responsibility:** the read schema of each system's `station_status`, passed to dbt as variables (#11, #12, #15).
 - **Location:** `pipeline/src/bikesharing/core/read_schema.py`
-- **Contract:** `STATION_STATUS_COLUMNS` maps each top-level field of a `station_status` object to its DuckDB type, as `read_json`'s `columns` takes it, with the stations as a list of structs; its fields and types are declared from GBFS's `station_status` and the source cards in the step that writes the module. `STATION_FIELDS` holds the station struct's field names, the declared fields DQR11 compares against.
+- **Contract:** `STATION_STATUS_COLUMNS` maps, per system, each top-level field of a `station_status` object to its DuckDB type, as `read_json`'s `columns` takes it, with the stations as a list of structs. Each declares every field its source card's field dictionary lists, with the JSON type as published: a string as `VARCHAR`, a POSIX time as `BIGINT`, a count as `INTEGER`; the staging models cast and convert ([ambici › `station_status`](../sources/ambici.md#station_status), [bicing › `station_status`](../sources/bicing.md#station_status)). `STATION_FIELDS` holds, per system, the station struct's field names, the declared fields DQR11 compares against.
 
 ```python
 from collections.abc import Mapping
 from typing import Final
 
-STATION_STATUS_COLUMNS: Final[Mapping[str, str]]
-STATION_FIELDS: Final[frozenset[str]]
+from bikesharing.core.settings import System
+
+STATION_STATUS_COLUMNS: Final[Mapping[System, Mapping[str, str]]] = {
+    "ambici": {
+        "last_updated": "BIGINT",
+        "ttl": "INTEGER",
+        "version": "VARCHAR",
+        "data": (
+            "STRUCT(stations STRUCT("
+            "station_id VARCHAR, "
+            "num_bikes_available INTEGER, "
+            "vehicle_types_available STRUCT(vehicle_type_id VARCHAR, count INTEGER)[], "
+            "num_docks_available INTEGER, "
+            "is_installed BOOLEAN, "
+            "is_renting BOOLEAN, "
+            "is_returning BOOLEAN, "
+            "last_reported BIGINT"
+            ")[])"
+        ),
+    },
+    "bicing": {
+        "last_updated": "VARCHAR",
+        "ttl": "INTEGER",
+        "version": "VARCHAR",
+        "data": (
+            "STRUCT(stations STRUCT("
+            "station_id VARCHAR, "
+            "num_vehicles_available INTEGER, "
+            "vehicle_types_available STRUCT(vehicle_type_id VARCHAR, count INTEGER)[], "
+            "num_vehicles_disabled INTEGER, "
+            "num_docks_available INTEGER, "
+            "num_docks_disabled INTEGER, "
+            "vehicle_docks_available STRUCT(vehicle_type_ids VARCHAR[], count INTEGER)[], "
+            "is_installed BOOLEAN, "
+            "is_renting BOOLEAN, "
+            "is_returning BOOLEAN, "
+            "last_reported VARCHAR"
+            ")[])"
+        ),
+    },
+}
+STATION_FIELDS: Final[Mapping[System, frozenset[str]]]
 ```
 
 #### `bikesharing.core.verdict`
@@ -848,7 +890,7 @@ def rule_checked(
     failures: int,
 ) -> Event: ...
 def volume_not_evaluated(
-    ts: datetime, *, system: System, capture_instant: datetime, captures_in_window: int
+    ts: datetime, *, system: System, captured_at: datetime, captures_in_window: int
 ) -> Event: ...
 def schema_drift_field(
     ts: datetime, *, system: System, field: str, change: Literal["added", "dropped"]
@@ -1004,7 +1046,7 @@ from bikesharing.shell.delta import ArrowStream
 @dataclass(frozen=True, slots=True)
 class NotEvaluated:
     system: System
-    capture_instant: datetime
+    captured_at: datetime
     captures_in_window: int
 
 @dataclass(frozen=True, slots=True)
@@ -1029,11 +1071,79 @@ def latest_station_count(con: DuckDBPyConnection) -> list[dict[str, object]]: ..
 def write_parquet(con: DuckDBPyConnection, stream: ArrowStream, path: Path) -> None: ...
 ```
 
+#### dbt model contracts
+
+- **Responsibility:** the shape of each model the shell reads, enforced by dbt at build time (#27, #28).
+- **Location:** `pipeline/dbt/models/silver/silver.yml` and `pipeline/dbt/models/gold/gold.yml`
+- **Contract:** each model below sets `contract: {enforced: true}`, so a model whose columns or types differ from its contract fails, and with it the batch (R21). Types are DuckDB's. `not_null` constraints apply to `station_stock` only, the one table; on the views dbt checks names and types, and the published file's nullability is checked by its JSON Schema (DQR14).
+  - Every instant is a `timestamp with time zone` in UTC ([ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md)): the staging models convert AMBici's POSIX seconds and Bicing's RFC 3339 strings, keeping the instant each source publishes (TR7, TR53).
+  - `local_date` and `local_minute` are the date and the minute of the day, 0 to 1439, of `captured_at` in `Europe/Madrid`; the minute is a number, since Delta has no time type.
+  - The nullable measures are `num_vehicles_available` (TR9), `num_docks_available` (conditionally required in GBFS), and `num_vehicles_disabled` and `num_docks_disabled` (TR8, null for AMBici).
+  - In `capture_volume`, `median_station_count` is null for a capture with no capture of its system in its window.
+
+```yaml
+# models/silver/silver.yml
+models:
+  - name: station_stock
+    config: {materialized: table, contract: {enforced: true}}
+    columns:
+      - {name: system, data_type: varchar, constraints: [{type: not_null}]}
+      - {name: station_id, data_type: varchar, constraints: [{type: not_null}]}
+      - {name: captured_at, data_type: timestamp with time zone, constraints: [{type: not_null}]}
+      - {name: local_date, data_type: date, constraints: [{type: not_null}]}
+      - {name: local_minute, data_type: smallint, constraints: [{type: not_null}]}
+      - {name: num_vehicles_available, data_type: integer}
+      - {name: num_docks_available, data_type: integer}
+      - {name: num_vehicles_disabled, data_type: integer}
+      - {name: num_docks_disabled, data_type: integer}
+      - {name: is_installed, data_type: boolean, constraints: [{type: not_null}]}
+      - {name: is_renting, data_type: boolean, constraints: [{type: not_null}]}
+      - {name: is_returning, data_type: boolean, constraints: [{type: not_null}]}
+      - {name: last_reported, data_type: timestamp with time zone, constraints: [{type: not_null}]}
+      - {name: last_updated, data_type: timestamp with time zone, constraints: [{type: not_null}]}
+      - {name: run_id, data_type: varchar, constraints: [{type: not_null}]}
+      - {name: code_version, data_type: varchar, constraints: [{type: not_null}]}
+
+  - name: capture_volume
+    config: {materialized: view, contract: {enforced: true}}
+    columns:
+      - {name: system, data_type: varchar}
+      - {name: captured_at, data_type: timestamp with time zone}
+      - {name: station_count, data_type: integer}
+      - {name: captures_in_window, data_type: integer}
+      - {name: median_station_count, data_type: double}
+      - {name: status, data_type: varchar}  # ok, drop, not_evaluated
+
+  - name: schema_drift
+    config: {materialized: view, contract: {enforced: true}}
+    columns:
+      - {name: system, data_type: varchar}
+      - {name: captured_at, data_type: timestamp with time zone}
+      - {name: field, data_type: varchar}
+      - {name: change, data_type: varchar}  # added, dropped
+```
+
+```yaml
+# models/gold/gold.yml
+models:
+  - name: latest_station_count
+    config: {materialized: view, contract: {enforced: true}}
+    columns:
+      - {name: system, data_type: varchar}
+      - {name: station_id, data_type: varchar}
+      - {name: num_vehicles_available, data_type: integer}
+      - {name: num_docks_available, data_type: integer}
+      - {name: is_renting, data_type: boolean}
+      - {name: is_returning, data_type: boolean}
+      - {name: last_reported, data_type: timestamp with time zone}
+      - {name: captured_at, data_type: timestamp with time zone}
+```
+
 #### `bikesharing.shell.dbt_runner`
 
 - **Responsibility:** runs `dbt build` in process with the batch's variables and returns its node statuses as values (#12, #16).
 - **Location:** `pipeline/src/bikesharing/shell/dbt_runner.py`
-- **Contract:** runs `dbtRunner` with `build --select <select> --exclude-resource-type unit_test`, without fail-fast, and calls `on_node` for each node as it finishes. `profiles.yml` reads the scratch database, the allowed directory, the spill folder and the memory limit with `env_var()` from `BIKESHARING_SCRATCH_DATABASE`, `BIKESHARING_ALLOWED_DIRECTORY`, `BIKESHARING_TEMP_DIRECTORY` and `BIKESHARING_MEMORY_LIMIT`, set by `dbt_build` from `paths`, and applies `connect`'s settings. The variables are, for `silver`, `bronze_files`, `read_columns`, `station_fields`, `capture_history_file`, `run_id` and `code_version`; for `gold`, `latest_captures_file`. A dbt invocation that fails outside its nodes, such as a parse error, raises `DbtInvocationError`.
+- **Contract:** runs `dbtRunner` with `build --select <select> --exclude-resource-type unit_test`, without fail-fast, and calls `on_node` for each node as it finishes. `profiles.yml` reads the scratch database, the allowed directory, the spill folder and the memory limit with `env_var()` from `BIKESHARING_SCRATCH_DATABASE`, `BIKESHARING_ALLOWED_DIRECTORY`, `BIKESHARING_TEMP_DIRECTORY` and `BIKESHARING_MEMORY_LIMIT`, set by `dbt_build` from `paths`, and applies `connect`'s settings. The variables are, for `silver`, `bronze_files`, `read_columns` and `station_fields`, each a mapping keyed by system, and `capture_history_file`, `run_id` and `code_version`; for `gold`, `latest_captures_file`. A dbt invocation that fails outside its nodes, such as a parse error, raises `DbtInvocationError`.
 
 ```python
 from collections.abc import Callable, Mapping
@@ -1066,7 +1176,7 @@ def dbt_build(
 
 - **Responsibility:** creates the Delta tables, reads the processing state and writes each batch's two commits (#4, #5, #14, #17).
 - **Location:** `pipeline/src/bikesharing/shell/delta.py`
-- **Contract:** `STATION_STOCK_SCHEMA` follows `station_stock`'s dbt contract, partitioned by `local_date`, and `PROCESSED_OBJECTS_SCHEMA` the columns of #4; both are declared in the step that writes the module. `r2_lakehouse` sets R2's endpoint and conditional put in the storage options. `merge_station_stock` runs the insert-only MERGE on the natural key, bounded by the batch's capture range and `local_dates`, and retries a commit conflict on a fresh table handle up to `attempts` times in all. `record_processed` appends. `capture_history` returns the rows of `processed_objects` captured in `[since, until)`, and `latest_captures` the rows of `station_stock` of each system's latest capture, pruned by its local date.
+- **Contract:** `STATION_STOCK_SCHEMA` holds the columns of `station_stock`'s dbt contract ([dbt model contracts](#dbt-model-contracts)) in its order, each nullable unless it has `not_null`, with Delta's type for DuckDB's: `varchar` as `string`, `integer` as `integer`, `smallint` as `short`, `boolean` as `boolean`, `date` as `date`, and `timestamp with time zone` as `timestamp`; the table is partitioned by `local_date`. `PROCESSED_OBJECTS_SCHEMA` holds the columns of #4, none nullable, and the table has no partitions. `r2_lakehouse` sets R2's endpoint and conditional put in the storage options. `merge_station_stock` runs the insert-only MERGE on the natural key, bounded by the batch's capture range and `local_dates`, and retries a commit conflict on a fresh table handle up to `attempts` times in all. `record_processed` appends. `capture_history` returns the rows of `processed_objects` captured in `[since, until)`, and `latest_captures` the rows of `station_stock` of each system's latest capture, pruned by its local date.
 
 ```python
 from collections.abc import Collection, Mapping, Sequence
@@ -1075,7 +1185,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Final, Literal, Protocol
 
-from deltalake import Schema
+from deltalake import Field, Schema
 
 from bikesharing.core.settings import System
 from bikesharing.core.verdict import MergeMetrics
@@ -1099,10 +1209,19 @@ class ProcessedObject:
     station_count: int
     status: Literal["processed"]
     run_id: str
-    version: str
+    code_version: str
 
 STATION_STOCK_SCHEMA: Final[Schema]
-PROCESSED_OBJECTS_SCHEMA: Final[Schema]
+PROCESSED_OBJECTS_SCHEMA: Final = Schema([
+    Field("key", "string", nullable=False),
+    Field("system", "string", nullable=False),
+    Field("feed", "string", nullable=False),
+    Field("captured_at", "timestamp", nullable=False),
+    Field("station_count", "integer", nullable=False),
+    Field("status", "string", nullable=False),
+    Field("run_id", "string", nullable=False),
+    Field("code_version", "string", nullable=False),
+])
 
 def r2_lakehouse(*, account_id: str, access_key_id: str, secret_access_key: str) -> Lakehouse: ...
 def local_lakehouse(path: Path) -> Lakehouse: ...
