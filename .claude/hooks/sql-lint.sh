@@ -27,8 +27,12 @@ export BIKESHARING_SCRATCH_DATABASE="$work/scratch.duckdb"
 export BIKESHARING_TEMP_DIRECTORY="$work/spill"
 export BIKESHARING_MEMORY_LIMIT="1GiB"
 
-# What fix leaves behind is what lint reports, so fix's own output is not needed.
-uv run --quiet --project pipeline sqlfluff fix "$file" >/dev/null 2>&1
-out=$(uv run --quiet --project pipeline sqlfluff lint "$file" 2>&1) && exit 0
+# SQLFluff takes its templater only from the configuration of the working directory,
+# so it runs from pipeline/, as check-pipeline.sh does; from the root it would fall
+# back to the Jinja templater. What fix leaves behind is what lint reports, so fix's
+# own output is not needed.
+cd pipeline
+uv run --quiet sqlfluff fix "$file" >/dev/null 2>&1
+out=$(uv run --quiet sqlfluff lint "$file" 2>&1) && exit 0
 echo "$out" >&2
 exit 2
