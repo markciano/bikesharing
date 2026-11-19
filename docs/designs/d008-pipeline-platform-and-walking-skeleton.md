@@ -1485,8 +1485,8 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 | P3 | Modal's usage limit and spend limit, on the existing account's billing page ([Run operation on Modal](#run-operation-on-modal)) | Starter plan; usage limit $30; spend limit $1 | the billing page shows the plan and both limits |
 | P4 | Modal's CLI authenticated on the local machine, with `uv run --group platform modal token new` if it is not | the existing account | `uv run --group platform modal profile current` names the account |
 | P5 | R2 bucket `bikesharing-lakehouse` ([ADR-0035](../decisions/0035-cloud-resource-naming.md)), with a lifecycle rule on the prefix `logs/pipeline/` ([Observability](#observability)) | objects deleted 30 days after creation | the bucket's settings list the rule with its prefix and age |
-| P6 | R2 API token `bikesharing-pipeline-bronze-read` | Object Read, on `bikesharing-bronze` only | R2's API tokens page shows its permission and bucket |
-| P7 | R2 API token `bikesharing-pipeline-lakehouse-write` | Object Read & Write, on `bikesharing-lakehouse` only | R2's API tokens page shows its permission and bucket |
+| P6 | R2 API token `bikesharing-pipeline-bronze-read` | Object Read, on `bikesharing-bronze` only, with a one-year expiry (DI1) | R2's API tokens page shows its permission, bucket and expiry |
+| P7 | R2 API token `bikesharing-pipeline-lakehouse-write` | Object Read & Write, on `bikesharing-lakehouse` only, with a one-year expiry (DI1) | R2's API tokens page shows its permission, bucket and expiry |
 | P8 | Cloudflare API token `bikesharing-pipeline-deploy` ([ADR-0038](../decisions/0038-account-wide-workers-editor-deploy-token.md)) | Workers Editor, with an expiry date | the API tokens page shows its role and expiry |
 | P9 | Healthchecks.io check of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) | period 15 min, grace 15 min | the check's page shows both values |
 | P10 | Modal Secrets, each with the environment variables that [`modal_app`](#modal_app) names: `bikesharing-pipeline-bronze-read` from P6, `bikesharing-pipeline-lakehouse-write` from P7, `bikesharing-pipeline-deploy` from P8, `bikesharing-pipeline-heartbeat` with P9's ping URL | four Secrets | `uv run --group platform modal secret list` lists the four names |
@@ -2468,4 +2468,4 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
-| | | | | |
+| DI1 | [3.1 Prerequisites](#31-prerequisites) › P6, P7 | The pipeline's R2 tokens expire after one year, as its Cloudflare token does | Credential rotation (NIST SP 800-53 IA-5): a leaked token stops working within a year; an expired one fails the run and the heartbeat alerts | Step 1 |
