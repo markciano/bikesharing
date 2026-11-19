@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 18, run by the owner.
+- Current: Step 19.
 
 ## 1. Spec — what and why
 
@@ -267,7 +267,7 @@ Options considered for the platform module:
 - **Python:** `pipeline/.python-version` holds the exact patch of 3.14, with `requires-python = ">=3.14,<3.15"`; if `uv sync --locked` or the tests fail on 3.14, both move to 3.13.18 and the cause is recorded as a finding; since `uuid.uuid7()` is new in 3.14, the shell then generates the run ID with a function of its own that follows RFC 9562's UUIDv7 layout.
 - **Python on Modal:** the image is built from the official `python:<patch>-slim-bookworm` image, whose patch `modal_app.py` reads from `.python-version` at deploy time, so production runs the patch that passed CI. **#3**
 - **Manifest and lockfile:** `pyproject.toml` declares the runtime dependencies (DuckDB on its pinned 2.0.x patch, `dbt-core` 1.12.7, `dbt-duckdb` 1.11.1, `deltalake`, `obstore` and `jsonschema`) and two dependency groups: `dev` (pytest, ruff, mypy, import-linter, SQLFluff with its dbt templater) and `platform` (Modal's SDK). `uv.lock` locks them all. `mashumaro>=3.15` is a constraint on a transitive dependency of dbt, set in `[tool.uv] constraint-dependencies`, against the truncation of float model versions below 3.15.
-- **S3 client:** the shell reaches R2's S3 API with `obstore`, through an `S3Store` with the account's endpoint and the credentials passed explicitly, never read from the environment or a profile; it lists, downloads each batch's objects concurrently and uploads the run's log object. Tests use its `LocalStore` over local folders, through the same code. The step that writes `r2.py` confirms against R2 that `list`'s `offset` returns the keys after it, as `start-after` does (#7); the core sorts the keys it receives, since `obstore` does not guarantee their order. **#25**
+- **S3 client:** the shell reaches R2's S3 API with `obstore`, through an `S3Store` with the account's endpoint and the credentials passed explicitly, never read from the environment or a profile; it lists, downloads each batch's objects concurrently and uploads the run's log object. Tests use its `LocalStore` over local folders, through the same code. On R2, `list`'s `offset` returns exactly the keys after it and not the key itself, as `start-after` does (#7): listing a day of AMBici's `station_status` (1,431 keys) after the key in the middle of the day returned the 715 keys that follow it; the core sorts the keys it receives, since `obstore` does not guarantee their order. **#25**
 - **Image dependencies:** the image installs only the runtime dependencies, at the versions locked in `uv.lock`; Modal provides its own client inside the container.
 - **Checks:** `pipeline/scripts/check-pipeline.sh` runs the checks of [Tests and CI](#tests-and-ci); it is the Check of every code step and the command of the pipeline's CI job.
 
@@ -279,7 +279,7 @@ Options considered for the Python patch on Modal:
 
 Options considered for the S3 client:
 
-- `obstore` (chosen), following a minimal dependency footprint where secrets are held and tests against a real local implementation rather than a mock: pros, one wheel with no Python dependencies, concurrent downloads, and `LocalStore` runs the integration tests through the production code; cons, pre-1.0 with breaking minor releases, held by `uv.lock` and reviewed at each update, and `offset` is still to be confirmed against R2.
+- `obstore` (chosen), following a minimal dependency footprint where secrets are held and tests against a real local implementation rather than a mock: pros, one wheel with no Python dependencies, concurrent downloads, and `LocalStore` runs the integration tests through the production code; cons, pre-1.0 with breaking minor releases, held by `uv.lock` and reviewed at each update.
 - `boto3`, AWS's SDK, the client of Cloudflare's R2 examples: pros, the most used and documented client; cons, botocore and four more packages in the image, `moto` to simulate R2 in tests, and its checksum settings pinned after the incompatibility R2 had with them.
 
 #### Delta writes
@@ -2088,7 +2088,7 @@ Whether files on the container's local disk count against its memory needs a Mod
 
 ### Step 18 — Listing probe against R2
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `docs: d008.s18 record the listing probe against R2`
 - **R:** —
