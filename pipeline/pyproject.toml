@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Pipeline of the Barcelona bike sharing project: bronze to silver and gold, and the published file."
 requires-python = ">=3.14,<3.15"
 dependencies = [
+    "arro3-core>=0.9.1",
     "dbt-core==1.12.7",
     "dbt-duckdb==1.11.1",
     "deltalake>=1.6.6",

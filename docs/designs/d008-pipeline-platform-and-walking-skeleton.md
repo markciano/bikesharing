@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 19.
+- Current: Step 20.
 
 ## 1. Spec — what and why
 
@@ -266,7 +266,7 @@ Options considered for the platform module:
 
 - **Python:** `pipeline/.python-version` holds the exact patch of 3.14, with `requires-python = ">=3.14,<3.15"`; if `uv sync --locked` or the tests fail on 3.14, both move to 3.13.18 and the cause is recorded as a finding; since `uuid.uuid7()` is new in 3.14, the shell then generates the run ID with a function of its own that follows RFC 9562's UUIDv7 layout.
 - **Python on Modal:** the image is built from the official `python:<patch>-slim-bookworm` image, whose patch `modal_app.py` reads from `.python-version` at deploy time, so production runs the patch that passed CI. **#3**
-- **Manifest and lockfile:** `pyproject.toml` declares the runtime dependencies (DuckDB on its pinned 2.0.x patch, `dbt-core` 1.12.7, `dbt-duckdb` 1.11.1, `deltalake`, `obstore` and `jsonschema`) and two dependency groups: `dev` (pytest, ruff, mypy, import-linter, SQLFluff with its dbt templater) and `platform` (Modal's SDK). `uv.lock` locks them all. `mashumaro>=3.15` is a constraint on a transitive dependency of dbt, set in `[tool.uv] constraint-dependencies`, against the truncation of float model versions below 3.15.
+- **Manifest and lockfile:** `pyproject.toml` declares the runtime dependencies (DuckDB on its pinned 2.0.x patch, `dbt-core` 1.12.7, `dbt-duckdb` 1.11.1, `deltalake` with its Arrow library `arro3-core` (DI7), `obstore` and `jsonschema`) and two dependency groups: `dev` (pytest, ruff, mypy, import-linter, SQLFluff with its dbt templater) and `platform` (Modal's SDK). `uv.lock` locks them all. `mashumaro>=3.15` is a constraint on a transitive dependency of dbt, set in `[tool.uv] constraint-dependencies`, against the truncation of float model versions below 3.15.
 - **S3 client:** the shell reaches R2's S3 API with `obstore`, through an `S3Store` with the account's endpoint and the credentials passed explicitly, never read from the environment or a profile; it lists, downloads each batch's objects concurrently and uploads the run's log object. Tests use its `LocalStore` over local folders, through the same code. On R2, `list`'s `offset` returns exactly the keys after it and not the key itself, as `start-after` does (#7): listing a day of AMBici's `station_status` (1,431 keys) after the key in the middle of the day returned the 715 keys that follow it; the core sorts the keys it receives, since `obstore` does not guarantee their order. **#25**
 - **Image dependencies:** the image installs only the runtime dependencies, at the versions locked in `uv.lock`; Modal provides its own client inside the container.
 - **Checks:** `pipeline/scripts/check-pipeline.sh` runs the checks of [Tests and CI](#tests-and-ci); it is the Check of every code step and the command of the pipeline's CI job.
@@ -291,7 +291,7 @@ Options considered for the S3 client:
 - **Conflicts:** a MERGE that conflicts with a concurrent commit is retried on a fresh table handle. Scheduled runs never overlap and one-off runs write only to local disk (#20), so a conflict means another writer, such as T072's maintenance job, committed at the same time.
 - **Table creation:** the shell creates each missing table with its explicit schema at the start of a run, before any write; no write uses `schema_mode="merge"`, so a column change takes a new code version.
 - **Table maintenance:** the run neither compacts nor vacuums its tables; their maintenance, with silver's retention, is a scheduled job of its own, T072. Until then each partition keeps the small files of its commits, which only reads of past days touch. **#6**
-- **Conditional put:** `deltalake` writes to R2 with conditional put; the step that writes the storage options confirms whether the option is `conditional_put` or `aws_conditional_put`.
+- **Conditional put:** `deltalake` writes to R2 with conditional put, with no locking provider: the storage options set `aws_conditional_put` to `etag` and `AWS_REGION` to `auto`, as `deltalake`'s documentation gives them for R2.
 
 Options considered for the processing state:
 
@@ -1309,7 +1309,7 @@ def record_processed(lakehouse: Lakehouse, objects: Sequence[ProcessedObject]) -
 def latest_captures(lakehouse: Lakehouse, latest: Mapping[System, datetime]) -> ArrowStream: ...
 ```
 
-The step that writes this module confirms that `deltalake`'s reads and writes and DuckDB's hand-off work over the Arrow C stream interface without `pyarrow`; if one needs it, `pyarrow` joins the runtime dependencies.
+`deltalake`'s reads and writes and DuckDB's hand-off work over the Arrow C stream interface without `pyarrow`; `record_processed` builds its MERGE's source from Python values with `arro3-core` (DI7).
 
 #### `bikesharing.shell.publishing`
 
@@ -2115,7 +2115,7 @@ The confirmation that `obstore`'s `list` with `offset` returns the keys after it
 
 ### Step 19 — Delta tables
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s19 add the Delta tables with the insert-only MERGE and the control table`
 - **R:** R20
@@ -2492,3 +2492,4 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 | DI4 | `pipeline/dbt/dbt_project.yml`, `.gitignore` | dbt's anonymous usage telemetry is off (`send_anonymous_usage_stats: false`), and dbt's `.user.yml` is ignored by Git | Minimal data egress: the pipeline sends nothing to a third party its design does not name | Step 4 |
 | DI5 | [2.4 File layout](#24-file-layout), [Step 5](#step-5--bronze-fixtures-and-read-schema) | The fixtures come from the capture spike's 13 days, are written by `pipeline/scripts/trim_fixtures.py` and listed with their provenance in `manifest.json`; a variety absent from the sample is a derived copy of a captured object | ADR-0037's rule (committed trimming script, provenance per fixture), as capture does; P11's one day lacks AMBici's station changes | Step 5 |
 | DI6 | [`bikesharing.shell.duckdb_session`](#bikesharingshellduckdb_session), [`bikesharing.shell.dbt_runner`](#bikesharingshelldbt_runner), `pipeline/dbt/profiles.yml` | dbt's connection takes DuckDB's sandbox and memory settings from a dbt-duckdb plugin, `Plugin` in `duckdb_session`, applied once per database with the function `connect` also uses, following the adapter's plugin hook for connection setup | dbt-duckdb applies a profile's `settings` again on every cursor, which a sandboxed or locked DuckDB refuses, and `config_options` cannot set `allowed_directories`; D10's settings and their order stay as designed | Step 12 |
+| DI7 | [Runtime and dependencies](#runtime-and-dependencies), [`bikesharing.shell.delta`](#bikesharingshelldelta), `pipeline/pyproject.toml` | `arro3-core` joins the runtime dependencies, and `record_processed` builds its MERGE's source with it instead of `pyarrow` | Every directly imported package is declared (ADR-0017); it is already locked as `deltalake`'s own Arrow library, so the image gains no package, and its use is a few lines a test covers | Step 19 |
