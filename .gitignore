@@ -32,6 +32,13 @@ ENV/
 .coverage.*
 coverage.xml
 htmlcov/
+
+# dbt
+pipeline/dbt/target/
+pipeline/dbt/logs/
+
+# The page's file, written by each run
+web/public/
 *.egg-info/
 *.egg
 .eggs/

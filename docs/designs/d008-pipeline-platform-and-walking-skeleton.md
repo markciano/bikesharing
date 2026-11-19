@@ -18,9 +18,9 @@ Kind: a build task builds code or configuration and has every block. A document-
 Phase: the blocks and reviews completed. A document-only task shows only Spec · Plan · Plan review.
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
-- State: Ready for implementation 🎬
+- State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 1.
+- Current: Step 2. P4 and P10 follow Step 1, since they need the `platform` group; P11's sample is at `~/Documents/projects/bikesharing-tmp/raw`, local day 2026-11-17.
 
 ## 1. Spec — what and why
 
@@ -1480,7 +1480,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 
 | # | Prerequisite | Version or value | Verification |
 |---|---|---|---|
-| P1 | uv on the local machine, upgraded if older | 0.13.9 | `uv --version` prints `uv 0.13.9` |
+| P1 | uv on the local machine, through Homebrew, upgraded if older | 0.13.5 (DI3) | `uv --version` prints `uv 0.13.5` |
 | P2 | Node on the local machine, through fnm, for `web/` | 26.12.1, as `capture/.nvmrc` | `node --version` prints `v26.12.1` with `web/`'s pin active |
 | P3 | Modal's usage limit and spend limit, on the existing account's billing page ([Run operation on Modal](#run-operation-on-modal)) | Starter plan; usage limit $30; spend limit $1 | the billing page shows the plan and both limits |
 | P4 | Modal's CLI authenticated on the local machine, with `uv run --group platform modal token new` if it is not | the existing account | `uv run --group platform modal profile current` names the account |
@@ -1494,7 +1494,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 
 ### Step 1 — Python project
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** — (committed with Step 4)
 - **R:** —
@@ -1505,7 +1505,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 
 The pipeline's Python project, installable and with its lint and import contracts configured, with no code yet.
 
-- `pipeline/.python-version` (new): `3.14.10`.
+- `pipeline/.python-version` (new): `3.14.9` (DI3).
 - `pipeline/pyproject.toml` (new): metadata, `requires-python = ">=3.14,<3.15"`, build backend for the `src/` layout, runtime dependencies, groups `dev` and `platform`, `[tool.uv] default-groups = ["dev"]` and the `mashumaro>=3.15` constraint; ruff, mypy, import-linter (rules 1–3) and SQLFluff configuration.
 - `pipeline/uv.lock` (new).
 - `pipeline/src/bikesharing/__init__.py`, `core/__init__.py`, `shell/__init__.py` (new): module docstrings only.
@@ -1521,7 +1521,7 @@ The pipeline's Python project, installable and with its lint and import contract
 
 #### Do
 
-1. Write `pipeline/.python-version` with `3.14.10`.
+1. Write `pipeline/.python-version` with `3.14.9`.
 2. Write `pipeline/pyproject.toml` with the metadata, `requires-python`, the build backend, `default-groups`, the `mashumaro` constraint and the tool configuration; import-linter's root packages are `bikesharing` only, since `modal_app` and rule 4 come with Step 25.
 3. Add the runtime dependencies with `uv add --directory pipeline`: `duckdb==2.0.0`, `dbt-core==1.12.7`, `dbt-duckdb==1.11.1`, `deltalake`, `obstore`, `jsonschema`.
 4. Add the `dev` group with `uv add --directory pipeline --dev`: `pytest`, `ruff`, `mypy`, `import-linter`, `sqlfluff`, `sqlfluff-templater-dbt`.
@@ -1532,7 +1532,7 @@ The pipeline's Python project, installable and with its lint and import contract
 
 #### Check
 
-- `uv sync --directory pipeline --locked` ends without error on Python 3.14.10; if it fails on 3.14, both pins move to 3.13.18 and the cause is recorded as a finding ([Runtime and dependencies](#runtime-and-dependencies)).
+- `uv sync --directory pipeline --locked` ends without error on Python 3.14.9; if it fails on 3.14, both pins move to 3.13.18 and the cause is recorded as a finding ([Runtime and dependencies](#runtime-and-dependencies)).
 - `uv run --directory pipeline lint-imports` reports every contract kept.
 
 ### Step 2 — Lint hooks
@@ -1632,7 +1632,7 @@ The pipeline's checks in one script, run by its CI job, and rule 5 of ADR-0046 a
 
 #### Check
 
-- `bash pipeline/scripts/check-pipeline.sh` exits 0, with pytest passing on Python 3.14.10; if a test fails on 3.14 for a cause of the runtime, both pins move to 3.13.18 and the cause is recorded as a finding.
+- `bash pipeline/scripts/check-pipeline.sh` exits 0, with pytest passing on Python 3.14.9; if a test fails on 3.14 for a cause of the runtime, both pins move to 3.13.18 and the cause is recorded as a finding.
 - The `pipeline` job's path filter lists `pipeline/**`, `.github/workflows/ci.yml` and the three contract files, and `ci-passed` lists `pipeline` among its needs.
 
 ### Step 5 — Bronze fixtures and read schema
@@ -2469,3 +2469,5 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
 | DI1 | [3.1 Prerequisites](#31-prerequisites) › P6, P7 | The pipeline's R2 tokens expire after one year, as its Cloudflare token does | Credential rotation (NIST SP 800-53 IA-5): a leaked token stops working within a year; an expired one fails the run and the heartbeat alerts | Step 1 |
+| DI2 | [Runtime and dependencies](#runtime-and-dependencies), [Step 1](#step-1--python-project), [Step 4](#step-4--check-script-and-ci-job) | The `dev` group adds `pytest-cov`, `pyproject.toml` sets `[tool.coverage.run] source = ["bikesharing"]`, and `check-pipeline.sh` runs pytest with `--cov` | `python.md` › Testing: line coverage is reported, never enforced | Step 1 |
+| DI3 | [3.1 Prerequisites](#31-prerequisites) › P1, [Step 1](#step-1--python-project), [Step 4](#step-4--check-script-and-ci-job) | Local uv is 0.13.5, Homebrew's stable release, instead of 0.13.9, and Python is 3.14.9, the latest patch uv 0.13.5 downloads, instead of 3.14.10 | The machine's package manager keeps local tools; patches of 0.13 share the lockfile format, and CI's `setup-uv` pins no version | Step 1 |

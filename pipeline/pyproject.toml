@@ -1,0 +1,80 @@
+[project]
+name = "bikesharing"
+version = "0.1.0"
+description = "Pipeline of the Barcelona bike sharing project: bronze to silver and gold, and the published file."
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "dbt-core==1.12.7",
+    "dbt-duckdb==1.11.1",
+    "deltalake>=1.6.6",
+    "duckdb==2.0.0",
+    "jsonschema>=4.26.0",
+    "obstore>=0.12.1",
+]
+
+[dependency-groups]
+dev = [
+    "import-linter>=2.17",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.5",
+    "sqlfluff>=4.5.0",
+    "sqlfluff-templater-dbt>=4.5.0",
+]
+platform = [
+    "modal>=1.6.4",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv]
+default-groups = ["dev"]
+# dbt's transitive dependency; below 3.15 it truncates float model versions.
+constraint-dependencies = ["mashumaro>=3.15"]
+
+[tool.coverage.run]
+source = ["bikesharing"]
+
+# Each tool starts from its default configuration: ruff's default rule set and
+# mypy's standard mode. A rule or a stricter mode is added only when a bug or a
+# review finding shows it would have caught something (s016 D2, Automatic
+# checks).
+[tool.ruff]
+
+[tool.mypy]
+
+# Rules 1–3 of the package's structure (ADR-0046, Functional core and imperative
+# shell for the pipeline); rule 4 comes with modal_app.py, and rule 5 is an
+# integration test.
+[tool.importlinter]
+root_packages = ["bikesharing"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Rule 1: the package does not import Modal's SDK"
+type = "forbidden"
+source_modules = ["bikesharing"]
+forbidden_modules = ["modal"]
+
+[[tool.importlinter.contracts]]
+name = "Rule 2: the core imports no DuckDB, dbt or HTTP client"
+type = "forbidden"
+source_modules = ["bikesharing.core"]
+forbidden_modules = ["duckdb", "dbt", "obstore", "requests", "httpx", "urllib3"]
+
+[[tool.importlinter.contracts]]
+name = "Rule 3: the shell sits above the core"
+type = "layers"
+containers = ["bikesharing"]
+layers = ["shell", "core"]
+
+[tool.sqlfluff.core]
+dialect = "duckdb"
+templater = "dbt"
+
+[tool.sqlfluff.templater.dbt]
+project_dir = "dbt"
+profiles_dir = "dbt"
