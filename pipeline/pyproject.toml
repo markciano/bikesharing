@@ -21,6 +21,7 @@ dev = [
     "ruff>=0.17.5",
     "sqlfluff>=4.5.0",
     "sqlfluff-templater-dbt>=4.5.0",
+    "types-jsonschema>=4.26.0.20261006",
 ]
 platform = [
     "modal>=1.6.4",
