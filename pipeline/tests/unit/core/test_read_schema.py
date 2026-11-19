@@ -5,6 +5,7 @@ with the JSON type as published (d008, Bronze reading).
 """
 
 import pytest
+
 from bikesharing.core.read_schema import STATION_FIELDS, STATION_STATUS_COLUMNS
 from bikesharing.core.settings import System
 
