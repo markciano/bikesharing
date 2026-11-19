@@ -711,3 +711,28 @@ unit_tests:
         rows: *no_bicing_raw_objects
     expect:
       rows: []
+
+  # Verifies DQR11
+  - name: schema_drift_raises_none_for_an_object_listing_no_station
+    description: >-
+      An object that lists no station has no fields to compare, so it drops none of
+      the declared ones; its empty feed is the volume audit's finding (DQR12).
+    model: schema_drift
+    overrides:
+      vars:
+        station_fields:
+          ambici: [is_renting, num_docks_available, station_id]
+          bicing: [station_id]
+    given:
+      - input: source('ambici', 'station_status_raw')
+        format: sql
+        rows: |
+          select
+              '{"data": {"stations": []}}'::json as json,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz'
+                  as filename
+      - input: source('bicing', 'station_status_raw')
+        format: sql
+        rows: *no_bicing_raw_objects
+    expect:
+      rows: []
