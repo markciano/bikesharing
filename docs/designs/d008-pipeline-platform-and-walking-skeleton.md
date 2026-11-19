@@ -16,11 +16,11 @@ Kind: a build task builds code or configuration and has every block. A document-
 
 <!-- State: Draft 📝 · Ready for implementation 🎬 · In progress 🔄 · Complete ✅. A document-only task goes from Draft to Complete.
 Phase: the blocks and reviews completed. A document-only task shows only Spec · Plan · Plan review.
-Current: where work resumes, with only the context the next session needs: the step being implemented, or the block and section of the design; — when complete. A document-only task names the section. -->
+Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 4, Components; File layout is approved.
+- Current: Plan › 4, Components: whether the dbt models get contracts in 2.5.
 
 ## 1. Spec — what and why
 
@@ -541,7 +541,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 ```text
 .
 ├── CLAUDE.md                                (modified)  Project structure: `pipeline/` replaces `src/bikesharing/` and `tests/`; adds `web/`; `scripts/` keeps only the shared helpers
-├── .gitignore                               (modified)  Ignores dbt's `target/` and `logs/` under `pipeline/dbt/`
+├── .gitignore                               (modified)  Ignores dbt's `target/` and `logs/` under `pipeline/dbt/`, and `web/public/`
 ├── .claude/
 │   ├── settings.json                        (modified)  Registers the Python and SQL lint hooks
 │   ├── hooks/
@@ -574,13 +574,13 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   │   │   ├── batching.py                  (new)       Batches, time budget, end instant and `stage_drained` (R12, R13, R18, R19)
 │   │   │   ├── read_schema.py               (new)       Read schema of `station_status` (#11)
 │   │   │   ├── verdict.py                   (new)       Verdict over dbt's node statuses (#16); DQR2's check on a MERGE's metrics (#13)
-│   │   │   ├── events.py                    (new)       Event values of [Observability](#observability) and the redaction of secrets (R24)
-│   │   │   └── published_file.py            (new)       Validation of the built file against its schema (DQR14)
+│   │   │   ├── events.py                    (new)       Event values of [Observability](#observability), the redaction of secrets (R24) and the log object's key
+│   │   │   └── published_file.py            (new)       The published document from `latest_station_count`'s rows, and its validation against its schema (DQR14)
 │   │   └── shell/                                       I/O and orchestration (ADR-0046)
 │   │       ├── __init__.py                  (new)
 │   │       ├── run.py                       (new)       A run end to end: tables, discovery, batches, publishing, log upload, heartbeat
 │   │       ├── r2.py                        (new)       Listing, batch download and log upload over R2's S3 API with `obstore` (#7, #9, #25)
-│   │       ├── duckdb_session.py            (new)       DuckDB connection with the sandbox and memory settings (#9, #10)
+│   │       ├── duckdb_session.py            (new)       DuckDB connection with the sandbox and memory settings, and the reads of the scratch database (#9, #10, #17)
 │   │       ├── dbt_runner.py                (new)       `dbt build` with the batch's variables, the event callback and node statuses (#12, #16)
 │   │       ├── delta.py                     (new)       Table creation, insert-only MERGE, `processed_objects`, retry on conflict, the Parquet inputs of dbt (#4, #14, #17)
 │   │       ├── publishing.py                (new)       File writing and `wrangler deploy` as a subprocess (#18, #19)
@@ -616,20 +616,632 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
     ├── .nvmrc                               (new)       Node version installed in Modal's image for `wrangler`
     ├── package.json                         (new)       `wrangler`, pinned exactly
     ├── package-lock.json                    (new)       Lockfile of `wrangler`
-    └── wrangler.jsonc                       (new)       The page's Worker: name, compatibility date, assets directory
+    └── wrangler.jsonc                       (new)       The page's Worker: name, compatibility date, assets directory `public/`, written by the run and ignored by Git
 ```
 
 ### 2.5 Components
 
 <!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
-#### `<ComponentName>`
+Each contract is the module's public interface in stub form (PEP 484): what other modules import and its tests exercise. Names starting with `_` are private to their module and free to the implementation. Every `datetime` is timezone-aware in UTC, and every value object is a frozen dataclass with slots.
 
-- **Responsibility:** `<one sentence>`
-- **Location:** `path/to/file`
-- **Contract:**
+#### `bikesharing.core.settings`
+
+- **Responsibility:** the run's constants, reviewed and traced by the code version (#21, [Environments and configuration](#environments-and-configuration)).
+- **Location:** `pipeline/src/bikesharing/core/settings.py`
+- **Contract:** `CLOUDFLARE_ACCOUNT_ID` takes the owner's account ID, which is not a secret, in the step that writes the module.
 
 ```python
+from datetime import datetime, timedelta
+from typing import Final, Literal
+from zoneinfo import ZoneInfo
+
+type System = Literal["ambici", "bicing"]
+
+COMPONENT: Final = "pipeline"
+UNRELEASED_VERSION: Final = "unreleased"
+SYSTEMS: Final[tuple[System, ...]] = ("ambici", "bicing")
+FEED: Final = "station_status"
+LOCAL_TIMEZONE: Final = ZoneInfo("Europe/Madrid")
+
+CLOUDFLARE_ACCOUNT_ID: Final[str]
+BRONZE_BUCKET: Final = "bikesharing-bronze"
+LAKEHOUSE_BUCKET: Final = "bikesharing-lakehouse"
+STATION_STOCK_PATH: Final = "silver/station_stock"
+PROCESSED_OBJECTS_PATH: Final = "control/processed_objects"
+LOG_PREFIX: Final = "logs/pipeline"
+
+END_INSTANT: Final[datetime | None]
+MAX_OBJECTS_PER_BATCH: Final = 360
+TIME_BUDGET: Final = timedelta(minutes=7)
+LISTING_LOOKBACK: Final = timedelta(hours=1)
+DUCKDB_MEMORY_FRACTION: Final = 0.6
+```
+
+#### `bikesharing.core.discovery`
+
+- **Responsibility:** parses bronze keys, plans each system's listing and selects the pending objects (#7, #8).
+- **Location:** `pipeline/src/bikesharing/core/discovery.py`
+- **Contract:** `parse_bronze_key` and `bronze_key` follow `contracts/bronze-keys.json`; a listed key that does not parse raises `InvalidBronzeKey` and fails the run. A run sweeps the whole prefix when no object is processed, or when the local date of `now` is later than that of the latest processed capture; otherwise it lists after the key of the latest processed capture minus `lookback`. Each line of the exclusion list is `<key> # <reason>`; blank lines and lines starting with `#` are ignored, and a line with no reason raises `ValueError`.
+
+```python
+from collections.abc import Iterable, Set
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+from bikesharing.core.settings import System
+
+class InvalidBronzeKey(ValueError): ...
+
+@dataclass(frozen=True, slots=True)
+class BronzeObject:
+    key: str
+    system: System
+    feed: str
+    captured_at: datetime
+
+@dataclass(frozen=True, slots=True)
+class ListingPlan:
+    system: System
+    prefix: str              # "raw/<system>/station_status/"
+    start_after: str | None  # None lists the whole prefix
+    full_sweep: bool
+
+def parse_bronze_key(key: str) -> BronzeObject: ...
+def bronze_key(system: System, feed: str, captured_at: datetime) -> str: ...
+def plan_listing(
+    system: System,
+    latest_processed: datetime | None,
+    *,
+    now: datetime,
+    lookback: timedelta,
+    timezone: ZoneInfo,
+) -> ListingPlan: ...
+def parse_exclusion_list(text: str) -> frozenset[str]: ...
+def pending_objects(
+    listed: Iterable[str], processed: Set[str], excluded: Set[str]
+) -> list[BronzeObject]: ...  # oldest first, then by key
+```
+
+#### `bikesharing.core.batching`
+
+- **Responsibility:** applies the end instant, splits the pending objects into batches and decides whether another batch may start (R12, R13, R18, R19).
+- **Location:** `pipeline/src/bikesharing/core/batching.py`
+- **Contract:** batches keep the input's order, oldest first across both systems, and are numbered from 1 within the run. A batch may start while less than `budget` has passed since the run started. The stage is drained when an end instant is set and no pending object is captured up to it.
+
+```python
+from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+
+from bikesharing.core.discovery import BronzeObject
+
+@dataclass(frozen=True, slots=True)
+class Batch:
+    number: int
+    objects: tuple[BronzeObject, ...]
+
+    @property
+    def first_capture(self) -> datetime: ...
+    @property
+    def last_capture(self) -> datetime: ...
+
+def within_end_instant(
+    objects: Sequence[BronzeObject], end_instant: datetime | None
+) -> list[BronzeObject]: ...
+def plan_batches(objects: Sequence[BronzeObject], max_objects: int) -> list[Batch]: ...
+def may_start_batch(*, run_started: datetime, now: datetime, budget: timedelta) -> bool: ...
+def stage_drained(
+    objects: Sequence[BronzeObject], end_instant: datetime | None
+) -> bool: ...
+```
+
+#### `bikesharing.core.read_schema`
+
+- **Responsibility:** the read schema of `station_status`, passed to dbt as variables (#11, #12, #15).
+- **Location:** `pipeline/src/bikesharing/core/read_schema.py`
+- **Contract:** `STATION_STATUS_COLUMNS` maps each top-level field of a `station_status` object to its DuckDB type, as `read_json`'s `columns` takes it, with the stations as a list of structs; its fields and types are declared from GBFS's `station_status` and the source cards in the step that writes the module. `STATION_FIELDS` holds the station struct's field names, the declared fields DQR11 compares against.
+
+```python
+from collections.abc import Mapping
+from typing import Final
+
+STATION_STATUS_COLUMNS: Final[Mapping[str, str]]
+STATION_FIELDS: Final[frozenset[str]]
+```
+
+#### `bikesharing.core.verdict`
+
+- **Responsibility:** decides whether a batch commits from dbt's node statuses, and checks DQR2 on a MERGE's metrics (#13, #16).
+- **Location:** `pipeline/src/bikesharing/core/verdict.py`
+- **Contract:** a batch commits only if no node ends in `fail` or `error`; nodes in `warn` are returned to be logged. A node is a runtime rule when it is a data test whose name is a DQR ID (`DQR` followed by digits). The MERGE is insert-only when it reports no row updated or deleted.
+
+```python
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Literal
+
+type NodeStatus = Literal["success", "pass", "warn", "fail", "error", "skipped"]
+type Severity = Literal["error", "warn"]
+
+@dataclass(frozen=True, slots=True)
+class NodeResult:
+    unique_id: str
+    name: str
+    resource_type: Literal["model", "test", "unit_test"]
+    status: NodeStatus
+    severity: Severity | None  # data tests only
+    failures: int | None
+    rows: int | None
+    duration_s: float
+
+@dataclass(frozen=True, slots=True)
+class Verdict:
+    commit: bool
+    blocking: tuple[NodeResult, ...]
+    warnings: tuple[NodeResult, ...]
+
+@dataclass(frozen=True, slots=True)
+class MergeMetrics:
+    rows_inserted: int
+    rows_updated: int
+    rows_deleted: int
+
+def judge_batch(results: Sequence[NodeResult]) -> Verdict: ...
+def rule_id(result: NodeResult) -> str | None: ...
+def is_insert_only(metrics: MergeMetrics) -> bool: ...
+```
+
+#### `bikesharing.core.events`
+
+- **Responsibility:** builds each event of [Observability](#observability) as a value, serializes it per ADR-0036 and redacts secrets (R24).
+- **Location:** `pipeline/src/bikesharing/core/events.py`
+- **Contract:** one builder per event, named after it, whose keyword arguments are the event's own fields; `objects_discovered`'s own fields are the system names, each holding `listed`, `pending` and `full_sweep`. `rule_checked` takes its level from its status: `pass` info, `warn` warn, `fail` and `error` error; `run_finished` is info when `succeeded` and error when `failed`. `to_json_line` writes `ts`, `level`, `component`, `version`, `run_id` and `event` first, then the own fields, `ts` in RFC 3339 with milliseconds and `Z`, and replaces every occurrence of each secret in any string value with `***`. `peak_memory_mb` converts Linux's `ru_maxrss`, in KiB, to decimal MB. `log_object_key` returns `logs/pipeline/date=YYYY-MM-DD/<run_id>.jsonl`, dated by the run's start in UTC.
+
+```python
+from collections.abc import Collection, Mapping, Sequence
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Literal
+
+from bikesharing.core.batching import Batch
+from bikesharing.core.published_file import Violation
+from bikesharing.core.settings import System
+from bikesharing.core.verdict import NodeResult, Severity
+
+type Level = Literal["info", "warn", "error"]
+type FieldValue = (
+    str | int | float | bool | datetime | None
+    | Sequence[FieldValue] | Mapping[str, FieldValue]
+)
+
+@dataclass(frozen=True, slots=True)
+class RunContext:
+    run_id: str
+    version: str
+
+@dataclass(frozen=True, slots=True)
+class Event:
+    ts: datetime
+    level: Level
+    event: str
+    fields: Mapping[str, FieldValue]
+
+@dataclass(frozen=True, slots=True)
+class SystemDiscovery:
+    listed: int
+    pending: int
+    full_sweep: bool
+
+def run_started(ts: datetime, *, end_instant: datetime | None, excluded_objects: int) -> Event: ...
+def objects_discovered(ts: datetime, *, systems: Mapping[System, SystemDiscovery]) -> Event: ...
+def stage_drained(ts: datetime, *, end_instant: datetime) -> Event: ...
+def batch_started(ts: datetime, *, batch: Batch) -> Event: ...
+def node_finished(ts: datetime, *, result: NodeResult) -> Event: ...
+def rule_checked(
+    ts: datetime,
+    *,
+    rule: str,
+    severity: Severity,
+    status: Literal["pass", "warn", "fail", "error"],
+    failures: int,
+) -> Event: ...
+def volume_not_evaluated(
+    ts: datetime, *, system: System, capture_instant: datetime, captures_in_window: int
+) -> Event: ...
+def schema_drift_field(
+    ts: datetime, *, system: System, field: str, change: Literal["added", "dropped"]
+) -> Event: ...
+def batch_committed(ts: datetime, *, batch: int, rows_inserted: int, objects: int) -> Event: ...
+def batch_failed(
+    ts: datetime,
+    *,
+    batch: int,
+    reason: Literal["nodes_failed", "not_insert_only", "exception"],
+    error_type: str | None,
+    error: str | None,
+) -> Event: ...
+def file_built(ts: datetime, *, stations: int, data_instant: datetime) -> Event: ...
+def file_invalid(ts: datetime, *, violations: Sequence[Violation]) -> Event: ...
+def page_deployed(ts: datetime, *, tag: str, deploy_peak_memory_mb: float) -> Event: ...
+def page_deploy_failed(ts: datetime, *, exit_code: int, output: str) -> Event: ...
+def heartbeat_failed(
+    ts: datetime, *, signal: Literal["start", "success", "fail"], attempts: int, error_type: str
+) -> Event: ...
+def log_upload_failed(ts: datetime, *, error_type: str) -> Event: ...
+def run_finished(
+    ts: datetime,
+    *,
+    outcome: Literal["succeeded", "failed"],
+    batches: int,
+    rows_inserted: int,
+    duration_s: float,
+    peak_memory_mb: float,
+) -> Event: ...
+
+def to_json_line(event: Event, context: RunContext, secrets: Collection[str]) -> str: ...
+def redact(text: str, secrets: Collection[str]) -> str: ...
+def peak_memory_mb(ru_maxrss_kib: int) -> float: ...
+def log_object_key(run_id: str, started_at: datetime) -> str: ...
+```
+
+#### `bikesharing.core.published_file`
+
+- **Responsibility:** validates the built file against its JSON Schema (DQR14).
+- **Location:** `pipeline/src/bikesharing/core/published_file.py`
+- **Contract:** `build_published_file` takes the rows of `latest_station_count`, sorted by system and `station_id`, as the file's `stations`, and sets the file's `data_instant` to their latest `captured_at`; it writes every instant in RFC 3339 with `Z`, and raises `ValueError` on no rows. `validate_published_file` validates with `jsonschema`'s `Draft202012Validator` against the schema, which the shell reads as data from `contracts/latest-station-count.schema.json`; it returns every violation, an empty list when the file passes, each with its path in the file as a JSON Pointer (RFC 6901).
+
+```python
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+
+@dataclass(frozen=True, slots=True)
+class Violation:
+    path: str
+    message: str
+
+def build_published_file(stations: Sequence[Mapping[str, object]]) -> dict[str, object]: ...
+def validate_published_file(document: object, schema: Mapping[str, object]) -> list[Violation]: ...
+```
+
+#### `bikesharing.shell.run`
+
+- **Responsibility:** builds each function's configuration from its environment and runs the pipeline end to end.
+- **Location:** `pipeline/src/bikesharing/shell/run.py`
+- **Contract:** `scheduled_config` reads the version from `CODE_VERSION` and raises `ValueError` when it is missing or empty (#20); it reads the secrets of [`modal_app`](#modal_app), and points the lakehouse and the log store at `bikesharing-lakehouse`. `one_off_config` reads only bronze's credentials, takes the version `unreleased`, puts the lakehouse on a local path under `work_dir`, and leaves `log_store`, `publish` and `heartbeat_url` as `None` (R26, R27). Both take the core's constants from `settings` and the image's paths from `root`. `run` never raises; it returns the outcome, in this order:
+  1. Generates the run ID with `uuid.uuid7()`, pings `start` and logs `run_started`.
+  2. Creates the missing tables, reads the exclusion list and the processing state, lists each system with its `ListingPlan`, and logs `objects_discovered`.
+  3. Applies the end instant and logs `stage_drained` when the stage is drained.
+  4. For each batch, while `may_start_batch` holds, in a folder of its own that is removed whatever the outcome: downloads it, writes the capture history, runs `dbt_build` on `silver` and judges it. A batch that does not commit, or whose MERGE is not insert-only, logs `batch_failed`, and the run stops with no further batch and no publishing (D9). A batch that commits is merged, then recorded in `processed_objects`, and logs `batch_committed`.
+  5. Unless a batch failed, and once some system has a processed capture: writes the latest captures, runs `dbt_build` on `gold`, builds and validates the file. It logs `file_invalid` and fails the run on a violation, logs `file_built` otherwise, and, when `publish` is set, deploys it and logs `page_deployed` or `page_deploy_failed` (R31).
+  6. Logs `run_finished`, uploads the log object when `log_store` is set, and pings `success` or `fail` as its last action, the failure with the event log's `run_finished` and failing lines as its body.
+
+  Any exception fails the run: inside a batch it logs `batch_failed` with the reason `exception`; elsewhere it goes into `run_finished`'s error. Its message passes through the redaction of `to_json_line`.
+
+```python
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Literal
+
+from obstore.store import ObjectStore
+
+from bikesharing.shell.delta import Lakehouse
+
+@dataclass(frozen=True, slots=True)
+class PublishTarget:
+    web_dir: Path
+    schema: Mapping[str, object]
+    account_id: str
+    api_token: str
+
+@dataclass(frozen=True, slots=True)
+class RunConfig:
+    version: str
+    bronze: ObjectStore
+    lakehouse: Lakehouse
+    log_store: ObjectStore | None
+    publish: PublishTarget | None
+    heartbeat_url: str | None
+    secrets: frozenset[str]
+    dbt_project_dir: Path
+    exclusion_list: Path
+    work_dir: Path
+    memory_limit_mib: int
+    end_instant: datetime | None
+    max_objects: int
+    time_budget: timedelta
+    lookback: timedelta
+    clock: Callable[[], datetime]
+
+def scheduled_config(env: Mapping[str, str], *, root: Path, memory_limit_mib: int) -> RunConfig: ...
+def one_off_config(env: Mapping[str, str], *, root: Path, memory_limit_mib: int) -> RunConfig: ...
+def run(config: RunConfig) -> Literal["succeeded", "failed"]: ...
+```
+
+#### `bikesharing.shell.r2`
+
+- **Responsibility:** lists, downloads and uploads over R2's S3 API with `obstore` (#7, #9, #25).
+- **Location:** `pipeline/src/bikesharing/shell/r2.py`
+- **Contract:** `r2_store` builds an `S3Store` on `https://<account_id>.r2.cloudflarestorage.com`, region `auto`, with the credentials passed and none read from the environment or a profile. `list_keys` lists `plan.prefix` with `plan.start_after` as `offset`, in no guaranteed order. `download_batch` downloads the batch's objects concurrently to `folder/<key>`, so that a file's path ends with its key, from which the models take its system and capture instant, and returns the paths in the batch's order. Tests pass a `LocalStore`.
+
+```python
+from pathlib import Path
+
+from obstore.store import ObjectStore
+
+from bikesharing.core.batching import Batch
+from bikesharing.core.discovery import ListingPlan
+
+def r2_store(
+    bucket: str, *, account_id: str, access_key_id: str, secret_access_key: str
+) -> ObjectStore: ...
+def list_keys(store: ObjectStore, plan: ListingPlan) -> list[str]: ...
+def download_batch(store: ObjectStore, batch: Batch, folder: Path) -> list[Path]: ...
+def upload_log(store: ObjectStore, key: str, body: str) -> None: ...
+```
+
+#### `bikesharing.shell.duckdb_session`
+
+- **Responsibility:** opens DuckDB with its sandbox and memory settings, and reads the scratch database after `dbt build` (#9, #10, #17).
+- **Location:** `pipeline/src/bikesharing/shell/duckdb_session.py`
+- **Contract:** `connect` sets `memory_limit`, `temp_directory`, `allowed_directories`, `autoinstall_known_extensions = false`, `autoload_known_extensions = false`, `enable_external_access = false` and, last, `lock_configuration = true` (R28, R29). The readers query the scratch database's relations by name, with parameters, never with feed values in SQL text (R25); `station_stock` returns the relation, exported as an Arrow stream with no copy in DuckDB.
+
+```python
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from datetime import date, datetime
+from pathlib import Path
+from typing import Literal
+
+from duckdb import DuckDBPyConnection, DuckDBPyRelation
+
+from bikesharing.core.settings import System
+from bikesharing.shell.delta import ArrowStream
+
+@dataclass(frozen=True, slots=True)
+class NotEvaluated:
+    system: System
+    capture_instant: datetime
+    captures_in_window: int
+
+@dataclass(frozen=True, slots=True)
+class DriftField:
+    system: System
+    field: str
+    change: Literal["added", "dropped"]
+
+def connect(
+    database: Path,
+    *,
+    allowed_directories: Sequence[Path],
+    temp_directory: Path,
+    memory_limit_mib: int,
+) -> DuckDBPyConnection: ...
+def station_stock(con: DuckDBPyConnection) -> DuckDBPyRelation: ...
+def station_stock_local_dates(con: DuckDBPyConnection) -> frozenset[date]: ...
+def station_counts(con: DuckDBPyConnection) -> Mapping[tuple[System, datetime], int]: ...
+def volume_not_evaluated(con: DuckDBPyConnection) -> list[NotEvaluated]: ...
+def schema_drift_fields(con: DuckDBPyConnection) -> list[DriftField]: ...
+def latest_station_count(con: DuckDBPyConnection) -> list[dict[str, object]]: ...
+def write_parquet(con: DuckDBPyConnection, stream: ArrowStream, path: Path) -> None: ...
+```
+
+#### `bikesharing.shell.dbt_runner`
+
+- **Responsibility:** runs `dbt build` in process with the batch's variables and returns its node statuses as values (#12, #16).
+- **Location:** `pipeline/src/bikesharing/shell/dbt_runner.py`
+- **Contract:** runs `dbtRunner` with `build --select <select> --exclude-resource-type unit_test`, without fail-fast, and calls `on_node` for each node as it finishes. `profiles.yml` reads the scratch database, the allowed directory, the spill folder and the memory limit with `env_var()` from `BIKESHARING_SCRATCH_DATABASE`, `BIKESHARING_ALLOWED_DIRECTORY`, `BIKESHARING_TEMP_DIRECTORY` and `BIKESHARING_MEMORY_LIMIT`, set by `dbt_build` from `paths`, and applies `connect`'s settings. The variables are, for `silver`, `bronze_files`, `read_columns`, `station_fields`, `capture_history_file`, `run_id` and `code_version`; for `gold`, `latest_captures_file`. A dbt invocation that fails outside its nodes, such as a parse error, raises `DbtInvocationError`.
+
+```python
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal
+
+from bikesharing.core.verdict import NodeResult
+
+class DbtInvocationError(RuntimeError): ...
+
+@dataclass(frozen=True, slots=True)
+class DbtPaths:
+    project_dir: Path
+    scratch_database: Path
+    allowed_directory: Path
+    temp_directory: Path
+    memory_limit_mib: int
+
+def dbt_build(
+    paths: DbtPaths,
+    *,
+    select: Literal["silver", "gold"],
+    variables: Mapping[str, object],
+    on_node: Callable[[NodeResult], None],
+) -> list[NodeResult]: ...
+```
+
+#### `bikesharing.shell.delta`
+
+- **Responsibility:** creates the Delta tables, reads the processing state and writes each batch's two commits (#4, #5, #14, #17).
+- **Location:** `pipeline/src/bikesharing/shell/delta.py`
+- **Contract:** `STATION_STOCK_SCHEMA` follows `station_stock`'s dbt contract, partitioned by `local_date`, and `PROCESSED_OBJECTS_SCHEMA` the columns of #4; both are declared in the step that writes the module. `r2_lakehouse` sets R2's endpoint and conditional put in the storage options. `merge_station_stock` runs the insert-only MERGE on the natural key, bounded by the batch's capture range and `local_dates`, and retries a commit conflict on a fresh table handle up to `attempts` times in all. `record_processed` appends. `capture_history` returns the rows of `processed_objects` captured in `[since, until)`, and `latest_captures` the rows of `station_stock` of each system's latest capture, pruned by its local date.
+
+```python
+from collections.abc import Collection, Mapping, Sequence
+from dataclasses import dataclass
+from datetime import date, datetime
+from pathlib import Path
+from typing import Final, Literal, Protocol
+
+from deltalake import Schema
+
+from bikesharing.core.settings import System
+from bikesharing.core.verdict import MergeMetrics
+
+class ArrowStream(Protocol):
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object: ...
+
+@dataclass(frozen=True, slots=True)
+class Lakehouse:
+    uri: str
+    storage_options: Mapping[str, str]
+
+    def table_uri(self, path: str) -> str: ...
+
+@dataclass(frozen=True, slots=True)
+class ProcessedObject:
+    key: str
+    system: System
+    feed: str
+    captured_at: datetime
+    station_count: int
+    status: Literal["processed"]
+    run_id: str
+    version: str
+
+STATION_STOCK_SCHEMA: Final[Schema]
+PROCESSED_OBJECTS_SCHEMA: Final[Schema]
+
+def r2_lakehouse(*, account_id: str, access_key_id: str, secret_access_key: str) -> Lakehouse: ...
+def local_lakehouse(path: Path) -> Lakehouse: ...
+def ensure_tables(lakehouse: Lakehouse) -> None: ...
+def processed_keys(lakehouse: Lakehouse) -> frozenset[str]: ...
+def latest_processed(lakehouse: Lakehouse) -> dict[System, datetime | None]: ...
+def capture_history(lakehouse: Lakehouse, *, since: datetime, until: datetime) -> ArrowStream: ...
+def merge_station_stock(
+    lakehouse: Lakehouse,
+    rows: ArrowStream,
+    *,
+    first_capture: datetime,
+    last_capture: datetime,
+    local_dates: Collection[date],
+    attempts: int = 3,
+) -> MergeMetrics: ...
+def record_processed(lakehouse: Lakehouse, objects: Sequence[ProcessedObject]) -> None: ...
+def latest_captures(lakehouse: Lakehouse, latest: Mapping[System, datetime]) -> ArrowStream: ...
+```
+
+The step that writes this module confirms that `deltalake`'s reads and writes and DuckDB's hand-off work over the Arrow C stream interface without `pyarrow`; if one needs it, `pyarrow` joins the runtime dependencies.
+
+#### `bikesharing.shell.publishing`
+
+- **Responsibility:** writes the published file and deploys the page with `wrangler` (#18, #19, #26).
+- **Location:** `pipeline/src/bikesharing/shell/publishing.py`
+- **Contract:** `write_published_file` writes the document as UTF-8 JSON to `assets_dir/latest-station-count.json`, creating the folder. `deploy_page` runs `web_dir/node_modules/.bin/wrangler deploy --config wrangler.jsonc --tag <tag>` with `web_dir` as its working directory and an environment holding only `PATH`, `HOME`, `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, and returns its exit code, its combined output and its peak memory from `RUSAGE_CHILDREN`; it raises nothing on a non-zero exit.
+
+```python
+from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Final
+
+FILE_NAME: Final = "latest-station-count.json"
+
+@dataclass(frozen=True, slots=True)
+class DeployResult:
+    exit_code: int
+    output: str
+    peak_memory_mb: float
+
+def write_published_file(document: Mapping[str, object], assets_dir: Path) -> Path: ...
+def deploy_page(web_dir: Path, *, tag: str, account_id: str, api_token: str) -> DeployResult: ...
+```
+
+#### `bikesharing.shell.heartbeat`
+
+- **Responsibility:** pings Healthchecks.io with its retries ([Observability](#observability)).
+- **Location:** `pipeline/src/bikesharing/shell/heartbeat.py`
+- **Contract:** sends a POST with `urllib.request` from the standard library to `<url>/start`, `<url>` or `<url>/fail` by signal, with `body`, a timeout of `timeout_s` per attempt, and one more attempt after each delay in `delays_s`. It returns `None` once a ping gets a 2xx response, and a `PingFailure` after the last attempt fails, with the exception's type name only, never its message, which may quote the URL (R24).
+
+```python
+import time
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from typing import Literal
+
+type Signal = Literal["start", "success", "fail"]
+
+@dataclass(frozen=True, slots=True)
+class PingFailure:
+    signal: Signal
+    attempts: int
+    error_type: str
+
+def ping(
+    url: str,
+    signal: Signal,
+    *,
+    body: str = "",
+    timeout_s: float = 10.0,
+    delays_s: Sequence[float] = (1.0, 2.0),
+    sleep: Callable[[float], None] = time.sleep,
+) -> PingFailure | None: ...
+```
+
+#### `bikesharing.shell.event_log`
+
+- **Responsibility:** writes each event to stdout as it happens and keeps it for the run's log object.
+- **Location:** `pipeline/src/bikesharing/shell/event_log.py`
+- **Contract:** `emit` serializes with `to_json_line`, writes the line and a newline to `stream`, flushes it, keeps it and returns it; `body` joins the kept lines, each ending in a newline, as JSON Lines.
+
+```python
+from collections.abc import Collection
+from typing import TextIO
+
+from bikesharing.core.events import Event, RunContext
+
+class EventLog:
+    def __init__(self, context: RunContext, secrets: Collection[str], stream: TextIO) -> None: ...
+    def emit(self, event: Event) -> str: ...
+    def body(self) -> str: ...
+```
+
+#### `modal_app`
+
+- **Responsibility:** the platform module: the image, the two functions, their schedule, secrets and size (#2, #20, [Run operation on Modal](#run-operation-on-modal)).
+- **Location:** `pipeline/modal_app.py`
+- **Contract:** the image runs Python at `.python-version`'s patch, installs the locked runtime dependencies with no `dev` or `platform` group, installs Node at `web/.nvmrc`'s version and `web/`'s locked `wrangler` with `npm ci`, copies `pipeline/dbt/`, `pipeline/config/`, `web/` and `contracts/latest-station-count.schema.json`, adds the package with `add_local_python_source("bikesharing")`, and stores `CODE_VERSION` from the deploying shell's environment, empty when it is unset. Each Modal Secret holds the environment variables named beside it, which `scheduled_config` and `one_off_config` read:
+  - `bikesharing-pipeline-bronze-read`: `BRONZE_R2_ACCESS_KEY_ID`, `BRONZE_R2_SECRET_ACCESS_KEY`;
+  - `bikesharing-pipeline-lakehouse-write`: `LAKEHOUSE_R2_ACCESS_KEY_ID`, `LAKEHOUSE_R2_SECRET_ACCESS_KEY`;
+  - `bikesharing-pipeline-deploy`: `CLOUDFLARE_API_TOKEN`;
+  - `bikesharing-pipeline-heartbeat`: `HEARTBEAT_URL`.
+
+  Each function calls `run` with its configuration from `os.environ` and raises `RuntimeError` when the outcome is `failed`, so that Modal records the call as failed, which the deploy script's smoke test reads.
+
+```python
+import modal
+
+MEMORY_MIB = 4096
+
+app = modal.App("bikesharing-pipeline")
+image: modal.Image
+
+@app.function(
+    image=image,
+    schedule=modal.Cron("*/15 * * * *"),
+    secrets=[
+        modal.Secret.from_name("bikesharing-pipeline-bronze-read"),
+        modal.Secret.from_name("bikesharing-pipeline-lakehouse-write"),
+        modal.Secret.from_name("bikesharing-pipeline-deploy"),
+        modal.Secret.from_name("bikesharing-pipeline-heartbeat"),
+    ],
+    cpu=1.0,
+    memory=(MEMORY_MIB, MEMORY_MIB),
+    timeout=600,
+    max_containers=1,
+)
+def scheduled_run() -> None: ...
+
+@app.function(
+    image=image,
+    secrets=[modal.Secret.from_name("bikesharing-pipeline-bronze-read")],
+    cpu=1.0,
+    memory=(MEMORY_MIB, MEMORY_MIB),
+    timeout=600,
+)
+def one_off_run() -> None: ...
 ```
 
 ### 2.6 Test plan
