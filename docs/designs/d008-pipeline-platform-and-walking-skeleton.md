@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › 4, File layout; every concern is decided. It lists the edits to `docs/testing-strategy.md` planned in Tests and CI, and the TODO of [s010 › D5](../spikes/s010-storage-table-format.md#d5-bronze-is-kept-indefinitely-reviewed-only-above-a-cost-threshold) on the Cloudflare alerts, which Cost recalibration resolves.
+- Current: Plan › 4, Components; File layout is approved.
 
 ## 1. Spec — what and why
 
@@ -265,9 +265,10 @@ Options considered for the platform module:
 
 - **Python:** `pipeline/.python-version` holds the exact patch of 3.14, with `requires-python = ">=3.14,<3.15"`; if `uv sync --locked` or the tests fail on 3.14, both move to 3.13.17 and the cause is recorded as a finding.
 - **Python on Modal:** the image is built from the official `python:<patch>-slim-bookworm` image, whose patch `modal_app.py` reads from `.python-version` at deploy time, so production runs the patch that passed CI. **#3**
-- **Manifest and lockfile:** `pyproject.toml` declares the runtime dependencies (DuckDB on its pinned 2.0.x patch, `dbt-core` 1.12.7, `dbt-duckdb` 1.11.1, `deltalake`) and two dependency groups: `dev` (pytest, ruff, mypy, import-linter) and `platform` (Modal's SDK). `uv.lock` locks them all. `mashumaro>=3.15` is a constraint on a transitive dependency of dbt, set in `[tool.uv] constraint-dependencies`, against the truncation of float model versions below 3.15.
+- **Manifest and lockfile:** `pyproject.toml` declares the runtime dependencies (DuckDB on its pinned 2.0.x patch, `dbt-core` 1.12.7, `dbt-duckdb` 1.11.1, `deltalake`, `obstore` and `jsonschema`) and two dependency groups: `dev` (pytest, ruff, mypy, import-linter, SQLFluff with its dbt templater) and `platform` (Modal's SDK). `uv.lock` locks them all. `mashumaro>=3.15` is a constraint on a transitive dependency of dbt, set in `[tool.uv] constraint-dependencies`, against the truncation of float model versions below 3.15.
+- **S3 client:** the shell reaches R2's S3 API with `obstore`, through an `S3Store` with the account's endpoint and the credentials passed explicitly, never read from the environment or a profile; it lists, downloads each batch's objects concurrently and uploads the run's log object. Tests use its `LocalStore` over local folders, through the same code. The step that writes `r2.py` confirms against R2 that `list`'s `offset` returns the keys after it, as `start-after` does (#7); the core sorts the keys it receives, since `obstore` does not guarantee their order. **#25**
 - **Image dependencies:** the image installs only the runtime dependencies, at the versions locked in `uv.lock`; Modal provides its own client inside the container.
-- **Checks:** `pipeline/scripts/check-pipeline.sh` runs ruff, mypy, import-linter and pytest; it is the Check of every code step and the command of the pipeline's CI job.
+- **Checks:** `pipeline/scripts/check-pipeline.sh` runs the checks of [Tests and CI](#tests-and-ci); it is the Check of every code step and the command of the pipeline's CI job.
 
 Options considered for the Python patch on Modal:
 
@@ -275,8 +276,14 @@ Options considered for the Python patch on Modal:
 - Modal's `debian_slim` with the exact patch installed by `uv python install`: pros, the same build of Python as local and CI; cons, two or three more image steps for the same patch.
 - Modal's `debian_slim(python_version="3.14")`: pros, the simplest image; cons, Modal picks the patch, so production can run one CI never tested.
 
+Options considered for the S3 client:
+
+- `obstore` (chosen), following a minimal dependency footprint where secrets are held and tests against a real local implementation rather than a mock: pros, one wheel with no Python dependencies, concurrent downloads, and `LocalStore` runs the integration tests through the production code; cons, pre-1.0 with breaking minor releases, held by `uv.lock` and reviewed at each update, and `offset` is still to be confirmed against R2.
+- `boto3`, AWS's SDK, the client of Cloudflare's R2 examples: pros, the most used and documented client; cons, botocore and four more packages in the image, `moto` to simulate R2 in tests, and its checksum settings pinned after the incompatibility R2 had with them.
+
 #### Delta writes
 
+- **Table paths:** the Delta tables live in `bikesharing-lakehouse` under one prefix per layer, as [ADR-0035](../decisions/0035-cloud-resource-naming.md) sets for a bucket that holds more than one layer: `station_stock` at `silver/station_stock/`. The pipeline's control tables, which hold the state of its loads and no data of any layer, live under `control/`: `processed_objects` at `control/processed_objects/`. This slice writes no gold table, since `latest_station_count` lives only in the run's scratch database and leaves it as the published file (#24).
 - **Fact rows:** a batch's station stock is written with an insert-only MERGE on the natural key (system, `station_id`, capture instant), bounded by the batch's range of capture instants, so that processing an object again adds only the rows the table does not hold ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)) and no row is updated or deleted (DQR2).
 - **Partitioning:** the station stock is partitioned by the row's local calendar date ([ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md)), so that a normal run's MERGE and the read of the latest counts touch one partition, and retention drops whole partitions. The MERGE's partition predicate is the set of local dates the batch's own rows carry. **#5**
 - **Processing state:** a Delta table, `processed_objects`, holds one row per bronze object a run has processed: its key, system, feed, capture instant, the number of stations it lists (`station_count`, the history of DQR12), status, run ID and code version. A bronze object is pending while it has no row there. Each batch commits its fact rows first and its rows in `processed_objects` second, following an idempotent sink with a progress log written after it: a run that stops between the two commits leaves the batch pending, and processing it again adds no fact row. In T060.1 the only status is `processed`; T060.5 adds the status of a batch set aside and of an object with rows in quarantine. The table can be rebuilt from the fact rows, since each row's bronze object follows from its system, feed and capture instant ([ADR-0043](../decisions/0043-lineage-at-four-levels.md)). **#4**
@@ -330,7 +337,8 @@ Options considered for memory:
 
 - **Project:** the dbt project is `pipeline/dbt/`, with its `dbt_project.yml` and a `profiles.yml` whose database is the run's scratch database: a DuckDB file on the container's local disk, created at the start of the run and removed at its end ([ADR-0047](../decisions/0047-dbt-builds-and-audits-the-pipeline-sql.md)).
 - **Bronze as an external source:** bronze is the source `bronze.station_status`, declared with `dbt-duckdb`'s `external_location` as a `read_json` over the batch's local files with the read schema of #11. The shell passes the list of files and the schema as dbt variables, together with the run's ID and code version. Models read bronze only through `source()`, so that dbt's lineage starts at bronze and unit tests replace the source with hand-written rows. The step that writes the source confirms that `external_location` renders dbt variables; if it does not, `stg_station_status` calls `read_json` with the variables and declares the source with dbt's `depends_on` comment, so that lineage still starts at bronze, and unit tests start at the next model. **#12**
-- **Models:** `stg_station_status` types and renames the source's fields and applies D1's rules on measures and flags, with TR9's null; `station_stock` adds the local calendar keys and the lineage columns, at D1's grain.
+- **Models:** the models are grouped in one folder per layer of [ADR-0018](../decisions/0018-medallion-architecture.md), `models/silver/` and `models/gold/`. In silver, `stg_station_status` types and renames the source's fields and applies D1's rules on measures and flags, with TR9's null; `station_stock` adds the local calendar keys and the lineage columns, at D1's grain; `capture_volume` and `schema_drift` audit the batch (#14, #15). In gold, `latest_station_count` holds D2's fields in the shape of the published file, under a dbt model contract ([Publishing](#publishing)). The published file is a dbt exposure of type `application` in `models/exposures.yml`, which depends on `latest_station_count`, so that dbt's lineage ends at the file. **#24**
+- **SQL conventions:** the SQL files follow dbt Labs' SQL style guide, and `.claude/rules/code/sql.md`, on `pipeline/dbt/**`, states it with what is the project's own: one model per file, sources read only through `source()` and models through `ref()`, each data test's `name` as its DQR ID, and a model contract on every model the shell or a consumer reads. SQLFluff checks them with the `duckdb` dialect and its default rules, s016 › D2's policy, configured in `[tool.sqlfluff]` of `pyproject.toml`, with the dbt templater; the step that configures it confirms the templater supports `dbt-core` 1.12.7, and falls back to the Jinja templater otherwise. A `PostToolUse` hook on `.sql` edits under `pipeline/dbt/` runs `sqlfluff fix` and `sqlfluff lint` on the edited file and reports what remains on stderr with exit 2, as the Python hook does (s016 › P3). **#27**
 - **Rule traceability:** each runtime rule's data test takes its catalog ID as `name` and, in `meta`, the link to its entry in [data-quality.md](../data-quality.md), so that dbt's documentation shows the rule beside its model.
 - **Runtime rules:** DQR1 is a `unique` data test of `station_stock` on its natural key, and DQR13 a data test that compares the stations the source lists with the rows of `station_stock`; together with the insert-only MERGE (#4), they hold the grain across batches. DQR2 is the one rule of D3 that is not a dbt data test, since it concerns the Delta table's history, which dbt does not see: it holds by construction, as the MERGE has only an insert clause, and after each MERGE the shell checks that the metrics it returns report no row updated or deleted, logs DQR2's result and fails the run otherwise. The retention of T072 drops partitions in its own job, never in a run. **#13**
 - **Volume drop:** DQR12 is a data test of severity warn on the model `capture_volume`, with one row per capture of the batch: its system, capture instant and number of stations, the median number of stations of its system's captures in the 24 h before its capture instant, and its status, `ok`, `drop`, or `not_evaluated` with fewer than 60 captures in that window. The median takes the history and the batch's own earlier captures, so that the stages of D8 compare each capture with its own past. The test fails on `drop`, and the shell logs each `not_evaluated` capture. The history is the source `lakehouse.capture_history`: the rows of `processed_objects` captured in the 24 h before the batch's first capture, which the shell reads with `deltalake` and writes as a Parquet file to the batch's folder. A capture that lists no station is counted as 0. **#14**
@@ -355,6 +363,17 @@ Options considered for DQR11:
 - The read schema with `not_null` tests on required fields: pros, no second read; cons, it misses added fields, half of DQR11, and a dropped optional field.
 - One read with the stations as JSON, typed in the staging model: pros, a single read; cons, the typing of #11 moves to hand-written SQL to save milliseconds.
 
+Options considered for the models' folders:
+
+- One folder per layer, with the published file as an exposure of a gold model (chosen), following ADR-0018 and dbt's exposures for downstream consumers: pros, the project shows the medallion at a glance, the file reads only gold, and the lineage ends at the file with no model that copies another; cons, a fixed shape a future file cannot take from one gold table goes into gold or into its serialization.
+- dbt's `staging/`, `intermediate/` and `marts/`, with a table that maps each folder to its layer: pros, the layout every dbt user knows; cons, the medallion lives outside the code, and the published file has no place of its own.
+- One folder per layer plus `serving/`, a model with the file's shape: pros, room to shape files that combine gold tables; cons, in this slice a copy of the gold model.
+
+Options considered for the SQL conventions:
+
+- A rule on dbt Labs' style guide, checked by SQLFluff (chosen), following the style guide and the linter it recommends, as s016 › D2 does for Python: pros, a tool checks the style, not the review; cons, one more dependency, and the dbt templater's support of `dbt-core` 1.12.7 is still to be confirmed.
+- The rule alone, checked in review: pros, no new dependency; cons, the style rests on the review, unlike Python's.
+
 #### Publishing
 
 - **Source of the file:** the file is built from the lakehouse's committed state, not from the run's batches. After the run's last commit, the shell finds in `processed_objects` the most recent capture of each system, reads from `station_stock` only that capture's rows, pruned by local calendar date, and writes them as a Parquet file to a local folder of the run. The dbt model `latest_station_count` reads it as the source `lakehouse.latest_captures` and builds D2's fields. The file's stations are those listed by the latest capture of their system, so a system with no capture in the run keeps its earlier count, and a station the feed stops listing leaves the file.
@@ -362,12 +381,18 @@ Options considered for DQR11:
 - **Runtime check:** the core validates the built file against the schema with the `jsonschema` library before the shell deploys it. A file that fails DQR14 follows [d007 › R2](d007-pipeline-design.md#13-requirements): it is not deployed, the last file that passed stays published, and the run logs each violation with its path in the file.
   - TODO(T060.2): check that the alert on the file's age covers a file that fails DQR14, which until then sends no failure signal.
 - **CI check:** the pipeline's contract test builds the file from the fixtures through the same models and validates it against the schema, together with one invalid file per kind of violation (a missing field, a wrong type, a field outside D2's list), which must fail.
-- **Deployment tool:** the run deploys the page with `wrangler deploy`, passing the run's code version as `--tag` (D5). Modal's image installs Node and `wrangler` at build time, both pinned in `pipeline/` with their lockfile ([ADR-0016](../decisions/0016-runtime-versions-pinned-per-component.md), [ADR-0017](../decisions/0017-dependencies-locked-per-component.md)), so a run installs nothing. The shell runs `wrangler` as a subprocess with the pipeline's Cloudflare token in its environment only, and reads its exit code and output. **#18**
+- **Deployment tool:** the run deploys the page with `wrangler deploy`, passing the run's code version as `--tag` (D5). Modal's image installs Node and `wrangler` at build time, at the versions `web/` pins and locks ([ADR-0016](../decisions/0016-runtime-versions-pinned-per-component.md), [ADR-0017](../decisions/0017-dependencies-locked-per-component.md)), so a run installs nothing. The shell runs `wrangler` as a subprocess with the pipeline's Cloudflare token in its environment only, and reads its exit code and output. **#18**
+- **Worker configuration:** the page's Worker belongs to the page's component, `web/`, created in this slice with only what the deployment needs: `wrangler.jsonc`, a Worker of static assets only, with its name, compatibility date and assets directory, and the pins of Node and `wrangler`. T041 adds the page, its tests and its CI job. Modal's image copies `web/`; the run writes the published file to the assets directory and deploys with `wrangler deploy --config`. Until T041 the Worker serves only `latest-station-count.json`. **#26**
 
 Options considered for the deployment tool:
 
 - `wrangler` in Modal's image (chosen), following deployment with the provider's official tool: pros, no deployment code of the project's own, and the same tool and behaviour as capture; cons, a second runtime in the image, with its updates and npm dependencies in a container that holds secrets.
 - The direct upload API called from Python: pros, a single runtime in the image; cons, the project maintains code against an API whose hash format and version tag are not confirmed ([Cloudflare source card](../sources/cloudflare.md)), and its failures differ from capture's.
+
+Options considered for the Worker's configuration:
+
+- The page's component, `web/`, created now with the Worker's configuration and the pins of `wrangler` (chosen), following one folder per component in a monorepo, as #1, since the Worker deploys the page and its data together ([ADR-0033](../decisions/0033-data-published-by-redeploying-static-assets.md)): pros, each file is in its final place and T041 only adds; cons, an almost empty folder until T041, and `modal_app.py` reads files outside `pipeline/`.
+- `pipeline/publish/wrangler.jsonc`, with `wrangler` pinned in `pipeline/`: pros, the pipeline depends on nothing outside its folder; cons, T041 moves the file and the pins to the page's component.
 
 - **Failed deployment:** the deployment runs after the run's last commit, so a failed deployment leaves the committed batches in place. The run logs the failure with `wrangler`'s exit code and output, ends as failed, and the heartbeat sends the failure signal (R15). The next run builds the file again from the lakehouse and deploys it, so the scheduled cycle is the retry (D7). Every run deploys, with or without new batches, so a run after a failed deployment recovers the page even when it has nothing to process; at the 15-minute cadence that is about 2,900 deployments a month, below the 4,300–8,600 that [ADR-0033](../decisions/0033-data-published-by-redeploying-static-assets.md) assessed. **#19**
 
@@ -381,7 +406,7 @@ Options considered for a failed deployment:
 - **One environment:** the pipeline runs only in production, as [ADR-0035](../decisions/0035-cloud-resource-naming.md) sets; there are no development buckets or Modal environments.
 - **One-off runs:** `modal_app.py` holds two functions. The scheduled function is the only one with the lakehouse's read-write token and the pipeline's Cloudflare token attached, and it refuses to start unless the code version that the deploy script sets in the image is present (D5). The one-off function, used for runs from a branch such as D6's reference batch, has only bronze's read-only token attached: it writes its Delta tables to the container's local disk, removed at its end, and never deploys the page. R26 and R27 then hold because the one-off function has no credential to break them. **#20**
 - **End instant:** D8's end instant is a constant of the core, an instant in UTC or none, changed by a PR and a deployment at each stage and removed after the last one; the code version in each row then traces the end instant it was processed under. **#21**
-- **Secrets and settings:** secrets reach the run only as Modal Secrets (R23), one per credential so that each function attaches only its own: bronze's read-only R2 token, the lakehouse's read-write R2 token, the pipeline's Cloudflare token and the heartbeat's URL. Every other setting, such as the account ID, the bucket names of ADR-0035 and the page's Worker name, is a constant of the code, reviewed and traced like the end instant.
+- **Secrets and settings:** secrets reach the run only as Modal Secrets (R23), one per credential so that each function attaches only its own: bronze's read-only R2 token, the lakehouse's read-write R2 token, the pipeline's Cloudflare token and the heartbeat's URL. Every other setting, such as the account ID and the bucket names of ADR-0035, is a constant of the code, reviewed and traced like the end instant; the page's Worker name is in its `wrangler.jsonc` ([Publishing](#publishing)).
 
 Options considered for one-off runs:
 
@@ -455,7 +480,7 @@ The pipeline follows [testing-strategy.md](../testing-strategy.md), whose Python
 - **Platform separation:** import-linter's contracts run in `check-pipeline.sh` ([Component structure](#component-structure)). Rule 5 holds by the environment: the `platform` group is left out of `[tool.uv] default-groups`, so `uv sync --locked` installs no Modal SDK, locally and in CI, and a test asserts that `modal` cannot be imported and that the package and its configuration load without it. The deploy script adds the group with `uv run --group platform`.
 - **Fixtures:** `pipeline/tests/fixtures/`, bronze `station_status` objects of both systems kept as captured, gzip-compressed, trimmed to a few stations each and chosen for variety: a Bicing station out of service, a station without GBFS's optional fields, a capture with a station added or removed, and an object with a field outside the read schema ([ADR-0037](../decisions/0037-test-fixtures-per-component.md)).
 - **dbt documentation:** not generated in CI, since nothing publishes it; `check-pipeline.sh` runs `dbt parse`, which fails on the same errors in the project's YAML, and the owner generates the documentation locally when needed.
-- **Check script:** `pipeline/scripts/check-pipeline.sh` runs ruff, mypy, import-linter, `dbt parse`, `dbt run --empty` with dbt's unit tests, and pytest, in that order, so that the fastest checks fail first.
+- **Check script:** `pipeline/scripts/check-pipeline.sh` runs ruff, mypy, import-linter, SQLFluff (#27), `dbt parse`, `dbt run --empty` with dbt's unit tests, and pytest, in that order, so that the fastest checks fail first.
 - **CI job:** `pipeline` in `.github/workflows/ci.yml`, following [ci.md](../../.claude/rules/code/ci.md): `working-directory: pipeline`, `astral-sh/setup-uv` with its cache, `uv sync --locked`, and `bash scripts/check-pipeline.sh`. Its path filter holds `pipeline/**`, `.github/workflows/ci.yml` and the two contract files it reads. `ci-passed` needs the new job.
 
 #### Cost recalibration
@@ -494,12 +519,16 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 15 | [Transformation in dbt](#transformation-in-dbt) | DQR11 compares the keys of each bronze object, read with no schema, with the read schema, following the schema monitors of data observability | It detects added and dropped fields, which the typed read ignores, at a cost of milliseconds | R8 | Plan |
 | 16 | [Transformation in dbt](#transformation-in-dbt) | Each rule's severity is the data test's own dbt configuration, and the core commits a batch only if no node fails or errors, following dbt's native test severity, as ADR-0047 sets | One source of severity per rule, and the core keeps a single rule over the statuses | R8, R20, R21 | Plan |
 | 17 | [Transformation in dbt](#transformation-in-dbt) | The audited table passes to `deltalake` whole as Arrow, following the DuckDB to Arrow to `deltalake` hand-off | The simplest hand-off fits the headroom of #10 with bounded batches; streaming waits for a measured need | — | Plan |
-| 18 | [Publishing](#publishing) | The run deploys the page with `wrangler`, installed in Modal's image at build time, following deployment with the provider's official tool | No deployment code of the project's own, and the same tool as capture; the second runtime costs only a pinned version | R6 | Plan |
+| 18 | [Publishing](#publishing) | The run deploys the page with `wrangler`, installed in Modal's image at build time, following deployment with the provider's official tool **→ #26** | No deployment code of the project's own, and the same tool as capture; the second runtime costs only a pinned version | R6 | Plan |
 | 19 | [Publishing](#publishing) | A failed deployment keeps the committed batches and fails the run, following a heartbeat that reports the whole job's outcome | Until T060.2's alert on the file's age, the heartbeat is the only signal of a page that stops refreshing | R15, R31 | Plan |
 | 20 | [Environments and configuration](#environments-and-configuration) | One-off runs use a function of their own with only bronze's read-only token, writing to local disk, and the scheduled function requires the deployed code version, following least privilege per function | R26 and R27 hold by construction, within ADR-0035's single environment | R26, R27 | Plan |
 | 21 | [Environments and configuration](#environments-and-configuration) | D8's end instant is a constant in the repository, changed by a PR and a deployment per stage, following configuration as code | Each change is reviewed and traced by the SHA, as #8's deny list; about four changes in all | R18, R19 | Plan |
 | 22 | [Observability](#observability) | The copy of the events over OTLP (ADR-0049) is left to T060.2, following a walking skeleton that builds only the thinnest path | Nothing reads the copy before T060.2's alerts, and its field mapping is decided once, where ADR-0049 places it | — | Plan |
 | 23 | [Tests and CI](#tests-and-ci) | The content of a bronze object has no shared contract file, following contract tests only where no runtime check covers the interface (ADR-0015) | The read schema, DQR11 and R22 check it in every run, and capture's own tests check the stored body | — | Plan |
+| 24 | [Transformation in dbt](#transformation-in-dbt) | dbt's models are grouped in one folder per layer, `silver/` and `gold/`, and the published file is a dbt exposure of the gold model `latest_station_count`, following ADR-0018 and dbt's exposures for downstream consumers | The medallion shows in the project, the file reads only gold, and no model copies another | — | Plan |
+| 25 | [Runtime and dependencies](#runtime-and-dependencies) | The shell reaches R2 with `obstore`, following a minimal dependency footprint where secrets are held and tests against a real local implementation | One wheel with no Python dependencies in the container, and integration tests run the production code on `LocalStore` | — | Plan |
+| 26 | [Publishing](#publishing) | The page's component, `web/`, is created now with only the Worker's `wrangler.jsonc` and the pins of Node and `wrangler`, which Modal's image copies, following one folder per component in a monorepo; **refines #18** | The Worker deploys the page with its data, so its configuration and tool belong to the page, and T041 only adds | R6 | Plan |
+| 27 | [Transformation in dbt](#transformation-in-dbt) | The SQL files follow dbt Labs' style guide, stated in `.claude/rules/code/sql.md` and checked by SQLFluff with its default rules, following the style guide and the linter it recommends | A tool checks the SQL's style, as s016 › D2 does for Python | — | Plan |
 
 ### 2.3 Architecture
 
@@ -510,8 +539,84 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
 ```text
-<path>/
-└── <file>      (new)        <purpose>
+.
+├── CLAUDE.md                                (modified)  Project structure: `pipeline/` replaces `src/bikesharing/` and `tests/`; adds `web/`; `scripts/` keeps only the shared helpers
+├── .gitignore                               (modified)  Ignores dbt's `target/` and `logs/` under `pipeline/dbt/`
+├── .claude/
+│   ├── settings.json                        (modified)  Registers the Python and SQL lint hooks
+│   ├── hooks/
+│   │   ├── python-lint.sh                   (new)       `ruff format` and `ruff check --fix` on the edited file through `uv run --project pipeline`; reports what remains on stderr with exit 2 (s016 › P3)
+│   │   └── sql-lint.sh                      (new)       `sqlfluff fix` and `sqlfluff lint` on the edited `.sql` file under `pipeline/dbt/`; reports what remains on stderr with exit 2 (#27)
+│   └── rules/code/
+│       ├── general.md                       (modified)  `paths`: `pipeline/**` instead of `src/**` and `tests/**`
+│       ├── testing.md                       (modified)  `paths`: `pipeline/**` instead of `src/**` and `tests/**`
+│       ├── python.md                        (modified)  `paths` under `pipeline/`; test levels under `pipeline/tests/`; `modal_app.py` as the only importer of `modal`
+│       └── sql.md                           (new)       SQL conventions on `pipeline/dbt/**` (#27)
+├── .github/workflows/
+│   └── ci.yml                               (modified)  Job `pipeline` ([Tests and CI](#tests-and-ci)); `ci-passed` needs it
+├── contracts/
+│   └── latest-station-count.schema.json     (new)       JSON Schema (draft 2020-12) of the published file, D2's fields, `additionalProperties: false` (DQR14)
+├── docs/
+│   └── testing-strategy.md                  (modified)  Python section moves to `pipeline/` with `check-pipeline.sh`; new section for SQL in dbt; the pipeline's CI job
+├── pipeline/
+│   ├── .python-version                      (new)       Exact patch of Python 3.14 (#3)
+│   ├── pyproject.toml                       (new)       Runtime dependencies, groups `dev` and `platform`, `default-groups`, mashumaro constraint; ruff, mypy, import-linter and SQLFluff configuration, with the comment on s016 › D2's defaults policy
+│   ├── uv.lock                              (new)       Lockfile of every group
+│   ├── modal_app.py                         (new)       Image with `web/` copied in, the scheduled and one-off functions, schedule, secrets, container size; the only importer of `modal` (#2, #20, #26)
+│   ├── config/
+│   │   └── excluded_objects.txt             (new)       Excluded bronze keys with their reason, with its `TODO(T060.5):` marker (#8)
+│   ├── src/bikesharing/
+│   │   ├── __init__.py                      (new)       Package root
+│   │   ├── core/                                        Pure decisions, no I/O (ADR-0046)
+│   │   │   ├── __init__.py                  (new)
+│   │   │   ├── settings.py                  (new)       Constants: account ID, bucket names, end instant (#21), batch bound, time budget, DuckDB's memory fraction
+│   │   │   ├── discovery.py                 (new)       Listing start key and full sweep (#7); pending objects after the exclusion list (#8)
+│   │   │   ├── batching.py                  (new)       Batches, time budget, end instant and `stage_drained` (R12, R13, R18, R19)
+│   │   │   ├── read_schema.py               (new)       Read schema of `station_status` (#11)
+│   │   │   ├── verdict.py                   (new)       Verdict over dbt's node statuses (#16); DQR2's check on a MERGE's metrics (#13)
+│   │   │   ├── events.py                    (new)       Event values of [Observability](#observability) and the redaction of secrets (R24)
+│   │   │   └── published_file.py            (new)       Validation of the built file against its schema (DQR14)
+│   │   └── shell/                                       I/O and orchestration (ADR-0046)
+│   │       ├── __init__.py                  (new)
+│   │       ├── run.py                       (new)       A run end to end: tables, discovery, batches, publishing, log upload, heartbeat
+│   │       ├── r2.py                        (new)       Listing, batch download and log upload over R2's S3 API with `obstore` (#7, #9, #25)
+│   │       ├── duckdb_session.py            (new)       DuckDB connection with the sandbox and memory settings (#9, #10)
+│   │       ├── dbt_runner.py                (new)       `dbt build` with the batch's variables, the event callback and node statuses (#12, #16)
+│   │       ├── delta.py                     (new)       Table creation, insert-only MERGE, `processed_objects`, retry on conflict, the Parquet inputs of dbt (#4, #14, #17)
+│   │       ├── publishing.py                (new)       File writing and `wrangler deploy` as a subprocess (#18, #19)
+│   │       ├── heartbeat.py                 (new)       Healthchecks.io pings with their retries
+│   │       └── event_log.py                 (new)       Events to stdout and to the run's log object
+│   ├── dbt/
+│   │   ├── dbt_project.yml                  (new)       dbt project
+│   │   ├── profiles.yml                     (new)       The run's scratch database
+│   │   ├── models/
+│   │   │   ├── sources.yml                  (new)       `bronze.station_status`, `bronze.station_status_raw`, `lakehouse.capture_history`, `lakehouse.latest_captures`
+│   │   │   ├── exposures.yml                (new)       The published file as an exposure of `latest_station_count` (#24)
+│   │   │   ├── silver/
+│   │   │   │   ├── stg_station_status.sql   (new)       Typing, renaming, D1's rules and TR9's null
+│   │   │   │   ├── station_stock.sql        (new)       Station stock at D1's grain, with calendar keys and lineage
+│   │   │   │   ├── capture_volume.sql       (new)       Captures against their 24 h median (DQR12)
+│   │   │   │   ├── schema_drift.sql         (new)       Fields added and dropped per object (DQR11)
+│   │   │   │   └── silver.yml               (new)       Contracts; DQR1, DQR11, DQR12 and DQR13 data tests; unit tests
+│   │   │   └── gold/
+│   │   │       ├── latest_station_count.sql (new)       D2's fields in the shape of the published file
+│   │   │       └── gold.yml                 (new)       Contract and unit tests
+│   │   └── tests/generic/                   (new)       Project generic tests the rules need, each applied with its DQR `name`
+│   ├── scripts/
+│   │   ├── check-pipeline.sh                (new)       ruff, mypy, import-linter, SQLFluff, `dbt parse`, `dbt run --empty` with unit tests, pytest
+│   │   └── deploy.sh                        (new)       The only deployment path ([Deploy script](#deploy-script))
+│   └── tests/
+│       ├── conftest.py                      (new)       Shared fixtures: local bronze folder, local Delta path
+│       ├── unit/core/                       (new)       One test module per core module, mirroring `src/`; consumer of `contracts/bronze-keys.json`
+│       ├── integration/                     (new)       Read schema, two-batch run, re-run, stop between commits, DuckDB's sandbox, published file and its contract; rule 5 without Modal's SDK
+│       └── fixtures/
+│           ├── bronze/                      (new)       Gzip `station_status` objects of both systems, chosen for variety (ADR-0037)
+│           └── latest-station-count/        (new)       One invalid file per kind of violation
+└── web/                                     (new)       The page's component; T041 adds the page, its tests and its CI job (#26)
+    ├── .nvmrc                               (new)       Node version installed in Modal's image for `wrangler`
+    ├── package.json                         (new)       `wrangler`, pinned exactly
+    ├── package-lock.json                    (new)       Lockfile of `wrangler`
+    └── wrangler.jsonc                       (new)       The page's Worker: name, compatibility date, assets directory
 ```
 
 ### 2.5 Components
