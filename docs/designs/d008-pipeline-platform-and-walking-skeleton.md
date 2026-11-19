@@ -474,7 +474,7 @@ The pipeline follows [testing-strategy.md](../testing-strategy.md), whose Python
 
 - **Unit, core:** `pipeline/tests/unit/`, pytest, no I/O. They cover the core's decisions as values: which prefix a run lists and from which key (#7), the pending objects after the exclusion list (#8), the batches and the time budget (R12, R13), the end instant and `stage_drained` (R18, R19), the verdict over dbt's node statuses (#16), DQR2's check on a MERGE's metrics (R30), the events and their redaction (R24), and the file's validation against its schema (DQR14).
 - **Unit, dbt:** dbt unit tests in `pipeline/dbt/`, on hand-written rows that replace the sources, for each model's logic: the casts, conversions and renames of each staging model, with TR8's nulls in AMBici's and TR9's null in Bicing's, the union of both in `station_stock`, the calendar keys and lineage of `station_stock`, the median, `drop` and `not_evaluated` of `capture_volume`, the fields added and dropped of `schema_drift`, and D2's fields of `latest_station_count`. dbt builds the upstream relations first with `dbt run --empty` ([s017 › P6](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)).
-- **Integration, shell:** `pipeline/tests/integration/`, on bronze fixtures in a local folder and Delta tables on a local path, with no network. They cover the read schema over the fixtures (#11), the shell's run of two batches in one process with a failing model and a contract violation, checking the tables and the log ([s017 › P7](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)), a batch processed twice that adds no row (#4), a run that stops between its two commits, DuckDB refusing a file outside its folder and an extension load (R28, R29), and the published file built from the tables.
+- **Integration, shell:** `pipeline/tests/integration/`, on bronze fixtures in a local folder and Delta tables on a local path, with no network. They cover the read schema over the fixtures (#11), the shell's run of two batches in one process with a failing model and a contract violation, checking the tables and the log ([s017 › P7](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)), a batch processed twice that adds no row (#4), a run that stops between its two commits, a batch with an unreadable bronze object (R22), DuckDB refusing a file outside its folder and an extension load (R28, R29), the published file built from the tables, a failed page deployment with a stand-in for `wrangler` that exits with an error (R31), and the heartbeat's pings for each outcome, with their retries, against a local stub of the check (R14, R15).
 - **Contract:** consumer of `contracts/bronze-keys.json`, the keys the discovery parses; producer of `contracts/latest-station-count.schema.json`, with its invalid files ([Publishing](#publishing)). The content of a bronze object has no contract file: the read schema (#11), DQR11 and the failure of an unreadable object (R22) check it in every run, and capture's own tests check that it stores the response body unchanged ([d004](d004-bronze-data-capture.md)).
 - **End to end:** none in CI. The one-off run of D6's reference batch on Modal, on real bronze, is the end-to-end check before the first deployment, and the deploy script's smoke test the one after each deployment ([Deploy script](#deploy-script)).
 - **Platform separation:** import-linter's contracts run in `check-pipeline.sh` ([Component structure](#component-structure)). Rule 5 holds by the environment: the `platform` group is left out of `[tool.uv] default-groups`, so `uv sync --locked` installs no Modal SDK, locally and in CI, and a test asserts that `modal` cannot be imported and that the package and its configuration load without it. The deploy script adds the group with `uv run --group platform`.
@@ -1369,7 +1369,37 @@ def one_off_run() -> None: ...
 
 | R | Method | What is verified | Level |
 |---|---|---|---|
-| R1 | Test / Inspection / Analysis / Demonstration | | unit / integration / e2e; — for other methods |
+| R1 | Test | `station_stock` holds the rows of both systems' staging models, one per station and capture, keyed by system, `station_id` and capture instant in UTC | unit (dbt) |
+| R2 | Test | Each staging model's casts, conversions and renames, with TR8's nulls in AMBici's | unit (dbt) |
+| R3 | Test | Bicing's staging model writes null as `num_vehicles_available` for a station with `is_renting` and `is_returning` false | unit (dbt) |
+| R4 | Test | `station_stock`'s local calendar keys, on captures on both sides of a local midnight | unit (dbt) |
+| R5 | Test | `station_stock`'s lineage columns carry the run's ID and code version passed to dbt | unit (dbt) |
+| R6 | Test | `latest_station_count` builds D2's fields; the shell's file holds the latest capture of each system, a system with no capture in the run keeping its earlier count | unit (dbt), integration |
+| R7 | Test | The file built from the fixtures passes the schema, and the invalid file with a field outside D2's list fails it | contract |
+| R8 | Test | A run logs `rule_checked` for each of the six rules with its severity, and the verdict maps dbt's node statuses to them | unit, integration |
+| R9 | Demonstration | After the first deployment, the smoke test's `run_started` and rows carry the SHA of `origin/main` | — |
+| R10 | Demonstration | Before the first deployment, the deploy script refuses an uncommitted change, an untracked file and a commit other than `origin/main`, each with its cause | — |
+| R11 | Inspection | The scheduled function in `modal_app.py` declares `timeout=600` | — |
+| R12 | Test | Batching stops opening batches once the time budget is spent | unit |
+| R13 | Test | Batching splits pending objects into batches of at most 360 | unit |
+| R14 | Test | A run that ends without failing pings `/start` and then success on a local stub of the check | integration |
+| R15 | Test | A failing run pings `/fail` with `run_finished` and the failing event as its body; a ping that fails is retried and then logged as `heartbeat_failed` | integration |
+| R16 | Inspection | The scheduled function declares no `retries`; the memory-kill probe of [Run operation on Modal](#run-operation-on-modal) records how Modal treats a memory kill | — |
+| R17 | Inspection | The Healthchecks.io check has a period of 15 min and a grace of 15 min | — |
+| R18 | Test | With an end instant set, discovery keeps only the objects captured up to it, oldest first | unit |
+| R19 | Test | With an end instant set and no pending object up to it, the run builds `stage_drained` | unit |
+| R20 | Test | A batch whose model fails DQR1 or DQR13 commits nothing, its objects stay pending and the run fails | integration |
+| R21 | Test | A batch with a row that violates a model's contract commits nothing, its objects stay pending and the run fails | integration |
+| R22 | Test | A batch with an unreadable bronze object commits nothing, its objects stay pending and the run fails | integration |
+| R23 | Inspection | Every secret reaches the functions in `modal_app.py` as a `modal.Secret`, and `bikesharing.core.settings` holds none | — |
+| R24 | Test | Redaction replaces each secret's value in an error's message, the heartbeat's URL included | unit |
+| R25 | Inspection | The shell's SQL and dbt's models take feed values only as columns or bound parameters, never by string formatting | — |
+| R26 | Inspection | The one-off function attaches only bronze's read-only token and writes its tables to local disk | — |
+| R27 | Inspection | The one-off function attaches no Cloudflare token and does not call the deployment | — |
+| R28 | Test | DuckDB refuses a file outside its allowed folder | integration |
+| R29 | Test | DuckDB refuses an extension load | integration |
+| R30 | Test | DQR2's check fails on a MERGE's metrics with a row updated or deleted | unit |
+| R31 | Test | A deployment whose stand-in for `wrangler` exits with an error keeps the run's commits, logs `page_deploy_failed` and fails the run | integration |
 
 ### 2.7 Breaking changes
 
