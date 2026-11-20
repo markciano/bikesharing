@@ -24,6 +24,7 @@ from arro3.core import Table
 from deltalake import DeltaTable, QueryBuilder
 from obstore.store import LocalStore
 
+from bikesharing.core.discovery import parse_bronze_key, parse_exclusion_list
 from bikesharing.shell.delta import (
     PROCESSED_OBJECTS_PATH,
     STATION_STOCK_PATH,
@@ -546,6 +547,19 @@ def test_the_one_off_config_holds_only_bronze_and_writes_locally() -> None:
     assert config.heartbeat_url is None
     assert config.secrets == frozenset({"bronze-id", "bronze-secret"})
     assert config.file_schema == SCHEMA
+
+
+def test_the_committed_exclusion_list_holds_only_valid_bronze_keys() -> None:
+    # A key that breaks the bronze key contract would never match the object it
+    # means to exclude, so the pipeline would stay halted after its deployment.
+    text = (REPO / "pipeline" / "config" / "excluded_objects.txt").read_text(
+        encoding="utf-8"
+    )
+
+    keys = parse_exclusion_list(text)
+
+    for key in keys:
+        parse_bronze_key(key)
 
 
 def test_each_one_off_config_starts_from_its_own_empty_lakehouse() -> None:
