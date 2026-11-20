@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 25.
+- Current: Step 26; ADR-0046's rule 4 text, which names an import contract, awaits the owner's decision (DI11).
 
 ## 1. Spec — what and why
 
@@ -250,7 +250,7 @@ The pipeline is a component with its own folder, `pipeline/`, beside `capture/`:
 
 The package `bikesharing` has the two subpackages of [ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md), `bikesharing.core` and `bikesharing.shell`. The platform module is `pipeline/modal_app.py`, at the component's root and outside `src/`, so it is never installed with the package; it is the only file that imports `modal`, and it adds the package to the image with `add_local_python_source("bikesharing")`. **#2**
 
-ADR-0046's rules 1–4 are import-linter contracts in `pyproject.toml`, with `bikesharing` and `modal_app` as root packages: rule 1 forbids `modal` in `bikesharing`, rule 2 forbids `duckdb`, `dbt` and HTTP clients in `bikesharing.core`, rule 3 is a layers contract of `shell` above `core`, and rule 4 forbids `duckdb` in `modal_app`. A forbidden contract on an external package needs `include_external_packages = true`; the step that writes the contracts confirms it with a contract that must fail, and falls back to PyTestArch if import-linter cannot express it. Rule 5 is a CI test that imports the package and builds its configuration in an environment synced without Modal's SDK, which sits in its own dependency group.
+ADR-0046's rules 1–3 are import-linter contracts in `pyproject.toml`, with `bikesharing` as its root package: rule 1 forbids `modal` in `bikesharing`, rule 2 forbids `duckdb`, `dbt` and HTTP clients in `bikesharing.core`, and rule 3 is a layers contract of `shell` above `core`. A forbidden contract on an external package needs `include_external_packages = true`; the step that writes the contracts confirms it with a contract that must fail, and falls back to PyTestArch if import-linter cannot express it. Rules 4 and 5 are CI tests in `pipeline/tests/integration/test_platform_separation.py`. Rule 4 reads the imports of `modal_app.py` from its syntax tree and fails on `duckdb`, since import-linter takes only packages as root packages and `modal_app.py` is a single module. Rule 5 imports the package and builds its configuration in an environment synced without Modal's SDK, which sits in its own dependency group. **DI11**
 
 Options considered for the component folder:
 
@@ -259,7 +259,7 @@ Options considered for the component folder:
 
 Options considered for the platform module:
 
-- `pipeline/modal_app.py`, outside `src/` (chosen): pros, PyPA's `src/` layout keeps it out of the installed package, so rule 5 holds by construction, and its name states the platform; cons, import-linter sees it only once it is added to its root packages.
+- `pipeline/modal_app.py`, outside `src/` (chosen): pros, PyPA's `src/` layout keeps it out of the installed package, so rule 5 holds by construction, and its name states the platform; cons, import-linter takes only packages as root packages, so rule 4 is a test of the module's imports instead of a contract.
 - `pipeline/src/bikesharing_modal/`, a second top-level package: pros, import-linter sees it as one more package; cons, two packages declared in `pyproject.toml`, and rule 5 depends on keeping one of them out of the installation.
 
 #### Runtime and dependencies
@@ -477,7 +477,7 @@ The pipeline follows [testing-strategy.md](../testing-strategy.md), whose Python
 - **Integration, shell:** `pipeline/tests/integration/`, on bronze fixtures in a local folder and Delta tables on a local path, with no network. They cover the read schema over the fixtures (#11), the shell's run of two batches in one process with a failing model and a contract violation, checking the tables and the log ([s017 › P7](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)), a batch processed twice that adds no row (#4), a run that stops between its two commits, a batch with an unreadable bronze object (R22), DuckDB refusing a file outside its folder and an extension load (R28, R29), the published file built from the tables, a failed page deployment with a stand-in for `wrangler` that exits with an error (R31), the deploy script's refusals in a temporary Git repository with a stand-in for `uv` first on the `PATH`, which records its calls (R10), and the heartbeat's pings for each outcome, with their retries, against a local stub of the check (R14, R15).
 - **Contract:** consumer of `contracts/bronze-keys.json`, the keys the discovery parses; producer of `contracts/latest-station-count.schema.json`, tested with its vectors, `contracts/latest-station-count.json` ([Publishing](#publishing)). The content of a bronze object has no contract file: the read schema (#11), DQR11 and the failure of an unreadable object (R22) check it in every run, and capture's own tests check that it stores the response body unchanged ([d004](d004-bronze-data-capture.md)).
 - **End to end:** none in CI. The one-off run of D6's reference batch on Modal, on real bronze, is the end-to-end check before the first deployment, and the deploy script's smoke test the one after each deployment ([Deploy script](#deploy-script)).
-- **Platform separation:** import-linter's contracts run in `check-pipeline.sh` ([Component structure](#component-structure)). Rule 5 holds by the environment: the `platform` group is left out of `[tool.uv] default-groups`, so `uv sync --locked` installs no Modal SDK, locally and in CI, and a test asserts that `modal` cannot be imported and that the package and its configuration load without it. The deploy script adds the group with `uv run --group platform`. mypy checks `modal_app.py` and the deploy script's smoke test with a `[[tool.mypy.overrides]]` that sets `ignore_missing_imports` for the module `modal` only, so the rest of each file is type-checked without the group installed.
+- **Platform separation:** import-linter's contracts run in `check-pipeline.sh` ([Component structure](#component-structure)), and so does the test of rule 4, which fails if `modal_app.py` imports `duckdb`. Rule 5 holds by the environment: the `platform` group is left out of `[tool.uv] default-groups`, so `uv sync --locked` installs no Modal SDK, locally and in CI, and a test asserts that `modal` cannot be imported and that the package and its configuration load without it. The deploy script adds the group with `uv run --group platform`. mypy checks `modal_app.py` and the deploy script's smoke test with a `[[tool.mypy.overrides]]` that sets `ignore_missing_imports` for the module `modal` only, so the rest of each file is type-checked without the group installed.
 - **Fixtures:** `pipeline/tests/fixtures/`, bronze `station_status` objects of both systems kept as captured, gzip-compressed, trimmed to a few stations each and chosen for variety: a Bicing station out of service, a station without GBFS's optional fields, a capture with a station added or removed, and an object with a field outside the read schema ([ADR-0037](../decisions/0037-test-fixtures-per-component.md)).
 - **dbt documentation:** not generated in CI, since nothing publishes it; `check-pipeline.sh` runs `dbt parse`, which fails on the same errors in the project's YAML, and the owner generates the documentation locally when needed.
 - **Check script:** `pipeline/scripts/check-pipeline.sh` runs ruff, mypy, import-linter, SQLFluff (#27), `dbt parse`, `dbt run --empty` with dbt's unit tests, and pytest, in that order, so that the fastest checks fail first. The dbt commands take their variables from `pipeline/scripts/dbt_check_vars.py`, run with `uv run`: it writes empty Parquet files of `capture_history` and `latest_captures` to the script's temporary folder and prints, as JSON, the variables of [`bikesharing.shell.dbt_runner`](#bikesharingshelldbt_runner) for the bronze fixtures, with `read_columns` and `station_fields` taken from `bikesharing.core.read_schema`, so that the read schema lives in one place; `check-pipeline.sh` passes them with `--vars`.
@@ -1532,7 +1532,7 @@ The pipeline's Python project, installable and with its lint and import contract
 #### Reads
 
 - [Runtime and dependencies](#runtime-and-dependencies), this design: the versions, groups and constraint the manifest declares.
-- [Component structure](#component-structure), this design: ADR-0046's rules 1–4 as import-linter contracts and the check of `include_external_packages`.
+- [Component structure](#component-structure), this design: ADR-0046's rules 1–3 as import-linter contracts and the check of `include_external_packages`.
 - [Transformation in dbt](#transformation-in-dbt) › SQL conventions, this design: SQLFluff's dialect and templater.
 - [s016 › D2](../spikes/s016-code-workflow.md): the defaults policy that the comment in `[tool.ruff]` and `[tool.mypy]` states.
 - `.claude/rules/code/dependencies.md` and `python.md`: how dependencies are added and what the Python rule expects of the configuration.
@@ -2314,7 +2314,7 @@ A run end to end over local fixtures and tables, and the exclusion list.
 
 ### Step 25 — Modal app
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s25 add the Modal app with its image, functions and secrets`
 - **R:** R11, R16, R23, R26, R27
@@ -2326,7 +2326,9 @@ A run end to end over local fixtures and tables, and the exclusion list.
 The platform module, with its image, both functions and their secrets, and ADR-0046's rule 4.
 
 - `pipeline/modal_app.py` (new): [`modal_app`](#modal_app).
-- `pipeline/pyproject.toml` (modified): `modal_app` among import-linter's root packages, rule 4's contract, and mypy's override for `modal` ([Tests and CI](#tests-and-ci) › Platform separation).
+- `pipeline/pyproject.toml` (modified): mypy's override for `modal` ([Tests and CI](#tests-and-ci) › Platform separation).
+- `pipeline/scripts/check-pipeline.sh` (modified): mypy also checks `modal_app.py`.
+- `pipeline/tests/integration/test_platform_separation.py` (modified): rule 4's test, which fails if `modal_app.py` imports `duckdb` (DI11).
 
 #### Reads
 
@@ -2336,12 +2338,13 @@ The platform module, with its image, both functions and their secrets, and ADR-0
 
 #### Do
 
-1. Implement `pipeline/modal_app.py`.
-2. Update import-linter's and mypy's configuration in `pipeline/pyproject.toml`.
+1. Write rule 4's test in `pipeline/tests/integration/test_platform_separation.py`.
+2. Update mypy's configuration in `pipeline/pyproject.toml` and its command in `pipeline/scripts/check-pipeline.sh`.
+3. Implement `pipeline/modal_app.py`.
 
 #### Check
 
-- `bash pipeline/scripts/check-pipeline.sh` exits 0, with rule 4's contract kept.
+- `bash pipeline/scripts/check-pipeline.sh` exits 0, with rule 4's test passing.
 - `modal_app.py` declares the scheduled function with `timeout=600`, `max_containers=1` and no `retries`, and the one-off function with bronze's Secret only (R11, R16, R23, R26, R27).
 
 ### Step 26 — Deploy script
@@ -2500,3 +2503,4 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 | DI8 | [Observability](#observability), [`bikesharing.core.events`](#bikesharingcoreevents) | `run_finished` carries `error_type` and `error`, as `batch_failed` and capture's failure events do, holding an exception raised outside a batch | Structured logging of the exception on the terminal event: the log object and the failure ping carry the cause of a run that fails outside its batches | Step 24 |
 | DI9 | [`bikesharing.shell.run`](#bikesharingshellrun) | The file's schema moves from `PublishTarget` to `RunConfig` as `file_schema`, so a one-off run builds and validates the file too | A producer validates its contract whether or not it deploys: a one-off run from a branch checks DQR14 on real bronze before the merge | Step 24 |
 | DI10 | [`bikesharing.shell.publishing`](#bikesharingshellpublishing) | `wrangler` is killed after 120 s, and a timeout or a `wrangler` that cannot start is returned as a failed deployment, exit codes 124 and 127 | Every subprocess call is bounded: a hung deployment ends as `page_deploy_failed` well inside the run's timeout, and the run still logs, uploads and pings | Step 24 |
+| DI11 | [Component structure](#component-structure), [Tests and CI](#tests-and-ci), [Step 25](#step-25--modal-app) | ADR-0046's rule 4 is a test of `modal_app.py`'s imports from its syntax tree, in `test_platform_separation.py`, not an import-linter contract | Import-linter takes only packages as root packages and `modal_app.py` is a single module; the test checks the same direct imports and fails the PR like a contract | Step 25 |
