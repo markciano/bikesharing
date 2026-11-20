@@ -144,12 +144,14 @@ def _build_image() -> modal.Image:
         # `--locked` fails the build when `uv.lock` does not match `pyproject.toml`,
         # which `frozen=True`'s `--frozen` would not; the two flags exclude each
         # other. The system Python is the pinned patch, so uv may neither prefer nor
-        # download another one.
+        # download another one. Modal's builder points uv at its own PyPI mirror, and
+        # `uv.lock` names pypi.org: without `--default-index`, uv discards the lock for
+        # its missing index and `--locked` then fails.
         .uv_sync(
             str(PIPELINE_DIR),
             frozen=False,
             uv_version=UV_VERSION,
-            extra_options="--locked --no-dev --python-preference=only-system --no-python-downloads",
+            extra_options="--locked --default-index https://pypi.org/simple --no-dev --python-preference=only-system --no-python-downloads",
         )
         .add_local_file(
             web_dir / "package.json", str(remote_web / "package.json"), copy=True
