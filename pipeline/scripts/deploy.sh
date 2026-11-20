@@ -38,7 +38,9 @@ if [[ -n $untracked ]]; then
 fi
 
 sha=$(git rev-parse HEAD)
-main_sha=$(git rev-parse origin/main)
+# The fetched tip, not the `origin/main` ref: a clone whose fetch refspec does not
+# cover main, such as a single-branch checkout, would leave that ref stale.
+main_sha=$(git rev-parse FETCH_HEAD)
 if [[ $sha != "$main_sha" ]]; then
   refuse "HEAD ($sha) is not origin/main ($main_sha)."
 fi
