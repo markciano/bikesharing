@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 29, run by the owner: deployed on 2026-11-20; stages 1 and 2 are in Close › Implemented; stage 3 (`END_INSTANT` removed) ships in its PR; next, the owner checks it when the backlog is drained (Do 2), and add its result to Close; a run near 3.5 GB is the signal to stop (the heartbeat alerts on a failed run). Still to do: Do 3's spend limit (TH7), Do 4 to Do 7.
+- Current: Step 29, run by the owner: deployed on 2026-11-20, stages 1 and 2 are in Close › Implemented. Stage 3 (`END_INSTANT` removed, deployed at `df7225d`) has run since 19:42 UTC that day and drains the rest of bronze, about 240 batches. It is over when a succeeded `run_finished` ends well under the 7-minute budget, not near 454 s, and the next ones show 1 batch and a few seconds; `stage_drained` is not logged without an end instant. The owner brings the `run_finished` events since 19:42 UTC, and Claude records the stage in Close (Do 2). A run near 3.5 GB is the signal to stop, and the heartbeat alerts on a failed run. Still to do: Do 3's spend limit (TH7) and Do 4 to Do 7.
 
 ## 1. Spec — what and why
 
