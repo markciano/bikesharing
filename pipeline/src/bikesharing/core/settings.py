@@ -26,10 +26,9 @@ STATION_STOCK_PATH: Final = "silver/station_stock"
 PROCESSED_OBJECTS_PATH: Final = "control/processed_objects"
 LOG_PREFIX: Final = "logs/pipeline"
 
-# The first load drains in stages; the second one ends with the first week of
-# bronze captures, the local days 2026-10-14 to 2026-10-20 (d008 D8, First load in
-# chronological stages). None processes every object.
-END_INSTANT: Final[datetime | None] = datetime(2026, 10, 21, tzinfo=LOCAL_TIMEZONE)
+# The first load drained in stages, each ending at an instant (d008 D8, First load
+# in chronological stages). None, the last stage, processes every object.
+END_INSTANT: Final[datetime | None] = None
 MAX_OBJECTS_PER_BATCH: Final = 360
 TIME_BUDGET: Final = timedelta(minutes=7)
 LISTING_LOOKBACK: Final = timedelta(hours=1)
