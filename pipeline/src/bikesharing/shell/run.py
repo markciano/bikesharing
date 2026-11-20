@@ -311,9 +311,10 @@ def one_off_config(
     Returns
     -------
     RunConfig
-        A run with the version ``unreleased`` that writes its tables under its
-        work folder, and uploads no log, deploys nothing and pings nothing
-        (d008 #20, Environments and configuration).
+        A run with the version ``unreleased`` that writes its tables under a
+        work folder created for this configuration, so it starts from empty
+        tables, and uploads no log, deploys nothing and pings nothing (d008
+        #20, Environments and configuration).
 
     Raises
     ------
@@ -322,7 +323,9 @@ def one_off_config(
     """
     bronze_id = _required(env, "BRONZE_R2_ACCESS_KEY_ID")
     bronze_secret = _required(env, "BRONZE_R2_SECRET_ACCESS_KEY")
-    work_dir = _work_dir()
+    # A folder of its own, so that a run in a reused container, or a second
+    # local run, never starts from an earlier run's tables.
+    work_dir = Path(tempfile.mkdtemp(prefix="bikesharing-one-off-"))
     return _config(
         root=root,
         container_memory_mib=container_memory_mib,

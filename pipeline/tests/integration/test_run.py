@@ -21,13 +21,6 @@ from typing import Any
 
 import pytest
 from arro3.core import Table
-from bikesharing.shell.run import (
-    PublishTarget,
-    RunConfig,
-    one_off_config,
-    run,
-    scheduled_config,
-)
 from deltalake import DeltaTable, QueryBuilder
 from obstore.store import LocalStore
 
@@ -36,6 +29,13 @@ from bikesharing.shell.delta import (
     STATION_STOCK_PATH,
     local_lakehouse,
     processed_keys,
+)
+from bikesharing.shell.run import (
+    PublishTarget,
+    RunConfig,
+    one_off_config,
+    run,
+    scheduled_config,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -533,3 +533,18 @@ def test_the_one_off_config_holds_only_bronze_and_writes_locally() -> None:
     assert config.heartbeat_url is None
     assert config.secrets == frozenset({"bronze-id", "bronze-secret"})
     assert config.file_schema == SCHEMA
+
+
+def test_each_one_off_config_starts_from_its_own_empty_lakehouse() -> None:
+    env = {
+        "BRONZE_R2_ACCESS_KEY_ID": "bronze-id",
+        "BRONZE_R2_SECRET_ACCESS_KEY": "bronze-secret",
+    }
+
+    first = one_off_config(env, root=REPO, container_memory_mib=4096)
+    second = one_off_config(env, root=REPO, container_memory_mib=4096)
+
+    assert first.work_dir != second.work_dir
+    assert first.lakehouse.uri != second.lakehouse.uri
+    assert not Path(first.lakehouse.uri).exists()
+    assert not Path(second.lakehouse.uri).exists()
