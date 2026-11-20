@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 29, run by the owner.
+- Current: Step 29, run by the owner: deployed on 2026-11-20 and stage 1 checked (maximum 158.6 s, 1,417 MB, no warn beyond `stage_drained`; record it in Close); stage 2 (`END_INSTANT` 2026-10-21) ships in its PR; next, the owner checks it when `stage_drained` is logged (Do 2). The first deployment's page deployment needed the Cloudflare token of the "Edit Cloudflare Workers" template, not `Workers: Edit`: correct D10 and P8 at the closing.
 
 ## 1. Spec — what and why
 
@@ -2454,7 +2454,7 @@ D6's reference batch: a one-off run, from the task's branch, of one full batch o
 
 ### Step 29 — Production rollout
 
-- **Status:** 💤 todo
+- **Status:** 🔄 in progress
 - **Who:** Owner
 - **Commit:** one per stage, `feat: d008.s29 move the end instant to <stage>`, and the closing one, `docs: d008.s29 record the production checks`
 - **R:** R9, R17
