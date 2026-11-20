@@ -15,7 +15,6 @@ import resource
 import shutil
 import sys
 import tempfile
-import time
 import uuid
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -404,7 +403,6 @@ def run(config: RunConfig) -> Literal["succeeded", "failed"]:
         ``failed`` when a batch does not commit, the file breaks its schema,
         the deployment fails, or any exception is raised.
     """
-    started = time.monotonic()
     started_at = config.clock()
     run_id = str(uuid.uuid7())
     work = config.work_dir / run_id
@@ -443,7 +441,7 @@ def run(config: RunConfig) -> Literal["succeeded", "failed"]:
         error = raised
     finally:
         shutil.rmtree(work, ignore_errors=True)
-    return _finish(state, started_at, started, error)
+    return _finish(state, started_at, error)
 
 
 def _execute(state: _Run, started_at: datetime) -> None:
@@ -804,7 +802,7 @@ def _ping(state: _Run, signal: Signal, body: str = "") -> None:
 
 
 def _finish(
-    state: _Run, started_at: datetime, started: float, error: Exception | None
+    state: _Run, started_at: datetime, error: Exception | None
 ) -> Literal["succeeded", "failed"]:
     """Log ``run_finished``, upload the log and ping the outcome, as the run's last actions."""
     outcome: Literal["succeeded", "failed"] = (
@@ -816,7 +814,9 @@ def _finish(
             outcome=outcome,
             batches=state.batches,
             rows_inserted=state.rows_inserted,
-            duration_s=time.monotonic() - started,
+            # The run's wall-clock time, from the clock it is given, so that
+            # tests fix it (d008, Observability).
+            duration_s=(state.now() - started_at).total_seconds(),
             peak_memory_mb=events.peak_memory_mb(
                 resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             ),
