@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 26.
+- Current: Step 27, run by the owner.
 
 ## 1. Spec — what and why
 
@@ -2349,7 +2349,7 @@ The platform module, with its image, both functions and their secrets, and ADR-0
 
 ### Step 26 — Deploy script
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `build: d008.s26 add the deploy script with its refusals, tag and smoke test`
 - **R:** R9, R10
