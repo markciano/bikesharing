@@ -55,15 +55,15 @@ source = ["bikesharing"]
 [tool.mypy]
 
 # The platform group is not installed with the checks, so Modal's SDK has no stubs
-# to find: only that module is left unresolved, and the rest of modal_app.py is
-# still type-checked (d008, Tests and CI).
+# to find: only that module is left unresolved, and the rest of the platform modules
+# is still type-checked (d008, Tests and CI).
 [[tool.mypy.overrides]]
 module = ["modal"]
 ignore_missing_imports = true
 
 # Rules 1–3 of the package's structure (ADR-0046, Functional core and imperative
 # shell for the pipeline). Rules 4 and 5 are integration tests: import-linter takes
-# only packages as root packages, and modal_app.py is a single module.
+# only packages as root packages, and the platform modules are single modules.
 [tool.importlinter]
 root_packages = ["bikesharing"]
 include_external_packages = true
