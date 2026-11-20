@@ -551,6 +551,8 @@ def run_finished(
     rows_inserted: int,
     duration_s: float,
     peak_memory_mb: float,
+    error_type: str | None,
+    error: str | None,
 ) -> Event:
     """Build ``run_finished``, at info when the run succeeded and error otherwise.
 
@@ -568,6 +570,11 @@ def run_finished(
         The run's wall-clock time, in seconds.
     peak_memory_mb : float
         The process's peak memory, in decimal MB.
+    error_type : str or None
+        The type name of an exception raised outside a batch, which failed the
+        run; None otherwise.
+    error : str or None
+        That exception's message; redacted on writing.
 
     Returns
     -------
@@ -584,6 +591,8 @@ def run_finished(
             "rows_inserted": rows_inserted,
             "duration_s": duration_s,
             "peak_memory_mb": peak_memory_mb,
+            "error_type": error_type,
+            "error": error,
         },
     )
 

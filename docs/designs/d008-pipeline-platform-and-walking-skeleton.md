@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 24.
+- Current: Step 25.
 
 ## 1. Spec — what and why
 
@@ -450,7 +450,7 @@ Options considered for the end instant:
   | `page_deploy_failed` | error | `exit_code`, `output` (R31) |
   | `heartbeat_failed` | warn | `signal`, `attempts`, `error_type` |
   | `log_upload_failed` | warn | `error_type` (stdout only) |
-  | `run_finished` | info or error | `outcome`, `batches`, `rows_inserted`, `duration_s`, `peak_memory_mb` |
+  | `run_finished` | info or error | `outcome`, `batches`, `rows_inserted`, `duration_s`, `peak_memory_mb`, `error_type`, `error` (an exception outside a batch, DI8) |
 
 - **Run measures:** `duration_s` is the run's wall-clock time, and `peak_memory_mb` the Python process's `ru_maxrss` from `RUSAGE_SELF`, in decimal MB ([s012 › D1](../spikes/s012-execution-target.md#d1-execution-platform)); `wrangler`'s own peak, from `RUSAGE_CHILDREN` once it exits, goes in `page_deployed`, since the container's limit counts both.
 - **Log object:** every event goes to stdout as it happens, which Modal keeps for its own retention, and is kept in memory for the run's object. At the run's end, whatever its outcome, the shell writes that object to `bikesharing-lakehouse` as `logs/pipeline/date=YYYY-MM-DD/<run_id>.jsonl` ([ADR-0035](../decisions/0035-cloud-resource-naming.md)); a lifecycle rule on `logs/pipeline/`, set by the owner, deletes it after 30 days. A failed upload is logged to stdout and does not change the run's outcome or its heartbeat signal. A run killed by its timeout or its memory limit writes no object, and its events stay only in Modal's logs; the heartbeat reports it.
@@ -846,7 +846,7 @@ def is_insert_only(metrics: MergeMetrics) -> bool: ...
 
 - **Responsibility:** builds each event of [Observability](#observability) as a value, serializes it per ADR-0036 and redacts secrets (R24).
 - **Location:** `pipeline/src/bikesharing/core/events.py`
-- **Contract:** one builder per event, named after it, whose keyword arguments are the event's own fields; `objects_discovered`'s own fields are the system names, each holding `listed`, `pending` and `full_sweep`. `rule_checked` takes its level from its status: `pass` info, `warn` warn, `fail` and `error` error; `run_finished` is info when `succeeded` and error when `failed`. `to_json_line` writes `ts`, `level`, `component`, `version`, `run_id` and `event` first, then the own fields, `ts` in RFC 3339 with milliseconds and `Z`, and replaces every occurrence of each secret in any string value with `***`. `peak_memory_mb` converts Linux's `ru_maxrss`, in KiB, to decimal MB. `log_object_key` returns `logs/pipeline/date=YYYY-MM-DD/<run_id>.jsonl`, dated by the run's start in UTC.
+- **Contract:** one builder per event, named after it, whose keyword arguments are the event's own fields; `objects_discovered`'s own fields are the system names, each holding `listed`, `pending` and `full_sweep`. `rule_checked` takes its level from its status: `pass` info, `warn` warn, `fail` and `error` error; `run_finished` is info when `succeeded` and error when `failed`, and carries in `error_type` and `error` an exception raised outside a batch, null otherwise (DI8). `to_json_line` writes `ts`, `level`, `component`, `version`, `run_id` and `event` first, then the own fields, `ts` in RFC 3339 with milliseconds and `Z`, and replaces every occurrence of each secret in any string value with `***`. `peak_memory_mb` converts Linux's `ru_maxrss`, in KiB, to decimal MB. `log_object_key` returns `logs/pipeline/date=YYYY-MM-DD/<run_id>.jsonl`, dated by the run's start in UTC.
 
 ```python
 from collections.abc import Collection, Mapping, Sequence
@@ -927,6 +927,8 @@ def run_finished(
     rows_inserted: int,
     duration_s: float,
     peak_memory_mb: float,
+    error_type: str | None,
+    error: str | None,
 ) -> Event: ...
 
 def to_json_line(event: Event, context: RunContext, secrets: Collection[str]) -> str: ...
@@ -958,7 +960,7 @@ def validate_published_file(document: object, schema: Mapping[str, object]) -> l
 
 - **Responsibility:** builds each function's configuration from its environment and runs the pipeline end to end.
 - **Location:** `pipeline/src/bikesharing/shell/run.py`
-- **Contract:** `scheduled_config` reads the version from `CODE_VERSION` and raises `ValueError` when it is missing or empty (#20); it reads the secrets of [`modal_app`](#modal_app), and points the lakehouse and the log store at `bikesharing-lakehouse`. `one_off_config` reads only bronze's credentials, takes the version `unreleased`, puts the lakehouse on a local path under `work_dir`, and leaves `log_store`, `publish` and `heartbeat_url` as `None` (R26, R27). Both take the core's constants from `settings`, each path from `root`, and the container's hard limit as `container_memory_mib`, from `modal_app.py`'s `MEMORY_MIB`. `root` is the repository's root locally and in tests, and `/repo` in the image, which holds the same relative paths: `pipeline/dbt/`, `pipeline/config/excluded_objects.txt`, `web/` and `contracts/latest-station-count.schema.json`. `run` passes DuckDB's limit, `DUCKDB_MEMORY_FRACTION` of `container_memory_mib` rounded down, as `duckdb_memory_limit_mib` to `connect` and `DbtPaths` (#10). `run` never raises; it returns the outcome, in this order:
+- **Contract:** `scheduled_config` reads the version from `CODE_VERSION` and raises `ValueError` when it is missing or empty (#20); it reads the secrets of [`modal_app`](#modal_app), and points the lakehouse and the log store at `bikesharing-lakehouse`. `one_off_config` reads only bronze's credentials, takes the version `unreleased`, puts the lakehouse on a local path under `work_dir`, and leaves `log_store`, `publish` and `heartbeat_url` as `None` (R26, R27). Both take the core's constants from `settings`, each path from `root`, the file's schema, which every run validates against, from `contracts/latest-station-count.schema.json` (DI9), and the container's hard limit as `container_memory_mib`, from `modal_app.py`'s `MEMORY_MIB`. `root` is the repository's root locally and in tests, and `/repo` in the image, which holds the same relative paths: `pipeline/dbt/`, `pipeline/config/excluded_objects.txt`, `web/` and `contracts/latest-station-count.schema.json`. `run` passes DuckDB's limit, `DUCKDB_MEMORY_FRACTION` of `container_memory_mib` rounded down, as `duckdb_memory_limit_mib` to `connect` and `DbtPaths` (#10). `run` never raises; it returns the outcome, in this order:
   1. Generates the run ID with `uuid.uuid7()`, creates the run's work folder under `work_dir` (#9), pings `start` and logs `run_started`.
   2. Creates the missing tables, reads the exclusion list and the processing state, lists each system with its `ListingPlan`, and logs `objects_discovered`.
   3. Applies the end instant and logs `stage_drained` when the stage is drained.
@@ -982,7 +984,6 @@ from bikesharing.shell.delta import Lakehouse
 @dataclass(frozen=True, slots=True)
 class PublishTarget:
     web_dir: Path
-    schema: Mapping[str, object]
     account_id: str
     api_token: str
 
@@ -995,6 +996,7 @@ class RunConfig:
     publish: PublishTarget | None
     heartbeat_url: str | None
     secrets: frozenset[str]
+    file_schema: Mapping[str, object]
     dbt_project_dir: Path
     exclusion_list: Path
     work_dir: Path
@@ -2275,7 +2277,7 @@ The file's writing to the assets directory and `wrangler deploy` as a subprocess
 
 ### Step 24 — Run end to end
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d008.s24 run the pipeline end to end with the exclusion list`
 - **R:** R6, R7, R8, R14, R15, R20, R21, R22, R31
@@ -2493,3 +2495,5 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 | DI5 | [2.4 File layout](#24-file-layout), [Step 5](#step-5--bronze-fixtures-and-read-schema) | The fixtures come from the capture spike's 13 days, are written by `pipeline/scripts/trim_fixtures.py` and listed with their provenance in `manifest.json`; a variety absent from the sample is a derived copy of a captured object | ADR-0037's rule (committed trimming script, provenance per fixture), as capture does; P11's one day lacks AMBici's station changes | Step 5 |
 | DI6 | [`bikesharing.shell.duckdb_session`](#bikesharingshellduckdb_session), [`bikesharing.shell.dbt_runner`](#bikesharingshelldbt_runner), `pipeline/dbt/profiles.yml` | dbt's connection takes DuckDB's sandbox and memory settings from a dbt-duckdb plugin, `Plugin` in `duckdb_session`, applied once per database with the function `connect` also uses, following the adapter's plugin hook for connection setup | dbt-duckdb applies a profile's `settings` again on every cursor, which a sandboxed or locked DuckDB refuses, and `config_options` cannot set `allowed_directories`; D10's settings and their order stay as designed | Step 12 |
 | DI7 | [Runtime and dependencies](#runtime-and-dependencies), [`bikesharing.shell.delta`](#bikesharingshelldelta), `pipeline/pyproject.toml` | `arro3-core` joins the runtime dependencies, and `record_processed` builds its MERGE's source with it instead of `pyarrow` | Every directly imported package is declared (ADR-0017); it is already locked as `deltalake`'s own Arrow library, so the image gains no package, and its use is a few lines a test covers | Step 19 |
+| DI8 | [Observability](#observability), [`bikesharing.core.events`](#bikesharingcoreevents) | `run_finished` carries `error_type` and `error`, as `batch_failed` and capture's failure events do, holding an exception raised outside a batch | Structured logging of the exception on the terminal event: the log object and the failure ping carry the cause of a run that fails outside its batches | Step 24 |
+| DI9 | [`bikesharing.shell.run`](#bikesharingshellrun) | The file's schema moves from `PublishTarget` to `RunConfig` as `file_schema`, so a one-off run builds and validates the file too | A producer validates its contract whether or not it deploys: a one-off run from a branch checks DQR14 on real bronze before the merge | Step 24 |
