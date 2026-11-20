@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: DI12's code (the three platform modules, `test_platform_separation.py` and `check-pipeline.sh`) as a one-step change, then a one-off run from the new module to confirm the image; then Step 29, run by the owner.
+- Current: Step 29, run by the owner.
 
 ## 1. Spec — what and why
 
@@ -2491,7 +2491,7 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 
 <!-- Component — what was delivered; tests passing. In a document-only task: Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. -->
 
-- **Reference batch (Step 28):** a `one_off_run` from the task's branch on 2026-11-20, over the real bronze up to the configured end instant. It listed 106,103 objects (53,262 of AMBici and 52,841 of Bicing) in a full sweep that took about 74 s, and processed 4 batches: three of 360 objects and a last one of 245, 516,597 rows in all. The first batch, of 360 objects, inserted 140,094 rows in 9.3 s. `run_finished` reports `outcome` `succeeded`, `duration_s` 106.1 and `peak_memory_mb` 1,358 (about 1,295 MiB, 32% of the container's 4 GiB), and no rule failed. D6's bound of 360 objects is confirmed, `MAX_OBJECTS_PER_BATCH` stays, and the peak, with DuckDB's default 17 threads, leaves the `threads` of #30 as it is.
+- **Reference batch (Step 28):** a `one_off_run` from the task's branch on 2026-11-20, over the real bronze up to the configured end instant. It listed 106,103 objects (53,262 of AMBici and 52,841 of Bicing) in a full sweep that took about 74 s, and processed 4 batches: three of 360 objects and a last one of 245, 516,597 rows in all. The first batch, of 360 objects, inserted 140,094 rows in 9.3 s. `run_finished` reports `outcome` `succeeded`, `duration_s` 106.1 and `peak_memory_mb` 1,358 (about 1,295 MiB, 32% of the container's 4 GiB), and no rule failed. D6's bound of 360 objects is confirmed, `MAX_OBJECTS_PER_BATCH` stays, and the peak, with DuckDB's default 17 threads, leaves the `threads` of #30 as it is. The same run from `modal_one_off.py` (DI12) created only `one_off_run` and gave `duration_s` 132.9 and `peak_memory_mb` 1,437 (about 1,370 MiB, 33% of 4 GiB), with the same 516,597 rows.
 
 ### 4.2 Known gaps at close
 
