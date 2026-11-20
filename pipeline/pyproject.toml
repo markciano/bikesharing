@@ -37,6 +37,12 @@ default-groups = ["dev"]
 # dbt's transitive dependency; below 3.15 it truncates float model versions.
 constraint-dependencies = ["mashumaro>=3.15"]
 
+# Tests live only under tests/: without it, pytest would also collect
+# scripts/smoke_test.py, whose name matches its `*_test.py` pattern, and import Modal's
+# SDK, which the checks never install.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.coverage.run]
 source = ["bikesharing"]
 
