@@ -26,12 +26,13 @@ TAG = "a1b2c3d"
 # The stand-in records its call in ``calls.json`` and reads its behaviour from
 # ``behaviour.json``, both in its working directory, which is the web folder.
 _STAND_IN = f"""#!{sys.executable}
-import json, os, sys
+import json, os, sys, time
 
 with open("calls.json", "w", encoding="utf-8") as calls:
     json.dump({{"argv": sys.argv[1:], "cwd": os.getcwd(), "env": dict(os.environ)}}, calls)
 with open("behaviour.json", encoding="utf-8") as behaviour:
     spec = json.load(behaviour)
+time.sleep(spec.get("sleep_s", 0))
 print(spec["stdout"])
 print(spec["stderr"], file=sys.stderr)
 sys.exit(spec["exit_code"])
@@ -54,10 +55,12 @@ def web_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return folder
 
 
-def _behave(folder: Path, *, exit_code: int, stdout: str, stderr: str) -> None:
+def _behave(
+    folder: Path, *, exit_code: int, stdout: str, stderr: str, sleep_s: float = 0
+) -> None:
+    spec = {"exit_code": exit_code, "stdout": stdout, "stderr": stderr}
     (folder / "behaviour.json").write_text(
-        json.dumps({"exit_code": exit_code, "stdout": stdout, "stderr": stderr}),
-        encoding="utf-8",
+        json.dumps({**spec, "sleep_s": sleep_s}), encoding="utf-8"
     )
 
 
@@ -130,6 +133,32 @@ def test_a_wrangler_that_exits_with_an_error_is_returned_as_a_failed_deployment(
     assert result.exit_code == 3
     assert "Uploading assets" in result.output
     assert "Authentication error" in result.output
+
+
+# Verifies d008 R31
+def test_a_wrangler_that_hangs_is_stopped_and_returned_as_a_failed_deployment(
+    web_dir: Path,
+) -> None:
+    _behave(web_dir, exit_code=0, stdout="never printed", stderr="", sleep_s=30)
+
+    result = deploy_page(
+        web_dir, tag=TAG, account_id=ACCOUNT_ID, api_token=API_TOKEN, timeout_s=0.5
+    )
+
+    assert result.exit_code == 124
+    assert "timed out after 0.5 s" in result.output
+
+
+# Verifies d008 R31
+def test_a_wrangler_that_cannot_start_is_returned_as_a_failed_deployment(
+    web_dir: Path,
+) -> None:
+    (web_dir / "node_modules" / ".bin" / "wrangler").unlink()
+
+    result = deploy_page(web_dir, tag=TAG, account_id=ACCOUNT_ID, api_token=API_TOKEN)
+
+    assert result.exit_code == 127
+    assert "FileNotFoundError" in result.output
 
 
 def test_a_successful_deployment_returns_its_output_and_a_peak_memory(
