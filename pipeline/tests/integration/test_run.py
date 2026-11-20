@@ -241,6 +241,19 @@ def test_events_share_the_runs_common_fields_from_start_to_finish(
     assert {e["component"] for e in events} == {"pipeline"}
 
 
+def test_duration_is_measured_with_the_runs_clock(
+    config: RunConfig, tmp_path: Path
+) -> None:
+    instants = iter([NOW])
+
+    def clock() -> datetime:
+        return next(instants, NOW + timedelta(seconds=90))
+
+    run(replace(config, clock=clock))
+
+    assert _named(_events(tmp_path), "run_finished")[0]["duration_s"] == 90.0
+
+
 def test_the_run_removes_its_work_folder(config: RunConfig) -> None:
     run(config)
 
