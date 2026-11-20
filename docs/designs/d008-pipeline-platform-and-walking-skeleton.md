@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 28, run by the owner.
+- Current: Step 29, run by the owner.
 
 ## 1. Spec — what and why
 
@@ -2415,7 +2415,7 @@ The confirmations on Modal and Cloudflare that the Plan leaves to the build, eac
 
 ### Step 28 — Reference batch
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `docs: d008.s28 record the reference batch`; if the bound is lowered, that change goes first in its own commit, `fix: d008.s28 lower the batch bound to <N> objects`
 - **R:** —
@@ -2478,6 +2478,8 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 ### 4.1 Implemented
 
 <!-- Component — what was delivered; tests passing. In a document-only task: Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. -->
+
+- **Reference batch (Step 28):** a `one_off_run` from the task's branch on 2026-11-20, over the real bronze up to the configured end instant. It listed 106,103 objects (53,262 of AMBici and 52,841 of Bicing) in a full sweep that took about 74 s, and processed 4 batches: three of 360 objects and a last one of 245, 516,597 rows in all. The first batch, of 360 objects, inserted 140,094 rows in 9.3 s. `run_finished` reports `outcome` `succeeded`, `duration_s` 106.1 and `peak_memory_mb` 1,358 (about 1,295 MiB, 32% of the container's 4 GiB), and no rule failed. D6's bound of 360 objects is confirmed, `MAX_OBJECTS_PER_BATCH` stays, and the peak, with DuckDB's default 17 threads, leaves the `threads` of #30 as it is.
 
 ### 4.2 Known gaps at close
 
