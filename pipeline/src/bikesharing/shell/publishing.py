@@ -19,8 +19,15 @@ from typing import Final
 from bikesharing.core.events import peak_memory_mb
 
 FILE_NAME: Final = "latest-station-count.json"
+# The run's batches stop opening at 7 min of its 10-minute timeout, so a
+# deployment bounded at 2 min leaves the run time to log, upload and ping
+# (d008 D6, Provisional run bounds).
+DEPLOY_TIMEOUT_S: Final = 120.0
 _WRANGLER: Final = Path("node_modules") / ".bin" / "wrangler"
 _CONFIG: Final = "wrangler.jsonc"
+# Shell conventions: GNU timeout's exit code, and the shell's "command not found".
+_TIMED_OUT: Final = 124
+_NOT_STARTED: Final = 127
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,7 +74,12 @@ def write_published_file(document: Mapping[str, object], assets_dir: Path) -> Pa
 
 
 def deploy_page(
-    web_dir: Path, *, tag: str, account_id: str, api_token: str
+    web_dir: Path,
+    *,
+    tag: str,
+    account_id: str,
+    api_token: str,
+    timeout_s: float = DEPLOY_TIMEOUT_S,
 ) -> DeployResult:
     """Deploy the page by running ``wrangler deploy`` in the web folder.
 
@@ -83,12 +95,17 @@ def deploy_page(
     api_token : str
         The Cloudflare token. It is a secret: it goes in ``CLOUDFLARE_API_TOKEN``
         only, never in the arguments, which other processes can read.
+    timeout_s : float, default DEPLOY_TIMEOUT_S
+        How long ``wrangler`` may run before it is killed.
 
     Returns
     -------
     DeployResult
-        The exit code, output and peak memory. A non-zero exit is returned,
-        not raised.
+        The exit code, output and peak memory. A failed deployment is
+        returned, never raised: a non-zero exit as it is, a ``wrangler``
+        killed at its timeout as exit code 124 with the output it wrote, and a
+        ``wrangler`` that cannot start as exit code 127 with the error's type
+        and message.
     """
     folder = web_dir.resolve()
     # Only what wrangler needs: the parent's environment holds the run's other
@@ -99,19 +116,42 @@ def deploy_page(
         "CLOUDFLARE_ACCOUNT_ID": account_id,
         "CLOUDFLARE_API_TOKEN": api_token,
     }
-    completed = subprocess.run(
-        [str(folder / _WRANGLER), "deploy", "--config", _CONFIG, "--tag", tag],
-        cwd=folder,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            [str(folder / _WRANGLER), "deploy", "--config", _CONFIG, "--tag", tag],
+            cwd=folder,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=timeout_s,
+        )
+    except subprocess.TimeoutExpired as error:
+        # subprocess.run kills the child at its timeout; the output read so
+        # far comes as bytes whatever the text mode.
+        partial = error.output
+        written = (
+            partial.decode("utf-8", errors="replace")
+            if isinstance(partial, bytes)
+            else partial or ""
+        )
+        return _result(
+            _TIMED_OUT, f"wrangler timed out after {timeout_s:g} s\n{written}"
+        )
+    except OSError as error:
+        return _result(
+            _NOT_STARTED, f"wrangler could not start: {type(error).__name__}: {error}"
+        )
+    return _result(completed.returncode, completed.stdout)
+
+
+def _result(exit_code: int, output: str) -> DeployResult:
+    """Return a deployment's outcome, with the peak memory of this process's children."""
     children = resource.getrusage(resource.RUSAGE_CHILDREN)
     return DeployResult(
-        exit_code=completed.returncode,
-        output=completed.stdout,
+        exit_code=exit_code,
+        output=output,
         peak_memory_mb=peak_memory_mb(children.ru_maxrss),
     )

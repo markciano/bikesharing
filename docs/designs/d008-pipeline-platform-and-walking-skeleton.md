@@ -1317,7 +1317,7 @@ def latest_captures(lakehouse: Lakehouse, latest: Mapping[System, datetime]) -> 
 
 - **Responsibility:** writes the published file and deploys the page with `wrangler` (#18, #19, #26).
 - **Location:** `pipeline/src/bikesharing/shell/publishing.py`
-- **Contract:** `write_published_file` writes the document as UTF-8 JSON to `assets_dir/latest-station-count.json`, creating the folder. `deploy_page` runs `web_dir/node_modules/.bin/wrangler deploy --config wrangler.jsonc --tag <tag>` with `web_dir` as its working directory and an environment holding only `PATH`, `HOME`, `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, and returns its exit code, its combined output and its peak memory from `RUSAGE_CHILDREN`; it raises nothing on a non-zero exit.
+- **Contract:** `write_published_file` writes the document as UTF-8 JSON to `assets_dir/latest-station-count.json`, creating the folder. `deploy_page` runs `web_dir/node_modules/.bin/wrangler deploy --config wrangler.jsonc --tag <tag>` with `web_dir` as its working directory and an environment holding only `PATH`, `HOME`, `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, and returns its exit code, its combined output and its peak memory from `RUSAGE_CHILDREN`. A failed deployment is returned, never raised: a non-zero exit as it is, a `wrangler` killed at its timeout of 120 s as exit code 124, GNU `timeout`'s, with the output it wrote, and a `wrangler` that cannot start as exit code 127, the shell's "command not found", with the error's type and message.
 
 ```python
 from collections.abc import Mapping
@@ -1334,7 +1334,9 @@ class DeployResult:
     peak_memory_mb: float
 
 def write_published_file(document: Mapping[str, object], assets_dir: Path) -> Path: ...
-def deploy_page(web_dir: Path, *, tag: str, account_id: str, api_token: str) -> DeployResult: ...
+def deploy_page(
+    web_dir: Path, *, tag: str, account_id: str, api_token: str, timeout_s: float = 120.0
+) -> DeployResult: ...
 ```
 
 #### `bikesharing.shell.heartbeat`
@@ -2497,3 +2499,4 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 | DI7 | [Runtime and dependencies](#runtime-and-dependencies), [`bikesharing.shell.delta`](#bikesharingshelldelta), `pipeline/pyproject.toml` | `arro3-core` joins the runtime dependencies, and `record_processed` builds its MERGE's source with it instead of `pyarrow` | Every directly imported package is declared (ADR-0017); it is already locked as `deltalake`'s own Arrow library, so the image gains no package, and its use is a few lines a test covers | Step 19 |
 | DI8 | [Observability](#observability), [`bikesharing.core.events`](#bikesharingcoreevents) | `run_finished` carries `error_type` and `error`, as `batch_failed` and capture's failure events do, holding an exception raised outside a batch | Structured logging of the exception on the terminal event: the log object and the failure ping carry the cause of a run that fails outside its batches | Step 24 |
 | DI9 | [`bikesharing.shell.run`](#bikesharingshellrun) | The file's schema moves from `PublishTarget` to `RunConfig` as `file_schema`, so a one-off run builds and validates the file too | A producer validates its contract whether or not it deploys: a one-off run from a branch checks DQR14 on real bronze before the merge | Step 24 |
+| DI10 | [`bikesharing.shell.publishing`](#bikesharingshellpublishing) | `wrangler` is killed after 120 s, and a timeout or a `wrangler` that cannot start is returned as a failed deployment, exit codes 124 and 127 | Every subprocess call is bounded: a hung deployment ends as `page_deploy_failed` well inside the run's timeout, and the run still logs, uploads and pings | Step 24 |
