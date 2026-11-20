@@ -5,7 +5,9 @@ deployed (d008, Deploy script). The run is a normal production run: it is idempo
 waits behind a scheduled run in progress (``max_containers=1``) and sends its
 heartbeat signal like any other. The function raises when the run fails, so the call
 ends failed and this script exits with 1. The call's ID, printed before the wait, finds
-the run's events in Modal's logs. Modal's own timeout of the function bounds the wait.
+the run's events in Modal's logs. The wait has no timeout of its own: the function's
+timeout bounds the run in progress it may wait behind, and then its own run, so it
+ends in about twice that timeout at most.
 """
 
 import sys
