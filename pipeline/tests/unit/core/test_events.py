@@ -256,6 +256,8 @@ def test_run_finished_takes_its_level_from_its_outcome(
         rows_inserted=3000,
         duration_s=95.5,
         peak_memory_mb=812.3,
+        error_type=None,
+        error=None,
     )
 
     record = _line(event)
@@ -267,8 +269,31 @@ def test_run_finished_takes_its_level_from_its_outcome(
         "rows_inserted",
         "duration_s",
         "peak_memory_mb",
+        "error_type",
+        "error",
     ]
     assert record["outcome"] == outcome
+    assert record["error_type"] is None
+    assert record["error"] is None
+
+
+def test_run_finished_holds_an_exception_raised_outside_a_batch() -> None:
+    event = events.run_finished(
+        TS,
+        outcome="failed",
+        batches=0,
+        rows_inserted=0,
+        duration_s=1.5,
+        peak_memory_mb=120.0,
+        error_type="GenericError",
+        error=f"listing failed for {HEARTBEAT_URL}",
+    )
+
+    record = _line(event, [HEARTBEAT_URL])
+
+    assert record["level"] == "error"
+    assert record["error_type"] == "GenericError"
+    assert record["error"] == "listing failed for ***"
 
 
 # Verifies d008 R24

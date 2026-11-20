@@ -71,6 +71,8 @@ def test_body_holds_every_event_in_order_as_json_lines() -> None:
             rows_inserted=10,
             duration_s=1.5,
             peak_memory_mb=200.0,
+            error_type=None,
+            error=None,
         )
     )
 

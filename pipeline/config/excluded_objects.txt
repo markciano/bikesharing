@@ -1,0 +1,9 @@
+# Bronze objects the pipeline never processes, since they cannot be read.
+#
+# One object per line: its key in the bronze bucket, then "#" and the reason,
+# e.g.
+#   raw/bicing/station_status/2026-10-22/20261022T074219Z.json.gz # truncated gzip
+# Blank lines and lines starting with "#" are ignored. Each exclusion is a
+# reviewed change, deployed as a new code version (d008 #8, Unreadable objects).
+#
+# TODO(T060.5): replace this list with the set-aside and its redrive, and remove it.
