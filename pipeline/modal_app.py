@@ -137,7 +137,9 @@ def _build_image() -> modal.Image:
 
     return (
         modal.Image.from_registry(f"python:{python_patch}-slim-bookworm")
-        .apt_install("ca-certificates", "curl")
+        # Node's official Linux binary links `libatomic.so.1`, which the slim Python
+        # base image does not ship.
+        .apt_install("ca-certificates", "curl", "libatomic1")
         .run_commands(_node_install_command(node_version))
         # `--locked` fails the build when `uv.lock` does not match `pyproject.toml`,
         # which `frozen=True`'s `--frozen` would not; the two flags exclude each
