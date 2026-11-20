@@ -33,7 +33,7 @@ uv run ruff format --check .
 echo "== ruff check"
 uv run ruff check .
 echo "== mypy"
-uv run mypy src tests
+uv run mypy src tests modal_app.py
 echo "== import-linter"
 uv run lint-imports
 echo "== sqlfluff"
