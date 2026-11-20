@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 26; ADR-0046's rule 4 text, which names an import contract, awaits the owner's decision (DI11).
+- Current: Step 26.
 
 ## 1. Spec — what and why
 
