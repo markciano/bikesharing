@@ -204,6 +204,26 @@ def test_a_head_behind_origin_main_is_refused_before_any_call(
     assert repo.uv_calls() == []
 
 
+# Verifies d008 R10
+def test_a_clone_whose_fetch_leaves_the_origin_main_ref_stale_still_sees_the_new_tip(
+    repo: DeployRepo, tmp_path: Path
+) -> None:
+    # A single-branch checkout, such as CI's, may fetch no refspec that covers main.
+    repo.git(
+        "config", "remote.origin.fetch", "+refs/heads/other:refs/remotes/origin/other"
+    )
+    other = tmp_path / "other"
+    repo.git("clone", str(repo.origin), str(other), cwd=tmp_path)
+    repo.commit("upstream.txt", cwd=other)
+    repo.git("push", "origin", "main", cwd=other)
+
+    result = repo.deploy()
+
+    assert result.returncode != 0
+    assert "not origin/main" in result.stderr
+    assert repo.uv_calls() == []
+
+
 # Verifies d008 R9
 def test_a_clean_head_at_origin_main_is_deployed_tagged_with_its_full_sha(
     repo: DeployRepo,
