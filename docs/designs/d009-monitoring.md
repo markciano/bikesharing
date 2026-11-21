@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: —
+- Current: Spec › Open questions, from OQ4. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
 
 ## 1. Spec — what and why
 
@@ -146,10 +146,10 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ4 | Which threshold, window and minimum of captures does DQR12's volume drop keep, reviewed against weeks of production runs? | D3 | [data-quality › Runs and published files](../data-quality.md#runs-and-published-files) |
-| OQ5 | Which target does each quality indicator keep, but DQM4's, reviewed against weeks of production indicators? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators) |
-| OQ6 | Which target does DQM11, the minutes with no capture by cause, take from the first weeks of capture's logs? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators) |
-| OQ10 | Which further alerts does a discovery over the production events of capture and the pipeline propose? | D3 | First pass in D3 |
+| OQ4 | Which threshold, window and minimum of captures does DQR12's volume drop keep, reviewed against weeks of production runs? | D3 | [data-quality › Runs and published files](../data-quality.md#runs-and-published-files); evidence in `spikes/d009-baselines/volume-drop/` |
+| OQ5 | Which target does each quality indicator keep, but DQM4's, reviewed against weeks of production indicators? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators); evidence in `spikes/d009-baselines/indicator-targets/` |
+| OQ6 | Which target does DQM11, the minutes with no capture by cause, take from the first weeks of capture's logs? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators); evidence in `spikes/d009-baselines/capture-gaps/` |
+| OQ10 | Which further alerts does a discovery over the production events of capture and the pipeline propose? | D3 | First pass in D3; evidence in `spikes/d009-baselines/discovery/`; a candidate rule or indicator on the data goes to Out of scope, with the child that owns its table |
 | OQ7 | How does each alert reach the owner, by urgency, starting from the SRE split between page and ticket? | D3, OQ10 | [s018 › P3](../spikes/s018-monitoring-tool.md#23-production-inputs) |
 | OQ8 | Which health questions does a script answer that Grafana does not, and must it run from a phone? Out of scope if none. | D1 | [s013 › D5, P9](../spikes/s013-visualization-tool.md#55-production-inputs) |
 
