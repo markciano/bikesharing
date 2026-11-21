@@ -22,3 +22,25 @@ Question: what do weeks of production captures and runs show for the values the 
 
   `--self-test` checks the window logic on synthetic captures.
 - **Run time:** under 10 s for 5.5 weeks of captures.
+
+## indicator-targets
+
+- **Question:** which targets should DQM7, capture completeness, and DQM10, the age of the data the page serves, keep? Evidence for [d009 › D7](../../docs/designs/d009-monitoring.md#d7-capture-completeness-target-per-system) and [D8](../../docs/designs/d009-monitoring.md#d8-page-data-age-keeps-its-target).
+- **Inputs:** read from R2, nothing written to it:
+  - `control/processed_objects` of `bikesharing-lakehouse`: the `station_status` captures in the station stock, with the `run_id` of the run that processed each;
+  - capture's pass logs, `logs/date=<YYYY-MM-DD>/<run_id>.jsonl` of `bikesharing-bronze`, one per pass;
+  - the pipeline's run logs, `logs/pipeline/date=<YYYY-MM-DD>/<run_id>.jsonl` of `bikesharing-lakehouse`, kept for 30 days.
+- **What the script does:** `indicator_targets.py`:
+  - **DQM7:** for each system, every UTC minute from its first to its last processed capture, marked captured or not, a minute of two captures counted once. It reports the share of captured minutes per system and month against 99.5%, and the worst days. Each missed minute gets the cause its pass logged: the failure events of that minute (`feed_failed` of `station_status` or `index_rejected`, with status and error type), a capture logged but not processed, a pass with no `station_status` event, or no pass logged. Causes are ranked by missed minutes.
+  - **DQM10:** for each `page_deployed`, its time minus each system's latest capture processed by the runs up to the deploying one, runs ordered by the time in their UUIDv7 `run_id`, and the oldest age a visitor meets, just before the next deployment. Steady state starts at the first deployment whose data is under 30 min old, after the runs that catch up on earlier captures. It reports the page's age (the older system) in steady state, together with the runs' outcome, `duration_s`, `peak_memory_mb` and the interval between runs, against one cadence plus one run.
+  - Captures copied from V4 have no pass logs ([d004 › D2](../../docs/designs/d004-bronze-data-capture.md#d2-spike-data-moved-to-production)): their missed minutes show the cause `before capture logs`.
+- **Output:** the report on screen, saved as `out/report-<UTC time>.txt`, in UTC.
+- **Commands:**
+
+  ```bash
+  uv run --directory pipeline python ../spikes/d009-baselines/indicator-targets/indicator_targets.py
+  uv run --directory pipeline python ../spikes/d009-baselines/indicator-targets/indicator_targets.py --self-test
+  ```
+
+  `--self-test` checks the minute count, the cause given to each missed minute and the UUIDv7 time on synthetic rows.
+- **Run time:** about 5 min for two weeks of capture's logs, about 20 s per day, with progress per day.

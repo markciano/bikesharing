@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Spec › Open questions, from OQ5. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
+- Current: Spec › Open questions, from OQ6. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
 
 ## 1. Spec — what and why
 
@@ -118,6 +118,20 @@ DQR12 flags a capture of a system that lists fewer than 95% of the median number
 
 Rejected: 95% over 24 h. It keeps the window and the history the run reads, but flags only the first 10 h of the November drop and misses the October one.
 
+#### D7. Capture completeness target per system
+
+DQM7 keeps its definition and takes one target per system: at least 99.5% of the minutes of each calendar month for AMBici and 97% for Bicing. Over the first 14.5 days of production capture (2026-11-07 to 2026-11-21), AMBici captured 99.9% of its minutes, losing 17 to scattered 5xx responses and timeouts, while Bicing captured 97.8%, losing 464, 98% of them to a 403 from the provider, almost always a single minute at a time, about 32 a day, worst day 97.15% ([`spikes/d009-baselines/indicator-targets/`](../../spikes/d009-baselines/indicator-targets/)). Each target sits just below what production shows, following the SRE practice of setting an SLO from measured performance and revising it, so ALR6 stays quiet in normal operation and fires when a system gets worse. The captures copied from V4 before 2026-11-07 do not count: another capture wrote them, with no pass logs to give the cause of a gap. **refines [d004 › D6](d004-bronze-data-capture.md#d6-capture-completeness-target)**
+
+- **What would change it:** the first full calendar month of production, December 2026, with Bicing clearly above or below 97%: its target is revised with that month. If Bicing's 403 stops, Bicing returns to 99.5%.
+
+Rejected: 99.5% for both, with the minutes lost to a 403 left out of DQM7. One target for both, but the indicator would no longer measure what is missing from the station stock, and whether a 403 is the provider's gap or capture's is what DQM11 splits.
+
+#### D8. Page data age keeps its target
+
+DQM10 keeps its target, at most one cadence plus one run ([d002 › R3](d002-requirements.md#requirements)), since production meets it: today one cadence is 15 min and a run lasts up to about 7 min, so about 22 min. Over 8.7 h of steady state (from 2026-11-21 03:03 UTC, 37 deployments, the runs before it catching up on the weeks captured earlier), the oldest data a visitor met, just before the next deployment, was 16.8 min at the median and 19.6 min at most; runs lasted 90 s at the median and 421 s at most, 15 min apart ([`spikes/d009-baselines/indicator-targets/`](../../spikes/d009-baselines/indicator-targets/)). These are the walking skeleton's figures, a baseline: runs grow as later children add models, and the target, stated relative to the cadence and the run, follows them without being rewritten, while ALR7 and ALR4 watch that growth. A target is kept when production meets it, following the SRE practice of D7. Where ALR4 sets its threshold is a Plan decision (D3).
+
+- **What would change it:** runs that bring the oldest data a visitor meets above one cadence plus one run: the cadence or the run's duration is reviewed, not the target, since it is what the page promises its visitor.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -154,7 +168,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ5 | Which target does each quality indicator keep, but DQM4's, reviewed against weeks of production indicators? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators); evidence in `spikes/d009-baselines/indicator-targets/` |
 | OQ6 | Which target does DQM11, the minutes with no capture by cause, take from the first weeks of capture's logs? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators); evidence in `spikes/d009-baselines/capture-gaps/` |
 | OQ10 | Which further alerts does a discovery over the production events of capture and the pipeline propose? | D3 | First pass in D3; evidence in `spikes/d009-baselines/discovery/`; a candidate rule or indicator on the data goes to Out of scope, with the child that owns its table |
 | OQ7 | How does each alert reach the owner, by urgency, starting from the SRE split between page and ticket? | D3, OQ10 | [s018 › P3](../spikes/s018-monitoring-tool.md#23-production-inputs) |
