@@ -8,8 +8,8 @@ Kind: a build task builds code or configuration and has every block. A document-
 # Design: Monitoring capture and pipeline
 
 - **Task:** T060.2
-- **Kind:** `<build | document-only | parent>`
-- **ADRs:** `<ADRs this design must respect, or "none">`
+- **Kind:** build
+- **ADRs:** [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md), [ADR-0036](../decisions/0036-log-convention-across-components.md), [ADR-0048](../decisions/0048-grafana-cloud-as-monitoring-tool.md), [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)
 - **New ADRs from this doc:** `<ADRs created during this design, or "none">`
 
 ## Status
@@ -30,6 +30,8 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 <!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
 
+Capture, the pipeline and the page each write structured log events rich enough to be split by any of their fields ([ADR-0036](../decisions/0036-log-convention-across-components.md)), yet today the owner reads them only in R2 objects and in each platform's own logs. The owner learns only of runs that fail or never start, through the heartbeat ([ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md)), so a failed rule of severity warn, a batch set aside or an indicator off its target reaches the owner late ([d007 › D1](d007-pipeline-design.md#d1-build-by-vertical-slice)). This task makes Grafana Cloud, the tool chosen by [s018](../spikes/s018-monitoring-tool.md), the place where the owner sees how each component and each of its parts is running, and learns of what needs action through alerts. It builds on the copy of every event over OTLP set by [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md), on the scope set by [d007 › Children](d007-pipeline-design.md#16-children), and on the pipeline T060.1 runs in production.
+
 ### 1.2 Decided at framing
 
 <!-- Optional. One heading per decision about what the result does. In this order, so the reader finds what matters first:
@@ -45,7 +47,26 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 | `TH1` | | | | |
 -->
 
-#### D`<N>`. `<Title of decision N>`
+#### D1. Every event of every level reaches Grafana
+
+Every event capture and the pipeline write, of every level, reaches Grafana Cloud, following [s018 › D1](../spikes/s018-monitoring-tool.md#d1-r2-as-the-record-the-tool-with-a-copy): R2 is the record and Grafana the hot copy (tiered storage). The owner queries the last 14 days there, the Free tier's retention; older events stay in R2 and are queried with SQL ([ADR-0036](../decisions/0036-log-convention-across-components.md)). The page runs no code of its own, so it appears through the pipeline's deployment events and through the synthetic check that reads its files as a visitor does ([s018 › D6](../spikes/s018-monitoring-tool.md#d6-quality-indicators-reach-the-tool-by-push)). A new event, field or system, such as those later children add, reaches Grafana and its queries with no change to the sending, since queries and alerts select on the fields events carry, never on a closed list of systems or events.
+
+- **What would change it:** an estimated volume close to the Free tier's 50 GB a month; today it is about 200 MB. Then the events of level `info` that no query or alert reads are the first left out.
+
+Rejected: only events of level `warn` and `error`. It saves volume the project does not need, and leaves out the health of the runs that end well (durations, rows, memory) that the dashboards of T060.10 chart.
+
+#### D2. The copy to Grafana never affects a run
+
+Sending to Grafana affects capture and the pipeline as little as possible, following best-effort delivery to the hot copy while R2 holds the record ([s018 › D1, D3, TH5](../spikes/s018-monitoring-tool.md#d8-monitoring-tool-security-threats)). What must not break:
+
+- A send that fails or is slow changes neither a run's outcome nor its heartbeat signal.
+- What a run writes to R2 is unchanged: the send is a copy of the same events.
+- Each send has a time limit, so neither capture's cadence nor the pipeline's run timeout depends on Grafana.
+- The redaction of secrets of [d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability) applies to the copy as well.
+
+Events that did not reach Grafana, while it was down or a send failed, stay only in R2: Grafana shows a gap for that period, and the owner queries it with SQL over R2 if needed. The loss in the copy is accepted.
+
+Rejected: resending later from R2 what did not arrive. Grafana would be complete, but each component would keep state of what it sent, and Loki rejects events older than its configured limit, so the resend would not always succeed.
 
 ### 1.3 Requirements
 
@@ -70,26 +91,20 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
-- `<item>` — TNNN
+- Dashboards per component and per part of each, built on the events in Loki — T060.10
 
-### 1.6 Children
-
-<!-- Parent only. The child map, in build order: each child's scope (e.g. the business process it builds), the questions or requirements it closes, the children it depends on, and the condition that closes it. Each child has its own working document, which cites the parent's decisions instead of repeating them. Every open question and requirement of the parent is closed by the parent or by one child. The parent's Done when: its Open questions closed and its children created. -->
-
-| Child | Scope | Closes | Depends on | Done when |
-|---|---|---|---|---|
-| `TNNN.1` | | | — | |
-
-### 1.7 Open questions
+### 1.6 Open questions
 
 <!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ1 | How does each alert reach the owner, by urgency, starting from the SRE split between page and ticket? | — | [s018 › P3](../spikes/s018-monitoring-tool.md#23-production-inputs) |
-| OQ2 | Which threshold, window and minimum of captures does DQR12's volume drop keep, reviewed against weeks of production runs? | — | [data-quality › Runs and published files](../data-quality.md#runs-and-published-files) |
-| OQ3 | Which target does each quality indicator keep, but DQM4's, reviewed against weeks of production indicators? | — | [data-quality › Quality indicators](../data-quality.md#quality-indicators) |
-| OQ4 | Which target does DQM11, the minutes with no capture by cause, take from the first weeks of capture's logs? | — | [data-quality › Quality indicators](../data-quality.md#quality-indicators) |
+| OQ3 | Which situations raise an alert: a failed rule of either severity, a batch set aside, the published file's age, an indicator off its target, a capture feed with no data, events that stop arriving? | D1 | |
+| OQ4 | Which threshold, window and minimum of captures does DQR12's volume drop keep, reviewed against weeks of production runs? | OQ3 | [data-quality › Runs and published files](../data-quality.md#runs-and-published-files) |
+| OQ5 | Which target does each quality indicator keep, but DQM4's, reviewed against weeks of production indicators? | OQ3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators) |
+| OQ6 | Which target does DQM11, the minutes with no capture by cause, take from the first weeks of capture's logs? | OQ3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators) |
+| OQ7 | How does each alert reach the owner, by urgency, starting from the SRE split between page and ticket? | OQ3 | [s018 › P3](../spikes/s018-monitoring-tool.md#23-production-inputs) |
+| OQ8 | Which health questions does a script answer that Grafana does not, and must it run from a phone? Out of scope if none. | D1 | [s013 › D5, P9](../spikes/s013-visualization-tool.md#55-production-inputs) |
 
 ## 2. Plan — how
 
