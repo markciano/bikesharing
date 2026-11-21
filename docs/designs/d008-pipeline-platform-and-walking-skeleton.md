@@ -187,7 +187,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - The owner has created the pipeline's own Cloudflare token, with the Workers Editor role and an expiry, and the run deploys the page with it (D10, TH8).
 - The first load has drained through D8's three stages, each with its runtime rules, reconciliation, run time and memory checked before the next, and the end instant removed after the last (D8).
 - The pipeline runs on Modal every 15 min in production; its run time and memory are measured on the feeds' real volume, and the cadence and [ADR-0027](../decisions/0027-modal-as-execution-platform.md) are reviewed against them ([d007 › Children](d007-pipeline-design.md#16-children)).
-- R2's operations and storage per bucket over 14 days of scheduled runs are compared with the cost model, the model is recalibrated, the classes of conditional PutObject, ListObjectsV2 and DeleteObjects are confirmed, and the owner has set Cloudflare's R2 alerts from the recalibrated figures ([Cost recalibration](#cost-recalibration)).
+- R2's operations and storage per bucket over 48 h of scheduled runs are compared with the cost model, the model is recalibrated, the classes of conditional PutObject, ListObjectsV2 and DeleteObjects are confirmed, and the owner has set Cloudflare's R2 alerts from the recalibrated figures ([Cost recalibration](#cost-recalibration), DI15).
 - The `pull_request` run's wall-clock is measured again with the `pipeline` job and updated in [testing-strategy.md › Moving tests](../testing-strategy.md#moving-tests); if it passes 10 min, the slowest group moves as that section sets.
 
 ### 1.5 Out of scope
@@ -488,7 +488,7 @@ The pipeline follows [testing-strategy.md](../testing-strategy.md), whose Python
 
 #### Cost recalibration
 
-- **Window:** the first 14 days of scheduled runs after D8's last stage, so that the first load's backlog does not inflate the figures and two weekly cycles are covered.
+- **Window:** the first 48 h of scheduled runs after D8's last stage, from 03:00 UTC on 2026-11-21 to 03:00 UTC on 2026-11-23, so that the first load's backlog does not inflate the figures; the totals are scaled to a month. **DI15**
 - **Measures:** per bucket, `bikesharing-bronze` and `bikesharing-lakehouse`, the Class A and Class B operations and the storage over the window, from R2's GraphQL Analytics API, with the query of [s010 › Step 5](../spikes/s010-storage-table-format.md#step-5--run-probe-a-and-verify-the-analysis). Operation metrics are sampled, so only totals per class and bucket are compared ([s010 › F14](../spikes/s010-storage-table-format.md#4-findings)).
 - **Operation classes:** the same query, grouped by `actionType`, confirms the class of conditional PutObject, ListObjectsV2 and DeleteObjects, which R2's pricing page does not name; a sampled count is enough to tell the class of an operation type.
 - **Comparison:** the measured totals, scaled to a month, are compared with the prediction of s010's cost model for 24/7 at 15 min; `params.toml` is adjusted where they differ and the model is run again, in `spikes/storage-table-format/`, the code it was built with ([s010 › P4](../spikes/s010-storage-table-format.md#production-inputs)). The prediction, the measure and the new monthly cost go in Close.
@@ -2463,7 +2463,7 @@ D6's reference batch: a one-off run, from the task's branch, of one full batch o
 
 #### Scope
 
-The first deployment, D8's stages and the checks of [Done when](#14-done-when) that need production data. The PR that ships the code carries `Refs #N`; each stage's PR moves `END_INSTANT` from a branch recreated from `main`; the closing PR, after the 14 days of [Cost recalibration](#cost-recalibration), records the checks and carries `Closes #N`.
+The first deployment, D8's stages and the checks of [Done when](#14-done-when) that need production data. The PR that ships the code carries `Refs #N`; each stage's PR moves `END_INSTANT` from a branch recreated from `main`; the closing PR, after the window of [Cost recalibration](#cost-recalibration), records the checks and carries `Closes #N`.
 
 #### Reads
 
@@ -2475,7 +2475,7 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 2. Check each stage when `stage_drained` is logged: runtime rules, reconciliation, run time and memory (owner); move `END_INSTANT` to the end of the first week, then to none, each by a PR and a deployment (Claude writes, owner merges and deploys).
 3. Check the Healthchecks.io check's period and grace (R17), the spend limit and the pipeline's Cloudflare token (owner).
 4. Compare `duration_s` and `peak_memory_mb` of the scheduled runs after the last stage with the thresholds that reopen ADR-0027 ([d007 › Carried-over inputs](d007-pipeline-design.md#carried-over-inputs)), review the 15-minute cadence against them (owner), and record the result in Close (Claude).
-5. Measure R2's operations and storage over 14 days, recalibrate the cost model and set Cloudflare's R2 alerts ([Cost recalibration](#cost-recalibration)).
+5. Measure R2's operations and storage over 48 h, recalibrate the cost model and set Cloudflare's R2 alerts ([Cost recalibration](#cost-recalibration)).
 6. Measure the `pull_request` run's wall-clock and update [testing-strategy.md › Moving tests](../testing-strategy.md#moving-tests) (Claude).
 7. Delete both `bikesharing-t0601-tag-probe` resources (owner).
 
@@ -2527,3 +2527,4 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 | DI12 | [Environments and configuration](#environments-and-configuration), [`modal_app`](#modal_app), [Component structure](#component-structure), [Tests and CI](#tests-and-ci), [Step 25](#step-25--modal-app) | The one-off function moves to its own Modal app in `modal_one_off.py`, the image and the Secrets' references to `modal_image.py`, and `modal_app.py` keeps the scheduled function only; R26 and R27 become a test of the one-off module's names | `modal run` creates every function of its app: `scheduled_run`, with production's credentials, ran during Step 28's one-off run and only the empty code version stopped it; least privilege per app makes R26 and R27 hold whatever the owner's shell holds; also, the image's `uv sync` takes `--default-index https://pypi.org/simple`, since Modal's builder mirror makes `--locked` fail on the lockfile's index, and installs `libatomic1`, which Node's binary links | Step 28 |
 | DI13 | [3.1 Prerequisites](#31-prerequisites) › P8 | The pipeline's Cloudflare token is created from the "Edit Cloudflare Workers" template, not with the `Workers: Edit` permission alone | The page's deployment uploads assets: with `Workers: Edit` alone `wrangler` and the same API call failed on `assets-upload-session` with "No access to the specified resource", and the template's token deployed the page | Step 29 |
 | DI14 | [Done when](#14-done-when), [Step 29](#step-29--production-rollout) | The station stock is also checked against bronze by `spikes/d008-s29-validation/`, a read-only script the owner runs through and after the drain with its own R2 token, read-only on `bikesharing-lakehouse` and with an expiry, held in `.env` as `LAKEHOUSE_READ_R2_*` and revoked when the validation ends | Source-to-target testing: DQR13 counts rows and the dbt tests check structure, so only a re-derivation of the values from bronze finds a wrong one; least privilege, apart from the pipeline's read-write pair, which stays a Modal Secret | Step 29 |
+| DI15 | [Cost recalibration](#cost-recalibration) › Window, [Done when](#14-done-when) | The cost recalibration measures 48 h of scheduled runs instead of 14 days | Steady-state measurement over a representative sample: the runs follow a fixed 15-minute cadence over a capture of fixed cadence, so R2's operations do not depend on the day of the week; 192 runs keep sampling noise out of the totals, and Cloudflare's alerts catch a deviation later | Step 29 |
