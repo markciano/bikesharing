@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Spec › Open questions, from OQ4. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
+- Current: Spec › Open questions, from OQ5. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
 
 ## 1. Spec — what and why
 
@@ -110,6 +110,14 @@ This task absorbs T074 and builds the observability catalog: one document that h
 
 Rejected: T074 kept apart, after this task. This design would be shorter, but the events would be walked twice, and the alerts' IDs would have no place until T074.
 
+#### D6. Volume drop at 95% of a 7-day median
+
+DQR12 flags a capture of a system that lists fewer than 95% of the median number of stations of that system's captures in the 7 days before its capture instant; with fewer than 60 such captures, the rule is not evaluated. Over 5.5 weeks of production captures (2026-10-14 to 2026-11-21, 108,289 captures, no gap over 1 h), AMBici listed 236 or 237 stations, at most 0.4% below its median, while Bicing lost stations from its feed twice and recovered them: to 513 (5.5% below) for about 20 h from 2026-10-31, and to 504 (7.5% below, 41 stations) for about 38 h from 2026-11-10. The provisional 90% over 24 h flagged neither, and a 24 h median takes in a sustained drop after about 12 h; 95% over 7 days flags both for their whole length and nothing else ([`spikes/d009-baselines/volume-drop/`](../../spikes/d009-baselines/volume-drop/)). The longer baseline follows the volume monitors of data observability, whose baseline must not absorb the drop it measures. Each capture is judged on its own, so a drop of a few captures flags only those captures; the minimum of 60 captures holds, since it only applied to each system's first hour. **refines [d008 › D4](d008-pipeline-platform-and-walking-skeleton.md#d4-volume-drop-against-a-rolling-median)**
+
+- **What would change it:** a legitimate change of the network above 5%, such as stations closed for good, which flags each capture for about 3.5 days, until the median takes the new count; the owner silences that episode. Several such changes would call for a shorter window.
+
+Rejected: 95% over 24 h. It keeps the window and the history the run reads, but flags only the first 10 h of the November drop and misses the October one.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -146,7 +154,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ4 | Which threshold, window and minimum of captures does DQR12's volume drop keep, reviewed against weeks of production runs? | D3 | [data-quality › Runs and published files](../data-quality.md#runs-and-published-files); evidence in `spikes/d009-baselines/volume-drop/` |
 | OQ5 | Which target does each quality indicator keep, but DQM4's, reviewed against weeks of production indicators? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators); evidence in `spikes/d009-baselines/indicator-targets/` |
 | OQ6 | Which target does DQM11, the minutes with no capture by cause, take from the first weeks of capture's logs? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators); evidence in `spikes/d009-baselines/capture-gaps/` |
 | OQ10 | Which further alerts does a discovery over the production events of capture and the pipeline propose? | D3 | First pass in D3; evidence in `spikes/d009-baselines/discovery/`; a candidate rule or indicator on the data goes to Out of scope, with the child that owns its table |
