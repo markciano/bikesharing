@@ -172,11 +172,11 @@ Grafana Cloud on its Free tier shows and alerts on the logs of capture and the p
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | At account set-up, check on the Free tier: template variables and data links, the SLO app, Loki recording rules, a scripted k6 check asserting a file's age, the IRM heartbeat; two or more failing reopen D2 | D2 | `TODO(T060.2): check Grafana Cloud Free tier features` |
-| P2 | At account set-up, check: tokens scoped to writing logs, a stack in an EU region, no payment method needed; then apply the controls of TH1–TH5 | D8 | `TODO(T060.2): check and apply the monitoring security controls` |
-| P3 | Route alerts by urgency, starting from the SRE split between page and ticket | D5 | `TODO(T060.2): route alerts by urgency` |
-| P4 | Send the indicators' values as log events, unless the design shows a reason for metrics | D6 | `TODO(T060.2): choose the indicators' signal` |
-| P5 | Map the common fields of ADR-0036 to OTLP attributes and Loki labels; a failed send never changes a run's outcome | D3, D4 | `TODO(T060.2): map log fields to OTLP and Loki` |
+| P1 | At account set-up, check on the Free tier: template variables and data links, the SLO app, Loki recording rules, a scripted k6 check asserting a file's age, the IRM heartbeat; two or more failing reopen D2 | D2 | [d009 › Carried-over inputs](../designs/d009-monitoring.md#carried-over-inputs) |
+| P2 | At account set-up, check: tokens scoped to writing logs, a stack in an EU region, no payment method needed; then apply the controls of TH1–TH5 | D8 | [d009 › Carried-over inputs](../designs/d009-monitoring.md#carried-over-inputs) |
+| P3 | Route alerts by urgency, starting from the SRE split between page and ticket | D5 | [d009](../designs/d009-monitoring.md), as an open question |
+| P4 | Send the indicators' values as log events, unless the design shows a reason for metrics | D6 | [d009 › Carried-over inputs](../designs/d009-monitoring.md#carried-over-inputs) |
+| P5 | Map the common fields of ADR-0036 to OTLP attributes and Loki labels; a failed send never changes a run's outcome | D3, D4 | [d009 › Carried-over inputs](../designs/d009-monitoring.md#carried-over-inputs) |
 
 ### 2.4 Records
 
