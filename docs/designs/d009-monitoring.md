@@ -68,6 +68,48 @@ Events that did not reach Grafana, while it was down or a send failed, stay only
 
 Rejected: resending later from R2 what did not arrive. Grafana would be complete, but each component would keep state of what it sent, and Loki rejects events older than its configured limit, so the resend would not always succeed.
 
+#### D3. Alerts on symptoms that need action
+
+An alert fires on a symptom that needs an action from the owner, not on each error, following the SRE practice of alerting on symptoms with every alert actionable: capture's single source failures, 57 in 22 days, mostly recover on the next pass ([d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)). The list below is a first pass, which the discovery over production events extends (OQ10); thresholds come from those events or from the Plan, and each alert's urgency from OQ7.
+
+| # | Situation | Source | Why |
+|---|---|---|---|
+| ALR1 | A runtime rule of severity error fails (`batch_failed`, `file_invalid`) | Pipeline | [d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes) |
+| ALR2 | A runtime rule of severity warn fails (`schema_drift_field`, DQR12's volume drop) | Pipeline | d007 › D4 |
+| ALR3 | The page's deployment fails (`page_deploy_failed`) | Pipeline | The page stops updating |
+| ALR4 | A published file is older than its target (DQM10, synthetic check) | Page | What a visitor sees, whatever the cause |
+| ALR5 | A feed has had no clean capture for too many minutes in a row (DQM11) | Capture | A sustained failure, not a single one |
+| ALR6 | Capture burns its monthly error budget (DQM7, 99.5%) at a rate that would exhaust it | Capture | The standard SLO burn-rate alert |
+| ALR7 | A run nears its time or memory limit (`duration_s`, `peak_memory_mb`) | Pipeline | Warns before the timeout or a memory kill ends runs ([ADR-0027](../decisions/0027-modal-as-execution-platform.md)) |
+| ALR8 | A component sends no events to Grafana for N minutes | Both | The send is broken (D2) |
+| ALR9 | Any other event of the warning level, such as `heartbeat_failed` or `log_upload_failed` | Both | Single warnings of low urgency |
+
+An indicator built by a later child reaches these alerts by adding its target to the mechanism ALR4–ALR6 prove, as [d007 › D1](d007-pipeline-design.md#d1-build-by-vertical-slice) sets (Out of scope).
+
+#### D4. Alerts carry their own ID and the catalog IDs they check
+
+Each alert is a citable item with a flat ID of its own, prefixed `ALR`, as `DQR` and `DQM` are in the data quality catalog ([docs › References](../../.claude/rules/docs/general.md)), so an alert that checks no catalog item, such as a failed deployment, is citable too. Each alert carries, as labels, the catalog IDs it checks, following the practice of labels on Prometheus and Grafana alerts: an alert that covers a class of items, such as every rule of severity error, takes the failing item's ID from the event itself, since each data test is named after its rule ([s017 › P5](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)). The notification shows both, so the owner reaches the item in its catalog and filters its past firings in Grafana.
+
+Threats are cited the same way once a project-wide threat catalog gives them global IDs (`THG`); until then an alert carries no threat ID, since `TH` IDs restart in each document (Out of scope).
+
+A failed rule of severity error reaches the owner as, for example:
+
+```text
+[ALR1] A runtime rule of severity error failed
+  Rule:      DQR13, the rows added do not match the items read from bronze
+  Component: pipeline · system: bicing · version: 3f2a9c1
+  Batch:     2026-11-21 10:00 UTC
+  → link to that run's events in Grafana
+```
+
+Rejected: an alert named after the item it checks, with no ID of its own. It is simpler, but alerts on a deployment, a run's limits or a silent sender check no catalog item and would not be citable.
+
+#### D5. One observability catalog, built here
+
+This task absorbs T074 and builds the observability catalog: one document that holds, for every component, its log events with their level and own fields, the common fields of [ADR-0036](../decisions/0036-log-convention-across-components.md), the heartbeat checks, and the signals and alerts that read them, alerts included with their IDs (D4). It becomes the source the designs link to, following link, don't copy: d004 and d008 keep their decisions and link to it for the events. The task walks every event of capture and the pipeline to map them to Grafana and to find alerts, so the catalog is written once, from that walk. The level of a failure that does not affect the data is written `warning` by capture and `warn` by the pipeline; the catalog fixes one name for both. Where the catalog lives, and how a later component, such as the page in T041, adds its events, are settled in the Plan.
+
+Rejected: T074 kept apart, after this task. This design would be shorter, but the events would be walked twice, and the alerts' IDs would have no place until T074.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -92,6 +134,11 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
 - Dashboards per component and per part of each, built on the events in Loki — T060.10
+- Alerts on DQM5, DQM8 and DQM9: the child builds each indicator, adds its target to the alerts and reviews it — T060.8
+- Alerts on DQM4, the same way — T060.3
+- Alerts on quarantined rows, once the quarantine table exists — T060.5
+- Targets of DQM1–DQM3, rows of the review table — T060.6
+- A project-wide threat catalog with global IDs (`THG`), and the threat ID on the alerts that detect one — T073
 
 ### 1.6 Open questions
 
@@ -99,11 +146,11 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ3 | Which situations raise an alert: a failed rule of either severity, a batch set aside, the published file's age, an indicator off its target, a capture feed with no data, events that stop arriving? | D1 | |
-| OQ4 | Which threshold, window and minimum of captures does DQR12's volume drop keep, reviewed against weeks of production runs? | OQ3 | [data-quality › Runs and published files](../data-quality.md#runs-and-published-files) |
-| OQ5 | Which target does each quality indicator keep, but DQM4's, reviewed against weeks of production indicators? | OQ3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators) |
-| OQ6 | Which target does DQM11, the minutes with no capture by cause, take from the first weeks of capture's logs? | OQ3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators) |
-| OQ7 | How does each alert reach the owner, by urgency, starting from the SRE split between page and ticket? | OQ3 | [s018 › P3](../spikes/s018-monitoring-tool.md#23-production-inputs) |
+| OQ4 | Which threshold, window and minimum of captures does DQR12's volume drop keep, reviewed against weeks of production runs? | D3 | [data-quality › Runs and published files](../data-quality.md#runs-and-published-files) |
+| OQ5 | Which target does each quality indicator keep, but DQM4's, reviewed against weeks of production indicators? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators) |
+| OQ6 | Which target does DQM11, the minutes with no capture by cause, take from the first weeks of capture's logs? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators) |
+| OQ10 | Which further alerts does a discovery over the production events of capture and the pipeline propose? | D3 | First pass in D3 |
+| OQ7 | How does each alert reach the owner, by urgency, starting from the SRE split between page and ticket? | D3, OQ10 | [s018 › P3](../spikes/s018-monitoring-tool.md#23-production-inputs) |
 | OQ8 | Which health questions does a script answer that Grafana does not, and must it run from a phone? Out of scope if none. | D1 | [s013 › D5, P9](../spikes/s013-visualization-tool.md#55-production-inputs) |
 
 ## 2. Plan — how
