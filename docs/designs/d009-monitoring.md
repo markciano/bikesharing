@@ -19,8 +19,8 @@ Phase: the blocks and reviews completed. A document-only task shows only Spec ·
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
 - State: Draft 📝
-- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › Test plan; Components written. Check there capture's heartbeat limit: `heartbeat.js` says 10 s, Thresholds says capture's send uses 5 s "as capture's heartbeat". Then What does not change, which holds: `pipeline/modal_one_off.py` gets no monitoring Secret (d008 › Observability).
+- Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Current: Plan review. The owner delegated the Plan's cross-checks to it.
 
 ## 1. Spec — what and why
 
