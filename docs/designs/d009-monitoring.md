@@ -270,6 +270,8 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R39** When a feed's minutes given to capture over the last 7 days exceed 7, the 7-day share of DQM11's target, Grafana shall raise ALR15 as a ticket. (D3, D10, D11, #6)
 - **R40** Grafana shall show each feed's minutes given to the provider over the last 7 days, with no target. (D10, #6)
 - **R41** Grafana's queries and alerts shall select events by the fields they carry, with no list of systems. (D1)
+- **R42** While no event of capture has reached Grafana within ALR8's threshold, Grafana shall not raise ALR5 or ALR6. (D2, #10)
+- **R43** If no heartbeat signal of capture arrives within 10 min plus 10 min of grace, then the heartbeat service shall email the owner; capture shall signal it from one pass in five, when that pass stored all three dynamic feeds. (#10)
 
 ### 1.4 Done when
 
@@ -370,10 +372,21 @@ Each threshold is a formula over the settings it depends on, never a figure meas
 | ALR7, run memory (`peak_memory_mb`) | 80% of the container's memory | 3,436 MB (80% of 4,096 MiB) | 2,428 MB at most |
 | ALR8, pipeline silent in Grafana | 2 × cadence | 30 min | — |
 | Pipeline's send time limit (R5) | fixed, one attempt | 10 s | — |
+| ALR5, minutes in a row with no clean capture of a feed | fixed: capture's cadence is one pass a minute ([d004](d004-bronze-data-capture.md)) | over 10 | 5 at most, any cause |
+| ALR8, capture silent in Grafana | fixed | 5 min with no event | — |
+| Capture's send time limit (R5) | fixed, one attempt, as capture's heartbeat | 5 s | — |
 
-ALR4 fires at the target itself, since the target is what the page promises its visitor. ALR7 follows the practice of warning at 80% of a capacity limit: runs that grow towards the time budget as later children add models raise it, which is the signal to review the cadence or the budget. ALR8 at two cadences lets one lost send go, since the copy is best-effort (D2); a run that never starts is reported by the heartbeat. The pipeline's send uses the per-attempt timeout of the heartbeat's pings ([d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability)). **#8**
+ALR4 fires at the target itself, since the target is what the page promises its visitor. ALR7 follows the practice of warning at 80% of a capacity limit: runs that grow towards the time budget as later children add models raise it, which is the signal to review the cadence or the budget. ALR8 at two cadences lets one lost send go, since the copy is best-effort (D2); a run that never starts is reported by the heartbeat. The pipeline's send uses the per-attempt timeout of the heartbeat's pings ([d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability)). ALR5 at twice the longest run measured stays quiet in normal operation; on AMBici the fast burn of ALR6 fires first, so ALR5 serves Bicing, whose budget is larger, and the feeds DQM7 does not count. ALR8 at five passes with no event points to a broken send rather than a single failure, and is the window of R42. **#8**
+
+#### Notification grouping
+
+Notifications follow Alertmanager's grouping, which Grafana Alerting implements: an alert fires one instance per set of labels and stays firing while its condition holds, the notification policy groups instances by alert ID and system into one notification, repeats it every 4 h while it fires, Grafana's default `repeat_interval`, and sends one notice when it resolves. A page's repeats join its alert group in IRM, which notifies until the owner acknowledges it, so a failure that lasts hours pages once per alert and system.
 
 The pipeline's cadence, time budget, timeout and container memory live in one data file, `pipeline/src/bikesharing/core/run_settings.json`: `settings.py` loads it and keeps exposing the same typed constants, and Terraform reads it with `jsondecode(file(...))`, so the pipeline and its thresholds change together. The period and grace of the heartbeat's check stay in Healthchecks.io's console, outside Terraform (ADR-0051), and the catalog states that a change of cadence also changes them there. **#9**
+
+#### Capture silence
+
+Grafana cannot tell a capture that stores nothing from a capture whose send is broken: both reach it as no events. ALR5 and ALR6 are therefore evaluated only while capture's events reach Grafana, and a capture silent altogether raises ALR8 instead, so a broken send or an outage of Grafana's ingest never pages the owner for data that R2 holds. Whether data is being stored is checked from outside Grafana by capture's heartbeat, a dead man's switch that signals only when a pass stored all three dynamic feeds: capture signals it on every fifth pass, and Healthchecks.io emails the owner when no signal arrives within a period of 10 min plus 10 min of grace, so a capture that stores nothing is reported in about 20 min. A single failed signal, such as one of Bicing's scattered 403s, is covered by the next ones within the grace. **#10** **refines [d004 › D10](d004-bronze-data-capture.md#d10-capture-heartbeat)**
 
 #### Sending the copy
 
@@ -404,8 +417,9 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 5 | [Field mapping](#field-mapping) | `system` for the bike sharing system in every component's log events; capture changes from `source` in its logs only (one name per concept, as OpenTelemetry's semantic conventions, in ADR-0040's vocabulary) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | Queries by system cover every component with one field | R41 | Plan |
 | 6 | [D10](#d10-a-target-on-captures-own-missed-minutes-only), [D3](#d3-alerts-on-symptoms-that-need-action) | ALR15 and the provider's minutes over a rolling 7 days in Grafana, from capture's events; DQM11's monthly value queried with SQL over R2 (alerts on rolling windows, SLO period measured from the durable store) | Grafana keeps 14 days; the pipeline needs no access to capture's logs | R39, R40 | Plan |
 | 7 | [Error budget alerts](#error-budget-alerts) | ALR6 as LogQL alert rules built by a Terraform module, with the SRE Workbook's multiwindow, multi-burn-rate levels; not Grafana's SLO app | Fewer parts, every window within 14 days; moving to the SLO app later keeps the same queries | R12, R13 | Plan |
-| 8 | [Thresholds](#thresholds) | The pipeline's thresholds as formulas over its cadence, time budget and container (ALR4 at DQM10's target, ALR7 at 80% of each limit, ALR8 at 2 cadences), a 5-minute synthetic check and a 10 s send | Thresholds follow the pipeline as it grows and its cadence is tuned, with no rewrite | R5, R10, R14, R15 | Plan |
+| 8 | [Thresholds](#thresholds) | The pipeline's thresholds as formulas over its cadence, time budget and container (ALR4 at DQM10's target, ALR7 at 80% of each limit, ALR8 at 2 cadences), a 5-minute synthetic check and a 10 s send; capture's ALR5 over 10 minutes in a row, ALR8 at 5 min and a 5 s send | Thresholds follow the pipeline as it grows and its cadence is tuned, with no rewrite; capture's stay quiet at twice what production shows | R5, R10, R11, R14, R15 | Plan |
 | 9 | [Thresholds](#thresholds) | The pipeline's run settings in one JSON data file read by `settings.py` and by Terraform (single source of truth, configuration as data) | A change of cadence is one edit; no copy to keep aligned | R10, R14, R15 | Plan |
+| 10 | [Capture silence](#capture-silence) | ALR5 and ALR6 only while capture's events reach Grafana; a silent capture raises ALR8, and capture's heartbeat on every fifth pass, with 10 min of period and 10 min of grace, reports a capture that stores nothing (dead man's switch) **refines [d004 › D10](d004-bronze-data-capture.md#d10-capture-heartbeat)** | No page for a broken send; a dead capture reported in about 20 min instead of 2 h | R11, R12, R13, R15, R42, R43 | Plan |
 
 ### 2.3 Architecture
 
