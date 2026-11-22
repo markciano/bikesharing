@@ -159,7 +159,7 @@ Rejected: a target per class, the provider's included. It repeats DQM7's per-sys
 
 #### D11. Pages for what waiting makes worse, tickets for the rest
 
-Each alert is a page or a ticket, following the SRE split between alerts that interrupt and alerts reviewed later: a page when waiting makes the harm worse, because data is lost for good or a visitor already sees it; a ticket when the action can wait for days. Both reach the Grafana mobile app through IRM ([s018 › D5](../spikes/s018-monitoring-tool.md#d5-notifications-in-the-grafana-app)). A page notifies the owner on the phone until acknowledged; a ticket sends no notification and stays in the app's list of alerts until the owner closes it. No alert notifies the owner between 23:00 and 09:00, Madrid time: a page that fires in those hours notifies at 09:00 if it is still firing.
+Each alert is a page or a ticket, following the SRE split between alerts that interrupt and alerts reviewed later: a page when waiting makes the harm worse, because data is lost for good or a visitor already sees it; a ticket when the action can wait for days. Both reach the Grafana mobile app through IRM ([s018 › D5](../spikes/s018-monitoring-tool.md#d5-notifications-in-the-grafana-app)). A page notifies the owner on the phone until acknowledged; a ticket sends no notification and stays in the app's list of alerts until the owner closes it. Alerts notify at any hour.
 
 | Alert | Urgency | Why |
 |---|---|---|
@@ -181,6 +181,12 @@ Rejected: every alert a page. Simpler, but ten alerts that interrupt alike lead 
 The owner checks the health of capture, the pipeline and the page in Grafana, from the phone as well, over the last 14 days; anything older is queried with SQL over R2 from the owner's machine ([ADR-0036](../decisions/0036-log-convention-across-components.md)), which is investigation rather than a health check. This follows the tiered storage of D1: Grafana is the hot copy to operate with, R2 the record to investigate. No script of its own answers health questions, which closes the health script that could run from a phone ([s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs)).
 
 Rejected: a health script run from a phone through a manual GitHub Actions run. It reaches the history from the phone, but GitHub would hold one more read key on R2, its summary would be public if the repository is, and it repeats what Grafana shows.
+
+#### D13. A watchdog outside Grafana watches its alerting
+
+Grafana keeps one alert that always fires and signals, every few minutes, a check of the heartbeat service of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md), Healthchecks.io; when the signals stop, that service emails the owner. This follows the watchdog alert, a dead man's switch watched from outside: ALR8 and every other alert run inside Grafana, so a suspended account, a change to the Free tier or a broken notification setting would silence them all with no notice. The watchdog proves that Grafana evaluates rules and sends notifications; delivery from IRM to the phone is not watched. Its period and grace time are settled in the Plan with the other thresholds (D8). It takes one of the free plan's 20 checks.
+
+Rejected: no watchdog. Nothing to add, but a silent Grafana goes unnoticed until the owner opens it, while capture keeps losing minutes for good (D11). Rejected as well: a scheduled script outside Grafana, such as a Cloudflare Worker with a Cron Trigger, that asks Grafana's API whether it evaluates its alerts. It checks the same, with code of its own to maintain and one more credential.
 
 ### 1.3 Requirements
 
@@ -218,6 +224,8 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
+| OQ12 | From how many probe locations must the synthetic check of ALR4 fail before the alert fires? | D3, D11 | Each probe counts against the Free tier's monthly check executions |
+| OQ13 | Where does a missed minute go when its pass logs a cause D9's table does not list, and how does the owner learn of the new cause? | D9, D10 | Fail-safe default; the catalog of D5 |
 
 ## 2. Plan — how
 
