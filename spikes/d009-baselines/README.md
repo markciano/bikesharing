@@ -44,3 +44,19 @@ Question: what do weeks of production captures and runs show for the values the 
 
   `--self-test` checks the minute count, the cause given to each missed minute and the UUIDv7 time on synthetic rows.
 - **Run time:** about 5 min for two weeks of capture's logs, about 20 s per day, with progress per day.
+
+## capture-gaps
+
+- **Question:** which target should DQM11, the minutes with no capture of each feed split by cause, take? Evidence for [d009 › D9](../../docs/designs/d009-monitoring.md#d9-a-missed-minutes-cause-goes-to-whoever-can-act-on-it) and [D10](../../docs/designs/d009-monitoring.md#d10-a-target-on-captures-own-missed-minutes-only).
+- **Inputs:** capture's pass logs, `logs/date=<YYYY-MM-DD>/<run_id>.jsonl` of `bikesharing-bronze`, from 2026-11-07, the first production pass; captures copied from V4 have no pass logs ([d004 › D2](../../docs/designs/d004-bronze-data-capture.md#d2-spike-data-moved-to-production)). Nothing is written to R2.
+- **What the script does:** `capture_gaps.py` takes every UTC minute from the first to the last pass logged, for each dynamic feed of each source (`station_status` of both, `free_bike_status` of AMBici). A minute is captured when its pass logged `feed_captured` for the feed. Each missed minute gets its cause and its class by D9: provider for an HTTP error or a timeout on the feed (`feed_failed`) or its index (`index_rejected`); capture for a write failure, a pass with no event for the feed, or no pass logged; unclassified for any other error type, so a new one shows. It reports, per source, feed and class, the missed minutes per month, per day (median and worst) and per run of consecutive minutes.
+- **Output:** the report on screen, saved as `out/report-<UTC time>.txt`, in UTC.
+- **Commands:**
+
+  ```bash
+  uv run --directory pipeline python ../spikes/d009-baselines/capture-gaps/capture_gaps.py
+  uv run --directory pipeline python ../spikes/d009-baselines/capture-gaps/capture_gaps.py --self-test
+  ```
+
+  `--self-test` checks the class given to each cause on synthetic events.
+- **Run time:** about 5 min, about 20 s per day of logs, with progress per day.
