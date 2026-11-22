@@ -9,7 +9,7 @@ const RUN_ID = "20261018T120003Z";
 const CTX = { runId: RUN_ID, version: "test-version" };
 const EVENTS = [
   buildEvent(CTX, new Date("2026-10-18T12:00:03.871Z"), "info", "heartbeat_sent", { status: 200, latency_ms: 96 }),
-  buildEvent(CTX, new Date("2026-10-18T12:00:04.102Z"), "warning", "heartbeat_failed", {
+  buildEvent(CTX, new Date("2026-10-18T12:00:04.102Z"), "warn", "heartbeat_failed", {
     status: null,
     latency_ms: null,
     error_type: "network",
