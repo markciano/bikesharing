@@ -842,8 +842,8 @@ resource "grafana_rule_group" "this" {
 | R34, R35 | Demonstration | A test page rings on the phone as an important notification until acknowledged, and a test ticket enters the app's list with no notification | — |
 | R44 | Test | The pages' policy is active from 08:00 to 23:00, `Europe/Madrid`, every day; tickets' and ALR12's policies have no time interval | unit |
 | R36 | Demonstration | Grafana's Explore, in the browser and the mobile app, shows events of capture and the pipeline, and the synthetic check's results, over the last 14 days | — |
-| R37 | Test | The watchdog's URL is a `sensitive` variable with no default | unit |
-| R37 | Inspection | No signal URL in the repository; `.env.example` holds it empty | — |
+| R37 | Test | The watchdog's URL variable is sensitive, asserted with `issensitive` | unit |
+| R37 | Inspection | No signal URL in the repository; its variable has no default; `.env.example` holds it empty | — |
 | R38 | Inspection | The template reads only the alert's labels and annotations, and no annotation holds an event's body | — |
 | R39 | Test | ALR15 sums each feed's minutes given to capture over 7 days, among the minutes with an event of capture, and fires over 7, as a ticket | unit |
 | R40 | Demonstration | The query in `docs/observability.md`, run in Explore, shows each feed's minutes given to the provider over the last 7 days, with no target | — |
@@ -1543,8 +1543,8 @@ The provider configured from variables, secrets only from `.env`, and the check 
 - `monitoring/variables.tf` (new): the variables of the File layout; the tokens and the watchdog's URL `sensitive` with no default (R37); the data source UIDs with no default, set from `.env`; the systems' DQM7 targets, the published files and the GitHub base URL with their defaults.
 - `.env.example` (modified): each secret and data source UID as an empty `TF_VAR_<name>`.
 - `monitoring/scripts/check-monitoring.sh` (new): `terraform fmt -check -recursive`, `init -backend=false -lockfile=readonly`, `validate` and `test`, as CI runs them.
-- `monitoring/tests/alerting.tftest.hcl` (new): `mock_provider "grafana"` and `command = plan`; the first run block checks that the watchdog's URL is `sensitive` with no default (R37).
-- Tests: the unit row of R37.
+- `monitoring/tests/alerting.tftest.hcl` (new): `mock_provider "grafana"` and `command = plan`; the first run block asserts with `issensitive` that the watchdog's URL variable is sensitive (R37). That it has no default cannot be asserted by `terraform test`, since a missing variable fails the plan, and is inspected instead.
+- Tests: the unit and Inspection rows of R37.
 
 #### Reads
 
@@ -1562,7 +1562,7 @@ The provider configured from variables, secrets only from `.env`, and the check 
 #### Check
 
 - `bash monitoring/scripts/check-monitoring.sh` passes.
-- No token, URL or other secret value appears in `monitoring/` or `.env.example`: yes/no.
+- No token, URL or other secret value appears in `monitoring/` or `.env.example`, and the tokens' and the watchdog's URL variables have no default: yes/no.
 
 ### Step 19 — Monitoring: locals
 
