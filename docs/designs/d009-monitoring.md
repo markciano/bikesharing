@@ -1682,7 +1682,7 @@ The rules that fire on an event, the pattern the later rule steps follow.
 - **Status:** 💤 todo
 - **Who:** Claude
 - **Commit:** `feat: d009.s22 alert on thresholds and keep the watchdog's alert firing`
-- **R:** R11, R14, R15, R19, R21, R39, R42
+- **R:** R11, R14, R15, R19, R21, R39, R41, R42
 - **Model:** sonnet · medium
 - **Review:** code
 
@@ -1690,9 +1690,9 @@ The rules that fire on an event, the pattern the later rule steps follow.
 
 The rules that fire on a count or a measure over a window, and the rule the watchdog listens to.
 
-- `monitoring/alert_rules.tf` (modified): ALR5, minutes in a row with no clean capture per system and feed, as a page, held only while capture's events reach Grafana (R11, R42); ALR7 on `duration_s` and `peak_memory_mb` (R14); ALR8 per component (R15); ALR13 on the Free tier's use (R21); ALR15 on each feed's minutes given to capture over 7 days (R39); ALR12, whose condition always holds (R19). Thresholds from `locals.tf`.
-- `monitoring/tests/alerting.tftest.hcl` (modified): a run block per rule.
-- Tests: the unit rows of R11, R14, R15, R19, R21, R39 and ALR5's part of R42.
+- `monitoring/alert_rules.tf` (modified): ALR5, minutes in a row with no clean capture per system and feed, as a page, held only while capture's events reach Grafana (R11, R42); ALR7 on `duration_s` and `peak_memory_mb` (R14); ALR8 per component (R15); ALR13 on the Free tier's use (R21); ALR15 on each feed's minutes given to capture over 7 days (R39); ALR12, whose condition always holds (R19). Thresholds from `locals.tf`; each query that splits by system groups by `system` with no list of systems (R41).
+- `monitoring/tests/alerting.tftest.hcl` (modified): a run block per rule, R41's assertion included.
+- Tests: the unit rows of R11, R14, R15, R19, R21, R39, ALR5's part of R42, and R41 for these rules.
 
 #### Reads
 
@@ -1711,6 +1711,7 @@ The rules that fire on a count or a measure over a window, and the rule the watc
 #### Check
 
 - `bash monitoring/scripts/check-monitoring.sh` passes.
+- No query names a system: yes/no.
 
 ### Step 23 — Monitoring: error budget module
 
