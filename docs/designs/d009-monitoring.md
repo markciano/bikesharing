@@ -84,6 +84,8 @@ An alert fires on a symptom that needs an action from the owner, not on each err
 | ALR8 | A component sends no events to Grafana for N minutes | Both | The send is broken (D2) |
 | ALR9 | Any other event of the warning level, such as `heartbeat_failed`, `log_upload_failed` or `stage_drained`, but `fetch_retried` | Both | Single warnings of low urgency; a retry that succeeds needs no action and one that fails is a `feed_failed`, while `fetch_retried` comes about 32 times a day |
 | ALR10 | A provider's index lists a feed capture does not know (`unknown_feeds` of `index_refreshed`) | Capture | A change in the source for the owner to evaluate, which nothing else shows |
+| ALR11 | A pass logs a cause of a missed minute that D9's table does not list | Capture | A new cause to classify (D9) |
+| ALR12 | Grafana stops signalling the heartbeat service (watchdog) | Grafana | Every other alert runs in Grafana (D13) |
 
 An indicator built by a later child reaches these alerts by adding its target to the mechanism ALR4–ALR6 prove, as [d007 › D1](d007-pipeline-design.md#d1-build-by-vertical-slice) sets (Out of scope).
 
@@ -144,6 +146,9 @@ DQM11 gives each minute with no capture of a feed to capture or to the provider 
 | A failure to write the response to R2 (`error_type` `write`) | Capture |
 | No pass logged for the minute | Capture |
 | A pass with no event for the feed | Capture |
+| Any other cause, until this table lists it | Capture |
+
+A cause the table does not list goes to capture, following the fail-safe default of giving the unknown to whoever can investigate it, and raises ALR11, so the owner adds it to this table and to the observability catalog (D5).
 
 - **What would change it:** evidence that Bicing's 403 depends on how capture requests, such as the Cloudflare location the request leaves from (Hong Kong is suspected, not shown): the 403 then goes to capture, since capture can act on it. Timeouts that grow: whether capture's limit is too short is reviewed.
 
@@ -173,8 +178,10 @@ Each alert is a page or a ticket, following the SRE split between alerts that in
 | ALR8 | Ticket | R2 still holds the record (D2), and the heartbeat, on another provider, still reports stopped runs |
 | ALR9 | Ticket | Single warnings of low urgency (D3) |
 | ALR10 | Ticket | A change to evaluate, with no hurry |
+| ALR11 | Ticket | A cause to classify, with no hurry: its minutes already count against capture (D10) |
+| ALR12 | Page, by email from the heartbeat service | Every other alert is silent; it cannot go through Grafana (D13) |
 
-Rejected: every alert a page. Simpler, but ten alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead.
+Rejected: every alert a page. Simpler, but twelve alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead.
 
 #### D12. No health script
 
@@ -184,9 +191,15 @@ Rejected: a health script run from a phone through a manual GitHub Actions run. 
 
 #### D13. A watchdog outside Grafana watches its alerting
 
-Grafana keeps one alert that always fires and signals, every few minutes, a check of the heartbeat service of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md), Healthchecks.io; when the signals stop, that service emails the owner. This follows the watchdog alert, a dead man's switch watched from outside: ALR8 and every other alert run inside Grafana, so a suspended account, a change to the Free tier or a broken notification setting would silence them all with no notice. The watchdog proves that Grafana evaluates rules and sends notifications; delivery from IRM to the phone is not watched. Its period and grace time are settled in the Plan with the other thresholds (D8). It takes one of the free plan's 20 checks.
+Grafana keeps one alert, ALR12, that always fires and signals, every few minutes, a check of the heartbeat service of [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md), Healthchecks.io; when the signals stop, that service emails the owner. This follows the watchdog alert, a dead man's switch watched from outside: ALR8 and every other alert run inside Grafana, so a suspended account, a change to the Free tier or a broken notification setting would silence them all with no notice. The watchdog proves that Grafana evaluates rules and sends notifications; delivery from IRM to the phone is not watched. Its period and grace time are settled in the Plan with the other thresholds (D8). It takes one of the free plan's 20 checks.
 
 Rejected: no watchdog. Nothing to add, but a silent Grafana goes unnoticed until the owner opens it, while capture keeps losing minutes for good (D11). Rejected as well: a scheduled script outside Grafana, such as a Cloudflare Worker with a Cron Trigger, that asks Grafana's API whether it evaluates its alerts. It checks the same, with code of its own to maintain and one more credential.
+
+#### D14. The synthetic check confirms a failure from two of three probes
+
+The synthetic check of ALR4 reads the page's files from three probe locations, and ALR4 fires only when at least two of them find a file too old or cannot read it. This follows synthetic monitoring's practice of confirming a failure from several locations before alerting: a file's age is the same from every location, so a single failing probe points to its own network, and ALR4 is a page (D11), which must be reliable for the owner to keep answering it. Each probe counts against the Free tier's 100k check executions a month ([s018 › C4](../spikes/s018-monitoring-tool.md#d2-monitoring-tool)): a check every 5 min from three probes takes 25,920 a month. The check's frequency is settled in the Plan with the other thresholds (D8).
+
+Rejected: one probe. A third of the executions, but a network failure at that probe pages the owner while visitors see a fresh page.
 
 ### 1.3 Requirements
 
@@ -224,8 +237,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ12 | From how many probe locations must the synthetic check of ALR4 fail before the alert fires? | D3, D11 | Each probe counts against the Free tier's monthly check executions |
-| OQ13 | Where does a missed minute go when its pass logs a cause D9's table does not list, and how does the owner learn of the new cause? | D9, D10 | Fail-safe default; the catalog of D5 |
 
 ## 2. Plan — how
 
