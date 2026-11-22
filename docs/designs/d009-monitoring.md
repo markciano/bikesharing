@@ -543,9 +543,10 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   └── test/
 │       ├── unit/otlp.test.js                   (new)       Request built from the lines; failed or late send changes nothing
 │       ├── unit/log.test.js, unit/schedule.test.js (modified) warn and toLines; the heartbeat at every fifth minute
-│       ├── integration/pass.test.js            (modified)  warn and system; the heartbeat at :05; order: log, heartbeat, copy
-│       ├── integration/pass-failures.test.js   (modified)  warn and system
-│       └── contract/log-events-registry.test.js (new)      Registry valid against its schema; every capture event registered
+│       ├── integration/pass.test.js            (modified)  warn and system; the heartbeat at :05; order: log, heartbeat, copy; every logged event registered
+│       ├── integration/pass-failures.test.js   (modified)  warn and system; every logged event registered
+│       ├── registry.js                         (new)       expectRegistered: each line names a capture event of the registry, with its level
+│       └── contract/log-events-registry.test.js (new)      Registry valid against its schema; the registry's capture events match the log contract's vectors
 ├── pipeline/
 │   ├── modal_image.py                          (modified)  The monitoring token's Modal Secret; container memory and timeout from settings, and run_settings.json added to the image (#9)
 │   ├── modal_app.py                            (modified)  That Secret on the scheduled function only; the schedule from the cadence in settings (#9)
@@ -1076,6 +1077,8 @@ Capture's side of the event registry: the registry is valid, and it holds exactl
   - the registry is valid against `contracts/log-events.schema.json`, draft 2020-12;
   - each pair of `component` and `event` appears once;
   - the registry's `capture` events and the events of the valid vectors of `contracts/capture-logs.json` are the same set, each with the same level.
+- `capture/test/registry.js` (new): `expectRegistered(lines)`, which asserts that each JSON line names a `capture` event of the registry, at the registry's level.
+- `capture/test/integration/pass.test.js` and `capture/test/integration/pass-failures.test.js` (modified): each test that reads a pass's R2 log passes its lines to `expectRegistered`, so an event capture writes with no entry fails CI.
 - Tests: the contract rows of R25 and R27.
 
 #### Reads
@@ -1083,17 +1086,19 @@ Capture's side of the event registry: the registry is valid, and it holds exactl
 - `.claude/rules/code/testing.md` › Contracts between components: reference data validated against its schema by each component that reads it.
 - [Event registry schema](#event-registry-schema) › Beyond the schema, in this design: what the schema cannot check.
 - `capture/test/contract/capture-logs.test.js`: how a contract test reads a file in `contracts/`.
+- `capture/test/integration/pass.test.js` and `pass-failures.test.js`: where each test reads the pass's R2 log.
 
 #### Do
 
 1. Install `@cfworker/json-schema` as Scope sets.
-2. Write `log-events-registry.test.js`.
-3. Run `npm test --prefix capture -- test/contract/log-events-registry.test.js`.
+2. Write `log-events-registry.test.js` and `registry.js`.
+3. Call `expectRegistered` from `pass.test.js` and `pass-failures.test.js`.
+4. Run `npm test --prefix capture`.
 
 #### Check
 
 - `npm test --prefix capture` passes.
-- With one `capture` entry removed from the registry, the test fails, and passes again once it is restored: yes/no.
+- With one `capture` entry removed from the registry, the contract test and the integration tests that log that event fail, and pass again once it is restored: yes/no.
 
 ### Step 6 — Capture: OTLP sender
 
@@ -1186,7 +1191,7 @@ Each pass sends its lines to Grafana after its log and its heartbeat, and the se
 - `capture/src/worker.js` (modified): passes `OTLP_ENDPOINT`, `OTLP_TOKEN` and `ctx.waitUntil` to `runPass`.
 - `capture/wrangler.jsonc` (modified): `OTLP_ENDPOINT` as a variable, the stack's OTLP logs endpoint recorded in Close ([Prerequisites](#31-prerequisites) › Account values); `OTLP_TOKEN` stays a secret, set in Step 28.
 - `capture/test/unit/log.test.js` (modified): `toLines`.
-- `capture/test/integration/pass.test.js` (modified): the request holds one record per line written to R2, of every level, in order (R1); with the endpoint at `http-500`, `stall-body` or `network-error`, the outcome and the heartbeat equal those of a successful send, and `otlp_send_failed` reaches the console with its `error_type` (R3); the R2 log is byte-identical with a send that succeeds and one that fails (R4); the order is log, heartbeat, copy.
+- `capture/test/integration/pass.test.js` (modified): the request holds one record per line written to R2, of every level, in order (R1); with the endpoint at `http-500`, `stall-body` or `network-error`, the outcome and the heartbeat equal those of a successful send, and `otlp_send_failed` reaches the console with its `error_type`, its line passing `expectRegistered` (R3); the R2 log is byte-identical with a send that succeeds and one that fails (R4); the order is log, heartbeat, copy.
 - Tests: the integration rows of R1, R3 and R4, capture's side.
 
 #### Reads
