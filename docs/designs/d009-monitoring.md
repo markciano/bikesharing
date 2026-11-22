@@ -417,7 +417,7 @@ DQR12 follows D6 in the model `capture_volume`: the median takes the captures of
 
 Notifications follow Alertmanager's grouping, which Grafana Alerting implements: an alert fires one instance per set of labels and stays firing while its condition holds, the notification policy groups instances by alert ID and system into one notification, repeats it every 4 h while it fires, Grafana's default `repeat_interval`, and sends one notice when it resolves. A page's repeats join its alert group in IRM, which notifies until the owner acknowledges it, so a failure that lasts hours pages once per alert and system.
 
-The pipeline's cadence, time budget, timeout and container memory live in one data file, `pipeline/src/bikesharing/core/run_settings.json`: `settings.py` loads it and keeps exposing the same typed constants, and Terraform reads it with `jsondecode(file(...))`, so the pipeline and its thresholds change together. The period and grace of the heartbeat's check stay in Healthchecks.io's console, outside Terraform (ADR-0051), and the catalog states that a change of cadence also changes them there. **#9**
+The pipeline's cadence, time budget, timeout and container memory live in one data file, `pipeline/src/bikesharing/core/run_settings.json`: `settings.py` loads it and keeps exposing the same typed constants, which Modal's app and image files read for the schedule, the timeout and the container memory, and Terraform reads it with `jsondecode(file(...))`, so the pipeline and its thresholds change together. The period and grace of the heartbeat's check stay in Healthchecks.io's console, outside Terraform (ADR-0051), and the catalog states that a change of cadence also changes them there. **#9**
 
 #### Capture silence
 
@@ -466,8 +466,86 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
 ```text
-<path>/
-└── <file>      (new)        <purpose>
+.
+├── CLAUDE.md                                   (modified)  Project structure: monitoring/ and the event registry in contracts/
+├── .env.example                                (modified)  Empty Terraform variables: Grafana's tokens, the watchdog's check URL
+├── .gitignore                                  (modified)  Terraform's state and .terraform/
+├── .claude/
+│   ├── settings.json                           (modified)  Allows monitoring's check command
+│   └── rules/
+│       ├── code/
+│       │   ├── terraform.md                    (new)       Terraform language and monitoring component rules (#1)
+│       │   ├── dependencies.md                 (modified)  Terraform row: versions.tf, .terraform.lock.hcl, .terraform-version
+│       │   ├── ci.md                           (modified)  Terraform's setup and lockfile install in a component job
+│       │   └── testing.md                      (modified)  monitoring/** in scope; the event registry, a reference document validated by its schema
+│       └── docs/
+│           └── observability.md                (new)       Conventions for writing a catalog entry (#3)
+├── .github/workflows/
+│   └── ci.yml                                  (modified)  Job monitoring; the registry and its schema in the filters of capture, pipeline and monitoring
+├── contracts/
+│   ├── log-events.registry.json                (new)       Every component's events: component, level, own fields, needs action (#2)
+│   ├── log-events.schema.json                  (new)       JSON Schema (draft 2020-12) of a registry entry (#2)
+│   └── capture-logs.json                       (modified)  Vectors with warn and system (#4, #5)
+├── monitoring/                                 (new)       Grafana Cloud configuration as code (#1)
+│   ├── .terraform-version                      (new)       Terraform version pin
+│   ├── .terraform.lock.hcl                     (new)       Provider lockfile
+│   ├── versions.tf                             (new)       required_version range and Grafana's provider
+│   ├── providers.tf                            (new)       Provider configuration from variables
+│   ├── variables.tf                            (new)       Stack, tokens, watchdog URL (sensitive), GitHub base URL, published files, systems' targets
+│   ├── locals.tf                               (new)       Reads the event registry and the pipeline's run settings; derives the thresholds (#8, #9)
+│   ├── alert_rules.tf                          (new)       ALR rules, ALR12's watchdog rule included
+│   ├── contact_points.tf                       (new)       Email, IRM and the watchdog's webhook
+│   ├── notification_policies.tf                (new)       Grouping by alert ID and system, repeat intervals, the watchdog's policy
+│   ├── message_template.tf                     (new)       The notification template resource (#11)
+│   ├── templates/notification.tmpl             (new)       The notification layout (#11)
+│   ├── synthetic_check.tf                      (new)       ALR4's scripted k6 check
+│   ├── checks/published_file_age.js            (new)       k6 script: each published file's data age against ALR4's threshold
+│   ├── modules/error_budget_alert/
+│   │   ├── main.tf                             (new)       ALR6's three burn-rate levels for one system (#7)
+│   │   └── variables.tf                        (new)       System and target
+│   ├── tests/
+│   │   └── alerting.tftest.hcl                 (new)       terraform test with a mocked provider
+│   └── scripts/check-monitoring.sh             (new)       fmt -check, validate and test, as CI runs it
+├── capture/
+│   ├── package.json, package-lock.json         (modified)  JSON Schema validator as a dev dependency
+│   ├── wrangler.jsonc                          (modified)  OTLP endpoint as a variable
+│   ├── src/
+│   │   ├── otlp.js                             (new)       Builds the OTLP/HTTP JSON request from the pass's lines and sends it within its limit
+│   │   ├── log.js                              (modified)  warn and system (#4, #5)
+│   │   ├── heartbeat.js                        (modified)  Signal on every fifth pass that stored the three dynamic feeds (#10)
+│   │   ├── pass.js                             (modified)  Sends the copy after the log and the heartbeat
+│   │   └── worker.js                           (modified)  The send inside ctx.waitUntil; the token as a Worker secret
+│   └── test/
+│       ├── unit/otlp.test.js                   (new)       Request built from the lines; failed or late send changes nothing
+│       ├── unit/log.test.js, unit/heartbeat.test.js (modified) warn and system; the fifth-pass signal
+│       ├── integration/pass.test.js            (modified)  Order: log, heartbeat, copy
+│       └── contract/log-events-registry.test.js (new)      Registry valid against its schema; every capture event registered
+├── pipeline/
+│   ├── modal_image.py                          (modified)  The monitoring token's Modal Secret; container memory and timeout from settings (#9)
+│   ├── modal_app.py                            (modified)  That Secret on the scheduled function only; the schedule from the cadence in settings (#9)
+│   ├── src/bikesharing/
+│   │   ├── core/run_settings.json              (new)       Cadence, time budget, timeout and container memory (#9)
+│   │   ├── core/settings.py                    (modified)  Loads run_settings.json into the same typed constants
+│   │   ├── core/otlp_payload.py                (new)       Builds the OTLP/HTTP JSON request from the run's lines
+│   │   ├── shell/otlp_exporter.py              (new)       Sends it within its limit; a failure goes to stdout
+│   │   └── shell/run.py                        (modified)  Sends the copy after the log upload; 7-day volume history (DQR12)
+│   ├── dbt/models/silver/
+│   │   ├── capture_volume.sql                  (modified)  7-day median, 95% threshold (DQR12)
+│   │   └── silver.yml                          (modified)  capture_volume's unit tests for the new window and threshold
+│   └── tests/
+│       ├── unit/core/test_otlp_payload.py      (new)       Request built from the lines
+│       ├── unit/core/test_settings.py          (new)       Constants loaded from run_settings.json
+│       ├── integration/test_otlp_exporter.py   (new)       Failed or late send changes nothing
+│       ├── integration/test_run.py             (modified)  Copy sent after the log upload
+│       └── integration/test_log_events_registry_contract.py (new) Registry valid against its schema; every pipeline event registered
+└── docs/
+    ├── observability.md                        (new)       The catalog: common fields, heartbeat checks, alerts, error budgets, notification layout (#2, #3, #11)
+    ├── data-quality.md                         (modified)  DQM7, DQM10, DQM11 and DQR12
+    ├── architecture.md                         (modified)  Monitoring as a building block, and its deployment
+    ├── testing-strategy.md                     (modified)  The monitoring component and the registry tests
+    └── designs/
+        ├── d004-bronze-data-capture.md         (modified)  D6, D9 with R20 and the level type, D10 with R19; links to the catalog
+        └── d008-pipeline-platform-and-walking-skeleton.md (modified) D4; links to the catalog
 ```
 
 ### 2.5 Components
