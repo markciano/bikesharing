@@ -21,6 +21,7 @@ const TEST_LIMITS = Object.freeze({
   maxBytes: 64_000,
   retryDelayMs: 0,
   heartbeatTimeoutMs: 100,
+  otlpTimeoutMs: 100,
   retry403MinMs: 1,
   retry403MaxMs: 2,
 });
@@ -113,8 +114,9 @@ function forbiddenResponse() {
  * The simulated routes on https://sim.test/, by first path segment. Each handler gets
  * the segments that follow; a trailing `/<id>` of the test's own is ignored by the
  * handler and only keeps the request counts of one test apart from another's.
- * @type {Record<string, (args: string[], url: string, headers: import("node:http").IncomingHttpHeaders)
- *   => Response | typeof NETWORK_ERROR>}
+ * `body` is the request's body as text, empty for a GET.
+ * @type {Record<string, (args: string[], url: string, headers: import("node:http").IncomingHttpHeaders,
+ *   body: string) => Response | typeof NETWORK_ERROR>}
  */
 const ROUTES = {
   // HTTP 500 with a short body: a source that answers with an error (errorType `http`).
@@ -160,18 +162,31 @@ const ROUTES = {
   heartbeat: () => new Response("OK"),
   // The heartbeat request throws: no response at all.
   "heartbeat-network-error": () => NETWORK_ERROR,
+  // Grafana's OTLP endpoint answering 200: keeps each request's body and Authorization
+  // header under its path, read back through `otlp-seen/<path>` (d009 R5, R6).
+  otlp: (_args, href, headers, body) => {
+    const path = new URL(href).pathname;
+    otlpSeen.set(path, [...(otlpSeen.get(path) ?? []), { body, authorization: headers.authorization ?? null }]);
+    return new Response("{}", { headers: { "Content-Type": "application/json" } });
+  },
+  // The requests `otlp/<path>` has received, as a JSON array of `{ body, authorization }`.
+  "otlp-seen": (args) => Response.json(otlpSeen.get(`/otlp/${args.join("/")}`) ?? []),
 };
 
 /** Requests received by path, for the `count/<path>` route. */
 const counts = new Map();
 
+/** What `otlp/<path>` received, by path, for the `otlp-seen/<path>` route. */
+const otlpSeen = new Map();
+
 /**
  * The simulated response to a URL: a fixture at its own URL, or a route on sim.test.
  * @param {string} href
  * @param {import("node:http").IncomingHttpHeaders} headers The request's headers
+ * @param {string} body The request's body as text
  * @returns {Response | typeof NETWORK_ERROR}
  */
-function simulate(href, headers) {
+function simulate(href, headers, body) {
   const fixtureBytes = byUrl.get(href);
   if (fixtureBytes) return gzipResponse(fixtureBytes);
 
@@ -183,7 +198,7 @@ function simulate(href, headers) {
     const handler = ROUTES[route];
     if (handler) {
       counts.set(url.pathname, (counts.get(url.pathname) ?? 0) + 1);
-      return handler(args, href, headers);
+      return handler(args, href, headers, body);
     }
   }
   throw new Error(`request outside the simulated sources: ${href}`);
@@ -198,7 +213,9 @@ function simulate(href, headers) {
  * @param {import("node:http").ServerResponse} res
  */
 async function outboundService(req, res) {
-  const response = simulate(`https://${req.headers.host}${req.url}`, req.headers);
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const response = simulate(`https://${req.headers.host}${req.url}`, req.headers, Buffer.concat(chunks).toString("utf8"));
   if (response === NETWORK_ERROR) {
     req.socket.destroy();
     return;
