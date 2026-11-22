@@ -272,7 +272,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R40** Grafana shall show each feed's minutes given to the provider over the last 7 days, with no target. (D10, #6)
 - **R41** Grafana's queries and alerts shall select events by the fields they carry, with no list of systems. (D1)
 - **R42** While no event of capture has reached Grafana within ALR8's threshold, Grafana shall not raise ALR5 or ALR6. (D2, #10)
-- **R43** If no heartbeat signal of capture arrives within 10 min plus 10 min of grace, then the heartbeat service shall email the owner; capture shall signal it from one pass in five, when that pass stored all three dynamic feeds. (#10)
+- **R43** If no heartbeat signal of capture arrives within 10 min plus 10 min of grace, then the heartbeat service shall email the owner; capture shall signal it from each pass whose scheduled minute is a multiple of 5, when that pass stored all three dynamic feeds. (#10)
 
 ### 1.4 Done when
 
@@ -426,7 +426,7 @@ The pipeline's cadence, time budget, timeout and container memory live in one da
 
 #### Capture silence
 
-Grafana cannot tell a capture that stores nothing from a capture whose send is broken: both reach it as no events. ALR5 and ALR6 are therefore evaluated only while capture's events reach Grafana, and a capture silent altogether raises ALR8 instead, so a broken send or an outage of Grafana's ingest never pages the owner for data that R2 holds, and its minutes count in no window of ALR6 or ALR15 once events return (#13). Whether data is being stored is checked from outside Grafana by capture's heartbeat, a dead man's switch that signals only when a pass stored all three dynamic feeds: capture signals it on every fifth pass, and Healthchecks.io emails the owner when no signal arrives within a period of 10 min plus 10 min of grace, so a capture that stores nothing is reported in about 20 min. A single failed signal, such as one of Bicing's scattered 403s, is covered by the next ones within the grace. **#10** **refines [d004 › D10](d004-bronze-data-capture.md#d10-capture-heartbeat)**
+Grafana cannot tell a capture that stores nothing from a capture whose send is broken: both reach it as no events. ALR5 and ALR6 are therefore evaluated only while capture's events reach Grafana, and a capture silent altogether raises ALR8 instead, so a broken send or an outage of Grafana's ingest never pages the owner for data that R2 holds, and its minutes count in no window of ALR6 or ALR15 once events return (#13). Whether data is being stored is checked from outside Grafana by capture's heartbeat, a dead man's switch that signals only when a pass stored all three dynamic feeds: capture signals it from the pass of every fifth minute, by the pass's scheduled time, so the Worker keeps no state between passes, and Healthchecks.io emails the owner when no signal arrives within a period of 10 min plus 10 min of grace, so a capture that stores nothing is reported in about 20 min. A single failed signal, such as one of Bicing's scattered 403s, is covered by the next ones within the grace. **#10** **refines [d004 › D10](d004-bronze-data-capture.md#d10-capture-heartbeat)**
 
 #### Sending the copy
 
@@ -522,7 +522,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   ├── src/
 │   │   ├── otlp.js                             (new)       Builds the OTLP/HTTP JSON request from the pass's lines and sends it within its limit
 │   │   ├── log.js                              (modified)  warn and system (#4, #5); toLines serializes the events once, for the log and the copy
-│   │   ├── heartbeat.js                        (modified)  Signal on every fifth pass that stored the three dynamic feeds (#10)
+│   │   ├── heartbeat.js                        (modified)  Signal from the pass of every fifth minute, by its scheduled time, when it stored the three dynamic feeds (#10)
 │   │   ├── pass.js                             (modified)  Sends the copy after the log and the heartbeat
 │   │   └── worker.js                           (modified)  The send inside ctx.waitUntil; the token as a Worker secret
 │   └── test/
@@ -827,7 +827,7 @@ resource "grafana_rule_group" "this" {
 | R40 | Demonstration | The query in `docs/observability.md`, run in Explore, shows each feed's minutes given to the provider over the last 7 days, with no target | — |
 | R41 | Test | Every rule's query groups by `system` and names no system, except ALR6's, which takes its system from the module's variable | unit |
 | R42 | Test | Every ALR5 and ALR6 rule holds only while capture has events in Grafana within ALR8's threshold | unit |
-| R43 | Test | Capture signals the heartbeat from one pass in five that stored the three dynamic feeds, and from no other pass | unit |
+| R43 | Test | Capture signals the heartbeat from a pass whose scheduled minute is a multiple of 5 and that stored the three dynamic feeds, and from no other pass | unit |
 | R43 | Inspection | Capture's heartbeat check in Healthchecks.io has a 10 min period and 10 min of grace | — |
 
 ### 2.7 Breaking changes
