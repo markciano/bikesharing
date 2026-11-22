@@ -168,7 +168,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 - Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
 - R: the requirements the step implements or tests, or —.
 - Commit: the proposed message, following the Git conventions in CLAUDE.md.
-- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner.
+- Model: the model and effort the step's session runs with, fitted to the step: the lightest that does it well, never more than it needs nor less (e.g. sonnet · medium). For an Owner step, those of the session that guides the owner, or — when the owner works alone.
 - Review: `code`, `security`, `code and security`, or `no`. A review goes on the step that completes a reviewable unit (a flow or action, usually built over several steps); the last code step has at least `code`. -->
 
 ### 3.1 Prerequisites
