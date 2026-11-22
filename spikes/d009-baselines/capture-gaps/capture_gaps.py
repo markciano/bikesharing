@@ -189,7 +189,7 @@ def as_text(rel: duckdb.DuckDBPyRelation) -> str:
     lines = [" | ".join(c.ljust(w) for c, w in zip(header, widths, strict=True))]
     lines.append("-+-".join("-" * w for w in widths))
     lines += [" | ".join(v.ljust(w) for v, w in zip(r, widths, strict=True)) for r in rows]
-    return "\n".join(lines)
+    return "\n".join(line.rstrip() for line in lines)
 
 
 def report(con: duckdb.DuckDBPyConnection, out: list[str]) -> None:

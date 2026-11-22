@@ -1,0 +1,201 @@
+# DQM7 and DQM10 target review — 2026-11-22T01:56:35Z
+
+## processed_objects rows per status
+
+system | status    | n    
+-------+-----------+------
+ambici | processed | 55265
+bicing | processed | 54793
+
+# DQM7, capture completeness
+
+## Captured minutes per system and month (target 99.5%)
+
+system | month   | first                     | last                      | minutes | captured | missed | pct     | met  
+-------+---------+---------------------------+---------------------------+---------+----------+--------+---------+------
+ambici | 2026-10 | 2026-10-14 10:51:00+00:00 | 2026-10-31 23:59:00+00:00 | 25269   | 25006    | 263    | 98.9590 | False
+ambici | 2026-11 | 2026-11-01 00:00:00+00:00 | 2026-11-22 01:44:00+00:00 | 30345   | 30244    | 101    | 99.6670 | True 
+bicing | 2026-10 | 2026-10-14 10:51:00+00:00 | 2026-10-31 23:59:00+00:00 | 25269   | 25005    | 264    | 98.9550 | False
+bicing | 2026-11 | 2026-11-01 00:00:00+00:00 | 2026-11-22 01:44:00+00:00 | 30345   | 29772    | 573    | 98.1120 | False
+
+## Missed minutes per cause, all months
+
+system | cause                                                                             | minutes | pct_of_missed
+-------+-----------------------------------------------------------------------------------+---------+--------------
+ambici | before capture logs                                                               | 346     | 95.1000      
+ambici | feed_failed status=522 error_type=http                                            | 4       | 1.1000       
+ambici | no pass logged                                                                    | 4       | 1.1000       
+ambici | feed_failed status=525 error_type=http                                            | 3       | 0.8000       
+ambici | feed_failed status=- error_type=timeout                                           | 3       | 0.8000       
+ambici | feed_failed status=404 error_type=http                                            | 2       | 0.5000       
+ambici | pass logged, no station_status event                                              | 1       | 0.3000       
+ambici | feed_failed status=520 error_type=http                                            | 1       | 0.3000       
+bicing | feed_failed status=403 error_type=http                                            | 473     | 56.5000      
+bicing | before capture logs                                                               | 345     | 41.2000      
+bicing | feed_failed status=403 error_type=http; index_rejected status=403 error_type=http | 5       | 0.6000       
+bicing | no pass logged                                                                    | 4       | 0.5000       
+bicing | index_rejected status=403 error_type=http; feed_failed status=403 error_type=http | 3       | 0.4000       
+bicing | feed_failed status=502 error_type=http                                            | 2       | 0.2000       
+bicing | feed_failed status=503 error_type=http                                            | 2       | 0.2000       
+bicing | pass logged, no station_status event                                              | 2       | 0.2000       
+bicing | feed_failed status=- error_type=timeout                                           | 1       | 0.1000       
+
+## Missed minutes per cause and month
+
+system | month   | cause                                                                             | minutes
+-------+---------+-----------------------------------------------------------------------------------+--------
+ambici | 2026-10 | before capture logs                                                               | 263    
+ambici | 2026-11 | before capture logs                                                               | 83     
+ambici | 2026-11 | feed_failed status=522 error_type=http                                            | 4      
+ambici | 2026-11 | no pass logged                                                                    | 4      
+ambici | 2026-11 | feed_failed status=525 error_type=http                                            | 3      
+ambici | 2026-11 | feed_failed status=- error_type=timeout                                           | 3      
+ambici | 2026-11 | feed_failed status=404 error_type=http                                            | 2      
+ambici | 2026-11 | feed_failed status=520 error_type=http                                            | 1      
+ambici | 2026-11 | pass logged, no station_status event                                              | 1      
+bicing | 2026-10 | before capture logs                                                               | 264    
+bicing | 2026-11 | feed_failed status=403 error_type=http                                            | 473    
+bicing | 2026-11 | before capture logs                                                               | 81     
+bicing | 2026-11 | feed_failed status=403 error_type=http; index_rejected status=403 error_type=http | 5      
+bicing | 2026-11 | no pass logged                                                                    | 4      
+bicing | 2026-11 | index_rejected status=403 error_type=http; feed_failed status=403 error_type=http | 3      
+bicing | 2026-11 | pass logged, no station_status event                                              | 2      
+bicing | 2026-11 | feed_failed status=502 error_type=http                                            | 2      
+bicing | 2026-11 | feed_failed status=503 error_type=http                                            | 2      
+bicing | 2026-11 | feed_failed status=- error_type=timeout                                           | 1      
+
+## Worst 15 days per system
+
+system | day        | missed | pct    
+-------+------------+--------+--------
+ambici | 2026-10-16 | 47     | 96.7400
+ambici | 2026-10-27 | 17     | 98.8200
+ambici | 2026-11-01 | 15     | 98.9600
+ambici | 2026-10-29 | 15     | 98.9600
+ambici | 2026-10-30 | 14     | 99.0300
+ambici | 2026-10-23 | 14     | 99.0300
+ambici | 2026-10-22 | 13     | 99.1000
+ambici | 2026-11-03 | 13     | 99.1000
+ambici | 2026-10-28 | 13     | 99.1000
+ambici | 2026-11-02 | 13     | 99.1000
+ambici | 2026-10-25 | 13     | 99.1000
+ambici | 2026-10-18 | 13     | 99.1000
+ambici | 2026-11-04 | 13     | 99.1000
+ambici | 2026-10-26 | 13     | 99.1000
+ambici | 2026-10-24 | 12     | 99.1700
+bicing | 2026-10-16 | 47     | 96.7400
+bicing | 2026-11-18 | 41     | 97.1500
+bicing | 2026-11-13 | 39     | 97.2900
+bicing | 2026-11-17 | 38     | 97.3600
+bicing | 2026-11-12 | 38     | 97.3600
+bicing | 2026-11-14 | 37     | 97.4300
+bicing | 2026-11-11 | 36     | 97.5000
+bicing | 2026-11-21 | 35     | 97.5700
+bicing | 2026-11-15 | 33     | 97.7100
+bicing | 2026-11-08 | 32     | 97.7800
+bicing | 2026-11-09 | 30     | 97.9200
+bicing | 2026-11-10 | 29     | 97.9900
+bicing | 2026-11-20 | 29     | 97.9900
+bicing | 2026-11-19 | 26     | 98.1900
+bicing | 2026-11-16 | 25     | 98.2600
+
+## Runs of consecutive missed minutes, by length
+
+system | minutes_in_a_row | gaps | missed
+-------+------------------+------+-------
+ambici | 1                | 327  | 327   
+ambici | 2-5              | 1    | 2     
+ambici | 6-30             | 2    | 35    
+bicing | 1                | 728  | 728   
+bicing | 2-5              | 36   | 74    
+bicing | 6-30             | 2    | 35    
+
+# DQM10, age of the data the page serves
+
+## Runs per outcome
+
+outcome   | runs | first                            | last                            
+----------+------+----------------------------------+---------------------------------
+failed    | 6    | 2026-11-20 17:29:06.338000+00:00 | 2026-11-20 18:13:25.356000+00:00
+succeeded | 126  | 2026-11-20 18:15:53.576000+00:00 | 2026-11-22 01:46:10.924000+00:00
+
+## Run duration_s and peak_memory_mb
+
+measure        | min      | p50       | p90       | p99       | max      
+---------------+----------+-----------+-----------+-----------+----------
+duration_s     | 41.4349  | 134.7960  | 484.2574  | 553.3719  | 555.8576 
+peak_memory_mb | 687.2310 | 1401.2641 | 2051.4333 | 2472.4275 | 2472.4275
+
+## Interval between run starts, in minutes
+
+intervals | min    | p50     | p90     | p99     | max    
+----------+--------+---------+---------+---------+--------
+131       | 1.6054 | 14.9972 | 15.1080 | 32.9952 | 41.5965
+
+## Deployments
+
+event              | n  
+-------------------+----
+page_deploy_failed | 6  
+page_deployed      | 126
+
+## Data age at deployment per system, in minutes, every deployment
+
+system | deploys | min    | p50    | p90        | p99        | max       
+-------+---------+--------+--------+------------+------------+-----------
+ambici | 126     | 0.7501 | 2.0433 | 37411.1121 | 51968.8226 | 53071.2346
+bicing | 126     | 0.7501 | 2.1296 | 37411.1121 | 51968.8226 | 53071.2346
+
+## Steady state
+
+steady_from                      | deploys | last                            
+---------------------------------+---------+---------------------------------
+2026-11-21 03:03:13.218000+00:00 | 93      | 2026-11-22 01:46:10.923000+00:00
+
+## Page age in steady state (the older system), in minutes
+
+measure               | n  | min    | p50     | p90     | p99     | max    
+----------------------+----+--------+---------+---------+---------+--------
+at deployment         | 93 | 0.7501 | 1.8066  | 2.7530  | 3.8455  | 6.5703 
+oldest a visitor sees | 92 | 7.7501 | 16.7616 | 18.5712 | 19.6115 | 19.6407
+
+## Page age in steady state from file_built.data_instant, in minutes
+
+measure               | n  | min    | p50     | p90     | p99     | max    
+----------------------+----+--------+---------+---------+---------+--------
+at deployment         | 93 | 0.7501 | 1.7883  | 2.6358  | 3.8455  | 6.5703 
+oldest a visitor sees | 92 | 7.7501 | 16.7616 | 18.4562 | 19.6115 | 19.6407
+
+## data_instant minus the derived data instant, per deployment, in seconds
+
+compared            | n  | min    | p50    | p90    | p99     | max    
+--------------------+----+--------+--------+--------+---------+--------
+vs the older system | 93 | 0.0000 | 0.0000 | 0.0000 | 61.0000 | 61.0000
+vs the newer system | 93 | 0.0000 | 0.0000 | 0.0000 | 0.0000  | 0.0000 
+
+## Steady-state runs: duration_s and interval between starts, in minutes
+
+measure    | min     | p50      | p90      | p99      | max     
+-----------+---------+----------+----------+----------+---------
+duration_s | 41.4349 | 126.7114 | 189.7719 | 263.4567 | 421.4635
+gap_min    | 7.0375  | 15.0012  | 15.0843  | 16.3476  | 17.3565 
+
+## Worst 15 deployments by page age
+
+run_id                               | deployed_at                      | oldest_system | age_min   
+-------------------------------------+----------------------------------+---------------+-----------
+01a1fa39-25a3-7372-b3f4-c12c7f7dfa83 | 2026-11-20 18:31:01.078000+00:00 | bicing        | 53071.2000
+01a1fa2b-61df-72e1-a42f-dde2ea34c4a6 | 2026-11-20 18:15:53.561000+00:00 | bicing        | 53056.1000
+01a1fa45-eb61-7047-8dd7-d54262b680da | 2026-11-20 18:51:42.732000+00:00 | bicing        | 48707.0000
+01a1fa4c-db12-70ee-9b90-111138b6674a | 2026-11-20 18:59:18.218000+00:00 | bicing        | 45989.6000
+01a1fa70-1c07-7653-8ce4-0c739030572d | 2026-11-20 19:32:40.631000+00:00 | bicing        | 44492.9000
+01a1fa62-85f7-75c5-b98d-a0265768b7db | 2026-11-20 19:17:58.389000+00:00 | bicing        | 44478.2000
+01a1fa54-8a09-744f-b7cd-bb0d1512bea8 | 2026-11-20 19:05:46.554000+00:00 | bicing        | 44466.0000
+01a1fa7b-3cdc-722b-91c6-97e4c8fa6ab0 | 2026-11-20 19:50:22.150000+00:00 | bicing        | 42333.1000
+01a1fa82-8ef3-7539-a0de-b98d408d40c3 | 2026-11-20 19:58:19.169000+00:00 | bicing        | 40343.5000
+01a1fa8b-9320-70aa-a660-45f8eff0c76c | 2026-11-20 20:08:00.265000+00:00 | bicing        | 39989.2000
+01a1fa99-4824-72ef-974e-457f7866207e | 2026-11-20 20:23:57.248000+00:00 | bicing        | 39098.1000
+01a1faa6-faee-77c6-8225-52c5e4bd29c2 | 2026-11-20 20:38:22.875000+00:00 | bicing        | 38204.6000
+01a1fab4-bf5a-7377-9928-9aecc61eb892 | 2026-11-20 20:53:47.192000+00:00 | bicing        | 37856.0000
+01a1fac2-84af-761a-8656-4a763136af8b | 2026-11-20 21:08:48.265000+00:00 | bicing        | 36966.3000
+01a1fad0-2c95-77ae-a4cf-d41ecda6692b | 2026-11-20 21:23:13.626000+00:00 | bicing        | 35346.7000

@@ -32,7 +32,7 @@ Question: what do weeks of production captures and runs show for the values the 
   - the pipeline's run logs, `logs/pipeline/date=<YYYY-MM-DD>/<run_id>.jsonl` of `bikesharing-lakehouse`, kept for 30 days.
 - **What the script does:** `indicator_targets.py`:
   - **DQM7:** for each system, every UTC minute from its first to its last processed capture, marked captured or not, a minute of two captures counted once. It reports the share of captured minutes per system and month against 99.5%, and the worst days. Each missed minute gets the cause its pass logged: the failure events of that minute (`feed_failed` of `station_status` or `index_rejected`, with status and error type), a capture logged but not processed, a pass with no `station_status` event, or no pass logged. Causes are ranked by missed minutes.
-  - **DQM10:** for each `page_deployed`, its time minus each system's latest capture processed by the runs up to the deploying one, runs ordered by the time in their UUIDv7 `run_id`, and the oldest age a visitor meets, just before the next deployment. Steady state starts at the first deployment whose data is under 30 min old, after the runs that catch up on earlier captures. It reports the page's age (the older system) in steady state, together with the runs' outcome, `duration_s`, `peak_memory_mb` and the interval between runs, against one cadence plus one run.
+  - **DQM10:** for each `page_deployed`, its time minus each system's latest capture processed by the runs up to the deploying one, runs ordered by the time in their UUIDv7 `run_id`, and the oldest age a visitor meets, just before the next deployment. Steady state starts at the first deployment whose data is under 30 min old, after the runs that catch up on earlier captures. It reports the page's age (the older system) in steady state, the same ages from the latest capture instant `file_built` logs (`data_instant`) with their difference to the derived ones, together with the runs' outcome, `duration_s`, `peak_memory_mb` and the interval between runs, against one cadence plus one run.
   - Captures copied from V4 have no pass logs ([d004 › D2](../../docs/designs/d004-bronze-data-capture.md#d2-spike-data-moved-to-production)): their missed minutes show the cause `before capture logs`.
 - **Output:** the report on screen, saved as `out/report-<UTC time>.txt`, in UTC.
 - **Commands:**
@@ -60,3 +60,25 @@ Question: what do weeks of production captures and runs show for the values the 
 
   `--self-test` checks the class given to each cause on synthetic events.
 - **Run time:** about 5 min, about 20 s per day of logs, with progress per day.
+
+## discovery
+
+- **Question:** which alerts beyond the first pass of [d009 › D3](../../docs/designs/d009-monitoring.md#d3-alerts-on-symptoms-that-need-action) do the production events of capture and the pipeline call for? The inventory also lists the events, levels and fields of the observability catalog ([d009 › D5](../../docs/designs/d009-monitoring.md#d5-one-observability-catalog-built-here)).
+- **Inputs:** read from R2, nothing written to it, each event read as a whole JSON object so that an unknown event or field shows:
+  - capture's pass logs, `logs/date=<YYYY-MM-DD>/<run_id>.jsonl` of `bikesharing-bronze`, from 2026-11-07, the first production pass;
+  - the pipeline's run logs, `logs/pipeline/date=<YYYY-MM-DD>/<run_id>.jsonl` of `bikesharing-lakehouse`, kept for 30 days.
+- **What the script does:** `discovery.py` reports, per component and event:
+  - the inventory: level, events, runs, days seen, first and last;
+  - the fields each event carries, with how many of its events carry each;
+  - the values of each field with at most 12 distinct values, with their counts, leaving out `ts` and `run_id`;
+  - for every event not at level `info`, its count per day, days with none included: median, worst day and the days seen.
+- **Output:** the report on screen, saved as `out/report-<UTC time>.txt`, in UTC.
+- **Commands:**
+
+  ```bash
+  uv run --directory pipeline python ../spikes/d009-baselines/discovery/discovery.py
+  uv run --directory pipeline python ../spikes/d009-baselines/discovery/discovery.py --self-test
+  ```
+
+  `--self-test` checks the field and value listing on synthetic events.
+- **Run time:** about 5 min, about 20 s per day of capture's logs, with progress per day.

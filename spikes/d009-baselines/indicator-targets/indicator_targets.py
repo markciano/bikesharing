@@ -61,6 +61,7 @@ PIPELINE_COLUMNS = {
     "outcome": "VARCHAR",
     "duration_s": "DOUBLE",
     "peak_memory_mb": "DOUBLE",
+    "data_instant": "TIMESTAMPTZ",
 }
 
 
@@ -269,7 +270,7 @@ def as_text(rel: duckdb.DuckDBPyRelation) -> str:
     lines = [" | ".join(c.ljust(w) for c, w in zip(header, widths, strict=True))]
     lines.append("-+-".join("-" * w for w in widths))
     lines += [" | ".join(v.ljust(w) for v, w in zip(r, widths, strict=True)) for r in rows]
-    return "\n".join(lines)
+    return "\n".join(line.rstrip() for line in lines)
 
 
 def quantiles(column: str) -> str:
@@ -407,6 +408,42 @@ def report(con: duckdb.DuckDBPyConnection, out: list[str]) -> None:
         union all
         select 'oldest a visitor sees', count(visitor_age_s), {quantiles('visitor_age_s / 60')}
         from ({page})
+        """,
+    )
+    # file_built carries the file's latest capture instant, a direct source for
+    # the age the derivation above estimates from processed_objects.
+    direct = f"""
+        select d.run_id, d.ts as deployed_at, f.data_instant,
+            epoch(d.ts - f.data_instant) as age_s,
+            epoch(lead(d.ts) over (order by d.ts) - f.data_instant) as visitor_age_s
+        from pipeline_events d
+        join pipeline_events f on f.run_id = d.run_id and f.event = 'file_built'
+        where d.event = 'page_deployed' and d.ts >= {STEADY_FROM_SQL}
+    """
+    show(
+        "Page age in steady state from file_built.data_instant, in minutes",
+        f"""
+        select 'at deployment' as measure, count(age_s) as n, {quantiles('age_s / 60')}
+        from ({direct})
+        union all
+        select 'oldest a visitor sees', count(visitor_age_s), {quantiles('visitor_age_s / 60')}
+        from ({direct})
+        """,
+    )
+    show(
+        "data_instant minus the derived data instant, per deployment, in seconds",
+        f"""
+        with derived as (
+            select run_id, min(data_at) as oldest_system, max(data_at) as newest_system
+            from deploys group by run_id
+        )
+        select 'vs the older system' as compared, count(*) as n,
+            {quantiles('epoch(x.data_instant - d.oldest_system)')}
+        from ({direct}) x join derived d using (run_id)
+        union all
+        select 'vs the newer system', count(*),
+            {quantiles('epoch(x.data_instant - d.newest_system)')}
+        from ({direct}) x join derived d using (run_id)
         """,
     )
     show(
