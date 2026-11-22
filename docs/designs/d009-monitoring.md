@@ -292,6 +292,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - Alerts on quarantined rows, once the quarantine table exists — T060.5
 - Targets of DQM1–DQM3, rows of the review table — T060.6
 - A project-wide threat catalog with global IDs (`THG`), and the threat ID on the alerts that detect one — T073
+- The existing catalogs aligned with the reader's introduction every catalog opens with (#15) — T076
 
 ## 2. Plan — how
 
@@ -463,7 +464,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 12 | [Observability catalog](#observability-catalog) | The provider's 7-day minutes as a LogQL query in `docs/observability.md`, run in Explore; no dashboard in this task (dashboards in T060.10) | Meets R40 with what Grafana ships, leaving every dashboard decision to the task that designs them | R40 | Plan |
 | 13 | [Error budget alerts](#error-budget-alerts), [D10](#d10-a-target-on-captures-own-missed-minutes-only) | ALR6's and ALR15's windows count only the minutes with an event of capture in Grafana; a minute with none is left to capture's heartbeat and to SQL over R2 (an SLI over valid events, SRE Workbook) **refines #6** **refines #7** | A gap in Grafana's ingest pages no one for data R2 holds, and leaves no alert blind for days | R12, R13, R39 | Plan review |
 | 14 | [Observability catalog](#observability-catalog) | Each registry event lists the alerts that read it by name; Terraform builds every alert's event selector from it, and ALR9 from the events with `needs_action` that list none; an alert's row in `docs/observability.md` lists no events (single source of truth) **refines #2** | No hand-written exclusion list for ALR9, and the link between alerts and events lives in one place | R16, R25 | Plan review |
-| 15 | [Observability catalog](#observability-catalog) | Every catalog opens with what it holds and what for, how to read an entry, and one worked example, as a rule in `.claude/rules/docs/general.md`; `docs/observability.md` follows it, the existing catalogs are aligned later (Diátaxis: reference with an explanatory entry point) | A reader new to the project understands the catalog without the designs | R25 | Plan review |
+| 15 | [Observability catalog](#observability-catalog) | Every catalog opens with what it holds and what for, how to read an entry, and one worked example, as a rule in `.claude/rules/docs/general.md`; `docs/observability.md` follows it, the existing catalogs are aligned in T076 (Diátaxis: reference with an explanatory entry point) | A reader new to the project understands the catalog without the designs | R25 | Plan review |
 
 ### 2.3 Architecture
 
