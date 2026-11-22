@@ -393,7 +393,7 @@ The pipeline's cadence, time budget, timeout and container memory live in one da
 
 #### Synthetic check
 
-ALR4's synthetic check is a scripted k6 check, as [s018 › P1](../spikes/s018-monitoring-tool.md#23-production-inputs) sets, that reads each file the page serves and measures its data's age as the time since its `data_instant`, the age of the data a visitor sees, which DQM10 measures (D8). A probe fails when that age exceeds ALR4's threshold, or when the file cannot be read or parsed. The file's `Last-Modified` header is not used: every run deploys, with or without new batches ([d008 › #19](d008-pipeline-platform-and-walking-skeleton.md#22-decision-summary)), so a stuck pipeline would redeploy old data under a fresh header. The files are a Terraform variable, today `latest-station-count.json` only; a child that publishes another file adds it.
+ALR4's synthetic check is a scripted k6 check, as [s018 › P1](../spikes/s018-monitoring-tool.md#23-production-inputs) sets, that reads each file the page serves and measures its data's age as the time since its `data_instant`, the age of the data a visitor sees, which DQM10 measures (D8). A probe fails when that age exceeds ALR4's threshold, or when the file cannot be read or parsed. The file's `Last-Modified` header is not used: every run deploys, with or without new batches ([d008 › #19](d008-pipeline-platform-and-walking-skeleton.md#22-decision-summary)), so a stuck pipeline would redeploy old data under a fresh header. The files are a Terraform variable, today `latest-station-count.json` only, read under the page's base URL, another variable; a child that publishes another file adds it. The three probes are named in a variable, all in Europe, near the owner and the stack.
 
 #### Notifications
 
@@ -513,7 +513,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   ├── .terraform.lock.hcl                     (new)       Provider lockfile
 │   ├── versions.tf                             (new)       required_version range and Grafana's provider
 │   ├── providers.tf                            (new)       Provider configuration from variables
-│   ├── variables.tf                            (new)       Stack, tokens, watchdog URL (sensitive), data source UIDs, GitHub base URL, published files, systems' targets
+│   ├── variables.tf                            (new)       Stack, tokens, watchdog URL (sensitive), data source UIDs, GitHub base URL, page base URL, published files, probes, systems' targets
 │   ├── locals.tf                               (new)       Reads the event registry and the pipeline's run settings; derives the thresholds (#8, #9)
 │   ├── alert_rules.tf                          (new)       ALR rules, ALR12's watchdog rule included
 │   ├── contact_points.tf                       (new)       IRM and the watchdog's webhook
@@ -986,7 +986,7 @@ The catalog's document, and the designs that now link to it for the events.
 #### Check
 
 - The lint hook reports no error on the three files.
-- Every alert ID in the registry has a row in the alerts table, and every row's ID appears in the registry or in [Thresholds](#thresholds): yes/no.
+- Every alert ID in the registry has a row in the alerts table, and the table holds ALR1–ALR15: yes/no.
 - The Inspection rows of R25 and R26 in the [Test plan](#26-test-plan) hold: yes/no.
 
 ### Step 3 — Data quality catalog: DQM7, DQM10, DQM11
@@ -1211,7 +1211,7 @@ Each pass sends its lines to Grafana after its log and its heartbeat, and the se
 #### Check
 
 - `npm test --prefix capture` passes.
-- `grep -rn "OTLP_TOKEN" capture` shows it only in `worker.js` and in no log, error or test fixture: yes/no.
+- `grep -rn "OTLP_TOKEN" capture` shows only the secret's name, never a value, and no log or error writes it: yes/no.
 - Each test of a Test plan row is tagged `Verifies d009 R<n>`: yes/no.
 
 ### Step 9 — Pipeline: run settings (core)
@@ -1546,7 +1546,7 @@ The `monitoring/` component's stack, as `.claude/rules/code/dependencies.md` set
 The provider configured from variables, secrets only from `.env`, and the check that CI runs.
 
 - `monitoring/providers.tf` (new): the provider's `url`, `auth`, `sm_url` and `sm_access_token` from variables.
-- `monitoring/variables.tf` (new): the variables of the File layout; the tokens and the watchdog's URL `sensitive` with no default (R37); the data source UIDs with no default, set from `.env`; the systems' DQM7 targets, the published files and the GitHub base URL with their defaults.
+- `monitoring/variables.tf` (new): the variables of the File layout; the tokens and the watchdog's URL `sensitive` with no default (R37); the data source UIDs with no default, set from `.env`; the systems' DQM7 targets, the page's base URL as its deployment in `web/` serves it, the published files, the three probes and the GitHub base URL with their defaults.
 - `.env.example` (modified): each secret and data source UID as an empty `TF_VAR_<name>`.
 - `monitoring/scripts/check-monitoring.sh` (new): `terraform fmt -check -recursive`, `init -backend=false -lockfile=readonly`, `validate` and `test`, as CI runs them.
 - `monitoring/tests/alerting.tftest.hcl` (new): `mock_provider "grafana"` and `command = plan`; the first run block asserts with `issensitive` that the watchdog's URL variable is sensitive (R37). That it has no default cannot be asserted by `terraform test`, since a missing variable fails the plan, and is inspected instead.
@@ -1760,7 +1760,7 @@ ALR6's three burn-rate levels, one rule group per system.
 
 ALR4's check from three probes, and the last alert, which completes the set the registry may cite.
 
-- `monitoring/synthetic_check.tf` (new): a scripted k6 check every 5 min from three probes, with the published files and ALR4's threshold from `locals.tf`.
+- `monitoring/synthetic_check.tf` (new): a scripted k6 check every 5 min from three probes in Europe, named in a variable and looked up with the provider's probes data source, with the page's base URL, the published files and ALR4's threshold from `locals.tf`.
 - `monitoring/checks/published_file_age.js` (new): reads each file the page serves, and fails when its data's age since `data_instant` exceeds the threshold or it cannot be read or parsed.
 - `monitoring/alert_rules.tf` (modified): ALR4, firing when at least two of the three probes fail, as a page.
 - `monitoring/tests/alerting.tftest.hcl` (modified): the check's frequency, probes and threshold, and ALR4's condition (R10); every alert ID in the registry is one Terraform declares (R16, R22).
@@ -1952,7 +1952,7 @@ Grafana's alerts, contact points, synthetic check and the watchdog are live.
 
 1. Create the watchdog's check in Healthchecks.io, with a period of 5 min, a grace of 10 min and the owner's email.
 2. Set its signal URL and the Grafana credentials in `.env`, as `.env.example` names them.
-3. With `.env` loaded, run `terraform -chdir=monitoring init`, then `plan`, and `apply` once the plan shows only the resources of this design.
+3. With `.env` loaded, run `terraform -chdir=monitoring init -lockfile=readonly`, then `plan`, and `apply` once the plan shows only the resources of this design.
 
 #### Check
 
