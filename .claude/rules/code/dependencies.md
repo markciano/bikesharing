@@ -8,6 +8,9 @@ paths:
   - "**/.npmrc"
   - "**/.nvmrc"
   - "**/wrangler.*"
+  - "**/versions.tf"
+  - "**/.terraform.lock.hcl"
+  - "**/.terraform-version"
 ---
 
 # Runtime versions and dependencies
@@ -23,6 +26,7 @@ Each component's directory holds its own files; the repository-wide tooling is o
 | Python | `pyproject.toml` (PEP 621) | `uv.lock` | `.python-version` |
 | JavaScript | `package.json` | `package-lock.json` | `.nvmrc` |
 | Cloudflare Worker | its JS manifest | its JS lockfile | `compatibility_date` in the wrangler configuration |
+| Terraform | `versions.tf` (`required_version`, `required_providers`) | `.terraform.lock.hcl` | `.terraform-version` |
 
 A component design lists these files in its File layout and chooses the concrete versions against its deployment runtime.
 
@@ -30,12 +34,13 @@ A component design lists these files in its File layout and chooses the concrete
 
 - Pin the exact version in the full format of the runtime's tooling (e.g. `3.12.7`, `24.11.0`), never a major alone or a range.
 - Choose a release inside the range the component's test tools support, not the version installed on one machine.
-- `requires-python` in `pyproject.toml` stays a compatibility range; `.python-version` is what runs.
+- `requires-python` in `pyproject.toml` and `required_version` in `versions.tf` stay compatibility ranges; `.python-version` and `.terraform-version` are what runs.
 - Upgrade a runtime by changing its pin file only; nothing else repeats the version.
 
 ## Dependencies
 
 - Add dependencies with the ecosystem tool, which writes a range to the manifest and updates the lockfile: `uv add <pkg>`, `npm install <pkg>`.
+- A Terraform provider is added to `required_providers` with a pessimistic range (`~>`), and `terraform providers lock` writes the lockfile with the hashes of every platform that runs it, the owner's machine and CI's.
 - Development-only dependencies go apart: `uv add --dev <pkg>` (dependency group `dev`), `npm install --save-dev <pkg>`.
 - Commit the lockfile together with its manifest, in the same commit; never edit a lockfile by hand.
 - Repository tooling (root `package.json`, `"private": true`) is pinned exactly: the root `.npmrc` sets `save-exact=true`.
@@ -43,7 +48,7 @@ A component design lists these files in its File layout and chooses the concrete
 
 ## Running
 
-- Only the locked versions run. Installing them automatically is fine (`uv sync --locked`, `npm ci`, `uv run`); running any other version is not (no `npx --yes <pkg>@<version>`, `pip install`, global installs).
+- Only the locked versions run. Installing them automatically is fine (`uv sync --locked`, `npm ci`, `uv run`, `terraform init -lockfile=readonly`); running any other version is not (no `npx --yes <pkg>@<version>`, `pip install`, global installs).
 - A repository tool runs through its entry script in `scripts/`, which checks that the locked version is installed and otherwise stops naming the install command (e.g. `scripts/lint-docs.sh`).
 
 ## Out of scope
