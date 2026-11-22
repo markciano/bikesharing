@@ -79,15 +79,15 @@ Rejected:
 
 #### D4. A retry is logged as its own event
 
-Each 403 that capture retries writes a `fetch_retried` event, at level `warning`, before the wait, with `source`, `feed` (null for an index), `status` and `latency_ms` of the first attempt, plus `headers`, the response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of the response body as text, or null if the body cannot be read. The request's outcome is then logged as today, by `feed_captured`, `feed_failed`, `index_refreshed` or `index_rejected`, whose `status` and `latency_ms` are those of the last attempt; the existing events keep their fields and meaning ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)). It extends D9's event table, and `warning` matches D9's level for a failure that does not affect the data. **extends [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)**
+Each 403 that capture retries writes a `fetch_retried` event, at level `warn`, before the wait, with `system`, `feed` (null for an index), `status` and `latency_ms` of the first attempt, plus `headers`, the response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of the response body as text, or null if the body cannot be read. The request's outcome is then logged as today, by `feed_captured`, `feed_failed`, `index_refreshed` or `index_rejected`, whose `status` and `latency_ms` are those of the last attempt; the existing events keep their fields and meaning ([d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)). It extends D9's event table, and `warn` matches D9's level for a failure that does not affect the data. **extends [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)**, **refined by [d009 › #4, #5](d009-monitoring.md#22-decision-summary)**
 
 The pass log then answers how many 403s each source gets per hour (the `fetch_retried` events) and how many the retry recovers (those followed in the same pass by `feed_captured` or `index_refreshed` for the same feed), which Done when measures. Who sends the 403 and what it keys on is unknown ([s014 › 5.4](../spikes/s014-bicing-403.md#54-not-verified)): `headers` and `body` can name the limiter or the wait it asks for (`Retry-After`), which the next step needs if the retry falls short, and a 403 that arrives in tens of milliseconds points to a limiter at the network edge, one of hundreds to the origin server. `Set-Cookie` is left out because it can carry a session token (OWASP Logging Cheat Sheet). At typically about 3 KB per event and about 940 403s per month, they add about 3 MB per month to D9's 30–35 MB.
 
 A retry that succeeds:
 
 ```json
-{"ts":"2026-11-12T10:15:36.120Z","level":"warning","event":"fetch_retried","source":"bicing","feed":"station_status","status":403,"latency_ms":85,"headers":{"content-type":"text/html","server":"…"},"body":"<html>…"}
-{"ts":"2026-11-12T10:15:40.530Z","level":"info","event":"feed_captured","source":"bicing","feed":"station_status","status":200,"latency_ms":640,"bytes":48210,"attempts":1,"recompressed":false}
+{"ts":"2026-11-12T10:15:36.120Z","level":"warn","event":"fetch_retried","system":"bicing","feed":"station_status","status":403,"latency_ms":85,"headers":{"content-type":"text/html","server":"…"},"body":"<html>…"}
+{"ts":"2026-11-12T10:15:40.530Z","level":"info","event":"feed_captured","system":"bicing","feed":"station_status","status":200,"latency_ms":640,"bytes":48210,"attempts":1,"recompressed":false}
 ```
 
 The common fields `component`, `version` and `run_id` are left out, and the values are illustrative. When the retry also fails, the second event is `feed_failed` with the retry's `status`, or with `status` null and `error_type` `timeout` if D3's limit runs out.
@@ -157,7 +157,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R2** If a source request fails in a way R1 does not retry, or its retry fails, then the capture shall make no further attempt in the same pass. (D1, D6)
 - **R3** When the capture retries a request, it shall wait a uniform random time between 3 and 5 s before the retry. (D2)
 - **R4** If a source request, retry included, takes longer than 60 s, then the capture shall abandon it and log it as a failure. (D3, D6)
-- **R5** When the capture retries a request, it shall log a `fetch_retried` event at level `warning`, before the wait, with `source`, `feed` (null for an index), and the first attempt's `status` and `latency_ms`. (D4, D6)
+- **R5** When the capture retries a request, it shall log a `fetch_retried` event at level `warn`, before the wait, with `system`, `feed` (null for an index), and the first attempt's `status` and `latency_ms`. (D4, D6)
 - **R6** The `fetch_retried` event shall carry `headers`, the first attempt's response headers except `Set-Cookie`, at most 50 with each value cut to 1,000 bytes, and `body`, the first 1,000 bytes of its response body as text, or null if the body cannot be read. (D4, TH1, TH2)
 - **R7** When a retried request ends, the capture shall log its outcome in the event d004 › D9 lists for it, with the last attempt's `status` and `latency_ms`. (D4, D6)
 - **R8** The capture shall send `User-Agent: bikesharing-capture (+https://github.com/markciano/bikesharing)` in every source request, and not in the heartbeat signal. (D5, D6, TH3)
@@ -207,7 +207,7 @@ The retry lives in the source fetch, which already owns the 60 s limit; the pass
 #### Pass and source setting
 
 - Each source in `sources.js` has `retryOn403`: true for Bicing, false for AMBici ([ADR-0039](../decisions/0039-retry-a-403-only-where-shown-transient.md)).
-- `captureFeed` and `refreshIndex` in `pass.js` pass the source's `retryOn403` and an `onRetry` that logs `fetch_retried` at `warning` through `pass.log`, so its `ts` is the time before the wait (R5). Its fields go in the order `source`, `feed` (null for an index), `status`, `latency_ms`, `headers`, `body`.
+- `captureFeed` and `refreshIndex` in `pass.js` pass the source's `retryOn403` and an `onRetry` that logs `fetch_retried` at `warn` through `pass.log`, so its `ts` is the time before the wait (R5). Its fields go in the order `system`, `feed` (null for an index), `status`, `latency_ms`, `headers`, `body`.
 - The outcome events keep their code and take `status` and `latency_ms` from the result, which is the last attempt's (R7).
 
 #### Documents
@@ -340,7 +340,7 @@ The 403's `headers` and `body` for `Retried` are built by private functions of t
 | R2 | Test | One request only after a 500, or after a 403 without `retryOn403`; two requests only after two 403s; only Bicing has `retryOn403`; a 403 on AMBici in a pass logs `feed_failed` with no retry | unit, integration |
 | R3 | Test | `retryWait` returns `retry403MinMs` for `random` 0, the midpoint for 0.5, and stays below `retry403MaxMs` for a value just under 1 | unit |
 | R4 | Test | With `retry403MinMs` above `timeoutMs`, a 403 ends in `timeout` with `status` and `latencyMs` null, no second request, and within `timeoutMs` + 500 ms, not after the wait | unit |
-| R5 | Test | A pass with a retried 403 logs `fetch_retried` at `warning` before the outcome event, with the fields in order and `feed` null for an index; the contract's valid cases build their JSON Lines | integration, contract |
+| R5 | Test | A pass with a retried 403 logs `fetch_retried` at `warn` before the outcome event, with the fields in order and `feed` null for an index; the contract's valid cases build their JSON Lines | integration, contract |
 | R6 | Test | What `fetchFeed` passes to `onRetry`: `headers` without `set-cookie`, the first 50, a value cut to 1,000 bytes; `body` decompressed from gzip and cut before a character the 1,000-byte limit would split (DI1); `body` null for corrupt gzip and for a body cut short by the deadline | unit |
 | R7 | Test | After a 403 then a 200, `feed_captured` carries 200 and a numeric `latency_ms`; after two 403s, `feed_failed` carries 403 | integration |
 | R8 | Test | A source request sends `USER_AGENT`; the heartbeat request does not | unit |
@@ -594,7 +594,7 @@ None.
 
 #### Scope
 
-`capture/src/pass.js`: `captureFeed` and `refreshIndex` pass the source's `retryOn403` and an `onRetry` that logs `fetch_retried` at `warning` through `pass.log`, fields in D4's order. The outcome events keep their code ([Pass and source setting](#pass-and-source-setting)). `capture/test/integration/pass-failures.test.js`: the integration tests of Test plan R1, R2, R5 and R7. With this step, d006's code is complete.
+`capture/src/pass.js`: `captureFeed` and `refreshIndex` pass the source's `retryOn403` and an `onRetry` that logs `fetch_retried` at `warn` through `pass.log`, fields in D4's order. The outcome events keep their code ([Pass and source setting](#pass-and-source-setting)). `capture/test/integration/pass-failures.test.js`: the integration tests of Test plan R1, R2, R5 and R7. With this step, d006's code is complete.
 
 #### Reads
 
@@ -605,7 +605,7 @@ None.
 #### Do
 
 1. Write the tests, each tagged with the requirements it verifies, and run them red:
-   - A Bicing feed whose first request gets a 403 is stored; the log has `fetch_retried` at `warning`, fields in order, before `feed_captured`, which carries 200 and a numeric `latency_ms` (R1, R5, R7).
+   - A Bicing feed whose first request gets a 403 is stored; the log has `fetch_retried` at `warn`, fields in order, before `feed_captured`, which carries 200 and a numeric `latency_ms` (R1, R5, R7).
    - A Bicing index whose first request gets a 403 is adopted; `fetch_retried` has `feed` null (R1, R5).
    - A Bicing feed with two 403s logs `fetch_retried` then `feed_failed` with `status` 403 (R2, R7).
    - An AMBici feed with a 403 logs `feed_failed` and no `fetch_retried` (R2).
