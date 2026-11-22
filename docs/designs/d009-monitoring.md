@@ -19,8 +19,8 @@ Phase: the blocks and reviews completed. A document-only task shows only Spec ·
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
 - State: Draft 📝
-- Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
-- Current: Steps › step skeleton. Owner's instruction: the watchdog's check (R20), capture's heartbeat check at 10 + 10 min (R43) and the OTLP token as Worker secret and Modal Secret are Owner steps, each placed just before the deployment that uses it, not prerequisites.
+- Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [ ] Steps review
+- Current: Steps review.
 
 ## 1. Spec — what and why
 
@@ -517,21 +517,24 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   │   └── alerting.tftest.hcl                 (new)       terraform test with a mocked provider
 │   └── scripts/check-monitoring.sh             (new)       fmt -check, validate and test, as CI runs it
 ├── capture/
-│   ├── package.json, package-lock.json         (modified)  JSON Schema validator as a dev dependency
+│   ├── package.json, package-lock.json         (modified)  @cfworker/json-schema, a JSON Schema validator that runs in workerd, as a dev dependency
 │   ├── wrangler.jsonc                          (modified)  OTLP endpoint as a variable
+│   ├── vitest.config.js                        (modified)  A simulated OTLP endpoint that answers 2xx and keeps each request's body for the tests to read
 │   ├── src/
 │   │   ├── otlp.js                             (new)       Builds the OTLP/HTTP JSON request from the pass's lines and sends it within its limit
-│   │   ├── log.js                              (modified)  warn and system (#4, #5); toLines serializes the events once, for the log and the copy
+│   │   ├── fetch.js                            (modified)  otlpTimeoutMs, 10 s, in LIMITS
+│   │   ├── log.js                              (modified)  warn in the level type (#4); toLines serializes the events once, for the log and the copy
 │   │   ├── schedule.js                         (modified)  The heartbeat at every minute that is a multiple of 5, by the pass's scheduled time (#10)
-│   │   ├── pass.js                             (modified)  Sends the copy after the log and the heartbeat
+│   │   ├── pass.js                             (modified)  warn and system in the events it logs (#4, #5); sends the copy after the log and the heartbeat
 │   │   └── worker.js                           (modified)  The send inside ctx.waitUntil; the token as a Worker secret
 │   └── test/
 │       ├── unit/otlp.test.js                   (new)       Request built from the lines; failed or late send changes nothing
-│       ├── unit/log.test.js, unit/schedule.test.js (modified) warn and system; the heartbeat at every fifth minute
-│       ├── integration/pass.test.js            (modified)  Order: log, heartbeat, copy
+│       ├── unit/log.test.js, unit/schedule.test.js (modified) warn and toLines; the heartbeat at every fifth minute
+│       ├── integration/pass.test.js            (modified)  warn and system; the heartbeat at :05; order: log, heartbeat, copy
+│       ├── integration/pass-failures.test.js   (modified)  warn and system
 │       └── contract/log-events-registry.test.js (new)      Registry valid against its schema; every capture event registered
 ├── pipeline/
-│   ├── modal_image.py                          (modified)  The monitoring token's Modal Secret; container memory and timeout from settings (#9)
+│   ├── modal_image.py                          (modified)  The monitoring token's Modal Secret; container memory and timeout from settings, and run_settings.json added to the image (#9)
 │   ├── modal_app.py                            (modified)  That Secret on the scheduled function only; the schedule from the cadence in settings (#9)
 │   ├── src/bikesharing/
 │   │   ├── core/run_settings.json              (new)       Cadence, time budget, timeout and container memory (#9)
@@ -548,6 +551,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   └── tests/
 │       ├── unit/core/test_otlp_payload.py      (new)       Request built from the lines
 │       ├── unit/core/test_settings.py          (new)       Settings parsed from data; invalid data rejected
+│       ├── unit/core/test_events.py            (modified)  otlp_send_failed
+│       ├── integration/test_event_log.py       (modified)  lines(): every kept line, in order
 │       ├── integration/test_otlp_exporter.py   (new)       Failed or late send changes nothing
 │       ├── integration/test_run.py             (modified)  Copy sent after the log upload and the ping, with log_upload_failed and heartbeat_failed
 │       └── integration/test_log_events_registry_contract.py (new) Registry valid against its schema; every pipeline event registered
@@ -876,30 +881,1114 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
   The first two and the URL go in `.env` as Terraform variables; the third stays with the owner until it is set as a Worker secret and a Modal Secret. Verify: each token is listed in the console with that scope and no other.
 - **Grafana mobile app** with IRM, signed in to the owner's account, notifications allowed. Verify: IRM's test notification reaches the phone.
 
-### Step 1 — `<Title>`
+### Step 1 — Event registry and its schema
 
 - **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md, with the design and step ID first in the description: `<type>: dNNN.sN <description>`.
-- **R:** R1, R3 (or —)
-- **Model:** `<model · effort>` (or —)
-- **Review:** `<code | security | code and security | no>`
+- **Who:** Claude
+- **Commit:** `feat: d009.s1 add the log events registry and its schema`
+- **R:** R25, R27
+- **Model:** sonnet · medium
+- **Review:** no
 
 #### Scope
 
 <!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
 
+The observability catalog's machine-readable half: every event of capture and the pipeline, with its level, own fields, whether it needs an action and the alerts that read it.
+
+- `contracts/log-events.schema.json` (new): the schema of [Event registry schema](#event-registry-schema), as written there.
+- `contracts/log-events.registry.json` (new): `$schema` `./log-events.schema.json` and one entry per event of capture and of the pipeline, `otlp_send_failed` of both included; levels `info`, `warn` and `error` only (R27); capture's events with `system`, never `source`.
+- Tests: the contract rows of R25 and R27 run against these files from Step 5 (capture) and Step 15 (pipeline).
+
 #### Reads
 
 <!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
+
+- [Event registry schema](#event-registry-schema), in this design: the schema to write and the rules beyond it (one entry per `component` and `event`).
+- [Observability catalog](#observability-catalog) and [Warning level](#warning-level), in this design: what an entry holds and the single level name.
+- [D3](#d3-alerts-on-symptoms-that-need-action) and [Thresholds](#thresholds), in this design: which alert reads which event, for `alerts`.
+- `.claude/rules/docs/observability.md`: the conventions of an entry, `needs_action` and `description` included.
+- [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs): capture's events and their own fields.
+- [d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability): the pipeline's events and their own fields.
+- [Capture's OTLP sender](#captures-otlp-sender) and [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter), Callers, in this design: `otlp_send_failed` and its field `error_type`.
 
 #### Do
 
 <!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
 
+1. Write `contracts/log-events.schema.json` from [Event registry schema](#event-registry-schema).
+2. Write `contracts/log-events.registry.json` with one entry per event of d004 › D9 and d008 › Observability, plus `otlp_send_failed` for each component, at `warn` with `error_type`; capture's `warning` becomes `warn` and `source` becomes `system`.
+3. Set each entry's `alerts` from D3 and Thresholds, and its `needs_action` and `description` as `.claude/rules/docs/observability.md` sets.
+4. Run `grep -rn "buildEvent(" capture/src` and `grep -n "^def " pipeline/src/bikesharing/core/events.py`, and confirm each event they show has its entry.
+
 #### Check
 
 <!-- command/s or verification with a yes/no result. -->
+
+- A throwaway script in the session's scratchpad, run with `uv run --project pipeline python <script>`, validates the registry against its schema with `jsonschema` and finds no repeated pair of `component` and `event`: it prints `ok`.
+- Every event Do 4 lists has an entry: yes/no.
+
+### Step 2 — Observability catalog
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: d009.s2 add the observability catalog`
+- **R:** R25, R26
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+The catalog's document, and the designs that now link to it for the events.
+
+- `docs/observability.md` (new), in this order:
+  - the introduction every catalog opens with: what it holds and what for, how to read an entry, and one worked example that follows an event from its registry entry to the alert that reads it and the notification on the owner's phone (#15);
+  - the common fields of [ADR-0036](../decisions/0036-log-convention-across-components.md), and the link to the registry for the events;
+  - the criterion by which an event needs an action from the owner (#3);
+  - the level and field names: `warn` and `system` for every component; capture's logs in R2 from before the change keep `warning` and `source`, with a `TODO(T060.2):` marker for the version and date of the change, recorded in Step 32;
+  - the heartbeat checks: capture's (10 min plus 10 min of grace, R43), the pipeline's, and the watchdog's (R20);
+  - the alerts ALR1–ALR15, one row each with its ID, the catalog IDs it checks and its urgency, and no list of events (R26);
+  - how the error budget alerts work, the notification layout, and the LogQL query of each feed's minutes given to the provider over the last 7 days (R40).
+- `docs/designs/d004-bronze-data-capture.md` (modified): D9 links to the catalog for the events.
+- `docs/designs/d008-pipeline-platform-and-walking-skeleton.md` (modified): Observability links to the catalog for the events.
+- Tests: the Inspection rows of R25 and R26.
+
+#### Reads
+
+- [D4](#d4-alerts-carry-their-own-id-and-the-catalog-ids-they-check), [D5](#d5-one-observability-catalog-built-here), [D11](#d11-pages-for-what-waiting-makes-worse-tickets-for-the-rest) and [D13](#d13-a-watchdog-outside-grafana-watches-its-alerting), in this design: the alerts' IDs, the catalog's content, urgency and the watchdog.
+- [Observability catalog](#observability-catalog), [Error budget alerts](#error-budget-alerts), [Thresholds](#thresholds), [Notifications](#notifications), [Watchdog](#watchdog), [Capture silence](#capture-silence), [Warning level](#warning-level) and [Field mapping](#field-mapping), in this design: each section of the document.
+- `.claude/rules/docs/general.md` › Catalogs and `.claude/rules/docs/observability.md`: how a catalog opens and how an entry is written.
+- `contracts/log-events.registry.json`, from Step 1: the event the worked example follows, and the alert IDs the table must hold.
+
+#### Do
+
+1. Write `docs/observability.md` with the sections of Scope, in that order.
+2. Update d004 › D9 and d008 › Observability to link to `docs/observability.md` for the events, keeping their decisions.
+
+#### Check
+
+- The lint hook reports no error on the three files.
+- Every alert ID in the registry has a row in the alerts table, and every row's ID appears in the registry or in [Thresholds](#thresholds): yes/no.
+- The Inspection rows of R25 and R26 in the [Test plan](#26-test-plan) hold: yes/no.
+
+### Step 3 — Data quality catalog: DQM7, DQM10, DQM11
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: d009.s3 set the targets of DQM7 and DQM11`
+- **R:** R30, R31, R32, R33
+- **Model:** sonnet · low
+- **Review:** no
+
+#### Scope
+
+The indicators this design sets, in `docs/data-quality.md` (modified):
+
+- DQM7: one target per system, at least 99.5% of the minutes of each calendar month for AMBici and 97% for Bicing (R30), read by ALR6.
+- DQM10: its target unchanged, read by ALR4.
+- DQM11: each missed minute given to the provider or to capture as D9's table sets, leaving out a minute captured but missing from the station stock (R31, R32); a target of at most 30 minutes given to capture per feed and calendar month, with no target on the provider's (R33), read by ALR15.
+- Each row links to its decision in this design and to its alert in `docs/observability.md`.
+- Tests: the Inspection rows of R30–R33.
+
+#### Reads
+
+- [D7](#d7-capture-completeness-target-per-system), [D8](#d8-page-data-age-keeps-its-target), [D9](#d9-a-missed-minutes-cause-goes-to-whoever-can-act-on-it) and [D10](#d10-a-target-on-captures-own-missed-minutes-only), in this design: the targets and DQM11's attribution table.
+- `docs/data-quality.md`, rows DQM7, DQM10 and DQM11 of Quality indicators: the rows to change.
+
+#### Do
+
+1. Update the rows of DQM7, DQM10 and DQM11 in `docs/data-quality.md` as Scope sets.
+
+#### Check
+
+- The Inspection rows of R30, R31, R32 and R33 in the [Test plan](#26-test-plan) hold: yes/no.
+- The lint hook reports no error.
+
+### Step 4 — Capture: `warn` and `system`
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat!: d009.s4 log capture's warn level and system field`
+- **R:** R27
+- **Model:** sonnet · low
+- **Review:** no
+
+#### Scope
+
+Capture's log contract and the events it writes take the single level name and field name, in one change ([Breaking changes](#27-breaking-changes)).
+
+- `contracts/capture-logs.json` (modified): the valid vectors with `warn` and `system`; one invalid case with level `warning` and one with field `source`, each with its `reason`; one valid vector of `otlp_send_failed` at `warn` with `error_type`, the line capture writes to Workers Logs.
+- `capture/src/log.js` (modified): the level type is `'info' | 'warn' | 'error'`.
+- `capture/src/pass.js` (modified): every event's `source` field becomes `system`, and `warning` becomes `warn`, its comments included. Bronze keys and the code's own `source` keep their name ([What does not change](#28-what-does-not-change)).
+- `capture/test/unit/log.test.js`, `capture/test/integration/pass.test.js`, `capture/test/integration/pass-failures.test.js` (modified): they expect `warn` and `system`.
+- Tests: the contract row of R27, through `capture/test/contract/capture-logs.test.js`, unchanged, which reads the new vectors.
+
+#### Reads
+
+- [Warning level](#warning-level) and [Field mapping](#field-mapping), in this design: the two names and why.
+- [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs): capture's events and fields, already with the new names.
+- `contracts/capture-logs.json` and `capture/test/contract/capture-logs.test.js`: how the vectors are written and read.
+
+#### Do
+
+1. Update `contracts/capture-logs.json` as Scope sets.
+2. Update the three tests to expect `warn` and `system`.
+3. Update `log.js` and `pass.js`.
+4. Run `npm test --prefix capture`.
+
+#### Check
+
+- `npm test --prefix capture` passes.
+- `grep -rn "warning" capture/src` finds no level, and every log field built in `pass.js` with `source.id` is named `system`: yes/no.
+
+### Step 5 — Capture: registry contract test
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `test: d009.s5 check capture's events against the registry`
+- **R:** R25, R27
+- **Model:** sonnet · low
+- **Review:** no
+
+#### Scope
+
+Capture's side of the event registry: the registry is valid, and it holds exactly the events capture writes.
+
+- `capture/package.json`, `capture/package-lock.json` (modified): `@cfworker/json-schema` as a dev dependency, installed with `npm install --save-dev @cfworker/json-schema --prefix capture`, in its latest release at least two weeks old.
+- `capture/test/contract/log-events-registry.test.js` (new), read by relative path as `capture-logs.test.js` reads its vectors:
+  - the registry is valid against `contracts/log-events.schema.json`, draft 2020-12;
+  - each pair of `component` and `event` appears once;
+  - the registry's `capture` events and the events of the valid vectors of `contracts/capture-logs.json` are the same set, each with the same level.
+- Tests: the contract rows of R25 and R27.
+
+#### Reads
+
+- `.claude/rules/code/testing.md` › Contracts between components: reference data validated against its schema by each component that reads it.
+- [Event registry schema](#event-registry-schema) › Beyond the schema, in this design: what the schema cannot check.
+- `capture/test/contract/capture-logs.test.js`: how a contract test reads a file in `contracts/`.
+
+#### Do
+
+1. Install `@cfworker/json-schema` as Scope sets.
+2. Write `log-events-registry.test.js`.
+3. Run `npm test --prefix capture -- test/contract/log-events-registry.test.js`.
+
+#### Check
+
+- `npm test --prefix capture` passes.
+- With one `capture` entry removed from the registry, the test fails, and passes again once it is restored: yes/no.
+
+### Step 6 — Capture: OTLP sender
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s6 build and send capture's OTLP request`
+- **R:** R1, R2, R5, R6
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+The module that turns a pass's lines into an OTLP request and sends it once, never throwing.
+
+- `capture/src/otlp.js` (new): `SEVERITY_NUMBER`, `buildLogsRequest` and `sendLogs`, as [Capture's OTLP sender](#captures-otlp-sender) and [OTLP request mapping](#otlp-request-mapping) set; the time limit covers the whole response, body included, as in `heartbeat.js`.
+- `capture/src/fetch.js` (modified): `otlpTimeoutMs: 10_000` in `LIMITS` and its typedef.
+- `capture/vitest.config.js` (modified): a route `otlp` that answers 200 and keeps each request's body and `Authorization` header by path, read back through a route like `count`; the failures reuse `http-500`, `stall-body` and `network-error`.
+- `capture/test/unit/otlp.test.js` (new): the request's resources, records and attribute types, a `null` field left out, no request with no lines, and the `Authorization` header; a line of an event and a system the code has never seen (R2); each body equal to its line, a redacted secret included (R6); `null` on 2xx, and `http` with its status, `timeout` with a small `otlpTimeoutMs` (R5) and `network` on each failure route.
+- Tests: the unit rows of R2, R5 and R6.
+
+#### Reads
+
+- [OTLP request mapping](#otlp-request-mapping), [Capture's OTLP sender](#captures-otlp-sender) and [Field mapping](#field-mapping), in this design: the contract.
+- `capture/src/heartbeat.js`: the pattern of a request that never throws and whose timeout covers the body.
+- `capture/vitest.config.js`, `ROUTES` and the `count` route: where the new route goes and how a test reads it back.
+
+#### Do
+
+1. Add the `otlp` route to `vitest.config.js`.
+2. Write `otlp.test.js`.
+3. Add `otlpTimeoutMs` to `LIMITS`.
+4. Implement `otlp.js`.
+5. Run `npm test --prefix capture`.
+
+#### Check
+
+- `npm test --prefix capture` passes.
+- Each test of a Test plan row is tagged `Verifies d009 R<n>`: yes/no.
+
+### Step 7 — Capture: heartbeat at every fifth minute
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s7 signal capture's heartbeat every fifth minute`
+- **R:** R43
+- **Model:** sonnet · low
+- **Review:** no
+
+#### Scope
+
+The pass calendar signals the heartbeat at every minute that is a multiple of 5 ([Capture silence](#capture-silence)).
+
+- `capture/src/schedule.js` (modified): the heartbeat at `:00`, `:05`, … `:55`, and no longer at `:22`; the other extra fetches unchanged.
+- `capture/test/unit/schedule.test.js` (modified): the heartbeat at the 288 minutes a day that are multiples of 5 and at no other (R43); 396 extra fetches a day ([d004 › Pass schedule](d004-bronze-data-capture.md#pass-schedule)).
+- `capture/test/integration/pass.test.js` (modified): the heartbeat's integration tests at `:05` instead of `:22`.
+- Tests: the unit row of R43.
+
+#### Reads
+
+- [Capture silence](#capture-silence), in this design: the cadence and why it keeps no state.
+- [d004 › Pass schedule](d004-bronze-data-capture.md#pass-schedule): the calendar, already updated.
+- `capture/src/schedule.js` and `capture/test/unit/schedule.test.js`: the table to change and its tests.
+
+#### Do
+
+1. Update `schedule.test.js` and `pass.test.js`.
+2. Update `schedule.js`.
+3. Run `npm test --prefix capture`.
+
+#### Check
+
+- `npm test --prefix capture` passes.
+- No minute carries two extra fetches: yes/no.
+
+### Step 8 — Capture: the copy in the pass
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s8 send capture's events to Grafana after each pass`
+- **R:** R1, R3, R4
+- **Model:** sonnet · medium
+- **Review:** code and security
+
+#### Scope
+
+Each pass sends its lines to Grafana after its log and its heartbeat, and the send can never change the pass ([Sending the copy](#sending-the-copy)).
+
+- `capture/src/log.js` (modified): `toLines(events)`, each event's `JSON.stringify`; `writeLog` takes those lines.
+- `capture/src/pass.js` (modified): serializes the pass's events once; after the log and the heartbeat, passes the same lines to `sendLogs` inside the `waitUntil` it receives; a failure is written with `console.log` as `otlp_send_failed` at `warn` with `error_type`, and the pass's outcome does not change.
+- `capture/src/worker.js` (modified): passes `OTLP_ENDPOINT`, `OTLP_TOKEN` and `ctx.waitUntil` to `runPass`.
+- `capture/wrangler.jsonc` (modified): `OTLP_ENDPOINT` as a variable, the stack's OTLP logs URL from the owner's account set-up ([Prerequisites](#31-prerequisites)); `OTLP_TOKEN` stays a secret, set in Step 28.
+- `capture/test/unit/log.test.js` (modified): `toLines`.
+- `capture/test/integration/pass.test.js` (modified): the request holds one record per line written to R2, of every level, in order (R1); with the endpoint at `http-500`, `stall-body` or `network-error`, the outcome and the heartbeat equal those of a successful send, and `otlp_send_failed` reaches the console with its `error_type` (R3); the R2 log is byte-identical with a send that succeeds and one that fails (R4); the order is log, heartbeat, copy.
+- Tests: the integration rows of R1, R3 and R4, capture's side.
+
+#### Reads
+
+- [Capture's OTLP sender](#captures-otlp-sender) › Callers and [Sending the copy](#sending-the-copy), in this design: where the send goes and what a failure does.
+- [D2](#d2-the-copy-to-grafana-never-affects-a-run), in this design: the copy never affects a run.
+- [d004 › `log.js`](d004-bronze-data-capture.md#logjs) and [`pass.js`](d004-bronze-data-capture.md#passjs): the contracts the change extends.
+- `capture/src/pass.js` and `capture/src/worker.js`: the order of the log and the heartbeat, and how `runPass` receives its dependencies.
+
+#### Do
+
+1. Update `log.test.js` and `pass.test.js`.
+2. Update `log.js`, `pass.js` and `worker.js`.
+3. Add `OTLP_ENDPOINT` to `wrangler.jsonc`.
+4. Run `npm test --prefix capture`.
+
+#### Check
+
+- `npm test --prefix capture` passes.
+- `grep -rn "OTLP_TOKEN" capture` shows it only in `worker.js` and in no log, error or test fixture: yes/no.
+- Each test of a Test plan row is tagged `Verifies d009 R<n>`: yes/no.
+
+### Step 9 — Pipeline: run settings (core)
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s9 parse the pipeline's run settings`
+- **R:** —
+- **Model:** sonnet · low
+- **Review:** no
+
+#### Scope
+
+The run's cadence, time budget, timeout and memory in one data file, parsed and checked by the core (#9), so Terraform's thresholds and Modal read the same values.
+
+- `pipeline/src/bikesharing/core/run_settings.json` (new): the values of [Pipeline's run settings](#pipelines-run-settings).
+- `pipeline/src/bikesharing/core/settings.py` (modified): `RunSettings`, `parse_run_settings` and `schedule_cron`, as that contract sets; `TIME_BUDGET` stays until Step 10.
+- `pipeline/tests/unit/core/test_settings.py` (new): the repository's `run_settings.json` parses; each invalid input is rejected with `ValueError` (a missing or unknown key, a value that is not a positive integer, a cadence that does not divide 60, a time budget not below the timeout, a timeout not below the cadence); `schedule_cron` gives `*/15 * * * *` for a cadence of 15.
+
+#### Reads
+
+- [Pipeline's run settings](#pipelines-run-settings), in this design: the contract.
+- [d008 › D6](d008-pipeline-platform-and-walking-skeleton.md#d6-provisional-run-bounds): the bounds the parser checks.
+- `pipeline/src/bikesharing/core/settings.py`: where the new items go.
+
+#### Do
+
+1. Write `test_settings.py`.
+2. Write `run_settings.json`.
+3. Implement the new items in `settings.py`.
+4. Run `uv run --directory pipeline pytest tests/unit`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` passes.
+
+### Step 10 — Pipeline: run settings wired in
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `refactor: d009.s10 read the run's bounds from the run settings`
+- **R:** —
+- **Model:** sonnet · medium
+- **Review:** code
+
+#### Scope
+
+The run and the Modal app take their bounds from `run_settings.json`, with the values they have today, so the deployed behaviour does not change.
+
+- `pipeline/src/bikesharing/shell/run_settings.py` (new): `RUN_SETTINGS`, the file parsed once at import.
+- `pipeline/src/bikesharing/shell/run.py` (modified): the time budget from `RUN_SETTINGS`.
+- `pipeline/src/bikesharing/core/settings.py` (modified): `TIME_BUDGET` removed.
+- `pipeline/modal_image.py` (modified): `MEMORY_MIB` and `TIMEOUT_S` from `RUN_SETTINGS`; `run_settings.json` added to the image with `add_local_file`, at its path inside the package, since `add_local_python_source` leaves out non-Python files by default.
+- `pipeline/modal_app.py` (modified): the schedule from `schedule_cron(RUN_SETTINGS)`.
+- `pipeline/modal_one_off.py` keeps its imports unchanged ([What does not change](#28-what-does-not-change)).
+- Tests: the existing tests, unchanged, pass with the same values.
+
+#### Reads
+
+- [Pipeline's run settings](#pipelines-run-settings) › Callers, in this design: who reads which value.
+- `pipeline/modal_image.py`, the image's `add_local_*` calls and the constants; `pipeline/modal_app.py`, the schedule: what changes.
+- `grep -rn "TIME_BUDGET" pipeline`: every use to replace.
+
+#### Do
+
+1. Write `shell/run_settings.py`.
+2. Update `run.py` and remove `TIME_BUDGET` from `settings.py`.
+3. Update `modal_image.py` and `modal_app.py`.
+4. Run `bash pipeline/scripts/check-pipeline.sh`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` passes.
+- `grep -rn "TIME_BUDGET\|= 4096\|= 600\|\*/15" pipeline/src pipeline/modal_image.py pipeline/modal_app.py` finds no value outside `run_settings.json`: yes/no.
+
+### Step 11 — Pipeline: OTLP payload
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s11 build the pipeline's OTLP request`
+- **R:** R1, R2, R6
+- **Model:** sonnet · low
+- **Review:** no
+
+#### Scope
+
+The pure function that turns a run's lines into the OTLP request, the same mapping capture uses.
+
+- `pipeline/src/bikesharing/core/otlp_payload.py` (new): `SEVERITY_NUMBER` and `logs_request`, as [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) and [OTLP request mapping](#otlp-request-mapping) set.
+- `pipeline/tests/unit/core/test_otlp_payload.py` (new): resources, records and attribute types, a `null` field left out, an empty request with no lines; a line of an event and a system the code has never seen (R2); each body equal to its line, a redacted secret included (R6).
+- Tests: the unit rows of R2 and R6, the pipeline's side.
+
+#### Reads
+
+- [OTLP request mapping](#otlp-request-mapping) and [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter), in this design: the contract.
+- `capture/test/unit/otlp.test.js`, from Step 6: the same cases, so both components map alike.
+
+#### Do
+
+1. Write `test_otlp_payload.py`.
+2. Implement `otlp_payload.py`.
+3. Run `uv run --directory pipeline pytest tests/unit`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` passes.
+
+### Step 12 — Pipeline: OTLP exporter
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s12 send the pipeline's OTLP request`
+- **R:** R5
+- **Model:** sonnet · low
+- **Review:** no
+
+#### Scope
+
+The shell's one POST of the request, within its limit, raising on any failure.
+
+- `pipeline/src/bikesharing/shell/otlp_exporter.py` (new): `OtlpTarget` and `send_logs`, as [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) sets, with `urllib`.
+- `pipeline/tests/integration/test_otlp_exporter.py` (new): against a local HTTP server, a 2xx returns; a non-2xx, a response that stalls past a small `timeout_s` (R5) and a refused connection each raise `OSError`; no lines sends nothing; the request carries `Authorization: Basic <token>`.
+- Tests: the integration row of R5.
+
+#### Reads
+
+- [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter), in this design: the contract.
+- `pipeline/src/bikesharing/shell/heartbeat.py` and its integration test: the pattern of a `urllib` request with a timeout, tested against a local server.
+
+#### Do
+
+1. Write `test_otlp_exporter.py`.
+2. Implement `otlp_exporter.py`.
+3. Run `uv run --directory pipeline pytest tests/integration`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` passes.
+
+### Step 13 — Pipeline: the copy in the run
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s13 send the pipeline's events to Grafana after each run`
+- **R:** R1, R3, R4, R6
+- **Model:** sonnet · medium
+- **Review:** code and security
+
+#### Scope
+
+Each scheduled run sends its lines after its log upload and its heartbeat ping, and the send can never change the run ([Sending the copy](#sending-the-copy)).
+
+- `pipeline/src/bikesharing/core/events.py` (modified): `otlp_send_failed(ts, *, error_type)` at `warn`, written to stdout only; `log_upload_failed` written to stdout and kept for the copy.
+- `pipeline/src/bikesharing/shell/event_log.py` (modified): `lines()`, every kept line in order.
+- `pipeline/src/bikesharing/shell/run.py` (modified): `scheduled_config` reads `OTLP_ENDPOINT` and `OTLP_TOKEN` into an `OtlpTarget`, and adds `OTLP_TOKEN` to the run's secrets, so the redaction of [d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability) covers it (R6); `one_off_config` sets no target; `run` sends after the upload and the ping, and catches any exception into `otlp_send_failed`, the outcome unchanged.
+- `pipeline/tests/unit/core/test_events.py` (modified): `otlp_send_failed`.
+- `pipeline/tests/integration/test_event_log.py` (modified): `lines()` holds every kept line, in order, `log_upload_failed` included.
+- `pipeline/tests/integration/test_run.py` (modified): the request holds one record per line uploaded, then `log_upload_failed` and `heartbeat_failed` when they occur (R1); with the target failing or stalling, the outcome and the heartbeat equal those of a successful send, and `otlp_send_failed` reaches stdout with its `error_type` (R3); the uploaded log is byte-identical either way (R4); a one-off run sends nothing.
+- Tests: the integration rows of R1, R3 and R4, the pipeline's side.
+
+#### Reads
+
+- [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) › Callers and [Sending the copy](#sending-the-copy), in this design: the order and what a failure does.
+- [d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability): the redaction and the events written to stdout.
+- `pipeline/src/bikesharing/shell/run.py`, `scheduled_config`, `one_off_config` and the log upload and ping in `run`: where the send goes.
+
+#### Do
+
+1. Update `test_events.py`, `test_event_log.py` and `test_run.py`.
+2. Add `otlp_send_failed` to `events.py` and `lines()` to `event_log.py`.
+3. Update `run.py`.
+4. Run `bash pipeline/scripts/check-pipeline.sh`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` passes.
+- A test shows `OTLP_TOKEN` redacted from a line that carries it: yes/no.
+- Each test of a Test plan row is tagged `Verifies d009 R<n>`: yes/no.
+
+### Step 14 — Pipeline: monitoring Modal Secret
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s14 give the scheduled function the monitoring Secret`
+- **R:** —
+- **Model:** sonnet · low
+- **Review:** security
+
+#### Scope
+
+The OTLP endpoint and token reach the scheduled function only.
+
+- `pipeline/modal_image.py` (modified): `MONITORING_SECRET = ("bikesharing-pipeline-monitoring", ["OTLP_ENDPOINT", "OTLP_TOKEN"])`, named as the other Secrets.
+- `pipeline/modal_app.py` (modified): that Secret in the scheduled function's `secrets`.
+- `pipeline/modal_one_off.py` is not changed: a one-off run has no monitoring Secret ([What does not change](#28-what-does-not-change)).
+
+#### Reads
+
+- [Sending the copy](#sending-the-copy), in this design: the Secret of the scheduled function only.
+- `pipeline/modal_image.py`, the Secret constants, and `pipeline/modal_app.py`, the function's `secrets`: the pattern to follow.
+
+#### Do
+
+1. Add `MONITORING_SECRET` to `modal_image.py`.
+2. Add it to the scheduled function in `modal_app.py`.
+3. Run `bash pipeline/scripts/check-pipeline.sh`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` passes.
+- `grep -n "MONITORING_SECRET" pipeline/modal_one_off.py` finds nothing: yes/no.
+
+### Step 15 — Pipeline: registry contract test
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `test: d009.s15 check the pipeline's events against the registry`
+- **R:** R25, R27
+- **Model:** sonnet · low
+- **Review:** no
+
+#### Scope
+
+The pipeline's side of the event registry, as Step 5 is capture's.
+
+- `pipeline/tests/integration/test_log_events_registry_contract.py` (new):
+  - the registry is valid against `contracts/log-events.schema.json` with `jsonschema`'s draft 2020-12 validator;
+  - each pair of `component` and `event` appears once;
+  - the registry's `pipeline` events and the events `core/events.py` defines are the same set, each with the same level.
+- Tests: the contract rows of R25 and R27, the pipeline's side.
+
+#### Reads
+
+- `.claude/rules/code/testing.md` › Contracts between components, and [Event registry schema](#event-registry-schema) › Beyond the schema, in this design.
+- `pipeline/src/bikesharing/core/events.py`: how each event and its level are defined, to enumerate them.
+- `capture/test/contract/log-events-registry.test.js`, from Step 5: the same checks.
+
+#### Do
+
+1. Write `test_log_events_registry_contract.py`.
+2. Run `uv run --directory pipeline pytest tests/integration`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` passes.
+- With one `pipeline` entry removed from the registry, the test fails, and passes again once it is restored: yes/no.
+
+### Step 16 — Pipeline: DQR12 over 7 days at 95%
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s16 judge capture volume against a 7-day median`
+- **R:** R28, R29
+- **Model:** sonnet · low
+- **Review:** code
+
+#### Scope
+
+DQR12 follows D6, in the model, the history the shell reads, and the catalog, in one change ([Volume drop](#volume-drop)).
+
+- `pipeline/dbt/models/silver/capture_volume.sql` (modified): the median over the 7 days before each capture instant; `drop` below 95% of it; `not_evaluated` with fewer than 60 captures, unchanged.
+- `pipeline/dbt/models/silver/silver.yml` (modified): the model's unit tests for a capture below 95% of the 7-day median, one at it, and one with fewer than 60 captures in those 7 days.
+- `pipeline/src/bikesharing/shell/run.py` (modified): `_VOLUME_WINDOW` is 7 days.
+- `docs/data-quality.md` (modified): DQR12's row with 95% and 7 days, linking to [D6](#d6-volume-drop-at-95-of-a-7-day-median).
+- Tests: the unit rows of R28 and R29, and the Inspection row of R28.
+
+#### Reads
+
+- [D6](#d6-volume-drop-at-95-of-a-7-day-median) and [Volume drop](#volume-drop), in this design: the values and where they apply.
+- [d008 › Transformation in dbt](d008-pipeline-platform-and-walking-skeleton.md#transformation-in-dbt) › Volume drop: the model's columns and statuses.
+- `pipeline/dbt/models/silver/capture_volume.sql` and its unit tests in `silver.yml`: what changes.
+
+#### Do
+
+1. Update the unit tests in `silver.yml`.
+2. Update `capture_volume.sql` and `_VOLUME_WINDOW` in `run.py`.
+3. Update DQR12's row in `docs/data-quality.md`.
+4. Run `bash pipeline/scripts/check-pipeline.sh`.
+
+#### Check
+
+- `bash pipeline/scripts/check-pipeline.sh` passes.
+- The Inspection row of R28 holds: yes/no.
+
+### Step 17 — Monitoring: Terraform pin, provider and lockfile
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `build: d009.s17 pin Terraform and Grafana's provider`
+- **R:** —
+- **Model:** haiku · low
+- **Review:** no
+
+#### Scope
+
+The `monitoring/` component's stack, as `.claude/rules/code/dependencies.md` sets for Terraform.
+
+- `monitoring/.terraform-version` (new): `1.17.1` ([Prerequisites](#31-prerequisites)).
+- `monitoring/versions.tf` (new): `required_version` as a compatibility range that includes 1.17.1, and `grafana/grafana` at `~> 4.54`.
+- `monitoring/.terraform.lock.hcl` (new): written by `terraform providers lock` with the hashes of `darwin_arm64`, the owner's machine, and `linux_amd64`, CI's, 4.54.0 locked.
+- `.gitignore` (modified): Terraform's state files and `.terraform/`.
+
+#### Reads
+
+- `.claude/rules/code/dependencies.md` and `.claude/rules/code/terraform.md`: the files and how the lockfile is written.
+- [Prerequisites](#31-prerequisites), in this design: the versions.
+
+#### Do
+
+1. Write `.terraform-version` and `versions.tf`.
+2. Run `terraform -chdir=monitoring providers lock -platform=darwin_arm64 -platform=linux_amd64`, the owner's Apple silicon machine and CI's.
+3. Update `.gitignore`.
+
+#### Check
+
+- `terraform -chdir=monitoring version` prints `Terraform v1.17.1`: yes/no.
+- `git status` shows no state file or `.terraform/` to commit: yes/no.
+
+### Step 18 — Monitoring: provider, variables and check script
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `build: d009.s18 configure Grafana's provider and the monitoring checks`
+- **R:** R37
+- **Model:** sonnet · low
+- **Review:** security
+
+#### Scope
+
+The provider configured from variables, secrets only from `.env`, and the check that CI runs.
+
+- `monitoring/providers.tf` (new): the provider's `url`, `auth`, `sm_url` and `sm_access_token` from variables.
+- `monitoring/variables.tf` (new): the variables of the File layout; the tokens and the watchdog's URL `sensitive` with no default (R37); the systems' DQM7 targets, the published files and the GitHub base URL with their defaults.
+- `.env.example` (modified): each secret as an empty `TF_VAR_<name>`.
+- `monitoring/scripts/check-monitoring.sh` (new): `terraform fmt -check -recursive`, `init -backend=false -lockfile=readonly`, `validate` and `test`, as CI runs them.
+- `monitoring/tests/alerting.tftest.hcl` (new): `mock_provider "grafana"` and `command = plan`; the first run block checks that the watchdog's URL is `sensitive` with no default (R37).
+- Tests: the unit row of R37.
+
+#### Reads
+
+- [Grafana configuration](#grafana-configuration), in this design: what Terraform manages.
+- [Prerequisites](#31-prerequisites), in this design: the credentials and their scopes.
+- `.claude/rules/code/terraform.md`: secrets, files and the test tool.
+
+#### Do
+
+1. Write `variables.tf` and `providers.tf`.
+2. Update `.env.example`.
+3. Write `check-monitoring.sh` and `alerting.tftest.hcl`.
+4. Run `bash monitoring/scripts/check-monitoring.sh`.
+
+#### Check
+
+- `bash monitoring/scripts/check-monitoring.sh` passes.
+- No token, URL or other secret value appears in `monitoring/` or `.env.example`: yes/no.
+
+### Step 19 — Monitoring: locals
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s19 derive the alerts' thresholds and event selectors`
+- **R:** R14, R15, R16, R22
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+Every threshold and event list the rules use, derived from the registry and the run settings, so no rule holds a literal figure or a hand-written list.
+
+- `monitoring/locals.tf` (new): the registry and `run_settings.json` read with `jsondecode(file(...))`; ALR7's thresholds at 80% of the timeout and of the container's memory (R14); ALR8's at 2 cadences for the pipeline and 5 min for capture (R15); the other thresholds of [Thresholds](#thresholds), each fixed one with its reason in a comment; each alert's event selector from the events that list it; ALR9's events with `needs_action` and no alert (R16), and ALR14's set of registered events (R22).
+- `monitoring/tests/alerting.tftest.hcl` (modified): run blocks for each derived value.
+- Tests: the unit rows of R14 and R15, and the part of R16 and R22 that builds the lists.
+
+#### Reads
+
+- [Thresholds](#thresholds) and [Observability catalog](#observability-catalog), in this design: each threshold and how the registry feeds the rules.
+- `.claude/rules/code/terraform.md`: thresholds as named locals.
+- `contracts/log-events.registry.json` and `pipeline/src/bikesharing/core/run_settings.json`: the data read.
+
+#### Do
+
+1. Write the run blocks in `alerting.tftest.hcl`.
+2. Write `locals.tf`.
+3. Run `bash monitoring/scripts/check-monitoring.sh`.
+
+#### Check
+
+- `bash monitoring/scripts/check-monitoring.sh` passes.
+- `locals.tf` holds every threshold of [Thresholds](#thresholds), and no rule file will need a literal one: yes/no.
+
+### Step 20 — Monitoring: contact points, policies and template
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s20 route and lay out the alert notifications`
+- **R:** R19, R23, R24, R34, R35, R38
+- **Model:** sonnet · medium
+- **Review:** code and security
+
+#### Scope
+
+Where each alert goes and what its notification shows.
+
+- `monitoring/contact_points.tf` (new): email, IRM, and the watchdog's webhook with its URL from the sensitive variable.
+- `monitoring/notification_policies.tf` (new): grouping by `alert_id` and `system` and the repeat intervals of [Notification grouping](#notification-grouping); `urgency = "page"` to IRM (R34), `urgency = "ticket"` to the alert list with no notification (R35); ALR12 to the watchdog every 5 min, and no other policy reaching it (R19).
+- `monitoring/message_template.tf` (new) and `monitoring/templates/notification.tmpl` (new): the layout of [Notifications](#notifications), the alert's ID and checked IDs (R23) and the links to the catalog section, the alert's row and the events in Explore (R24), read only from labels and annotations (R38).
+- `monitoring/tests/alerting.tftest.hcl` (modified): run blocks for the routing and ALR12's policy.
+- Tests: the unit rows of R19, R34 and R35, and the Inspection row of R38.
+
+#### Reads
+
+- [D11](#d11-pages-for-what-waiting-makes-worse-tickets-for-the-rest), [D13](#d13-a-watchdog-outside-grafana-watches-its-alerting) and [D15](#d15-monitoring-security-threats), in this design: urgency, watchdog and what a notification may carry.
+- [Notifications](#notifications), [Notification grouping](#notification-grouping) and [Watchdog](#watchdog), in this design: the layout, grouping and the watchdog's route.
+
+#### Do
+
+1. Write the run blocks in `alerting.tftest.hcl`.
+2. Write `contact_points.tf`, `notification_policies.tf`, `message_template.tf` and `templates/notification.tmpl`.
+3. Run `bash monitoring/scripts/check-monitoring.sh`.
+
+#### Check
+
+- `bash monitoring/scripts/check-monitoring.sh` passes.
+- The template reads no field other than the alert's labels and annotations: yes/no.
+
+### Step 21 — Monitoring: alerts on events
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s21 alert on the events that need action`
+- **R:** R7, R8, R9, R16, R17, R18, R22, R23, R41
+- **Model:** opus · medium
+- **Review:** code
+
+#### Scope
+
+The rules that fire on an event, the pattern the later rule steps follow.
+
+- `monitoring/alert_rules.tf` (new): the rules' folder; ALR1 and ALR2 on failed runtime rules by severity, with `rule` taken from the event as a label (R7, R8); ALR3 on the page's failed deployment (R9); ALR9 (R16), ALR10 (R17), ALR11 (R18) and ALR14 (R22) from the selectors of `locals.tf`; each with `alert_id`, `urgency` and the checked catalog IDs the template reads (R23), and grouped by `system` with no list of systems (R41).
+- `monitoring/tests/alerting.tftest.hcl` (modified): a run block per rule for its query, labels and urgency.
+- Tests: the unit rows of R7–R9, R16–R18, R22, R23 and R41 for these rules.
+
+#### Reads
+
+- [D3](#d3-alerts-on-symptoms-that-need-action) and [D4](#d4-alerts-carry-their-own-id-and-the-catalog-ids-they-check), in this design: the alerts and their labels.
+- [D9](#d9-a-missed-minutes-cause-goes-to-whoever-can-act-on-it), in this design: the causes ALR11 accepts.
+- [Field mapping](#field-mapping) and [Grafana configuration](#grafana-configuration), in this design: the fields the queries select on.
+- `.claude/rules/code/terraform.md`: how rules are written and tested.
+
+#### Do
+
+1. Write the run blocks in `alerting.tftest.hcl`.
+2. Write the rules in `alert_rules.tf`.
+3. Run `bash monitoring/scripts/check-monitoring.sh`.
+
+#### Check
+
+- `bash monitoring/scripts/check-monitoring.sh` passes.
+- No query names a system: yes/no.
+
+### Step 22 — Monitoring: threshold alerts and ALR12
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s22 alert on thresholds and keep the watchdog's alert firing`
+- **R:** R11, R14, R15, R19, R21, R39, R42
+- **Model:** sonnet · medium
+- **Review:** code
+
+#### Scope
+
+The rules that fire on a count or a measure over a window, and the rule the watchdog listens to.
+
+- `monitoring/alert_rules.tf` (modified): ALR5, minutes in a row with no clean capture per system and feed, as a page, held only while capture's events reach Grafana (R11, R42); ALR7 on `duration_s` and `peak_memory_mb` (R14); ALR8 per component (R15); ALR13 on the Free tier's use (R21); ALR15 on each feed's minutes given to capture over 7 days (R39); ALR12, whose condition always holds (R19). Thresholds from `locals.tf`.
+- `monitoring/tests/alerting.tftest.hcl` (modified): a run block per rule.
+- Tests: the unit rows of R11, R14, R15, R19, R21, R39 and ALR5's part of R42.
+
+#### Reads
+
+- [Thresholds](#thresholds), [Capture silence](#capture-silence) and [Watchdog](#watchdog), in this design: each threshold, the condition of R42 and ALR12.
+- [D10](#d10-a-target-on-captures-own-missed-minutes-only), in this design: how ALR15 counts.
+- `monitoring/alert_rules.tf`, from Step 21: the pattern to follow.
+
+#### Do
+
+1. Write the run blocks in `alerting.tftest.hcl`.
+2. Add the rules to `alert_rules.tf`.
+3. Run `bash monitoring/scripts/check-monitoring.sh`.
+
+#### Check
+
+- `bash monitoring/scripts/check-monitoring.sh` passes.
+
+### Step 23 — Monitoring: error budget module
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s23 alert on each system's error budget burn`
+- **R:** R12, R13, R42
+- **Model:** sonnet · medium
+- **Review:** code
+
+#### Scope
+
+ALR6's three burn-rate levels, one rule group per system.
+
+- `monitoring/modules/error_budget_alert/main.tf` and `variables.tf` (new): as [Error budget alert module](#error-budget-alert-module) sets.
+- `monitoring/alert_rules.tf` (modified): the module called once per system, with its DQM7 target from the variables.
+- `monitoring/tests/alerting.tftest.hcl` (modified): three rules per system with their burn rates, windows and thresholds, both windows required, the 1 h and 6 h levels as pages and the 3 d level as a ticket (R12, R13); each held only while capture's events reach Grafana (R42); a target outside (0, 1) rejected.
+- Tests: the unit rows of R12 and R13, and ALR6's part of R42.
+
+#### Reads
+
+- [Error budget alerts](#error-budget-alerts) and [Error budget alert module](#error-budget-alert-module), in this design: the levels and the module's contract.
+- [D7](#d7-capture-completeness-target-per-system), in this design: the targets.
+
+#### Do
+
+1. Write the run blocks in `alerting.tftest.hcl`.
+2. Write the module and call it from `alert_rules.tf`.
+3. Run `bash monitoring/scripts/check-monitoring.sh`.
+
+#### Check
+
+- `bash monitoring/scripts/check-monitoring.sh` passes.
+
+### Step 24 — Monitoring: synthetic check
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d009.s24 check the published files' age from outside`
+- **R:** R10, R16, R22
+- **Model:** sonnet · medium
+- **Review:** code and security
+
+#### Scope
+
+ALR4's check from three probes, and the last alert, which completes the set the registry may cite.
+
+- `monitoring/synthetic_check.tf` (new): a scripted k6 check every 5 min from three probes, with the published files and ALR4's threshold from `locals.tf`.
+- `monitoring/checks/published_file_age.js` (new): reads each file the page serves, and fails when its data's age since `data_instant` exceeds the threshold or it cannot be read or parsed.
+- `monitoring/alert_rules.tf` (modified): ALR4, firing when at least two of the three probes fail, as a page.
+- `monitoring/tests/alerting.tftest.hcl` (modified): the check's frequency, probes and threshold, and ALR4's condition (R10); every alert ID in the registry is one Terraform declares (R16, R22).
+- Tests: the unit row of R10, and the remaining part of R16 and R22.
+
+#### Reads
+
+- [D8](#d8-page-data-age-keeps-its-target) and [D14](#d14-the-synthetic-check-confirms-a-failure-from-two-of-three-probes), in this design: the target and the two of three probes.
+- [Synthetic check](#synthetic-check), in this design: what the script measures and why not `Last-Modified`.
+- `pipeline/src/bikesharing/core/published_file.py`: where `data_instant` sits in a published file.
+
+#### Do
+
+1. Write the run blocks in `alerting.tftest.hcl`.
+2. Write `published_file_age.js` and `synthetic_check.tf`.
+3. Add ALR4 to `alert_rules.tf`.
+4. Run `bash monitoring/scripts/check-monitoring.sh`.
+
+#### Check
+
+- `bash monitoring/scripts/check-monitoring.sh` passes.
+- The script fetches only the page's public files and sends no credential: yes/no.
+
+### Step 25 — CI job monitoring and filters
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `ci: d009.s25 add the monitoring job and the registry to the filters`
+- **R:** —
+- **Model:** sonnet · low
+- **Review:** code
+
+#### Scope
+
+The `monitoring` component in CI, and every job that reads a shared file runs when it changes.
+
+- `.github/workflows/ci.yml` (modified): the job `monitoring`, following `.claude/rules/code/ci.md`, running `bash monitoring/scripts/check-monitoring.sh`; its filter holds `monitoring/**`, the event registry, its schema and `pipeline/src/bikesharing/core/run_settings.json`, which Terraform reads; the filters of `capture` and `pipeline` add the registry and its schema.
+- `docs/testing-strategy.md` (modified): the monitoring component's section, and the registry tests of capture and the pipeline.
+
+#### Reads
+
+- `.claude/rules/code/ci.md`: the recipe of a component job and its filter.
+- `.github/workflows/ci.yml`: the existing jobs and filters.
+- `docs/testing-strategy.md`, a component's section: the layout of the new one.
+- [Test plan](#26-test-plan), in this design: what `terraform test` verifies and what it does not.
+
+#### Do
+
+1. Add the job and the filters to `ci.yml`.
+2. Update `docs/testing-strategy.md`.
+
+#### Check
+
+- The job follows each item of the recipe in `ci.md`, Terraform's version read from `.terraform-version`: yes/no.
+- Each file Terraform reads with `file(...)` is in the job's filter: yes/no.
+- The lint hook reports no error on `testing-strategy.md`.
+
+### Step 26 — Architecture
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: d009.s26 add monitoring to the architecture`
+- **R:** —
+- **Model:** sonnet · low
+- **Review:** no
+
+#### Scope
+
+- `docs/architecture.md` (modified): monitoring as a building block, Grafana Cloud configured as code from `monitoring/`; its deployment, applied by the owner as [ADR-0051](../decisions/0051-monitoring-configuration-as-code.md) sets; the watchdog beside the heartbeats in Healthchecks.io; the event registry as a shared contract.
+
+#### Reads
+
+- [ADR-0051](../decisions/0051-monitoring-configuration-as-code.md): where the configuration lives and how it is applied.
+- [D13](#d13-a-watchdog-outside-grafana-watches-its-alerting) and [Observability catalog](#observability-catalog), in this design: the watchdog and the registry.
+- `docs/architecture.md`, building blocks and deployment view: where each item goes.
+- `.claude/rules/docs/architecture.md`: how the document is written.
+
+#### Do
+
+1. Update `docs/architecture.md`.
+
+#### Check
+
+- The lint hook reports no error.
+- Every statement added cites its ADR or decision: yes/no.
+
+### Step 27 — PR and merge
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **R:** —
+- **Model:** haiku · low
+- **Review:** no
+
+#### Scope
+
+The build reaches `main`; the task stays open until the checks of Step 32.
+
+#### Reads
+
+- CLAUDE.md › Branches, PRs and CI: the PR's title, description and merge.
+
+#### Do
+
+1. Push `t060.2-monitoring` and open the PR `T060.2: Monitoring capture and pipeline`, with 2–3 lines of description and `Refs #64`.
+2. Wait for every required check to pass, `monitoring` included.
+3. Rebase merge, delete the local branch with `-D`, and recreate `t060.2-monitoring` from an up-to-date `main`.
+
+#### Check
+
+- The PR is merged with every check green: yes/no.
+
+### Step 28 — Deploy capture
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **R:** R43
+- **Model:** haiku · low
+- **Review:** no
+
+#### Scope
+
+Capture sends its events to Grafana, and its heartbeat check follows the new cadence.
+
+#### Reads
+
+- [d004 › Deployment](d004-bronze-data-capture.md#deployment): how capture is deployed and its smoke test.
+- [Capture's OTLP sender](#captures-otlp-sender), in this design: `OTLP_TOKEN` is base64 of `<instance ID>:<token>`.
+
+#### Do
+
+1. Run `npx wrangler secret put OTLP_TOKEN` in `capture/`, pasting base64 of `<instance ID>:<token>` with the `logs:write` token of [Prerequisites](#31-prerequisites).
+2. Deploy capture and run its smoke test, as d004 › Deployment sets.
+3. Once Healthchecks.io shows a signal at a minute that is a multiple of 5, set capture's check to a period of 10 min and a grace of 10 min. Not before: the Worker deployed until then signals once an hour.
+
+#### Check
+
+- Grafana's Explore shows capture's events with `warn` and `system`: yes/no.
+- Capture's check in Healthchecks.io has a 10 min period and 10 min of grace, and is up (R43, Inspection): yes/no.
+
+### Step 29 — Deploy the pipeline
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **R:** —
+- **Model:** haiku · low
+- **Review:** no
+
+#### Scope
+
+The scheduled pipeline sends its events to Grafana; a one-off run sends nothing.
+
+#### Reads
+
+- [Step 14](#step-14--pipeline-monitoring-modal-secret), in this design: the Secret's name and keys.
+
+#### Do
+
+1. Create the Modal Secret `bikesharing-pipeline-monitoring` with `OTLP_ENDPOINT`, the stack's OTLP logs URL, and `OTLP_TOKEN`, the value of Step 28.
+2. Run `bash pipeline/scripts/deploy.sh`.
+
+#### Check
+
+- After the next scheduled run, Grafana's Explore shows the pipeline's events: yes/no.
+
+### Step 30 — Watchdog and `terraform apply`
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **R:** R20
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+Grafana's alerts, contact points, synthetic check and the watchdog are live.
+
+#### Reads
+
+- [Watchdog](#watchdog), in this design: the check's period and grace.
+- [ADR-0051](../decisions/0051-monitoring-configuration-as-code.md): how the configuration is applied and where its state lives.
+
+#### Do
+
+1. Create the watchdog's check in Healthchecks.io, with a period of 5 min, a grace of 10 min and the owner's email.
+2. Set its signal URL and the Grafana credentials in `.env`, as `.env.example` names them.
+3. With `.env` loaded, run `terraform -chdir=monitoring init`, then `plan`, and `apply` once the plan shows only the resources of this design.
+
+#### Check
+
+- The watchdog's check has a 5 min period, 10 min of grace and the owner's email, and is up (R20, Inspection): yes/no.
+- Grafana shows the rules ALR1–ALR15, and the synthetic check runs from three probes: yes/no.
+
+### Step 31 — Demonstrations
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **R:** R10, R23, R24, R36, R40
+- **Model:** sonnet · medium
+- **Review:** no
+
+#### Scope
+
+The Demonstration rows of the [Test plan](#26-test-plan), and the notifications of [Done when](#14-done-when).
+
+#### Reads
+
+- [Test plan](#26-test-plan), the Demonstration rows, and [Done when](#14-done-when), in this design.
+- `docs/observability.md`: the provider's minutes query.
+
+#### Do
+
+1. Send a test page and a test ticket from Grafana.
+2. Run the synthetic check with ALR4's threshold set to 0 min for one probe, then restore it.
+3. Open a test notification's links.
+4. Run the provider's minutes query in Explore, in the browser and the mobile app.
+
+#### Check
+
+- The test page rings on the phone until acknowledged, and the test ticket appears in the app's list with no notification: yes/no.
+- The k6 script passes on the live file and fails the probe with a threshold of 0 min (R10): yes/no.
+- The notification shows the alert's ID and checked IDs, and its links open the catalog section, the alert's row and the events in Explore (R23, R24): yes/no.
+- Explore shows events of capture and the pipeline and the synthetic check's results, in the browser and the app (R36), and the query shows each feed's minutes given to the provider over 7 days (R40): yes/no.
+
+### Step 32 — Production checks and close
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** `docs: d009.s32 record the production checks and close`
+- **R:** —
+- **Model:** sonnet · low
+- **Review:** no
+
+#### Scope
+
+The checks of [Done when](#14-done-when) on production data, and the records that close the task, written by the session that guides the owner.
+
+- `docs/observability.md` (modified): the version and date capture changed to `warn` and `system`, resolving its `TODO(T060.2):` marker.
+- `docs/designs/d009-monitoring.md` (modified): Close, with the Grafana account's facts and Free tier features of [Prerequisites](#31-prerequisites) and the checks below.
+
+#### Reads
+
+- [Done when](#14-done-when) and [Prerequisites](#31-prerequisites), in this design: what is recorded.
+
+#### Do
+
+1. Check that events of capture and of the pipeline reach Grafana, the watchdog's check is green, and the synthetic check reads the page from its three probes.
+2. Record the outcomes, the account's facts and capture's deployed version and date.
+3. Open the PR `T060.2: Monitoring capture and pipeline` with `Closes #64`, and merge it as in Step 27.
+
+#### Check
+
+- Every item of Done when is recorded in Close: yes/no.
+- `grep -rn "TODO(T060.2)" .` finds nothing: yes/no.
 
 ## 4. Close
 
