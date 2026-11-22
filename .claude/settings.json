@@ -16,6 +16,7 @@
       "Bash(npm test)", "Bash(npm test *)",
       "Bash(uv run --directory pipeline pytest)", "Bash(uv run --directory pipeline pytest *)",
       "Bash(bash pipeline/scripts/check-pipeline.sh)",
+      "Bash(bash monitoring/scripts/check-monitoring.sh)",
 
       "Bash(node --version)", "Bash(python3 --version)", "Bash(duckdb --version)"
     ],
