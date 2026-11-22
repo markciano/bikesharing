@@ -19,8 +19,8 @@ Phase: the blocks and reviews completed. A document-only task shows only Spec ·
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
 - State: Draft 📝
-- Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Spec › Failure cases, every open question decided. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5), the thresholds of ALR4, ALR7 and the heartbeat derived from the pipeline's cadence, so a change of cadence is one setting (D8); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
+- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Current: Plan › step 1, the list of concerns. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`; D5 has d004 and d008 link to the catalog for the events: all planned in File layout. Parked for the Plan: one name for the warning level and where the observability catalog lives (D5); the thresholds of ALR4, ALR5, ALR6's burn rates, ALR7, ALR8, ALR13 and ALR15, the watchdog's period and grace time, the synthetic check's frequency and the send's time limit, derived from the pipeline's cadence where they depend on it, so a change of cadence is one setting (D8); alert labels taken only from fields with few values (system, feed, rule, event); a rule or template item by which a design that adds or changes an event classifies it in the catalog (D5). Parked, to propose to the owner: in the design template, rejected options only when a real alternative was weighed; a design-skill rule to explain each ID with an example in conversation.
 
 ## 1. Spec — what and why
 
@@ -49,7 +49,7 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 
 #### D1. Every event of every level reaches Grafana
 
-Every event capture and the pipeline write, of every level, reaches Grafana Cloud, following [s018 › D1](../spikes/s018-monitoring-tool.md#d1-r2-as-the-record-the-tool-with-a-copy): R2 is the record and Grafana the hot copy (tiered storage). The owner queries the last 14 days there, the Free tier's retention; older events stay in R2 and are queried with SQL ([ADR-0036](../decisions/0036-log-convention-across-components.md)). The page runs no code of its own, so it appears through the pipeline's deployment events and through the synthetic check that reads its files as a visitor does ([s018 › D6](../spikes/s018-monitoring-tool.md#d6-quality-indicators-reach-the-tool-by-push)). A new event, field or system, such as those later children add, reaches Grafana and its queries with no change to the sending, since queries and alerts select on the fields events carry, never on a closed list of systems or events.
+Every event capture and the pipeline write, of every level, reaches Grafana Cloud, following [s018 › D1](../spikes/s018-monitoring-tool.md#d1-r2-as-the-record-the-tool-with-a-copy): R2 is the record and Grafana the hot copy (tiered storage). The owner queries the last 14 days there, the Free tier's retention; older events stay in R2 and are queried with SQL ([ADR-0036](../decisions/0036-log-convention-across-components.md)). The page runs no code of its own, so it appears through the pipeline's deployment events and through the synthetic check that reads its files as a visitor does ([s018 › D6](../spikes/s018-monitoring-tool.md#d6-quality-indicators-reach-the-tool-by-push)). A new event, field or system, such as those later children add, reaches Grafana and its queries with no change to the sending, since queries and alerts select on the fields events carry, never on a closed list of systems; the list of events lives in the observability catalog, which ALR9 and ALR14 read so that a new event is classified (D5).
 
 - **What would change it:** an estimated volume close to the Free tier's 50 GB a month; today it is about 200 MB. Then the events of level `info` that no query or alert reads are the first left out.
 
@@ -79,7 +79,7 @@ An alert fires on a symptom that needs an action from the owner, not on each err
 | ALR3 | The page's deployment fails (`page_deploy_failed`) | Pipeline | The page stops updating |
 | ALR4 | A published file is older than its target (DQM10, synthetic check) | Page | What a visitor sees, whatever the cause |
 | ALR5 | A feed has had no clean capture for too many minutes in a row (DQM11) | Capture | A sustained failure, not a single one |
-| ALR6 | Capture burns its monthly error budget (DQM7, 99.5%) at a rate that would exhaust it | Capture | The standard SLO burn-rate alert |
+| ALR6 | Capture burns its monthly error budget (DQM7, each system's target) at a rate that would exhaust it | Capture | The standard SLO burn-rate alert |
 | ALR7 | A run nears its time or memory limit (`duration_s`, `peak_memory_mb`) | Pipeline | Warns before the timeout or a memory kill ends runs ([ADR-0027](../decisions/0027-modal-as-execution-platform.md)) |
 | ALR8 | A component sends no events to Grafana for N minutes | Both | The send is broken (D2) |
 | ALR9 | An event the observability catalog marks as actionable and no other alert covers, such as `heartbeat_failed`, `log_upload_failed` or `stage_drained` | Both | Single warnings of low urgency; `fetch_retried`, about 32 a day, is not actionable: a retry that succeeds needs no action and one that fails is a `feed_failed` |
@@ -128,7 +128,7 @@ Rejected: 95% over 24 h. It keeps the window and the history the run reads, but 
 
 #### D7. Capture completeness target per system
 
-DQM7 keeps its definition and takes one target per system: at least 99.5% of the minutes of each calendar month for AMBici and 97% for Bicing. Over the first 14.5 days of production capture (2026-11-07 to 2026-11-21), AMBici captured 99.9% of its minutes, losing 17 to scattered 5xx responses and timeouts, while Bicing captured 97.8%, losing 464, 98% of them to a 403 from the provider, almost always a single minute at a time, about 32 a day, worst day 97.15% ([`spikes/d009-baselines/indicator-targets/`](../../spikes/d009-baselines/indicator-targets/)). Each target sits just below what production shows, following the SRE practice of setting an SLO from measured performance and revising it, so ALR6 stays quiet in normal operation and fires when a system gets worse. The captures copied from V4 before 2026-11-07 do not count: another capture wrote them, with no pass logs to give the cause of a gap. **refines [d004 › D6](d004-bronze-data-capture.md#d6-capture-completeness-target)**
+DQM7 keeps its definition and takes one target per system: at least 99.5% of the minutes of each calendar month for AMBici and 97% for Bicing. Over the first 14.5 days of production capture (2026-11-07 to 2026-11-21), AMBici captured 99.9% of its minutes, losing 17 to scattered 5xx responses and timeouts, while Bicing captured 97.8%, losing 464, 98% of them to a 403 from the provider, almost always a single minute at a time, about 32 a day, worst day 97.15% ([`spikes/d009-baselines/indicator-targets/`](../../spikes/d009-baselines/indicator-targets/)). Each target sits just below what production shows, following the SRE practice of setting an SLO from measured performance and revising it, so ALR6 stays quiet in normal operation and fires when a system gets worse. The captures copied from V4 before 2026-11-07 do not count in this baseline: another capture wrote them, with no pass logs to give the cause of a gap. **refines [d004 › D6](d004-bronze-data-capture.md#d6-capture-completeness-target)**
 
 - **What would change it:** the first full calendar month of production, December 2026, with Bicing clearly above or below 97%: its target is revised with that month. If Bicing's 403 stops, Bicing returns to 99.5%.
 
@@ -248,13 +248,13 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R17** When an `index_refreshed` event lists `unknown_feeds`, Grafana shall raise ALR10 as a ticket. (D3, D11)
 - **R18** When a pass logs a cause of a missed minute that D9's table does not list, Grafana shall raise ALR11 as a ticket. (D3, D9, D11)
 - **R19** Grafana shall keep ALR12 always firing, signalling the heartbeat service once every period set in the Plan. (D13)
-- **R20** If the heartbeat service receives no signal of ALR12 within its period and grace time, then the heartbeat service shall email the owner. (D11, D13)
+- **R20** If the heartbeat service receives no signal of ALR12 within its period and grace time, then the heartbeat service shall email the owner, at any hour. (D11, D13)
 - **R21** When Grafana's use of a Free tier limit, logs a month or synthetic check executions, exceeds ALR13's threshold, set in the Plan, Grafana shall raise ALR13 as a ticket. (D3, D11)
 - **R22** When an event that the observability catalog does not list reaches Grafana, Grafana shall raise ALR14 as a ticket. (D3, D5, D11)
 - **R23** Each alert notification shall show the alert's ID and the catalog IDs it checks. (D4)
 - **R24** Each alert notification shall link to the events in Grafana that raised it. (D4)
-- **R25** The observability catalog shall list, for every event of capture and the pipeline, its level, its own fields, whether it needs an action from the owner, and the alerts that read it. (D5)
-- **R26** The observability catalog shall list every alert with its ID, the catalog IDs it checks and its urgency. (D4, D5)
+- **R25** The observability catalog shall list the common fields of [ADR-0036](../decisions/0036-log-convention-across-components.md), the heartbeat checks and, for every event of capture and the pipeline, its level, its own fields, whether it needs an action from the owner, and the alerts that read it. (D5)
+- **R26** The observability catalog shall list every alert with its ID, the catalog IDs it checks and its urgency. (D4, D5, D11)
 - **R27** The observability catalog shall give one name to the warning level of capture and the pipeline. (D5)
 - **R28** When a capture of a system lists fewer than 95% of the median number of stations of that system's captures in the 7 days before its capture instant, the pipeline shall flag it under DQR12. (D6)
 - **R29** While a system has fewer than 60 captures in the 7 days before a capture instant, the pipeline shall not evaluate DQR12 for that capture. (D6)
@@ -262,12 +262,14 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R31** DQM11 shall give each minute with no capture of a feed to the provider or to capture by the cause its pass logs, as D9's table sets. (D9)
 - **R32** DQM11 shall leave out a minute captured but missing from the station stock. (D9)
 - **R33** The data quality catalog shall set DQM11's target to at most 30 minutes given to capture per feed and calendar month, with no target on the minutes given to the provider. (D10)
-- **R34** When a page fires, Grafana shall notify the owner in the Grafana mobile app, at any hour, until the owner acknowledges it. (D11)
+- **R34** When a page other than ALR12 fires, Grafana shall notify the owner in the Grafana mobile app, at any hour, until the owner acknowledges it. (D11)
 - **R35** When a ticket fires, Grafana shall add it to the app's list of alerts with no notification, until the owner closes it. (D11)
-- **R36** Grafana shall show the health of capture, the pipeline and the page over the last 14 days, in the browser and in the mobile app. (D12)
+- **R36** Grafana shall show, over the last 14 days, the events of capture and the pipeline and the results of the synthetic check, in the browser and in the mobile app. (D1, D12)
 - **R37** The watchdog's signal URL shall be kept only in Grafana's notification setting, never in code. (D15)
 - **R38** Alert notifications shall carry no credentials and no visitor data. (D15)
 - **R39** When a feed's minutes given to capture in the calendar month exceed ALR15's share of DQM11's target, set in the Plan, Grafana shall raise ALR15 as a ticket. (D3, D10, D11)
+- **R40** Grafana shall show each feed's minutes given to the provider in the calendar month, with no target. (D10)
+- **R41** Grafana's queries and alerts shall select events by the fields they carry, with no list of systems. (D1)
 
 ### 1.4 Done when
 
@@ -287,13 +289,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - Alerts on quarantined rows, once the quarantine table exists — T060.5
 - Targets of DQM1–DQM3, rows of the review table — T060.6
 - A project-wide threat catalog with global IDs (`THG`), and the threat ID on the alerts that detect one — T073
-
-### 1.6 Open questions
-
-<!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
-
-| OQ | Question | Depends on | Notes |
-|---|---|---|---|
 
 ## 2. Plan — how
 
