@@ -892,9 +892,10 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 - **Grafana credentials**, each with the narrowest scope that works:
   - a stack service account token for Terraform's alerting and IRM resources (the provider's `auth`), with the `plugins.app:access` permission IRM needs;
   - a Synthetic Monitoring access token for ALR4's check (the provider's `sm_access_token`), with the stack's Synthetic Monitoring URL;
-  - an access policy token with the `logs:write` scope only, for the OTLP copy of capture and the pipeline.
+  - two access policy tokens with the `logs:write` scope only, one for capture's OTLP copy and one for the pipeline's, so one is revoked without the other ([s018 › TH2](../spikes/s018-monitoring-tool.md#d8-monitoring-tool-security-threats)).
 
-  The first two and the URL go in `.env` as Terraform variables; the third stays with the owner until it is set as a Worker secret and a Modal Secret. Verify: each token is listed in the console with that scope and no other.
+  The first two and the URL go in `.env` as Terraform variables; the two `logs:write` tokens stay with the owner until they are set as a Worker secret (Step 28) and a Modal Secret (Step 29). Verify: each token is listed in the console with that scope and no other.
+- **Security controls** of [s018 › D8](../spikes/s018-monitoring-tool.md#d8-monitoring-tool-security-threats), applied at account set-up: two-factor authentication with TOTP on the owner's sign-in, the owner as the only user (TH1), and no public dashboard or shared snapshot (TH3). Verify in the console's security and user settings. Record each in Close.
 - **Grafana mobile app** with IRM, signed in to the owner's account, notifications allowed, and the owner's personal rules for important notifications set to a push notification that overrides Do Not Disturb (iOS: "Override DND for important" and Critical Alerts allowed; Android: the Important channel overrides Do Not Disturb) ([Notification routing](#notification-routing)). Verify: an important test notification rings with the phone in Do Not Disturb.
 
 ### Step 1 — Event registry and its schema
@@ -1888,7 +1889,7 @@ Capture sends its events to Grafana, and its heartbeat check follows the new cad
 
 #### Do
 
-1. Run `npx wrangler secret put OTLP_TOKEN` in `capture/`, pasting base64 of `<instance ID>:<token>` with the `logs:write` token of [Prerequisites](#31-prerequisites).
+1. Run `npx wrangler secret put OTLP_TOKEN` in `capture/`, pasting base64 of `<instance ID>:<token>` with capture's `logs:write` token of [Prerequisites](#31-prerequisites).
 2. Deploy capture and run its smoke test, as d004 › Deployment sets.
 3. Once Healthchecks.io shows a signal at a minute that is a multiple of 5, set capture's check to a period of 10 min and a grace of 10 min. Not before: the Worker deployed until then signals once an hour.
 
@@ -1916,7 +1917,7 @@ The scheduled pipeline sends its events to Grafana; a one-off run sends nothing.
 
 #### Do
 
-1. Create the Modal Secret `bikesharing-pipeline-monitoring` with `OTLP_ENDPOINT`, the stack's OTLP logs URL, and `OTLP_TOKEN`, the value of Step 28.
+1. Create the Modal Secret `bikesharing-pipeline-monitoring` with `OTLP_ENDPOINT`, the stack's OTLP logs URL, and `OTLP_TOKEN`, base64 of `<instance ID>:<token>` with the pipeline's `logs:write` token of [Prerequisites](#31-prerequisites), never capture's.
 2. Run `bash pipeline/scripts/deploy.sh`.
 
 #### Check
@@ -2007,7 +2008,7 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 #### Do
 
 1. Check that events of capture and of the pipeline reach Grafana, the watchdog's check is green, and the synthetic check reads the page from its three probes.
-2. Record the outcomes, the account's facts and capture's deployed version and date.
+2. Record the outcomes, the account's facts and security controls, and capture's deployed version and date.
 3. Open the PR `T060.2: Monitoring capture and pipeline` with `Closes #64`, and merge it as in Step 27.
 
 #### Check
