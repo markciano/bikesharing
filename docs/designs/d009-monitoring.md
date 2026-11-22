@@ -273,7 +273,9 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
-- `<extra condition>`
+- When the owner creates the Grafana Cloud account, the three facts [s018 › D8](../spikes/s018-monitoring-tool.md#d8-monitoring-tool-security-threats) leaves unchecked are checked and recorded in Close: tokens scoped to writing logs only, a stack in an EU region, and a Free tier that needs no payment method.
+- A test page rings on the owner's phone until acknowledged, and a test ticket appears in the app's list of alerts with no notification.
+- With production data, after the merge: events of capture and of the pipeline reach Grafana, the watchdog's check is green in Healthchecks.io, and the synthetic check reads the page from its three probes.
 
 ### 1.5 Out of scope
 
