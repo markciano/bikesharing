@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › File layout; concerns #1–#11 decided. File layout also plans these changes to other documents: d004 › D6, D9 (with its R20 and the `level` type), D10 and its R19; d008 › D4; DQM7, DQM10, DQM11 and DQR12 in `data-quality.md`; links to the catalog from d004 and d008. CLAUDE.md › Project structure already lists `monitoring/` and the event registry in `contracts/`.
+- Current: Plan › Components; File layout written. Components agreed with the owner: `capture/src/otlp.js`; `core/otlp_payload.py` with `shell/otlp_exporter.py`; `core/settings.py` with the shape of `run_settings.json`; `contracts/log-events.schema.json`; the module `monitoring/modules/error_budget_alert`. Then Test plan, then What does not change, which holds: `pipeline/modal_one_off.py` gets no monitoring Secret (d008 › Observability).
 
 ## 1. Spec — what and why
 
