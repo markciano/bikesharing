@@ -206,7 +206,9 @@ describe("a capture pass", () => {
   // Verifies d004 R17
   it("sends one heartbeat and logs heartbeat_sent at the heartbeat minute with every dynamic feed stored", async () => {
     await seedIndexes();
-    const scheduledTime = minuteWhere((extra) => extra?.type === "heartbeat");
+    // Minute 5: the first heartbeat minute of an hour that is not the hour's own start
+    // (d009, Capture silence).
+    const scheduledTime = DAY + 5 * 60_000;
 
     const { runId } = await runAt(scheduledTime, 5, `${SIM}/heartbeat/r17`);
 
