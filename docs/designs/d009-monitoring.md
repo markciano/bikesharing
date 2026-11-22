@@ -358,6 +358,23 @@ A Terraform module builds the three levels from each system's target, so a new s
 
 - **What would change it:** a longer retention, from a paid plan, or many more SLOs: Grafana's SLO app then gives its budget view, with the same queries kept as Loki recording rules; the alert, its ID and its requirements are unchanged.
 
+#### Thresholds
+
+Each threshold is a formula over the settings it depends on, never a figure measured on the walking skeleton, so a change of cadence, time budget or container size changes every threshold that depends on it with no rewrite; the measured figures only show that each alert stays quiet today.
+
+| Threshold | Formula | Today | Measured today |
+|---|---|---|---|
+| ALR4, age of a published file | cadence + time budget, DQM10's target (D8) | 22 min | 19.6 min at most |
+| Synthetic check frequency | fixed, while the cadence is longer than it | 5 min | — |
+| ALR7, run duration (`duration_s`) | 80% of the time budget | 336 s | 43–70 s per steady-state run |
+| ALR7, run memory (`peak_memory_mb`) | 80% of the container's memory | 3,436 MB (80% of 4,096 MiB) | 2,428 MB at most |
+| ALR8, pipeline silent in Grafana | 2 × cadence | 30 min | — |
+| Pipeline's send time limit (R5) | fixed, one attempt | 10 s | — |
+
+ALR4 fires at the target itself, since the target is what the page promises its visitor. ALR7 follows the practice of warning at 80% of a capacity limit: runs that grow towards the time budget as later children add models raise it, which is the signal to review the cadence or the budget. ALR8 at two cadences lets one lost send go, since the copy is best-effort (D2); a run that never starts is reported by the heartbeat. The pipeline's send uses the per-attempt timeout of the heartbeat's pings ([d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability)). **#8**
+
+The pipeline's cadence, time budget, timeout and container memory live in one data file, `pipeline/src/bikesharing/core/run_settings.json`: `settings.py` loads it and keeps exposing the same typed constants, and Terraform reads it with `jsondecode(file(...))`, so the pipeline and its thresholds change together. The period and grace of the heartbeat's check stay in Healthchecks.io's console, outside Terraform (ADR-0051), and the catalog states that a change of cadence also changes them there. **#9**
+
 #### Sending the copy
 
 Each component sends its events over OTLP/HTTP with JSON encoding, as [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md) sets, in one request per pass or run, after writing them to R2 (D2):
@@ -387,6 +404,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 5 | [Field mapping](#field-mapping) | `system` for the bike sharing system in every component's log events; capture changes from `source` in its logs only (one name per concept, as OpenTelemetry's semantic conventions, in ADR-0040's vocabulary) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | Queries by system cover every component with one field | R41 | Plan |
 | 6 | [D10](#d10-a-target-on-captures-own-missed-minutes-only), [D3](#d3-alerts-on-symptoms-that-need-action) | ALR15 and the provider's minutes over a rolling 7 days in Grafana, from capture's events; DQM11's monthly value queried with SQL over R2 (alerts on rolling windows, SLO period measured from the durable store) | Grafana keeps 14 days; the pipeline needs no access to capture's logs | R39, R40 | Plan |
 | 7 | [Error budget alerts](#error-budget-alerts) | ALR6 as LogQL alert rules built by a Terraform module, with the SRE Workbook's multiwindow, multi-burn-rate levels; not Grafana's SLO app | Fewer parts, every window within 14 days; moving to the SLO app later keeps the same queries | R12, R13 | Plan |
+| 8 | [Thresholds](#thresholds) | The pipeline's thresholds as formulas over its cadence, time budget and container (ALR4 at DQM10's target, ALR7 at 80% of each limit, ALR8 at 2 cadences), a 5-minute synthetic check and a 10 s send | Thresholds follow the pipeline as it grows and its cadence is tuned, with no rewrite | R5, R10, R14, R15 | Plan |
+| 9 | [Thresholds](#thresholds) | The pipeline's run settings in one JSON data file read by `settings.py` and by Terraform (single source of truth, configuration as data) | A change of cadence is one edit; no copy to keep aligned | R10, R14, R15 | Plan |
 
 ### 2.3 Architecture
 
