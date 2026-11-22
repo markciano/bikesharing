@@ -13,6 +13,7 @@ Data engineering portfolio project on public bike sharing in the Barcelona area 
 - When a change alters documented behaviour, the document is updated in the same commit. Within a design, affected documents are planned in its File layout instead.
 - Source of truth: the approved working document (design or spike report). Code derives from it, never the other way round (spec-driven development).
 - State lives in the working document, not the session: decisions are written when approved (if small, accumulate 2-3); Status is updated when a session ends, with only the context the next session needs to resume.
+- A session ends by giving the owner the commands that start the next one: `/rename TNNN(<n>) - <Task name> (<block> <section>)`, with `n` the next session number of the task, then the skill command that resumes it (e.g. `/design dNNN`, `/design dNNN review-plan`, `/implement dNNN`).
 - Operational actions (accounts, consoles, billing, production deployments) are done by the owner.
 - Permissions are set in `.claude/settings.json`. Never work around an action it asks for or denies, including by reaching it through another tool (e.g. `gh` for a denied `git` command): report it.
 - A convention learned in a session (e.g. an owner's correction) is proposed as an edit to the rule, skill or template where it applies, not saved to Claude's memory; memory holds only facts about the local machine.
