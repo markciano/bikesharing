@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [ ] Steps · [ ] Steps review
-- Current: Steps › Prerequisites.
+- Current: Steps › step skeleton. Owner's instruction: the watchdog's check (R20), capture's heartbeat check at 10 + 10 min (R43) and the OTLP token as Worker secret and Modal Secret are Owner steps, each placed just before the deployment that uses it, not prerequisites.
 
 ## 1. Spec — what and why
 
@@ -864,7 +864,17 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
-- TODO(T060.2): when choosing Terraform's versions, check whether `hashicorp/setup-terraform` reads a version file; if it does, `.claude/rules/code/ci.md` passes it `.terraform-version` directly, with no step reading it.
+- **tenv**, the version manager that installs the Terraform release `monitoring/.terraform-version` pins and verifies its SHA256 and HashiCorp's PGP signature by default: `brew install tenv` (4.16.9 or later). Verify: `tenv --version`.
+- **Terraform 1.17.1**, the pin of `monitoring/.terraform-version`, the latest patch released at least two weeks before it was chosen. Grafana's provider is `~> 4.54` in `versions.tf`, with 4.54.0 locked. Installed by tenv on first use. Verify: `terraform version` inside `monitoring/` prints `Terraform v1.17.1`.
+- **Grafana Cloud account** on the Free tier, with its stack in an EU region and no payment method. Verify in the console: the stack's region and the billing page. Record both in Close (Done when).
+- **Free tier features** checked at account set-up: template variables and data links, the SLO app, Loki recording rules, a scripted k6 check asserting a file's age, the IRM heartbeat and the usage data source ALR13 reads. Two or more missing reopen s018's choice of tool ([s018 › P1](../spikes/s018-monitoring-tool.md#23-production-inputs)). Record the outcome in Close.
+- **Grafana credentials**, each with the narrowest scope that works:
+  - a stack service account token for Terraform's alerting and IRM resources (the provider's `auth`), with the `plugins.app:access` permission IRM needs;
+  - a Synthetic Monitoring access token for ALR4's check (the provider's `sm_access_token`), with the stack's Synthetic Monitoring URL;
+  - an access policy token with the `logs:write` scope only, for the OTLP copy of capture and the pipeline.
+
+  The first two and the URL go in `.env` as Terraform variables; the third stays with the owner until it is set as a Worker secret and a Modal Secret. Verify: each token is listed in the console with that scope and no other.
+- **Grafana mobile app** with IRM, signed in to the owner's account, notifications allowed. Verify: IRM's test notification reaches the phone.
 
 ### Step 1 — `<Title>`
 
