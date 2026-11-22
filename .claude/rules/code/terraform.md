@@ -23,7 +23,7 @@ General comment rules are in `general.md`.
 The configuration declares Grafana Cloud's alerting, synthetic check and watchdog, and the owner applies it from the owner's machine, with its state kept there and ignored by Git ([ADR-0051](../../../docs/decisions/0051-monitoring-configuration-as-code.md)).
 
 - Files follow HashiCorp's standard module structure: `versions.tf`, `providers.tf`, `variables.tf`, `locals.tf`, then one file per kind of resource; a module lives in `modules/<name>/` with its own `main.tf` and `variables.tf`.
-- A threshold is derived in `locals.tf` from the data it depends on, `pipeline/src/bikesharing/core/run_settings.json` or the event registry `contracts/log-events.registry.json`, read with `jsondecode(file(...))`; never a literal figure in a rule.
+- Every threshold is a named local in `locals.tf`, never a literal figure in a rule. One that depends on other data is derived from it, `pipeline/src/bikesharing/core/run_settings.json` or the event registry `contracts/log-events.registry.json`, read with `jsondecode(file(...))`; a fixed one states its reason in a comment.
 - Every alert's event list, ALR9's and ALR14's included, is built from the event registry, never written by hand: an alert selects the events whose `alerts` list its ID.
 - Every alert rule carries the labels `alert_id` and `urgency` (`page` or `ticket`), `system` where it applies, and the annotations the message template reads; the template reads only labels and annotations.
 - A secret, such as a token or the watchdog's signal URL, is a `sensitive` variable with no default, set from `.env` as `TF_VAR_<name>`; never in code or in a `.tfvars` file.
