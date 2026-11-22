@@ -320,7 +320,7 @@ Grafana's alert rules, contact points, notification policies, synthetic check an
 
 #### Observability catalog
 
-The observability catalog of D5 is a registry of events with its schema, and a document. `contracts/log-events.registry.json` is the registry, the single source of each event of every component: its component, level, own fields and whether it needs an action from the owner. `contracts/log-events.schema.json`, a JSON Schema (draft 2020-12) that the registry names in `$schema`, fixes the shape of an entry, and the registry test validates the registry against it. The registry is reference data written in the repository and read by several components, not data one component sends another, so it has no test vectors ([ADR-0050](../decisions/0050-contract-tests-by-contract-kind-with-native-schemas.md) covers the latter). `docs/observability.md`, beside `docs/data-quality.md`, holds the rest: the common fields of ADR-0036, the heartbeat checks, the alerts with their IDs, the catalog IDs they check and their urgency, and how alerts on an error budget work; it links to the registry for the events. Terraform reads the registry to build the event lists of ALR9 and ALR14, and the tests of capture and the pipeline check that every event they write is registered. **#2**
+The observability catalog of D5 is a registry of events with its schema, and a document. `contracts/log-events.registry.json` is the registry, the single source of each event of every component: its component, level, own fields, whether it needs an action from the owner, and the alerts that read it by name. `contracts/log-events.schema.json`, a JSON Schema (draft 2020-12) that the registry names in `$schema`, fixes the shape of an entry, and the registry test validates the registry against it. The registry is reference data written in the repository and read by several components, not data one component sends another, so it has no test vectors ([ADR-0050](../decisions/0050-contract-tests-by-contract-kind-with-native-schemas.md) covers the latter). `docs/observability.md`, beside `docs/data-quality.md`, holds the rest: the common fields of ADR-0036, the heartbeat checks, the alerts with their IDs, the catalog IDs they check and their urgency, and how alerts on an error budget work; it links to the registry for the events, and an alert's row does not list them. Terraform reads the registry to build each alert's event selector from the events that list it; ALR9 takes the events with `needs_action` that list no alert, and ALR14 every event the registry does not hold, so no event list is written by hand. The tests of capture and the pipeline check that every event they write is registered, and Terraform's tests that every alert ID the registry lists is an alert it declares. **#2** **#14**
 
 `docs/observability.md` also holds the LogQL query of each feed's minutes given to the provider over the last 7 days, run in Grafana's Explore (R40); Grafana's dashboards are designed in T060.10, which may turn the query into a panel. **#12**
 
@@ -448,7 +448,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | 1 | [Grafana configuration](#grafana-configuration) | Grafana's alerting, synthetic check and watchdog as code with Terraform and Grafana's official provider, applied by the owner (Infrastructure as Code); [ADR-0051](../decisions/0051-monitoring-configuration-as-code.md) | Reviewed on a diff, checked in CI, recreated with one apply | R7–R22, R34, R35, R37 | Plan |
-| 2 | [Observability catalog](#observability-catalog), [D5](#d5-one-observability-catalog-built-here) | The catalog's events in a machine-readable registry, `contracts/log-events.registry.json`, its single source, validated against its JSON Schema `contracts/log-events.schema.json`; `docs/observability.md` holds the rest and links to it (a registry as in OpenTelemetry's semantic conventions, validated by its schema as configuration files are) | Terraform and the components' tests read the same list; each fact lives in one place; a malformed entry fails CI | R16, R22, R25, R26 | Plan |
+| 2 | [Observability catalog](#observability-catalog), [D5](#d5-one-observability-catalog-built-here) | The catalog's events in a machine-readable registry, `contracts/log-events.registry.json`, its single source, validated against its JSON Schema `contracts/log-events.schema.json`; `docs/observability.md` holds the rest and links to it (a registry as in OpenTelemetry's semantic conventions, validated by its schema as configuration files are) **→ #14** | Terraform and the components' tests read the same list; each fact lives in one place; a malformed entry fails CI | R16, R22, R25, R26 | Plan |
 | 3 | [Observability catalog](#observability-catalog) | The criterion for classifying an event in `docs/observability.md`, enforced by the registry test, with a path rule for writing entries; no line in the design template (poka-yoke) | The test already blocks an unclassified event; the template would repeat it in every design | R16, R22, R25 | Plan |
 | 4 | [Warning level](#warning-level) | `warn` for every component, OpenTelemetry's short severity name; capture changes from `warning`, and its logs in R2 are not rewritten (append-only logs) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | One name in queries from now on; the record stays as written | R27 | Plan |
 | 5 | [Field mapping](#field-mapping) | `system` for the bike sharing system in every component's log events; capture changes from `source` in its logs only (one name per concept, as OpenTelemetry's semantic conventions, in ADR-0040's vocabulary) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | Queries by system cover every component with one field | R41 | Plan |
@@ -460,6 +460,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 11 | [Notifications](#notifications) | A message template of the project's own: alert ID, summary and checked IDs; where; the value against its threshold and since when, in Madrid's local time; then links to the item's catalog section, the alert's row and its events; no rule text copied (link, don't copy; actionable alerts show the value that fired) | Read on a phone, enough to tell a page from a wait; the item's text lives in its catalog only | R23, R24, R38 | Plan |
 | 12 | [Observability catalog](#observability-catalog) | The provider's 7-day minutes as a LogQL query in `docs/observability.md`, run in Explore; no dashboard in this task (dashboards in T060.10) | Meets R40 with what Grafana ships, leaving every dashboard decision to the task that designs them | R40 | Plan |
 | 13 | [Error budget alerts](#error-budget-alerts), [D10](#d10-a-target-on-captures-own-missed-minutes-only) | ALR6's and ALR15's windows count only the minutes with an event of capture in Grafana; a minute with none is left to capture's heartbeat and to SQL over R2 (an SLI over valid events, SRE Workbook) **refines #6** **refines #7** | A gap in Grafana's ingest pages no one for data R2 holds, and leaves no alert blind for days | R12, R13, R39 | Plan review |
+| 14 | [Observability catalog](#observability-catalog) | Each registry event lists the alerts that read it by name; Terraform builds every alert's event selector from it, and ALR9 from the events with `needs_action` that list none; an alert's row in `docs/observability.md` lists no events (single source of truth) **refines #2** | No hand-written exclusion list for ALR9, and the link between alerts and events lives in one place | R16, R25 | Plan review |
 
 ### 2.3 Architecture
 
@@ -487,7 +488,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 ├── .github/workflows/
 │   └── ci.yml                                  (modified)  Job monitoring; the registry and its schema in the filters of capture, pipeline and monitoring
 ├── contracts/
-│   ├── log-events.registry.json                (new)       Every component's events: component, level, own fields, needs action (#2)
+│   ├── log-events.registry.json                (new)       Every component's events: component, level, own fields, needs action, alerts that read it (#2, #14)
 │   ├── log-events.schema.json                  (new)       JSON Schema (draft 2020-12) of a registry entry (#2)
 │   └── capture-logs.json                       (modified)  Vectors with warn and system (#4, #5)
 ├── monitoring/                                 (new)       Grafana Cloud configuration as code (#1)
@@ -698,7 +699,7 @@ RUN_SETTINGS: Final[RunSettings]  # parse_run_settings of the file, read once at
     "name": { "type": "string", "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$" },
     "event": {
       "type": "object",
-      "required": ["event", "component", "level", "fields", "needs_action", "description"],
+      "required": ["event", "component", "level", "fields", "needs_action", "alerts", "description"],
       "additionalProperties": false,
       "properties": {
         "event": { "$ref": "#/$defs/name" },
@@ -713,6 +714,11 @@ RUN_SETTINGS: Final[RunSettings]  # parse_run_settings of the file, read once at
           }
         },
         "needs_action": { "type": "boolean" },
+        "alerts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^ALR[1-9][0-9]*$" }
+        },
         "description": { "type": "string", "minLength": 1 }
       }
     }
@@ -792,7 +798,7 @@ resource "grafana_rule_group" "this" {
 | R12, R13 | Test | The module builds three rules per system with the burn rates and windows of [Error budget alerts](#error-budget-alerts), each threshold the burn rate times `1 - target`, the error rate over the minutes with an event of capture only, both windows required, the 1 h and 6 h levels as pages and the 3 d level as a ticket; a target outside (0, 1) is rejected | unit |
 | R14 | Test | ALR7's thresholds derive from `run_settings.json`: 80% of the time budget and of the container's memory | unit |
 | R15 | Test | ALR8 fires per component after 2 cadences for the pipeline and 5 min for capture with no event, as a ticket | unit |
-| R16, R22 | Test | ALR9 selects the registry's events with `needs_action` and no other alert, ALR14 every event the registry does not list, both built from the registry | unit |
+| R16, R22 | Test | ALR9 selects the registry's events with `needs_action` and an empty `alerts`, ALR14 every event the registry does not list, both built from the registry; every alert ID in the registry is one Terraform declares | unit |
 | R17 | Test | ALR10 selects `index_refreshed` events with a non-empty `unknown_feeds` | unit |
 | R18 | Test | ALR11 selects a pass's missed-minute cause outside D9's table | unit |
 | R19 | Test | ALR12's condition always holds, its policy repeats every 5 min to the watchdog's webhook contact point, and no other policy reaches it | unit |
@@ -801,7 +807,7 @@ resource "grafana_rule_group" "this" {
 | R23 | Test | Every rule carries `alert_id` and the checked catalog IDs that the template reads | unit |
 | R23, R24 | Demonstration | A test notification shows the alert's ID and checked IDs, and its links open the catalog section, the alert's row and the events in Grafana's Explore | — |
 | R25 | Test | The registry is valid against its schema, each `component` and `event` pair appears once, and every event capture and the pipeline write is registered | contract |
-| R25, R26 | Inspection | `docs/observability.md` lists the common fields, the heartbeat checks, and every alert with its ID, checked IDs, urgency and the events it reads | — |
+| R25, R26 | Inspection | `docs/observability.md` lists the common fields, the heartbeat checks, and every alert with its ID, checked IDs and urgency; the registry lists, for each event, the alerts that read it | — |
 | R27 | Test | The registry's levels are `info`, `warn` and `error`, and capture's log contract vectors use `warn` | contract |
 | R28, R29 | Test | `capture_volume`'s dbt unit tests flag a capture below 95% of the 7-day median and skip it with fewer than 60 captures in those 7 days | unit |
 | R28 | Inspection | `_VOLUME_WINDOW` in `shell/run.py` is 7 days | — |
