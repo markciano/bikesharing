@@ -336,7 +336,7 @@ Every component writes `warn` for a failure that does not affect the data, OpenT
 
 #### Field mapping
 
-Each event maps to an OTLP log record, and Grafana turns only fields with few values into Loki labels, following Loki's practice of low-cardinality labels; every other field stays as structured metadata, which queries filter on as well:
+Each event maps to an OTLP log record. Of the fields the components send, Grafana Cloud turns into Loki labels only the resource attribute `service.name` and the severity, following Loki's practice of low-cardinality labels; every log record attribute stays as structured metadata, which queries filter after the stream selector ([Grafana Cloud › Logs](../sources/grafana-cloud.md#logs)):
 
 | ADR-0036 field | OTLP | Loki |
 |---|---|---|
@@ -344,12 +344,10 @@ Each event maps to an OTLP log record, and Grafana turns only fields with few va
 | `version` | resource `service.version` | structured metadata |
 | `ts` | `timeUnixNano` | the record's time |
 | `level` | `severityText` and `severityNumber` (9 `info`, 13 `warn`, 17 `error`) | label `detected_level` |
-| `event` | attribute | label |
-| `system`, `feed`, `rule` | attributes | labels |
-| `run_id` and every other own field | attributes | structured metadata |
+| `event`, `system`, `feed`, `rule`, `run_id` and every other own field | attributes | structured metadata |
 | the JSON line | body | the line shown |
 
-Which attributes Grafana Cloud promotes to labels is checked at account set-up with the Free tier features; an attribute that cannot be promoted stays as structured metadata, which queries and alerts filter the same way, only less fast.
+Queries and alerts select capture's or the pipeline's stream by `service_name` and filter `event`, `system`, `feed` and `rule` after it, as in `{service_name="capture"} | event="feed_failed"`.
 
 Every component names the bike sharing system `system` in its log events, as the pipeline does and as GBFS names it ([ADR-0040](../decisions/0040-model-vocabulary-from-gbfs-3-0.md)); capture, which wrote `source`, changes its log events and its log contract with #4, while its code and bronze keys keep `source`. Capture's logs already in R2 keep `source`, and the catalog records the change as for #4. **#5**
 
@@ -2050,4 +2048,4 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
-| | | | | |
+| DI1 | [Prerequisites](#31-prerequisites) | The owner signs in to Grafana Cloud with GitHub, whose second factor is GitHub Mobile, in place of TOTP on Grafana's own sign-in | The account's second factor lives with the sign-in provider; GitHub's covers it | Prerequisites |
