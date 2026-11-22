@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 10.
+- Current: Step 11.
 
 ## 1. Spec — what and why
 
@@ -1256,7 +1256,7 @@ The run's cadence, time budget, timeout and memory in one data file, parsed and 
 
 ### Step 10 — Pipeline: run settings wired in
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `refactor: d009.s10 read the run's bounds from the run settings`
 - **R:** —

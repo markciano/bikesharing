@@ -32,7 +32,6 @@ LOG_PREFIX: Final = "logs/pipeline"
 # in chronological stages). None, the last stage, processes every object.
 END_INSTANT: Final[datetime | None] = None
 MAX_OBJECTS_PER_BATCH: Final = 360
-TIME_BUDGET: Final = timedelta(minutes=7)
 LISTING_LOOKBACK: Final = timedelta(hours=1)
 DUCKDB_MEMORY_FRACTION: Final = 0.6
 
