@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 8.
+- Current: Step 9.
 
 ## 1. Spec — what and why
 
@@ -1181,7 +1181,7 @@ The pass calendar signals the heartbeat at every minute that is a multiple of 5 
 
 ### Step 8 — Capture: the copy in the pass
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s8 send capture's events to Grafana after each pass`
 - **R:** R1, R3, R4

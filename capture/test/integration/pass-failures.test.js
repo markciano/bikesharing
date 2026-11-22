@@ -109,7 +109,20 @@ function failingPuts(prefixes) {
 async function runAt(scheduledTime, second, opts = {}) {
   const { heartbeatUrl = `${SIM}/heartbeat/default`, sources = SOURCES, bucket = env.BUCKET } = opts;
   const start = new Date(scheduledTime + second * 1000);
-  await runPass(scheduledTime, { bucket, heartbeatUrl, version: VERSION, sources, limits: LIMITS, now: () => start });
+  /** @type {Promise<unknown>[]} */
+  const pending = [];
+  await runPass(scheduledTime, {
+    bucket,
+    heartbeatUrl,
+    otlpEndpoint: `${SIM}/otlp/default`,
+    otlpToken: "test-credential",
+    waitUntil: (promise) => pending.push(promise),
+    version: VERSION,
+    sources,
+    limits: LIMITS,
+    now: () => start,
+  });
+  await Promise.all(pending);
   return runIdOf(start);
 }
 
