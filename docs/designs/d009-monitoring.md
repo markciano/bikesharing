@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › File layout; concerns #1–#11 decided. File layout also plans these changes to other documents: d004 › D6, D9 (with its R20 and the `level` type), D10 and its R19; d008 › D4; DQM7, DQM10, DQM11 and DQR12 in `data-quality.md`; links to the catalog from d004 and d008. Still to do: confirm with the owner the folder name `monitoring/` and its row in CLAUDE.md › Project structure.
+- Current: Plan › File layout; concerns #1–#11 decided. File layout also plans these changes to other documents: d004 › D6, D9 (with its R20 and the `level` type), D10 and its R19; d008 › D4; DQM7, DQM10, DQM11 and DQR12 in `data-quality.md`; links to the catalog from d004 and d008. CLAUDE.md › Project structure already lists `monitoring/` and the event registry in `contracts/`.
 
 ## 1. Spec — what and why
 
