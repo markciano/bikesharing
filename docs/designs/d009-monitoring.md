@@ -10,7 +10,7 @@ Kind: a build task builds code or configuration and has every block. A document-
 - **Task:** T060.2
 - **Kind:** build
 - **ADRs:** [ADR-0026](../decisions/0026-budget-shares-per-component.md), [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md), [ADR-0036](../decisions/0036-log-convention-across-components.md), [ADR-0048](../decisions/0048-grafana-cloud-as-monitoring-tool.md), [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)
-- **New ADRs from this doc:** `<ADRs created during this design, or "none">`
+- **New ADRs from this doc:** [ADR-0051](../decisions/0051-monitoring-configuration-as-code.md)
 
 ## Status
 
@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`; D5 has d004 and d008 link to the catalog: all planned in File layout. Owner's instruction: thresholds that depend on the pipeline's cadence derive from it, so a change of cadence is one setting. Parked for the Plan: alert labels only from fields with few values (system, feed, rule, event); where the rule lives by which a design classifies its events (D5). To propose to the owner: in the design template, rejected options only when a real alternative was weighed; a design-skill rule to explain each ID with an example in conversation.
+- Current: Plan. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`; D5 has d004 and d008 link to the catalog: all planned in File layout. Owner's instruction: thresholds that depend on the pipeline's cadence derive from it, so a change of cadence is one setting. Parked for the Plan: alert labels only from fields with few values (system, feed, rule, event); where the rule lives by which a design classifies its events (D5).
 
 ## 1. Spec — what and why
 
@@ -311,6 +311,10 @@ Inputs about the how, left to this task by earlier spikes and designs; each link
 - **Field mapping:** the common fields of ADR-0036 mapped to OTLP attributes and Loki labels; a failed send never changes a run's outcome ([s018 › P5](../spikes/s018-monitoring-tool.md#23-production-inputs)).
 - **Pipeline's copy over OTLP:** each run's events sent after the log upload, as ADR-0049 sets, with the monitoring tool's token as a Modal Secret of the scheduled function only ([d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability)).
 
+#### Grafana configuration
+
+Grafana's alert rules, contact points, notification policies, synthetic check and watchdog are declared as code with Terraform and Grafana's official provider, and the owner applies them from the owner's machine, with Terraform's state kept there, ignored by Git ([ADR-0051](../decisions/0051-monitoring-configuration-as-code.md)). Each change is reviewed on a diff and checked in CI, and a lost or suspended account is recreated with one apply. Secrets, such as the watchdog's signal URL, enter as variables from `.env`, never in the code (R37). **#1**
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -322,7 +326,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| | | | | | |
+| 1 | [Grafana configuration](#grafana-configuration) | Grafana's alerting, synthetic check and watchdog as code with Terraform and Grafana's official provider, applied by the owner (Infrastructure as Code); [ADR-0051](../decisions/0051-monitoring-configuration-as-code.md) | Reviewed on a diff, checked in CI, recreated with one apply | R7–R22, R34, R35, R37 | Plan |
 
 ### 2.3 Architecture
 
