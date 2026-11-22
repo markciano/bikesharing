@@ -35,7 +35,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 <!-- Optional. One heading per decision about what the result does. In this order, so the reader finds what matters first:
 1. The decision and why, in one short paragraph.
 2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
-3. The options rejected.
+3. The options rejected that a later reader could propose again, each with why it lost: it meets the requirements and the ADRs in force, and lost on a trade-off this project weighed. An option that breaks an ADR or a requirement, only varies a parameter of the chosen one, or merely shapes the choice is left out; with none such, this item is omitted.
 4. The artefact that fixes it, in whatever form the decision needs (e.g. a mapping table, a page map, a weighted matrix). An artefact that does not fit here or must outlive the design goes in its own file: the Plan decides where it lives and its format, File layout lists it, and this decision links to it.
 
 A security decision lists its threats in this table, with IDs `TH1`, `TH2`… per document:
@@ -96,7 +96,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Detailed plan organized by #### blocks.
 Block `3. Steps` is written using this plan. In a document-only task, Approach lists the main and supporting deliverables instead, each already written.
-A block may end with `Options considered`, with pros and cons, only for a decision asked of the owner, and listing only alternatives a later reader could reasonably propose again; an option that merely shapes the choice is left out, and a decision with none such has no Options considered.
+A block may end with `Options considered`, with pros and cons, only for a decision asked of the owner, and listing only the alternatives that Decided at framing's item 3 keeps; a decision with none such has no Options considered.
 -->
 
 ### 2.2 Decision summary
