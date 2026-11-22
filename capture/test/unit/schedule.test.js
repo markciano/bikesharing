@@ -43,11 +43,12 @@ describe("extraFetch over one UTC day", () => {
     expect(hits.every((h) => h.minute === minute)).toBe(true);
   });
 
-  it("returns the heartbeat 24 times, at minute 22 of every hour", () => {
+  // Verifies d009 R43
+  it("returns the heartbeat 288 times, at every minute that is a multiple of 5 and at no other", () => {
     const hits = minutesOf({ type: "heartbeat" });
 
-    expect(hits).toHaveLength(24);
-    expect(hits.every((h) => h.minute === 22)).toBe(true);
+    expect(hits).toHaveLength(288);
+    expect(hits.every((h) => h.minute % 5 === 0)).toBe(true);
   });
 
   // Verifies d004 R3
@@ -72,8 +73,10 @@ describe("extraFetch over one UTC day", () => {
   });
 
   // Verifies d004 R4
-  it("returns an extra fetch at exactly 132 minutes", () => {
-    expect(day().filter(({ fetch }) => fetch !== null)).toHaveLength(132);
+  // Each minute has one extra fetch at most, so 396 = 288 heartbeats + 108 others
+  // proves that no heartbeat minute is also an index or feed minute.
+  it("returns an extra fetch at exactly 396 minutes", () => {
+    expect(day().filter(({ fetch }) => fetch !== null)).toHaveLength(396);
   });
 
   // Verifies d004 R4
@@ -89,8 +92,10 @@ describe("extraFetch over one UTC day", () => {
     expect([...scheduled].sort()).toEqual([...expected].sort());
   });
 
-  it("returns no extra fetch at minute 0", () => {
-    expect(day().filter(({ minute, fetch }) => minute === 0 && fetch !== null)).toEqual([]);
+  it("returns only the heartbeat at minute 0", () => {
+    const fetches = day().filter(({ minute }) => minute === 0).map(({ fetch }) => fetch);
+
+    expect(fetches).toEqual(Array(24).fill({ type: "heartbeat" }));
   });
 });
 

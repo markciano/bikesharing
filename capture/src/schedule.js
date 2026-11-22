@@ -15,10 +15,17 @@
 const HOURLY = Object.freeze({
   7: Object.freeze({ type: "index", source: "bicing" }),
   12: Object.freeze({ type: "feed", source: "bicing", feed: "station_information" }),
-  22: Object.freeze({ type: "heartbeat" }),
   37: Object.freeze({ type: "index", source: "ambici" }),
   42: Object.freeze({ type: "feed", source: "ambici", feed: "station_information" }),
 });
+
+/**
+ * The heartbeat signals at every UTC minute that is a multiple of 5, so the Worker keeps
+ * no state between passes and a silent capture is reported within minutes (d009, Capture
+ * silence). None of those minutes carries an index or a feed.
+ */
+const HEARTBEAT_EVERY_MINUTES = 5;
+const HEARTBEAT = Object.freeze({ type: "heartbeat" });
 
 /** UTC minute at which the daily feeds run, in the even hours of {@link DAILY}. */
 const DAILY_MINUTE = 52;
@@ -53,6 +60,7 @@ export function extraFetch(scheduledTime) {
   // The event's time, not the clock, so a pass that starts late still makes its extra fetch.
   const at = new Date(scheduledTime);
   const minute = at.getUTCMinutes();
+  if (minute % HEARTBEAT_EVERY_MINUTES === 0) return HEARTBEAT;
   if (minute === DAILY_MINUTE) return DAILY[at.getUTCHours()] ?? null;
   return HOURLY[minute] ?? null;
 }

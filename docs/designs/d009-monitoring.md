@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 7.
+- Current: Step 8.
 
 ## 1. Spec — what and why
 
@@ -1146,7 +1146,7 @@ The module that turns a pass's lines into an OTLP request and sends it once, nev
 
 ### Step 7 — Capture: heartbeat at every fifth minute
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s7 signal capture's heartbeat every fifth minute`
 - **R:** R43
