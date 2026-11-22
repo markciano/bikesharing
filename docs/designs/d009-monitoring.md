@@ -103,12 +103,13 @@ Threats are cited the same way once a project-wide threat catalog gives them glo
 A failed rule of severity error reaches the owner as, for example:
 
 ```text
-[ALR1] A runtime rule of severity error failed
-  Rule:      DQR13, the rows added do not match the items read from bronze
-  Component: pipeline · system: bicing · version: 3f2a9c1
-  Batch:     2026-11-21 10:00 UTC
-  → link to that run's events in Grafana
+[FIRING] [ALR1] A runtime rule of severity error failed · DQR13
+  pipeline · system: bicing · version: 3f2a9c1
+  since 11:00 CET
+  → rule in the catalog   → this alert   → events in Grafana
 ```
+
+Its layout is set in [Notifications](#notifications). **#11**
 
 Rejected: an alert named after the item it checks, with no ID of its own. It is simpler, but alerts on a deployment, a run's limits or a silent sender check no catalog item and would not be citable.
 
@@ -382,6 +383,36 @@ Each threshold is a formula over the settings it depends on, never a figure meas
 
 ALR4 fires at the target itself, since the target is what the page promises its visitor. ALR7 follows the practice of warning at 80% of a capacity limit: runs that grow towards the time budget as later children add models raise it, which is the signal to review the cadence or the budget. ALR8 at two cadences lets one lost send go, since the copy is best-effort (D2); a run that never starts is reported by the heartbeat. The pipeline's send uses the per-attempt timeout of the heartbeat's pings ([d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability)). ALR5 at twice the longest run measured stays quiet in normal operation; on AMBici the fast burn of ALR6 fires first, so ALR5 serves Bicing, whose budget is larger, and the feeds DQM7 does not count. ALR8 at five passes with no event points to a broken send rather than a single failure, and is the window of R42. ALR13 warns at 80% of each Free tier limit, as ALR7 does, reading Grafana Cloud's usage data source; if the Free tier lacks it, which account set-up checks with the other Free tier features, Grafana Cloud's own usage notifications cover it, as for Cloudflare and Modal (D3). A Grafana that stops evaluating or notifying is reported by email in about 15 min, the grace covering one lost signal; the watchdog takes the third of Healthchecks.io's 20 free checks. **#8**
 
+#### Synthetic check
+
+ALR4's synthetic check is a scripted k6 check, as [s018 › P1](../spikes/s018-monitoring-tool.md#23-production-inputs) sets, that reads each file the page serves and measures its data's age as the time since its `data_instant`, the age of the data a visitor sees, which DQM10 measures (D8). A probe fails when that age exceeds ALR4's threshold, or when the file cannot be read or parsed. The file's `Last-Modified` header is not used: every run deploys, with or without new batches ([d008 › #19](d008-pipeline-platform-and-walking-skeleton.md#22-decision-summary)), so a stuck pipeline would redeploy old data under a fresh header. The files are a Terraform variable, today `latest-station-count.json` only; a child that publishes another file adds it.
+
+#### Notifications
+
+Every notification uses one message template of the project's own, managed by Terraform, since Grafana's default lists every label, annotation and value, which is long on a phone and cannot build links to the catalogs. The template reads only the alert's labels and annotations, never an event's body (R38), and its layout is stated in `docs/observability.md`:
+
+```text
+[FIRING] [ALR5] A feed has had no clean capture for too many minutes in a row
+  capture · system: bicing · feed: station_status · version: 7f3c2a9
+  14 minutes in a row · threshold: over 10 · since 11:12 CET
+  → rule in the catalog   → this alert   → events in Grafana
+```
+
+- **First line:** the state, the alert's ID and summary, and the catalog IDs it checks, when it checks any (R23).
+- **Second line:** where it happens: the component, system, feed and version, those the alert carries.
+- **Third line:** the value that raised the alert and its threshold, when it has one, and since when, in Madrid's local time with its zone, `CET` or `CEST`, converted by the template's `tz` and `date` functions from the alert's UTC time; stored times stay in UTC. If account set-up finds those functions missing, the line shows UTC.
+- **Links:** the section of `docs/data-quality.md` that holds the checked item (Runtime rules for a `DQR`, Quality indicators for a `DQM`), the alert's row in `docs/observability.md`, and Grafana's Explore on the events that raised it, filtered by their labels and time (R24). The links to the catalogs open the repository on GitHub, whose base URL is a Terraform variable.
+
+The rule's text is not copied into the notification: the summary names the kind of failure, and the item is one tap away, so its text lives in its catalog only. **#11**
+
+#### Watchdog
+
+ALR12 is an alert rule whose condition always holds, with a notification policy of its own that sends it every 5 min, its `repeat_interval`, to a webhook contact point on the watchdog's check in Healthchecks.io, never through IRM (D13). The check's URL enters Terraform as a sensitive variable from `.env` (R37).
+
+#### Volume drop
+
+DQR12 follows D6 in the model `capture_volume`: the median takes the captures of the 7 days before each capture instant, and a capture is flagged below 95% of it, with the minimum of 60 captures unchanged. The history the shell reads from `processed_objects` widens from 24 h to 7 days before the batch's first capture, about 20,000 rows, and the model's dbt unit tests take the new window and threshold. **refines [d008 › D4](d008-pipeline-platform-and-walking-skeleton.md#d4-volume-drop-against-a-rolling-median)**
+
 #### Notification grouping
 
 Notifications follow Alertmanager's grouping, which Grafana Alerting implements: an alert fires one instance per set of labels and stays firing while its condition holds, the notification policy groups instances by alert ID and system into one notification, repeats it every 4 h while it fires, Grafana's default `repeat_interval`, and sends one notice when it resolves. A page's repeats join its alert group in IRM, which notifies until the owner acknowledges it, so a failure that lasts hours pages once per alert and system.
@@ -424,6 +455,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 8 | [Thresholds](#thresholds) | The pipeline's thresholds as formulas over its cadence, time budget and container (ALR4 at DQM10's target, ALR7 at 80% of each limit, ALR8 at 2 cadences), a 5-minute synthetic check and a 10 s send; capture's ALR5 over 10 minutes in a row, ALR8 at 5 min and a 5 s send; ALR13 at 80% of each Free tier limit; the watchdog signalling every 5 min to a check with 10 min of grace | Thresholds follow the pipeline as it grows and its cadence is tuned, with no rewrite; the others stay quiet at what production shows and warn with margin | R5, R10, R11, R14, R15, R19, R20, R21 | Plan |
 | 9 | [Thresholds](#thresholds) | The pipeline's run settings in one JSON data file read by `settings.py` and by Terraform (single source of truth, configuration as data) | A change of cadence is one edit; no copy to keep aligned | R10, R14, R15 | Plan |
 | 10 | [Capture silence](#capture-silence) | ALR5 and ALR6 only while capture's events reach Grafana; a silent capture raises ALR8, and capture's heartbeat on every fifth pass, with 10 min of period and 10 min of grace, reports a capture that stores nothing (dead man's switch) **refines [d004 › D10](d004-bronze-data-capture.md#d10-capture-heartbeat)** | No page for a broken send; a dead capture reported in about 20 min instead of 2 h | R11, R12, R13, R15, R42, R43 | Plan |
+| 11 | [Notifications](#notifications) | A message template of the project's own: alert ID, summary and checked IDs; where; the value against its threshold and since when, in Madrid's local time; then links to the item's catalog section, the alert's row and its events; no rule text copied (link, don't copy; actionable alerts show the value that fired) | Read on a phone, enough to tell a page from a wait; the item's text lives in its catalog only | R23, R24, R38 | Plan |
 
 ### 2.3 Architecture
 
