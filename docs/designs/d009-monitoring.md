@@ -576,7 +576,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
     ├── architecture.md                         (modified)  Monitoring as a building block, and its deployment
     ├── testing-strategy.md                     (modified)  The monitoring component and the registry tests
     ├── sources/
-    │   └── grafana-cloud.md                    (new)       Grafana Cloud's source card: Free tier, alerting and IRM facts, the account set-up's outcomes
+    │   ├── grafana-cloud.md                    (new)       Grafana Cloud's source card: Free tier, alerting and IRM facts, the account set-up's outcomes
+    │   └── healthchecks-io.md                  (new)       Healthchecks.io's source card: free plan, checks and signals
     ├── decisions/
     │   └── 0051-monitoring-configuration-as-code.md (new)  Monitoring configuration as code with Terraform (#1)
     └── designs/
@@ -1952,7 +1953,7 @@ Grafana's alerts, contact points, synthetic check and the watchdog are live.
 
 #### Do
 
-1. Create the watchdog's check in Healthchecks.io, with a period of 5 min, a grace of 10 min and the owner's email.
+1. Create the watchdog's check in Healthchecks.io, with a period of 5 min, a grace of 10 min and the owner's email; send a POST with a JSON body to its URL, and record in [Healthchecks.io's source card](../sources/healthchecks-io.md) whether the check counts it as a signal, closing that open question and the one on the minimum period.
 2. Set its signal URL and the Grafana credentials in `.env`, as `.env.example` names them.
 3. With `.env` loaded, run `terraform -chdir=monitoring init -lockfile=readonly`, then `plan`, and `apply` once the plan shows only the resources of this design.
 
