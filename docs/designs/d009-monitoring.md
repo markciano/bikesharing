@@ -830,7 +830,10 @@ resource "grafana_rule_group" "this" {
 
 <!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
 
--
+- `pipeline/modal_one_off.py`: no monitoring Secret and the same imports, so a one-off run sends nothing ([d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability)).
+- Capture's code and bronze object keys keep `source`; only its log events change to `system` (#5).
+- Capture's logs already in R2 are not rewritten (#4, #5).
+- The checks of capture's and the pipeline's heartbeats stay in Healthchecks.io's console, outside Terraform (#9).
 
 ## 3. Steps
 
@@ -846,6 +849,8 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 ### 3.1 Prerequisites
 
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
+
+- TODO(T060.2): when choosing Terraform's versions, check whether `hashicorp/setup-terraform` reads a version file; if it does, `.claude/rules/code/ci.md` passes it `.terraform-version` directly, with no step reading it.
 
 ### Step 1 — `<Title>`
 
