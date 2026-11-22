@@ -12,6 +12,7 @@ import { extraFetch } from "../../src/schedule.js";
 import { SOURCES, requiredFeeds } from "../../src/sources.js";
 import { logKey, rawKey, runIdOf } from "../../src/storage.js";
 import worker from "../../src/worker.js";
+import { expectRegistered } from "../registry.js";
 
 const LIMITS = env.TEST_LIMITS;
 const SIM = "https://sim.test";
@@ -102,14 +103,17 @@ async function capturedFeeds(runId) {
     .sort();
 }
 
-/** The events of a run's log object. @param {string} runId */
+/**
+ * The events of a run's log object. Every line read must be an event of the registry
+ * (d009, Observability catalog).
+ * @param {string} runId
+ */
 async function readLog(runId) {
   const object = await env.BUCKET.get(logKey(runId));
   if (!object) throw new Error(`no log object for ${runId}`);
-  return (await object.text())
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => JSON.parse(line));
+  const lines = (await object.text()).split("\n").filter(Boolean);
+  expectRegistered(lines);
+  return lines.map((line) => JSON.parse(line));
 }
 
 /** @param {string} path */

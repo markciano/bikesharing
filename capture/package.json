@@ -7,6 +7,7 @@
     "fixtures": "node scripts/trim-fixtures.js"
   },
   "devDependencies": {
+    "@cfworker/json-schema": "^4.1.6",
     "@cloudflare/vitest-plugin": "^1.6.0",
     "vitest": "^5.1.0",
     "wrangler": "^4.158.0"
