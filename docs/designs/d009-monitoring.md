@@ -375,7 +375,7 @@ Each threshold is a formula over the settings it depends on, never a figure meas
 | ALR4, age of a published file | cadence + time budget, DQM10's target (D8) | 22 min | 19.6 min at most |
 | Synthetic check frequency | fixed, while the cadence is longer than it | 5 min | — |
 | ALR7, run duration (`duration_s`) | 80% of the timeout | 480 s | 127 s at the median, 421 s at most, in steady state (D8) |
-| ALR7, run memory (`peak_memory_mb`) | 80% of the container's memory | 3,436 MB (80% of 4,096 MiB) | 2,472 MB at most |
+| ALR7, run memory (`peak_memory_mb`) | 80% of the container's memory, converted from Modal's MiB to the field's decimal MB | 3,436 MB | 2,472 MB at most |
 | ALR8, pipeline silent in Grafana | 2 × cadence | 30 min | — |
 | Pipeline's send time limit (R5) | fixed, one attempt | 10 s | — |
 | ALR5, minutes in a row with no clean capture of a feed | fixed: capture's cadence is one pass a minute ([d004](d004-bronze-data-capture.md)) | over 10 | 5 at most, any cause |
@@ -387,6 +387,8 @@ Each threshold is a formula over the settings it depends on, never a figure meas
 | Watchdog check in Healthchecks.io | period and grace | 5 min and 10 min | — |
 
 ALR4 fires at the target itself, since the target is what the page promises its visitor. ALR7 follows the practice of warning at 80% of a capacity limit, the timeout and the container's memory, which end a run. The time budget is not such a limit: a run stops taking batches there and finishes the one under way, so a run that catches up reaches it, as one steady-state run did at 421 s. Runs that grow towards the timeout as later children add models raise ALR7, which is the signal to review the cadence or the budget. ALR8 at two cadences lets one lost send go, since the copy is best-effort (D2); a run that never starts is reported by the heartbeat. The pipeline's send uses the per-attempt timeout of the heartbeat's pings ([d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability)). ALR5 at twice the longest run measured stays quiet in normal operation; on AMBici the fast burn of ALR6 fires first, so ALR5 serves Bicing, whose budget is larger, and the feeds DQM7 does not count. ALR8 at five passes with no event points to a broken send rather than a single failure, and is the window of R42. ALR13 warns at 80% of each Free tier limit, as ALR7 does, reading Grafana Cloud's usage data source; if the Free tier lacks it, which account set-up checks with the other Free tier features, Grafana Cloud's own usage notifications cover it, as for Cloudflare and Modal (D3). A Grafana that stops evaluating or notifying is reported by email in about 15 min, the grace covering one lost signal; the watchdog takes the third of Healthchecks.io's 20 free checks. **#8**
+
+The pipeline's cadence, time budget, timeout and container memory live in one data file, `pipeline/src/bikesharing/core/run_settings.json`: the core parses it into typed settings and the shell reads it once, as the functional core and imperative shell set ([ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md)), for the run and for Modal's app and image files, which take the schedule, the timeout and the container memory from it; Terraform reads it with `jsondecode(file(...))`, so the pipeline and its thresholds change together. The period and grace of the heartbeat's check stay in Healthchecks.io's console, outside Terraform (ADR-0051), and the catalog states that a change of cadence also changes them there. **#9**
 
 #### Synthetic check
 
@@ -412,7 +414,7 @@ The rule's text is not copied into the notification: the summary names the kind 
 
 #### Watchdog
 
-ALR12 is an alert rule whose condition always holds, with a notification policy of its own that sends it every 5 min, its `repeat_interval`, to a webhook contact point on the watchdog's check in Healthchecks.io, never through IRM (D13). The check's URL enters Terraform as a sensitive variable from `.env` (R37).
+ALR12 is an alert rule whose condition always holds, with a notification policy of its own that sends it every 5 min, its `repeat_interval`, to a webhook contact point on the watchdog's check in Healthchecks.io, never through IRM (D13). That policy is the first in the tree and matches `alert_id = "ALR12"` with no `continue`, so the policy for pages never routes ALR12 to IRM, although it carries `urgency = "page"` as D11 sets. The check's URL enters Terraform as a sensitive variable from `.env` (R37).
 
 #### Volume drop
 
@@ -421,8 +423,6 @@ DQR12 follows D6 in the model `capture_volume`: the median takes the captures of
 #### Notification grouping
 
 Notifications follow Alertmanager's grouping, which Grafana Alerting implements: an alert fires one instance per set of labels and stays firing while its condition holds, the notification policy groups instances by alert ID and system into one notification, repeats it every 4 h while it fires, Grafana's default `repeat_interval`, and sends one notice when it resolves. A page's repeats join its alert group in IRM, which notifies until the owner acknowledges it, so a failure that lasts hours pages once per alert and system.
-
-The pipeline's cadence, time budget, timeout and container memory live in one data file, `pipeline/src/bikesharing/core/run_settings.json`: the core parses it into typed settings and the shell reads it once, as the functional core and imperative shell set ([ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md)), for the run and for Modal's app and image files, which take the schedule, the timeout and the container memory from it; Terraform reads it with `jsondecode(file(...))`, so the pipeline and its thresholds change together. The period and grace of the heartbeat's check stay in Healthchecks.io's console, outside Terraform (ADR-0051), and the catalog states that a change of cadence also changes them there. **#9**
 
 #### Capture silence
 
@@ -556,6 +556,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
     ├── data-quality.md                         (modified)  DQM7, DQM10, DQM11 and DQR12
     ├── architecture.md                         (modified)  Monitoring as a building block, and its deployment
     ├── testing-strategy.md                     (modified)  The monitoring component and the registry tests
+    ├── decisions/
+    │   └── 0051-monitoring-configuration-as-code.md (new)  Monitoring configuration as code with Terraform (#1)
     └── designs/
         ├── d004-bronze-data-capture.md         (modified)  D6, D9 with R20 and the level type, D10 with R19; links to the catalog
         └── d008-pipeline-platform-and-walking-skeleton.md (modified) D4; links to the catalog
