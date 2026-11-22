@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Spec › Open questions, from OQ8. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5), the thresholds of ALR4, ALR7 and the heartbeat derived from the pipeline's cadence, so a change of cadence is one setting (D8); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
+- Current: Spec › Failure cases, every open question decided. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5), the thresholds of ALR4, ALR7 and the heartbeat derived from the pipeline's cadence, so a change of cadence is one setting (D8); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
 
 ## 1. Spec — what and why
 
@@ -176,6 +176,12 @@ Each alert is a page or a ticket, following the SRE split between alerts that in
 
 Rejected: every alert a page. Simpler, but ten alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead.
 
+#### D12. No health script
+
+The owner checks the health of capture, the pipeline and the page in Grafana, from the phone as well, over the last 14 days; anything older is queried with SQL over R2 from the owner's machine ([ADR-0036](../decisions/0036-log-convention-across-components.md)), which is investigation rather than a health check. This follows the tiered storage of D1: Grafana is the hot copy to operate with, R2 the record to investigate. No script of its own answers health questions, which closes the health script that could run from a phone ([s013 › P9](../spikes/s013-visualization-tool.md#55-production-inputs)).
+
+Rejected: a health script run from a phone through a manual GitHub Actions run. It reaches the history from the phone, but GitHub would hold one more read key on R2, its summary would be public if the repository is, and it repeats what Grafana shows.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -212,7 +218,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ8 | Which health questions does a script answer that Grafana does not, and must it run from a phone? Out of scope if none. | D1 | [s013 › D5, P9](../spikes/s013-visualization-tool.md#55-production-inputs) |
 
 ## 2. Plan — how
 

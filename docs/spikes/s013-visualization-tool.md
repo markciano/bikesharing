@@ -203,7 +203,7 @@ The visualization is a public static web page with JavaScript, without login, wh
 | P6 | Add the page's stack to the project's conventions: pinned runtimes and locked dependencies (ADR-0016, ADR-0017) and its own CI job (ADR-0013) | R33 | T041's design |
 | P7 | No cookies or analytics; reviewed if analytics are wanted | TH8 | T041's design |
 | P8 | The pipeline generates the prepared files from an explicit list and deploys them at the end of a run, with the token from the secret store; a failed deployment does not fail the run's data | D4, R25, R32 | T040's design, with T041 |
-| P9 | The health script could run from a phone through a manual GitHub Actions run: no server, but its summary is public if the repository is, and GitHub holds one more read-only key. Not verified | D5 | T040's design |
+| P9 | The health script could run from a phone through a manual GitHub Actions run: no server, but its summary is public if the repository is, and GitHub holds one more read-only key. Not verified | D5 | T040's design; closed with no script by [d009 › D12](../designs/d009-monitoring.md#d12-no-health-script) |
 
 TODO(T041): P1–P7.
 
