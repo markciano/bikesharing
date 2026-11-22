@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 3.
+- Current: Step 4.
 
 ## 1. Spec — what and why
 
@@ -997,7 +997,7 @@ The catalog's document, and the designs that now link to it for the events.
 
 ### Step 3 — Data quality catalog: DQM7, DQM10, DQM11
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: d009.s3 set the targets of DQM7 and DQM11`
 - **R:** R30, R31, R32, R33
