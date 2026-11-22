@@ -325,6 +325,36 @@ A component, including a later one such as the page, adds its events to the regi
 
 Every component writes `warn` for a failure that does not affect the data, OpenTelemetry's short severity name; capture, which wrote `warning`, changes to it, with its log contract. Capture's logs already in R2 keep `warning`, since logs are append-only, and the catalog records the version and date of the change, so that SQL over older logs accepts both. Capture's change is deployed no later than its sending to Grafana, so Grafana only receives `warn`. **#4**
 
+#### Field mapping
+
+Each event maps to an OTLP log record, and Grafana turns only fields with few values into Loki labels, following Loki's practice of low-cardinality labels; every other field stays as structured metadata, which queries filter on as well:
+
+| ADR-0036 field | OTLP | Loki |
+|---|---|---|
+| `component` | resource `service.name` | label `service_name` |
+| `version` | resource `service.version` | structured metadata |
+| `ts` | `timeUnixNano` | the record's time |
+| `level` | `severityText` and `severityNumber` (9 `info`, 13 `warn`, 17 `error`) | label `detected_level` |
+| `event` | attribute | label |
+| `system`, `feed`, `rule` | attributes | labels |
+| `run_id` and every other own field | attributes | structured metadata |
+| the JSON line | body | the line shown |
+
+Which attributes Grafana Cloud promotes to labels is checked at account set-up with the Free tier features; an attribute that cannot be promoted stays as structured metadata, which queries and alerts filter the same way, only less fast.
+
+Every component names the bike sharing system `system` in its log events, as the pipeline does and as GBFS names it ([ADR-0040](../decisions/0040-model-vocabulary-from-gbfs-3-0.md)); capture, which wrote `source`, changes its log events and its log contract with #4, while its code and bronze keys keep `source`. Capture's logs already in R2 keep `source`, and the catalog records the change as for #4. **#5**
+
+#### Sending the copy
+
+Each component sends its events over OTLP/HTTP with JSON encoding, as [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md) sets, in one request per pass or run, after writing them to R2 (D2):
+
+- **Capture:** after the pass's log is written to R2 and its heartbeat sent, the Worker sends the pass's events inside `ctx.waitUntil`, aborted at the send's time limit. The token is a Worker secret.
+- **Pipeline:** after the run's log is uploaded to R2, the run sends its events, aborted at the send's time limit. The token is a Modal Secret of the scheduled function only ([d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability)).
+
+A send that fails or reaches its limit is written to the platform's own logs, Workers Logs or stdout as `log_upload_failed` is, and changes nothing else: the R2 log is already written and the outcome and heartbeat signal are already set (R3–R5).
+
+The copy is built from the same JSON lines written to R2, never serialized again, so each line reaches Grafana as the body of its record and the redaction each component applies before writing reaches the copy with no code of its own (R4, R6).
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -340,6 +370,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 2 | [Observability catalog](#observability-catalog), [D5](#d5-one-observability-catalog-built-here) | The catalog's events in a machine-readable registry, `contracts/log-events.json`, its single source; `docs/observability.md` holds the rest and links to it (a registry as in OpenTelemetry's semantic conventions) | Terraform and the components' tests read the same list; each fact lives in one place | R16, R22, R25, R26 | Plan |
 | 3 | [Observability catalog](#observability-catalog) | The criterion for classifying an event in `docs/observability.md`, enforced by the registry test, with a path rule for writing entries; no line in the design template (poka-yoke) | The test already blocks an unclassified event; the template would repeat it in every design | R16, R22, R25 | Plan |
 | 4 | [Warning level](#warning-level) | `warn` for every component, OpenTelemetry's short severity name; capture changes from `warning`, and its logs in R2 are not rewritten (append-only logs) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | One name in queries from now on; the record stays as written | R27 | Plan |
+| 5 | [Field mapping](#field-mapping) | `system` for the bike sharing system in every component's log events; capture changes from `source` in its logs only (one name per concept, as OpenTelemetry's semantic conventions, in ADR-0040's vocabulary) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | Queries by system cover every component with one field | R41 | Plan |
 
 ### 2.3 Architecture
 
@@ -381,7 +412,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | File | Why it breaks | Strategy |
 |---|---|---|
-| `contracts/capture-logs.json` | Capture's `warning` level becomes `warn` (#4): the valid vectors at `warning` stop meeting the contract | The vectors change with capture's code in one step; SQL over capture's logs in R2 from before the change accepts both names, as the catalog records |
+| `contracts/capture-logs.json` | Capture's `warning` level becomes `warn` (#4) and its `source` field becomes `system` (#5): the valid vectors stop meeting the contract | The vectors change with capture's code in one step; SQL over capture's logs in R2 from before the change accepts both names, as the catalog records |
 
 ### 2.8 What does not change
 
