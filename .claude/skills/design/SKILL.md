@@ -82,3 +82,4 @@ Present them in two separate sections, writing "None" when empty:
 ### Fixes
 
 The owner decides which findings to fix. Apply each accepted fix to the section or step it concerns; the owner approves on the edit's diff. One finding per message when a fix needs a decision.
+Commit points follow one logical change per commit (CLAUDE.md › Git): each blocking or important fix, the minor fixes together, and the review's close.
