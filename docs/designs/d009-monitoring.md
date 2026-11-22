@@ -82,10 +82,14 @@ An alert fires on a symptom that needs an action from the owner, not on each err
 | ALR6 | Capture burns its monthly error budget (DQM7, 99.5%) at a rate that would exhaust it | Capture | The standard SLO burn-rate alert |
 | ALR7 | A run nears its time or memory limit (`duration_s`, `peak_memory_mb`) | Pipeline | Warns before the timeout or a memory kill ends runs ([ADR-0027](../decisions/0027-modal-as-execution-platform.md)) |
 | ALR8 | A component sends no events to Grafana for N minutes | Both | The send is broken (D2) |
-| ALR9 | Any other event of the warning level, such as `heartbeat_failed`, `log_upload_failed` or `stage_drained`, but `fetch_retried` | Both | Single warnings of low urgency; a retry that succeeds needs no action and one that fails is a `feed_failed`, while `fetch_retried` comes about 32 times a day |
+| ALR9 | An event the observability catalog marks as actionable and no other alert covers, such as `heartbeat_failed`, `log_upload_failed` or `stage_drained` | Both | Single warnings of low urgency; `fetch_retried`, about 32 a day, is not actionable: a retry that succeeds needs no action and one that fails is a `feed_failed` |
 | ALR10 | A provider's index lists a feed capture does not know (`unknown_feeds` of `index_refreshed`) | Capture | A change in the source for the owner to evaluate, which nothing else shows |
 | ALR11 | A pass logs a cause of a missed minute that D9's table does not list | Capture | A new cause to classify (D9) |
 | ALR12 | Grafana stops signalling the heartbeat service (watchdog) | Grafana | Every other alert runs in Grafana (D13) |
+| ALR13 | Grafana's use nears a limit of its Free tier: logs a month, synthetic check executions | Grafana | Past a limit, Grafana drops events or stops checking, and D1 is reviewed |
+| ALR14 | An event the observability catalog does not list reaches Grafana | Both | A new event to classify, which ALR9 would otherwise miss (D5) |
+
+The limits and costs of Cloudflare and Modal are watched by each provider's own usage and budget notifications, set in its console.
 
 An indicator built by a later child reaches these alerts by adding its target to the mechanism ALR4–ALR6 prove, as [d007 › D1](d007-pipeline-design.md#d1-build-by-vertical-slice) sets (Out of scope).
 
@@ -109,7 +113,7 @@ Rejected: an alert named after the item it checks, with no ID of its own. It is 
 
 #### D5. One observability catalog, built here
 
-This task absorbs T074 and builds the observability catalog: one document that holds, for every component, its log events with their level and own fields, the common fields of [ADR-0036](../decisions/0036-log-convention-across-components.md), the heartbeat checks, and the signals and alerts that read them, alerts included with their IDs (D4). It becomes the source the designs link to, following link, don't copy: d004 and d008 keep their decisions and link to it for the events. The task walks every event of capture and the pipeline to map them to Grafana and to find alerts, so the catalog is written once, from that walk. The level of a failure that does not affect the data is written `warning` by capture and `warn` by the pipeline; the catalog fixes one name for both. Where the catalog lives, and how a later component, such as the page in T041, adds its events, are settled in the Plan.
+This task absorbs T074 and builds the observability catalog: one document that holds, for every component, its log events with their level and own fields, the common fields of [ADR-0036](../decisions/0036-log-convention-across-components.md), the heartbeat checks, and the signals and alerts that read them, alerts included with their IDs (D4). It becomes the source the designs link to, following link, don't copy: d004 and d008 keep their decisions and link to it for the events. The task walks every event of capture and the pipeline to map them to Grafana and to find alerts, so the catalog is written once, from that walk. The level of a failure that does not affect the data is written `warning` by capture and `warn` by the pipeline; the catalog fixes one name for both. Each event in the catalog states whether it needs an action from the owner, which ALR9 reads, and a design that adds or changes an event classifies it when it designs its logs; ALR14 catches an event no design classified. Where the catalog lives, and how a later component, such as the page in T041, adds its events, are settled in the Plan.
 
 Rejected: T074 kept apart, after this task. This design would be shorter, but the events would be walked twice, and the alerts' IDs would have no place until T074.
 
@@ -180,8 +184,10 @@ Each alert is a page or a ticket, following the SRE split between alerts that in
 | ALR10 | Ticket | A change to evaluate, with no hurry |
 | ALR11 | Ticket | A cause to classify, with no hurry: its minutes already count against capture (D10) |
 | ALR12 | Page, by email from the heartbeat service | Every other alert is silent; it cannot go through Grafana (D13) |
+| ALR13 | Ticket | Fires with margin before the limit |
+| ALR14 | Ticket | An event to classify, with no hurry |
 
-Rejected: every alert a page. Simpler, but twelve alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead.
+Rejected: every alert a page. Simpler, but fourteen alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead.
 
 #### D12. No health script
 
