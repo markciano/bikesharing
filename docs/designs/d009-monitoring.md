@@ -170,7 +170,7 @@ Rejected: a target per class, the provider's included. It repeats DQM7's per-sys
 
 #### D11. Pages for what waiting makes worse, tickets for the rest
 
-Each alert is a page or a ticket, following the SRE split between alerts that interrupt and alerts reviewed later: a page when waiting makes the harm worse, because data is lost for good or a visitor already sees it; a ticket when the action can wait for days. Both reach the Grafana mobile app through IRM ([s018 › D5](../spikes/s018-monitoring-tool.md#d5-notifications-in-the-grafana-app)). A page notifies the owner on the phone until acknowledged; a ticket sends no notification and stays in the app's list of alerts until the owner closes it. Alerts notify at any hour.
+Each alert is a page or a ticket, following the SRE split between alerts that interrupt and alerts reviewed later: a page when waiting makes the harm worse, because data is lost for good or a visitor already sees it; a ticket when the action can wait for days. Both reach the Grafana mobile app through IRM ([s018 › D5](../spikes/s018-monitoring-tool.md#d5-notifications-in-the-grafana-app)). A page notifies the owner on the phone from 08:00 to 23:00, Madrid time, every day, insisting until acknowledged: the owner acts on alerts by day, never at night. A page that fires outside those hours is held and notifies at 08:00 if it still fires; the minutes capture loses meanwhile stay lost, which the owner accepts. A ticket sends no notification and stays in the app's list of alerts until the owner closes it. **#16**
 
 | Alert | Urgency | Why |
 |---|---|---|
@@ -190,7 +190,7 @@ Each alert is a page or a ticket, following the SRE split between alerts that in
 | ALR14 | Ticket | An event to classify, with no hurry |
 | ALR15 | Ticket | Capture getting worse on its own, which can wait for days |
 
-Rejected: every alert a page. Simpler, but fifteen alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead.
+Rejected: every alert a page. Simpler, but fifteen alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead. Rejected as well: pages at any hour; the owner does not act at night, so a page at night would only interrupt sleep.
 
 #### D12. No health script
 
@@ -263,7 +263,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R31** DQM11 shall give each minute with no capture of a feed to the provider or to capture by the cause its pass logs, as D9's table sets. (D9)
 - **R32** DQM11 shall leave out a minute captured but missing from the station stock. (D9)
 - **R33** The data quality catalog shall set DQM11's target to at most 30 minutes given to capture per feed and calendar month, with no target on the minutes given to the provider. (D10)
-- **R34** When a page other than ALR12 fires, Grafana shall notify the owner in the Grafana mobile app, at any hour, until the owner acknowledges it. (D11)
+- **R34** When a page other than ALR12 fires between 08:00 and 23:00, Madrid time, Grafana shall notify the owner in the Grafana mobile app with an important notification every 5 min, up to 6 times, until the owner acknowledges it. (D11, #16)
 - **R35** When a ticket fires, Grafana shall add it to the app's list of alerts with no notification, until the owner closes it. (D11)
 - **R36** Grafana shall show, over the last 14 days, the events of capture and the pipeline and the results of the synthetic check, in the browser and in the mobile app. (D1, D12)
 - **R37** The watchdog's signal URL shall be kept only in Grafana's notification setting, never in code. (D15)
@@ -273,6 +273,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R41** Grafana's queries and alerts shall select events by the fields they carry, with no list of systems. (D1)
 - **R42** While no event of capture has reached Grafana within ALR8's threshold, Grafana shall not raise ALR5 or ALR6. (D2, #10)
 - **R43** If no heartbeat signal of capture arrives within 10 min plus 10 min of grace, then the heartbeat service shall email the owner; capture shall signal it from each pass whose scheduled minute is a multiple of 5, when that pass stored all three dynamic feeds. (#10)
+- **R44** If a page other than ALR12 fires outside 08:00 to 23:00, Madrid time, then Grafana shall hold its notification until 08:00 and send it then if the alert still fires. (D11, #16)
 
 ### 1.4 Done when
 
@@ -412,6 +413,15 @@ Every notification uses one message template of the project's own, managed by Te
 
 The rule's text is not copied into the notification: the summary names the kind of failure, and the item is one tap away, so its text lives in its catalog only. **#11**
 
+#### Notification routing
+
+Every alert but ALR12 goes to one contact point of type IRM, on an IRM integration of type `grafana_alerting`; the root notification policy takes it as its default, so an alert with no `urgency` still reaches the app's list. In IRM, following its escalation chains, the integration's routes send each alert group to a chain by the alert's `urgency` label (`commonLabels.urgency` of the payload):
+
+- **Page:** a route matching `urgency = "page"`, to a chain that notifies the owner with an important notification, waits 5 min and repeats from the beginning 5 times: 6 notifications in about 25 min, then the alert group stays in the list until acknowledged.
+- **Ticket:** the integration's default route, to a chain with no steps, so the alert group enters the list with no notification.
+
+The notification policy for pages has an active time interval from 08:00 to 23:00, `Europe/Madrid`, every day, following Alertmanager's active time intervals: outside it, Grafana holds the notification and sends it when the interval opens, if the alert still fires. Tickets and ALR12 have none. IRM's integration, route and chains are declared in Terraform with the provider's service account token (ADR-0051); the owner's personal rules for important notifications, and their override of Do Not Disturb, are set in the app, since Terraform would need one more token for them. **#16**
+
 #### Watchdog
 
 ALR12 is an alert rule whose condition always holds, with a notification policy of its own that sends it every 5 min, its `repeat_interval`, to a webhook contact point on the watchdog's check in Healthchecks.io, never through IRM (D13). That policy is the first in the tree and matches `alert_id = "ALR12"` with no `continue`, so the policy for pages never routes ALR12 to IRM, although it carries `urgency = "page"` as D11 sets. The check's URL enters Terraform as a sensitive variable from `.env` (R37).
@@ -465,6 +475,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 13 | [Error budget alerts](#error-budget-alerts), [D10](#d10-a-target-on-captures-own-missed-minutes-only) | ALR6's and ALR15's windows count only the minutes with an event of capture in Grafana; a minute with none is left to capture's heartbeat and to SQL over R2 (an SLI over valid events, SRE Workbook) **refines #6** **refines #7** | A gap in Grafana's ingest pages no one for data R2 holds, and leaves no alert blind for days | R12, R13, R39 | Plan review |
 | 14 | [Observability catalog](#observability-catalog) | Each registry event lists the alerts that read it by name; Terraform builds every alert's event selector from it, and ALR9 from the events with `needs_action` that list none; an alert's row in `docs/observability.md` lists no events (single source of truth) **refines #2** | No hand-written exclusion list for ALR9, and the link between alerts and events lives in one place | R16, R25 | Plan review |
 | 15 | [Observability catalog](#observability-catalog) | Every catalog opens with what it holds and what for, how to read an entry, and one worked example, as a rule in `.claude/rules/docs/general.md`; `docs/observability.md` follows it, the existing catalogs are aligned in T076 (Diátaxis: reference with an explanatory entry point) | A reader new to the project understands the catalog without the designs | R25 | Plan review |
+| 16 | [D11](#d11-pages-for-what-waiting-makes-worse-tickets-for-the-rest), [Notification routing](#notification-routing) | Pages notify from 08:00 to 23:00, Madrid time, and are held outside it until 08:00 if still firing; in IRM a page's chain sends an important notification every 5 min, 6 times, and a ticket's chain has no steps (Alertmanager active time intervals, IRM escalation chains) | The owner acts by day, never at night; a page held overnight still rings in the morning | R34, R35, R44 | Steps review |
 
 ### 2.3 Architecture
 
@@ -504,8 +515,9 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   ├── variables.tf                            (new)       Stack, tokens, watchdog URL (sensitive), GitHub base URL, published files, systems' targets
 │   ├── locals.tf                               (new)       Reads the event registry and the pipeline's run settings; derives the thresholds (#8, #9)
 │   ├── alert_rules.tf                          (new)       ALR rules, ALR12's watchdog rule included
-│   ├── contact_points.tf                       (new)       Email, IRM and the watchdog's webhook
-│   ├── notification_policies.tf                (new)       Grouping by alert ID and system, repeat intervals, the watchdog's policy
+│   ├── contact_points.tf                       (new)       IRM and the watchdog's webhook
+│   ├── irm.tf                                  (new)       IRM integration, the pages' route and the two escalation chains (#16)
+│   ├── notification_policies.tf                (new)       Grouping by alert ID and system, repeat intervals, the pages' active time interval, the watchdog's policy
 │   ├── message_template.tf                     (new)       The notification template resource (#11)
 │   ├── templates/notification.tmpl             (new)       The notification layout (#11)
 │   ├── synthetic_check.tf                      (new)       ALR4's scripted k6 check
@@ -825,7 +837,9 @@ resource "grafana_rule_group" "this" {
 | R28 | Inspection | `_VOLUME_WINDOW` in `shell/run.py` is 7 days | — |
 | R30, R33 | Inspection | `docs/data-quality.md` sets DQM7's targets, 99.5% for AMBici and 97% for Bicing, and DQM11's, at most 30 min a feed and month given to capture | — |
 | R31, R32 | Inspection | DQM11's definition gives each cause to the provider or capture as D9's table sets, and leaves out a minute captured but missing from the station stock | — |
-| R34, R35 | Test | Notification policies route `urgency = "page"` to the IRM contact point and `urgency = "ticket"` to the alert list with no notification | unit |
+| R34, R35 | Test | Every alert but ALR12 reaches the IRM contact point, the root policy's default; the pages' route leads to a chain that notifies the owner as important, waits 5 min and repeats 5 times; the default route leads to a chain with no steps | unit |
+| R34, R35 | Demonstration | A test page rings on the phone as an important notification until acknowledged, and a test ticket enters the app's list with no notification | — |
+| R44 | Test | The pages' policy is active from 08:00 to 23:00, `Europe/Madrid`, every day; tickets' and ALR12's policies have no time interval | unit |
 | R36 | Demonstration | Grafana's Explore, in the browser and the mobile app, shows events of capture and the pipeline, and the synthetic check's results, over the last 14 days | — |
 | R37 | Test | The watchdog's URL is a `sensitive` variable with no default | unit |
 | R37 | Inspection | No signal URL in the repository; `.env.example` holds it empty | — |
@@ -879,7 +893,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
   - an access policy token with the `logs:write` scope only, for the OTLP copy of capture and the pipeline.
 
   The first two and the URL go in `.env` as Terraform variables; the third stays with the owner until it is set as a Worker secret and a Modal Secret. Verify: each token is listed in the console with that scope and no other.
-- **Grafana mobile app** with IRM, signed in to the owner's account, notifications allowed. Verify: IRM's test notification reaches the phone.
+- **Grafana mobile app** with IRM, signed in to the owner's account, notifications allowed, and the owner's personal rules for important notifications set to a push notification that overrides Do Not Disturb (iOS: "Override DND for important" and Critical Alerts allowed; Android: the Important channel overrides Do Not Disturb) ([Notification routing](#notification-routing)). Verify: an important test notification rings with the phone in Do Not Disturb.
 
 ### Step 1 — Event registry and its schema
 
@@ -1585,7 +1599,7 @@ Every threshold and event list the rules use, derived from the registry and the 
 - **Status:** 💤 todo
 - **Who:** Claude
 - **Commit:** `feat: d009.s20 route and lay out the alert notifications`
-- **R:** R19, R23, R24, R34, R35, R38
+- **R:** R19, R23, R24, R34, R35, R38, R44
 - **Model:** sonnet · medium
 - **Review:** code and security
 
@@ -1593,21 +1607,22 @@ Every threshold and event list the rules use, derived from the registry and the 
 
 Where each alert goes and what its notification shows.
 
-- `monitoring/contact_points.tf` (new): email, IRM, and the watchdog's webhook with its URL from the sensitive variable.
-- `monitoring/notification_policies.tf` (new): grouping by `alert_id` and `system` and the repeat intervals of [Notification grouping](#notification-grouping); `urgency = "page"` to IRM (R34), `urgency = "ticket"` to the alert list with no notification (R35); ALR12 to the watchdog every 5 min, and no other policy reaching it (R19).
+- `monitoring/contact_points.tf` (new): IRM, on the integration of `irm.tf`, and the watchdog's webhook with its URL from the sensitive variable.
+- `monitoring/irm.tf` (new): the IRM integration of type `grafana_alerting`, the pages' route and the two escalation chains of [Notification routing](#notification-routing) (R34, R35).
+- `monitoring/notification_policies.tf` (new): IRM as the root's default; grouping by `alert_id` and `system` and the repeat intervals of [Notification grouping](#notification-grouping); the pages' policy with its active time interval, 08:00 to 23:00 `Europe/Madrid` (R44); ALR12 to the watchdog every 5 min, and no other policy reaching it (R19).
 - `monitoring/message_template.tf` (new) and `monitoring/templates/notification.tmpl` (new): the layout of [Notifications](#notifications), the alert's ID and checked IDs (R23) and the links to the catalog section, the alert's row and the events in Explore (R24), read only from labels and annotations (R38).
-- `monitoring/tests/alerting.tftest.hcl` (modified): run blocks for the routing and ALR12's policy.
-- Tests: the unit rows of R19, R34 and R35, and the Inspection row of R38.
+- `monitoring/tests/alerting.tftest.hcl` (modified): run blocks for the routing, the chains, the pages' time interval and ALR12's policy.
+- Tests: the unit rows of R19, R34, R35 and R44, and the Inspection row of R38.
 
 #### Reads
 
 - [D11](#d11-pages-for-what-waiting-makes-worse-tickets-for-the-rest), [D13](#d13-a-watchdog-outside-grafana-watches-its-alerting) and [D15](#d15-monitoring-security-threats), in this design: urgency, watchdog and what a notification may carry.
-- [Notifications](#notifications), [Notification grouping](#notification-grouping) and [Watchdog](#watchdog), in this design: the layout, grouping and the watchdog's route.
+- [Notifications](#notifications), [Notification routing](#notification-routing), [Notification grouping](#notification-grouping) and [Watchdog](#watchdog), in this design: the layout, IRM's routes and chains, grouping and the watchdog's route.
 
 #### Do
 
 1. Write the run blocks in `alerting.tftest.hcl`.
-2. Write `contact_points.tf`, `notification_policies.tf`, `message_template.tf` and `templates/notification.tmpl`.
+2. Write `irm.tf`, `contact_points.tf`, `notification_policies.tf`, `message_template.tf` and `templates/notification.tmpl`.
 3. Run `bash monitoring/scripts/check-monitoring.sh`.
 
 #### Check
@@ -1932,7 +1947,7 @@ Grafana's alerts, contact points, synthetic check and the watchdog are live.
 - **Status:** 💤 todo
 - **Who:** Owner
 - **Commit:** —
-- **R:** R10, R23, R24, R36, R40
+- **R:** R10, R23, R24, R34, R35, R36, R40
 - **Model:** sonnet · medium
 - **Review:** no
 
