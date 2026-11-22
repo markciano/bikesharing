@@ -322,6 +322,8 @@ Grafana's alert rules, contact points, notification policies, synthetic check an
 
 The observability catalog of D5 is a registry of events with its schema, and a document. `contracts/log-events.registry.json` is the registry, the single source of each event of every component: its component, level, own fields and whether it needs an action from the owner. `contracts/log-events.schema.json`, a JSON Schema (draft 2020-12) that the registry names in `$schema`, fixes the shape of an entry, and the registry test validates the registry against it. The registry is reference data written in the repository and read by several components, not data one component sends another, so it has no test vectors ([ADR-0050](../decisions/0050-contract-tests-by-contract-kind-with-native-schemas.md) covers the latter). `docs/observability.md`, beside `docs/data-quality.md`, holds the rest: the common fields of ADR-0036, the heartbeat checks, the alerts with their IDs, the catalog IDs they check and their urgency, and how alerts on an error budget work; it links to the registry for the events. Terraform reads the registry to build the event lists of ALR9 and ALR14, and the tests of capture and the pipeline check that every event they write is registered. **#2**
 
+`docs/observability.md` also holds the LogQL query of each feed's minutes given to the provider over the last 7 days, run in Grafana's Explore (R40); Grafana's dashboards are designed in T060.10, which may turn the query into a panel. **#12**
+
 A component, including a later one such as the page, adds its events to the registry in the design that designs its logs. `docs/observability.md` states the criterion by which an event needs an action from the owner; the registry test keeps an unclassified event from passing CI, and the path rule `.claude/rules/docs/observability.md`, scoped to the catalog's two files, holds the conventions for writing an entry, as `.claude/rules/docs/data-model.md` does for the data model. **#3**
 
 #### Warning level
@@ -375,7 +377,7 @@ Each threshold is a formula over the settings it depends on, never a figure meas
 | Pipeline's send time limit (R5) | fixed, one attempt | 10 s | — |
 | ALR5, minutes in a row with no clean capture of a feed | fixed: capture's cadence is one pass a minute ([d004](d004-bronze-data-capture.md)) | over 10 | 5 at most, any cause |
 | ALR8, capture silent in Grafana | fixed | 5 min with no event | — |
-| Capture's send time limit (R5) | fixed, one attempt, as capture's heartbeat | 5 s | — |
+| Capture's send time limit (R5) | fixed, one attempt, as capture's heartbeat | 10 s | — |
 | ALR13, logs of the month | 80% of the Free tier's 50 GB | 40 GB | about 200 MB a month (D1) |
 | ALR13, synthetic check executions of the month | 80% of the Free tier's 100k | 80k | 25,920 a month (D14) |
 | ALR12, watchdog signal | the watchdog policy's `repeat_interval` | 5 min | — |
@@ -452,10 +454,11 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 5 | [Field mapping](#field-mapping) | `system` for the bike sharing system in every component's log events; capture changes from `source` in its logs only (one name per concept, as OpenTelemetry's semantic conventions, in ADR-0040's vocabulary) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | Queries by system cover every component with one field | R41 | Plan |
 | 6 | [D10](#d10-a-target-on-captures-own-missed-minutes-only), [D3](#d3-alerts-on-symptoms-that-need-action) | ALR15 and the provider's minutes over a rolling 7 days in Grafana, from capture's events; DQM11's monthly value queried with SQL over R2 (alerts on rolling windows, SLO period measured from the durable store) | Grafana keeps 14 days; the pipeline needs no access to capture's logs | R39, R40 | Plan |
 | 7 | [Error budget alerts](#error-budget-alerts) | ALR6 as LogQL alert rules built by a Terraform module, with the SRE Workbook's multiwindow, multi-burn-rate levels; not Grafana's SLO app | Fewer parts, every window within 14 days; moving to the SLO app later keeps the same queries | R12, R13 | Plan |
-| 8 | [Thresholds](#thresholds) | The pipeline's thresholds as formulas over its cadence, time budget and container (ALR4 at DQM10's target, ALR7 at 80% of each limit, ALR8 at 2 cadences), a 5-minute synthetic check and a 10 s send; capture's ALR5 over 10 minutes in a row, ALR8 at 5 min and a 5 s send; ALR13 at 80% of each Free tier limit; the watchdog signalling every 5 min to a check with 10 min of grace | Thresholds follow the pipeline as it grows and its cadence is tuned, with no rewrite; the others stay quiet at what production shows and warn with margin | R5, R10, R11, R14, R15, R19, R20, R21 | Plan |
+| 8 | [Thresholds](#thresholds) | The pipeline's thresholds as formulas over its cadence, time budget and container (ALR4 at DQM10's target, ALR7 at 80% of each limit, ALR8 at 2 cadences), a 5-minute synthetic check; capture's ALR5 over 10 minutes in a row and ALR8 at 5 min; each component's send limited to its heartbeat's timeout, 10 s; ALR13 at 80% of each Free tier limit; the watchdog signalling every 5 min to a check with 10 min of grace | Thresholds follow the pipeline as it grows and its cadence is tuned, with no rewrite; the others stay quiet at what production shows and warn with margin | R5, R10, R11, R14, R15, R19, R20, R21 | Plan |
 | 9 | [Thresholds](#thresholds) | The pipeline's run settings in one JSON data file read by the pipeline and by Terraform (single source of truth, configuration as data) | A change of cadence is one edit; no copy to keep aligned | R10, R14, R15 | Plan |
 | 10 | [Capture silence](#capture-silence) | ALR5 and ALR6 only while capture's events reach Grafana; a silent capture raises ALR8, and capture's heartbeat on every fifth pass, with 10 min of period and 10 min of grace, reports a capture that stores nothing (dead man's switch) **refines [d004 › D10](d004-bronze-data-capture.md#d10-capture-heartbeat)** | No page for a broken send; a dead capture reported in about 20 min instead of 2 h | R11, R12, R13, R15, R42, R43 | Plan |
 | 11 | [Notifications](#notifications) | A message template of the project's own: alert ID, summary and checked IDs; where; the value against its threshold and since when, in Madrid's local time; then links to the item's catalog section, the alert's row and its events; no rule text copied (link, don't copy; actionable alerts show the value that fired) | Read on a phone, enough to tell a page from a wait; the item's text lives in its catalog only | R23, R24, R38 | Plan |
+| 12 | [Observability catalog](#observability-catalog) | The provider's 7-day minutes as a LogQL query in `docs/observability.md`, run in Explore; no dashboard in this task (dashboards in T060.10) | Meets R40 with what Grafana ships, leaving every dashboard decision to the task that designs them | R40 | Plan |
 
 ### 2.3 Architecture
 
@@ -542,7 +545,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │       ├── integration/test_run.py             (modified)  Copy sent after the log upload
 │       └── integration/test_log_events_registry_contract.py (new) Registry valid against its schema; every pipeline event registered
 └── docs/
-    ├── observability.md                        (new)       The catalog: common fields, heartbeat checks, alerts, error budgets, notification layout (#2, #3, #11)
+    ├── observability.md                        (new)       The catalog: common fields, heartbeat checks, alerts, error budgets, notification layout, the provider's minutes query (#2, #3, #11, #12)
     ├── data-quality.md                         (modified)  DQM7, DQM10, DQM11 and DQR12
     ├── architecture.md                         (modified)  Monitoring as a building block, and its deployment
     ├── testing-strategy.md                     (modified)  The monitoring component and the registry tests
@@ -593,7 +596,7 @@ export function buildLogsRequest(lines) {}
 
 /**
  * One POST of `buildLogsRequest(lines)` to `target.endpoint`, with `Authorization: Basic <token>`,
- * aborted by `AbortSignal.timeout(limits.otlpTimeoutMs)`, 5 s in production. Never throws.
+ * aborted by `AbortSignal.timeout(limits.otlpTimeoutMs)`, 10 s in production. Never throws.
  * @param {OtlpTarget} target
  * @param {string[]} lines
  * @param {{ otlpTimeoutMs: number }} limits
@@ -770,9 +773,50 @@ resource "grafana_rule_group" "this" {
 
 <!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
 
+`terraform test` runs with a mocked provider: it verifies each rule's query, threshold, labels and routing as planned, not that Grafana evaluates them; that alerts fire and notify is shown by the demonstrations of [Done when](#14-done-when).
+
 | R | Method | What is verified | Level |
 |---|---|---|---|
-| R1 | Test / Inspection / Analysis / Demonstration | | unit / integration / e2e; — for other methods |
+| R1 | Test | A pass's request, and a run's, holds one record per line written to R2, of every level, in order | integration |
+| R2 | Test | The request is built for a line of an event and a system the code has never seen, with no list consulted | unit |
+| R3 | Test | With Grafana answering 500, stalling past the limit or unreachable, the pass's and the run's outcome and heartbeat signal equal those of a successful send, and the failure is written to Workers Logs or stdout as `otlp_send_failed` with its `error_type` | integration |
+| R4 | Test | The R2 log is byte-identical with a send that succeeds and one that fails | integration |
+| R5 | Test | A response that stalls past `otlpTimeoutMs`, or `timeout_s`, is aborted: capture returns `errorType: "timeout"`, the pipeline raises `OSError` | unit (capture), integration (pipeline) |
+| R6 | Test | Each record's body is the line written to R2, a redacted secret included, never serialized again | unit |
+| R7, R8 | Test | ALR1 and ALR2 select the failed rules' events by severity, take `rule` from the event as a label, and carry `urgency = "ticket"` | unit |
+| R9 | Test | ALR3 selects the page's failed deployment event, as a ticket | unit |
+| R10 | Test | The synthetic check runs every 5 min from three probes with ALR4's threshold from `locals.tf`, and ALR4 fires on two failing probes, as a page | unit |
+| R10 | Demonstration | The k6 script passes on the page's live file and fails a probe with a threshold of 0 min, run from Grafana's synthetic check | — |
+| R11 | Test | ALR5 counts minutes in a row with no clean capture per system and feed, fires over 10, as a page | unit |
+| R12, R13 | Test | The module builds three rules per system with the burn rates and windows of [Error budget alerts](#error-budget-alerts), each threshold the burn rate times `1 - target`, both windows required, the 1 h and 6 h levels as pages and the 3 d level as a ticket; a target outside (0, 1) is rejected | unit |
+| R14 | Test | ALR7's thresholds derive from `run_settings.json`: 80% of the time budget and of the container's memory | unit |
+| R15 | Test | ALR8 fires per component after 2 cadences for the pipeline and 5 min for capture with no event, as a ticket | unit |
+| R16, R22 | Test | ALR9 selects the registry's events with `needs_action` and no other alert, ALR14 every event the registry does not list, both built from the registry | unit |
+| R17 | Test | ALR10 selects `index_refreshed` events with a non-empty `unknown_feeds` | unit |
+| R18 | Test | ALR11 selects a pass's missed-minute cause outside D9's table | unit |
+| R19 | Test | ALR12's condition always holds, its policy repeats every 5 min to the watchdog's webhook contact point, and no other policy reaches it | unit |
+| R20 | Inspection | The watchdog's check in Healthchecks.io has a 5 min period, 10 min of grace and the owner's email | — |
+| R21 | Test | ALR13 fires at 40 GB of logs and 80k check executions a month, as a ticket | unit |
+| R23 | Test | Every rule carries `alert_id` and the checked catalog IDs that the template reads | unit |
+| R23, R24 | Demonstration | A test notification shows the alert's ID and checked IDs, and its links open the catalog section, the alert's row and the events in Grafana's Explore | — |
+| R25 | Test | The registry is valid against its schema, each `component` and `event` pair appears once, and every event capture and the pipeline write is registered | contract |
+| R25, R26 | Inspection | `docs/observability.md` lists the common fields, the heartbeat checks, and every alert with its ID, checked IDs, urgency and the events it reads | — |
+| R27 | Test | The registry's levels are `info`, `warn` and `error`, and capture's log contract vectors use `warn` | contract |
+| R28, R29 | Test | `capture_volume`'s dbt unit tests flag a capture below 95% of the 7-day median and skip it with fewer than 60 captures in those 7 days | unit |
+| R28 | Inspection | `_VOLUME_WINDOW` in `shell/run.py` is 7 days | — |
+| R30, R33 | Inspection | `docs/data-quality.md` sets DQM7's targets, 99.5% for AMBici and 97% for Bicing, and DQM11's, at most 30 min a feed and month given to capture | — |
+| R31, R32 | Inspection | DQM11's definition gives each cause to the provider or capture as D9's table sets, and leaves out a minute captured but missing from the station stock | — |
+| R34, R35 | Test | Notification policies route `urgency = "page"` to the IRM contact point and `urgency = "ticket"` to the alert list with no notification | unit |
+| R36 | Demonstration | Grafana's Explore, in the browser and the mobile app, shows events of capture and the pipeline, and the synthetic check's results, over the last 14 days | — |
+| R37 | Test | The watchdog's URL is a `sensitive` variable with no default | unit |
+| R37 | Inspection | No signal URL in the repository; `.env.example` holds it empty | — |
+| R38 | Inspection | The template reads only the alert's labels and annotations, and no annotation holds an event's body | — |
+| R39 | Test | ALR15 sums each feed's minutes given to capture over 7 days and fires over 7, as a ticket | unit |
+| R40 | Demonstration | The query in `docs/observability.md`, run in Explore, shows each feed's minutes given to the provider over the last 7 days, with no target | — |
+| R41 | Test | Every rule's query groups by `system` and names no system, except ALR6's, which takes its system from the module's variable | unit |
+| R42 | Test | Every ALR5 and ALR6 rule holds only while capture has events in Grafana within ALR8's threshold | unit |
+| R43 | Test | Capture signals the heartbeat from one pass in five that stored the three dynamic feeds, and from no other pass | unit |
+| R43 | Inspection | Capture's heartbeat check in Healthchecks.io has a 10 min period and 10 min of grace | — |
 
 ### 2.7 Breaking changes
 
