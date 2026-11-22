@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 6.
+- Current: Step 7.
 
 ## 1. Spec — what and why
 
@@ -1108,7 +1108,7 @@ Capture's side of the event registry: the registry is valid, and it holds exactl
 
 ### Step 6 — Capture: OTLP sender
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s6 build and send capture's OTLP request`
 - **R:** R1, R2, R5, R6

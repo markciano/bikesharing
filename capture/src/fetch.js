@@ -5,13 +5,14 @@
  * Production limits; tests pass their own, in milliseconds and bytes, so that the
  * timeout and the size limit are testable (d004, Tests and contracts).
  * @type {Readonly<{ timeoutMs: number, maxBytes: number, retryDelayMs: number,
- *   heartbeatTimeoutMs: number, retry403MinMs: number, retry403MaxMs: number }>}
+ *   heartbeatTimeoutMs: number, otlpTimeoutMs: number, retry403MinMs: number, retry403MaxMs: number }>}
  */
 export const LIMITS = Object.freeze({
   timeoutMs: 60_000,
   maxBytes: 10_000_000,
   retryDelayMs: 250,
   heartbeatTimeoutMs: 10_000,
+  otlpTimeoutMs: 10_000,
   retry403MinMs: 3_000,
   retry403MaxMs: 5_000,
 });
