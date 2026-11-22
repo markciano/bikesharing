@@ -344,6 +344,20 @@ Which attributes Grafana Cloud promotes to labels is checked at account set-up w
 
 Every component names the bike sharing system `system` in its log events, as the pipeline does and as GBFS names it ([ADR-0040](../decisions/0040-model-vocabulary-from-gbfs-3-0.md)); capture, which wrote `source`, changes its log events and its log contract with #4, while its code and bronze keys keep `source`. Capture's logs already in R2 keep `source`, and the catalog records the change as for #4. **#5**
 
+#### Error budget alerts
+
+ALR6 follows the SRE Workbook's multiwindow, multi-burn-rate alert, written as LogQL alert rules over capture's events. For each system and window, the error rate is one minus the minutes with a `feed_captured` over the minutes DQM7 counts in the window, so a minute with no pass counts as missed with no rule of its own; the burn rate is that error rate over the system's budget, one minus its DQM7 target (D7). A level fires when both its windows exceed its burn rate: the long one shows the burn is serious, the short one that it is still going on.
+
+| Level | Burn rate | Long window | Short window | Budget spent in the long window |
+|---|---|---|---|---|
+| Page | 14.4 | 1 h | 5 min | 2% |
+| Page | 6 | 6 h | 30 min | 5% |
+| Ticket | 1 | 3 d | 6 h | 10% |
+
+A Terraform module builds the three levels from each system's target, so a new system or target is one variable; every window fits Grafana's 14 days. The budget left in the month is queried with SQL over R2, as DQM11's month is (#6). **#7**
+
+- **What would change it:** a longer retention, from a paid plan, or many more SLOs: Grafana's SLO app then gives its budget view, with the same queries kept as Loki recording rules; the alert, its ID and its requirements are unchanged.
+
 #### Sending the copy
 
 Each component sends its events over OTLP/HTTP with JSON encoding, as [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md) sets, in one request per pass or run, after writing them to R2 (D2):
@@ -372,6 +386,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 4 | [Warning level](#warning-level) | `warn` for every component, OpenTelemetry's short severity name; capture changes from `warning`, and its logs in R2 are not rewritten (append-only logs) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | One name in queries from now on; the record stays as written | R27 | Plan |
 | 5 | [Field mapping](#field-mapping) | `system` for the bike sharing system in every component's log events; capture changes from `source` in its logs only (one name per concept, as OpenTelemetry's semantic conventions, in ADR-0040's vocabulary) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | Queries by system cover every component with one field | R41 | Plan |
 | 6 | [D10](#d10-a-target-on-captures-own-missed-minutes-only), [D3](#d3-alerts-on-symptoms-that-need-action) | ALR15 and the provider's minutes over a rolling 7 days in Grafana, from capture's events; DQM11's monthly value queried with SQL over R2 (alerts on rolling windows, SLO period measured from the durable store) | Grafana keeps 14 days; the pipeline needs no access to capture's logs | R39, R40 | Plan |
+| 7 | [Error budget alerts](#error-budget-alerts) | ALR6 as LogQL alert rules built by a Terraform module, with the SRE Workbook's multiwindow, multi-burn-rate levels; not Grafana's SLO app | Fewer parts, every window within 14 days; moving to the SLO app later keeps the same queries | R12, R13 | Plan |
 
 ### 2.3 Architecture
 
