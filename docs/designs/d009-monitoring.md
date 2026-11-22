@@ -207,6 +207,15 @@ The synthetic check of ALR4 reads the page's files from three probe locations, a
 
 Rejected: one probe. A third of the executions, but a network failure at that probe pages the owner while visitors see a fresh page.
 
+#### D15. Monitoring security threats
+
+One STRIDE pass covers what this task adds to the tool that [s018 › D8](../spikes/s018-monitoring-tool.md#d8-monitoring-tool-security-threats) already covers (the account, the write tokens, logs on one more provider, a flooded ingest, an outage): the watchdog's signal and the notifications on the owner's phone. Repudiation is covered by R2 as the record (D1); alerts grant no permission, so there is no elevation of privilege.
+
+| # | Threat (STRIDE) | Impact | Control | Requirement |
+|---|---|---|---|---|
+| `TH1` | Tampering: the watchdog's signal URL (ALR12) leaks | False signals keep the check green while Grafana is silent | The URL is kept only in Grafana's notification setting, never in code; it reaches that one check only and is rotated in Healthchecks.io; the risk is accepted as for the heartbeat ([s012 › TH11](../spikes/s012-execution-target.md#d3-pipeline-security)) | |
+| `TH2` | Information disclosure: a notification is read on a locked or lost phone | What fails and where is seen | Notifications carry IDs, system and version, never credentials or visitor data; their links lead to Grafana, behind sign-in with two-factor authentication (s018 › TH1) | |
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
