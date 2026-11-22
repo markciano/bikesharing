@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Spec › Open questions, from OQ7. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5), the thresholds of ALR4, ALR7 and the heartbeat derived from the pipeline's cadence, so a change of cadence is one setting (D8); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
+- Current: Spec › Open questions, from OQ8. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5), the thresholds of ALR4, ALR7 and the heartbeat derived from the pipeline's cadence, so a change of cadence is one setting (D8); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
 
 ## 1. Spec — what and why
 
@@ -157,6 +157,25 @@ DQM11 takes a target on the minutes D9 gives to capture: at most 30 minutes per 
 
 Rejected: a target per class, the provider's included. It repeats DQM7's per-system target, and a target the owner cannot act on prompts no action.
 
+#### D11. Pages for what waiting makes worse, tickets for the rest
+
+Each alert is a page or a ticket, following the SRE split between alerts that interrupt and alerts reviewed later: a page when waiting makes the harm worse, because data is lost for good or a visitor already sees it; a ticket when the action can wait for days. Both reach the Grafana mobile app through IRM ([s018 › D5](../spikes/s018-monitoring-tool.md#d5-notifications-in-the-grafana-app)). A page notifies the owner on the phone until acknowledged; a ticket sends no notification and stays in the app's list of alerts until the owner closes it. No alert notifies the owner between 23:00 and 09:00, Madrid time: a page that fires in those hours notifies at 09:00 if it is still firing.
+
+| Alert | Urgency | Why |
+|---|---|---|
+| ALR4 | Page | A visitor sees stale data, whatever the cause |
+| ALR5 | Page | A minute not captured is lost for good: bronze cannot be captured again |
+| ALR6 | Page at a fast burn, ticket at a slow one | The SLO alert of the SRE Workbook, at several burn rates over several windows |
+| ALR1 | Ticket | The batch is set aside and bronze keeps its data to process again; a page falling behind raises ALR4 |
+| ALR2 | Ticket | A rule of severity warn blocks nothing |
+| ALR3 | Ticket | A failed deployment that repeats ages the page and raises ALR4 |
+| ALR7 | Ticket | An early warning, with margin before the limit |
+| ALR8 | Ticket | R2 still holds the record (D2), and the heartbeat, on another provider, still reports stopped runs |
+| ALR9 | Ticket | Single warnings of low urgency (D3) |
+| ALR10 | Ticket | A change to evaluate, with no hurry |
+
+Rejected: every alert a page. Simpler, but ten alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -193,7 +212,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ7 | How does each alert reach the owner, by urgency, starting from the SRE split between page and ticket? | D3 | [s018 › P3](../spikes/s018-monitoring-tool.md#23-production-inputs) |
 | OQ8 | Which health questions does a script answer that Grafana does not, and must it run from a phone? Out of scope if none. | D1 | [s013 › D5, P9](../spikes/s013-visualization-tool.md#55-production-inputs) |
 
 ## 2. Plan — how
