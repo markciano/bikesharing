@@ -430,11 +430,11 @@ Grafana cannot tell a capture that stores nothing from a capture whose send is b
 Each component sends its events over OTLP/HTTP with JSON encoding, as [ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md) sets, in one request per pass or run, after writing them to R2 (D2):
 
 - **Capture:** after the pass's log is written to R2 and its heartbeat sent, the Worker sends the pass's events inside `ctx.waitUntil`, aborted at the send's time limit. The token is a Worker secret.
-- **Pipeline:** after the run's log is uploaded to R2, the run sends its events, aborted at the send's time limit. The token is a Modal Secret of the scheduled function only ([d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability)).
+- **Pipeline:** after the run's log is uploaded to R2 and its heartbeat pinged, the run sends its events, aborted at the send's time limit. The token is a Modal Secret of the scheduled function only ([d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability)).
 
 A send that fails or reaches its limit is written to the platform's own logs, Workers Logs or stdout as `log_upload_failed` is, and changes nothing else: the R2 log is already written and the outcome and heartbeat signal are already set (R3–R5).
 
-The copy is built from the same JSON lines written to R2, never serialized again, so each line reaches Grafana as the body of its record and the redaction each component applies before writing reaches the copy with no code of its own (R4, R6).
+The copy is built from the same JSON lines written to R2, never serialized again, so each line reaches Grafana as the body of its record and the redaction each component applies before writing reaches the copy with no code of its own (R4, R6). The pipeline's copy also carries the events emitted after the upload, `log_upload_failed` and `heartbeat_failed`, which the R2 log cannot hold, so that ALR9 reads them; capture pings its heartbeat before writing its log, so its copy is the R2 log's lines.
 
 ### 2.2 Decision summary
 
@@ -529,9 +529,9 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   ├── src/bikesharing/
 │   │   ├── core/run_settings.json              (new)       Cadence, time budget, timeout and container memory (#9)
 │   │   ├── core/settings.py                    (modified)  RunSettings and its pure parser; TIME_BUDGET moves into it
-│   │   ├── core/events.py                      (modified)  otlp_send_failed, at warn, stdout only
+│   │   ├── core/events.py                      (modified)  otlp_send_failed, at warn, stdout only; log_upload_failed to stdout and the copy
 │   │   ├── core/otlp_payload.py                (new)       Builds the OTLP/HTTP JSON request from the run's lines
-│   │   ├── shell/event_log.py                  (modified)  lines(): the kept lines, for the copy
+│   │   ├── shell/event_log.py                  (modified)  lines(): every kept line, for the copy
 │   │   ├── shell/otlp_exporter.py              (new)       Sends it within its limit, one attempt; raises on failure
 │   │   ├── shell/run_settings.py               (new)       Reads run_settings.json once into RUN_SETTINGS
 │   │   └── shell/run.py                        (modified)  Sends the copy after the log upload and the ping, a failure to stdout; OTLP target in the scheduled config; 7-day volume history (DQR12)
@@ -542,7 +542,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │       ├── unit/core/test_otlp_payload.py      (new)       Request built from the lines
 │       ├── unit/core/test_settings.py          (new)       Settings parsed from data; invalid data rejected
 │       ├── integration/test_otlp_exporter.py   (new)       Failed or late send changes nothing
-│       ├── integration/test_run.py             (modified)  Copy sent after the log upload
+│       ├── integration/test_run.py             (modified)  Copy sent after the log upload and the ping, with log_upload_failed and heartbeat_failed
 │       └── integration/test_log_events_registry_contract.py (new) Registry valid against its schema; every pipeline event registered
 └── docs/
     ├── observability.md                        (new)       The catalog: common fields, heartbeat checks, alerts, error budgets, notification layout, the provider's minutes query (#2, #3, #11, #12)
@@ -637,7 +637,7 @@ def send_logs(
     """
 ```
 
-- **Callers:** `EventLog.lines() -> tuple[str, ...]` returns the kept lines that `body()` joins. `scheduled_config` reads `OTLP_ENDPOINT` and `OTLP_TOKEN` into the run's configuration as an `OtlpTarget`; `one_off_config` sets none, so a one-off run sends nothing. `run` sends after the log upload and the heartbeat ping, and catches any exception as it does for the upload, emitting `otlp_send_failed(ts, *, error_type)` at `warn`, to stdout only; the outcome does not change (R3–R5).
+- **Callers:** `EventLog.lines() -> tuple[str, ...]` returns every kept line, in order; read after the heartbeat ping, it holds the lines `body()` uploaded followed by any `log_upload_failed` or `heartbeat_failed`. `scheduled_config` reads `OTLP_ENDPOINT` and `OTLP_TOKEN` into the run's configuration as an `OtlpTarget`; `one_off_config` sets none, so a one-off run sends nothing. `run` sends after the log upload and the heartbeat ping, and catches any exception as it does for the upload, emitting `otlp_send_failed(ts, *, error_type)` at `warn`, to stdout only; the outcome does not change (R3–R5).
 
 #### Pipeline's run settings
 
@@ -777,7 +777,7 @@ resource "grafana_rule_group" "this" {
 
 | R | Method | What is verified | Level |
 |---|---|---|---|
-| R1 | Test | A pass's request, and a run's, holds one record per line written to R2, of every level, in order | integration |
+| R1 | Test | A pass's request, and a run's, holds one record per line written to R2, of every level, in order; a run's request also holds the `log_upload_failed` and `heartbeat_failed` emitted after the upload | integration |
 | R2 | Test | The request is built for a line of an event and a system the code has never seen, with no list consulted | unit |
 | R3 | Test | With Grafana answering 500, stalling past the limit or unreachable, the pass's and the run's outcome and heartbeat signal equal those of a successful send, and the failure is written to Workers Logs or stdout as `otlp_send_failed` with its `error_type` | integration |
 | R4 | Test | The R2 log is byte-identical with a send that succeeds and one that fails | integration |
