@@ -575,6 +575,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
     ├── data-quality.md                         (modified)  DQM7, DQM10, DQM11 and DQR12
     ├── architecture.md                         (modified)  Monitoring as a building block, and its deployment
     ├── testing-strategy.md                     (modified)  The monitoring component and the registry tests
+    ├── sources/
+    │   └── grafana-cloud.md                    (new)       Grafana Cloud's source card: Free tier, alerting and IRM facts, the account set-up's outcomes
     ├── decisions/
     │   └── 0051-monitoring-configuration-as-code.md (new)  Monitoring configuration as code with Terraform (#1)
     └── designs/
@@ -888,8 +890,8 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 - **tenv**, the version manager that installs the Terraform release `monitoring/.terraform-version` pins and verifies its SHA256 and HashiCorp's PGP signature by default: `brew install tenv` (4.16.9 or later). Verify: `tenv --version`.
 - **Terraform 1.17.1**, the pin of `monitoring/.terraform-version`, the latest patch released at least two weeks before it was chosen. Grafana's provider is `~> 4.54` in `versions.tf`, with 4.54.0 locked, or the newer release Step 17 keeps. Installed by tenv on first use. Verify: `terraform version` inside `monitoring/` prints `Terraform v1.17.1`.
 - **Grafana Cloud account** on the Free tier, with its stack in an EU region and no payment method. Verify in the console: the stack's region and the billing page. Record both in Close (Done when).
-- **Free tier features** checked at account set-up: template variables and data links, the SLO app, Loki recording rules, a scripted k6 check asserting a file's age, the IRM heartbeat and the usage data source ALR13 reads. Two or more missing reopen s018's choice of tool ([s018 › P1](../spikes/s018-monitoring-tool.md#23-production-inputs)). Also checked: which of `event`, `system`, `feed` and `rule` Grafana Cloud promotes to Loki labels ([Field mapping](#field-mapping)), and whether message templates have the `tz` and `date` functions ([Notifications](#notifications)). Record each outcome in Close before Step 1: Steps 20–24 write their queries and template from it.
-- **Account values**, none of them secret: the stack's OTLP/HTTP logs endpoint, ending in `/v1/logs`, and the UIDs of its Loki, Prometheus (where the synthetic check's results land) and usage data sources. Record them in Close before Step 1, and set the UIDs in `.env` as Terraform variables. Verify: each UID is listed in the console under Connections › Data sources.
+- **Free tier features** checked at account set-up: template variables and data links, the SLO app, Loki recording rules, a scripted k6 check asserting a file's age, the IRM heartbeat and the usage data source ALR13 reads. Two or more missing reopen s018's choice of tool ([s018 › P1](../spikes/s018-monitoring-tool.md#23-production-inputs)). Also checked: which of `event`, `system`, `feed` and `rule` Grafana Cloud promotes to Loki labels ([Field mapping](#field-mapping)), and whether message templates have the `tz` and `date` functions ([Notifications](#notifications)). Record each outcome before Step 1 as a fact of [Grafana Cloud's source card](../sources/grafana-cloud.md), closing its open question: Steps 20–24 write their queries and template from it.
+- **Account values**, none of them secret: the stack's OTLP/HTTP logs endpoint, ending in `/v1/logs`, and the UIDs of its Loki, Prometheus (where the synthetic check's results land) and usage data sources. Record them before Step 1 in the source card's Access, and set the UIDs in `.env` as Terraform variables. Verify: each UID is listed in the console under Connections › Data sources.
 - **Grafana credentials**, each with the narrowest scope that works:
   - a stack service account token for Terraform's alerting and IRM resources (the provider's `auth`), with the `plugins.app:access` permission IRM needs;
   - a Synthetic Monitoring access token for ALR4's check (the provider's `sm_access_token`), with the stack's Synthetic Monitoring URL;
@@ -1189,7 +1191,7 @@ Each pass sends its lines to Grafana after its log and its heartbeat, and the se
 - `capture/src/log.js` (modified): `toLines(events)`, each event's `JSON.stringify`; `writeLog` takes those lines.
 - `capture/src/pass.js` (modified): serializes the pass's events once; after the log and the heartbeat, passes the same lines to `sendLogs` inside the `waitUntil` it receives; a failure is written with `console.log` as `otlp_send_failed` at `warn` with `error_type`, and the pass's outcome does not change.
 - `capture/src/worker.js` (modified): passes `OTLP_ENDPOINT`, `OTLP_TOKEN` and `ctx.waitUntil` to `runPass`.
-- `capture/wrangler.jsonc` (modified): `OTLP_ENDPOINT` as a variable, the stack's OTLP logs endpoint recorded in Close ([Prerequisites](#31-prerequisites) › Account values); `OTLP_TOKEN` stays a secret, set in Step 28.
+- `capture/wrangler.jsonc` (modified): `OTLP_ENDPOINT` as a variable, the stack's OTLP logs endpoint recorded in [Grafana Cloud's source card](../sources/grafana-cloud.md) › Access ([Prerequisites](#31-prerequisites) › Account values); `OTLP_TOKEN` stays a secret, set in Step 28.
 - `capture/test/unit/log.test.js` (modified): `toLines`.
 - `capture/test/integration/pass.test.js` (modified): the request holds one record per line written to R2, of every level, in order (R1); with the endpoint at `http-500`, `stall-body` or `network-error`, the outcome and the heartbeat equal those of a successful send, and `otlp_send_failed` reaches the console with its `error_type`, its line passing `expectRegistered` (R3); the R2 log is byte-identical with a send that succeeds and one that fails (R4); the order is log, heartbeat, copy.
 - Tests: the integration rows of R1, R3 and R4, capture's side.
@@ -1628,7 +1630,7 @@ Where each alert goes and what its notification shows.
 
 - [D11](#d11-pages-for-what-waiting-makes-worse-tickets-for-the-rest), [D13](#d13-a-watchdog-outside-grafana-watches-its-alerting) and [D15](#d15-monitoring-security-threats), in this design: urgency, watchdog and what a notification may carry.
 - [Notifications](#notifications), [Notification routing](#notification-routing), [Notification grouping](#notification-grouping) and [Watchdog](#watchdog), in this design: the layout, IRM's routes and chains, grouping and the watchdog's route.
-- [Close](#4-close), in this design: whether templates have `tz` and `date`, recorded at account set-up.
+- [Grafana Cloud's source card](../sources/grafana-cloud.md) › Facts: whether templates have `tz` and `date`, and how alerts reach IRM.
 
 #### Do
 
@@ -1663,7 +1665,7 @@ The rules that fire on an event, the pattern the later rule steps follow.
 - [D3](#d3-alerts-on-symptoms-that-need-action) and [D4](#d4-alerts-carry-their-own-id-and-the-catalog-ids-they-check), in this design: the alerts and their labels.
 - [D9](#d9-a-missed-minutes-cause-goes-to-whoever-can-act-on-it), in this design: the causes ALR11 accepts.
 - [Field mapping](#field-mapping) and [Grafana configuration](#grafana-configuration), in this design: the fields the queries select on.
-- [Close](#4-close), in this design: which fields Grafana Cloud promotes to labels, recorded at account set-up, so a query selects each field as a label or as structured metadata; Steps 22–24 read it too.
+- [Grafana Cloud's source card](../sources/grafana-cloud.md) › Facts: which fields Grafana Cloud promotes to labels, so a query selects each field as a label or as structured metadata.
 - `.claude/rules/code/terraform.md`: how rules are written and tested.
 
 #### Do
@@ -1700,7 +1702,7 @@ The rules that fire on a count or a measure over a window, and the rule the watc
 - [D10](#d10-a-target-on-captures-own-missed-minutes-only), in this design: how ALR15 counts.
 - [Error budget alerts](#error-budget-alerts), in this design: how Grafana counts the passes and a feed's minutes with no event, which ALR15 adds to its count.
 - `monitoring/alert_rules.tf`, from Step 21: the pattern to follow.
-- [Close](#4-close), in this design: the fields promoted to labels, and whether the usage data source ALR13 reads exists; if it does not, ALR13 is left to Grafana Cloud's own usage notifications ([Thresholds](#thresholds)) and the step stops for the owner to set them.
+- [Grafana Cloud's source card](../sources/grafana-cloud.md) › Facts: the fields promoted to labels, and whether the usage data source ALR13 reads exists; if it does not, ALR13 is left to Grafana Cloud's own usage notifications ([Thresholds](#thresholds)) and the step stops for the owner to set them.
 
 #### Do
 
@@ -1735,7 +1737,7 @@ ALR6's three burn-rate levels, one rule group per system.
 
 - [Error budget alerts](#error-budget-alerts) and [Error budget alert module](#error-budget-alert-module), in this design: the levels and the module's contract.
 - [D7](#d7-capture-completeness-target-per-system), in this design: the targets.
-- [Close](#4-close), in this design: the fields promoted to labels.
+- [Grafana Cloud's source card](../sources/grafana-cloud.md) › Facts: the fields promoted to labels.
 
 #### Do
 
@@ -1771,7 +1773,7 @@ ALR4's check from three probes, and the last alert, which completes the set the 
 - [D8](#d8-page-data-age-keeps-its-target) and [D14](#d14-the-synthetic-check-confirms-a-failure-from-two-of-three-probes), in this design: the target and the two of three probes.
 - [Synthetic check](#synthetic-check), in this design: what the script measures and why not `Last-Modified`.
 - `pipeline/src/bikesharing/core/published_file.py`: where `data_instant` sits in a published file.
-- [Close](#4-close), in this design: the Prometheus data source UID, where ALR4 reads the probes' results.
+- [Grafana Cloud's source card](../sources/grafana-cloud.md) › Access: the Prometheus data source UID, where ALR4 reads the probes' results.
 
 #### Do
 
