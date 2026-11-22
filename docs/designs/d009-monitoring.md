@@ -321,6 +321,10 @@ The observability catalog of D5 is two files. `contracts/log-events.json` is the
 
 A component, including a later one such as the page, adds its events to the registry in the design that designs its logs. `docs/observability.md` states the criterion by which an event needs an action from the owner; the registry test keeps an unclassified event from passing CI, and the path rule `.claude/rules/docs/observability.md`, scoped to the catalog's two files, holds the conventions for writing an entry, as `.claude/rules/docs/data-model.md` does for the data model. **#3**
 
+#### Warning level
+
+Every component writes `warn` for a failure that does not affect the data, OpenTelemetry's short severity name; capture, which wrote `warning`, changes to it, with its log contract. Capture's logs already in R2 keep `warning`, since logs are append-only, and the catalog records the version and date of the change, so that SQL over older logs accepts both. Capture's change is deployed no later than its sending to Grafana, so Grafana only receives `warn`. **#4**
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -335,6 +339,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 1 | [Grafana configuration](#grafana-configuration) | Grafana's alerting, synthetic check and watchdog as code with Terraform and Grafana's official provider, applied by the owner (Infrastructure as Code); [ADR-0051](../decisions/0051-monitoring-configuration-as-code.md) | Reviewed on a diff, checked in CI, recreated with one apply | R7–R22, R34, R35, R37 | Plan |
 | 2 | [Observability catalog](#observability-catalog), [D5](#d5-one-observability-catalog-built-here) | The catalog's events in a machine-readable registry, `contracts/log-events.json`, its single source; `docs/observability.md` holds the rest and links to it (a registry as in OpenTelemetry's semantic conventions) | Terraform and the components' tests read the same list; each fact lives in one place | R16, R22, R25, R26 | Plan |
 | 3 | [Observability catalog](#observability-catalog) | The criterion for classifying an event in `docs/observability.md`, enforced by the registry test, with a path rule for writing entries; no line in the design template (poka-yoke) | The test already blocks an unclassified event; the template would repeat it in every design | R16, R22, R25 | Plan |
+| 4 | [Warning level](#warning-level) | `warn` for every component, OpenTelemetry's short severity name; capture changes from `warning`, and its logs in R2 are not rewritten (append-only logs) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | One name in queries from now on; the record stays as written | R27 | Plan |
 
 ### 2.3 Architecture
 
@@ -376,7 +381,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | File | Why it breaks | Strategy |
 |---|---|---|
-| | | |
+| `contracts/capture-logs.json` | Capture's `warning` level becomes `warn` (#4): the valid vectors at `warning` stop meeting the contract | The vectors change with capture's code in one step; SQL over capture's logs in R2 from before the change accepts both names, as the catalog records |
 
 ### 2.8 What does not change
 
