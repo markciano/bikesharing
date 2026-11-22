@@ -15,7 +15,8 @@ Facts about the service where the owner sees how capture, the pipeline and the p
 
 | | |
 |---|---|
-| Endpoint | OTLP/HTTP logs endpoint of the stack, ending in `/v1/logs`, for the events of capture and the pipeline; Grafana's Terraform provider (`grafana/grafana`) for alerting, IRM and Synthetic Monitoring ([ADR-0051](../decisions/0051-monitoring-configuration-as-code.md)) |
+| Endpoint | `https://otlp-gateway-prod-eu-west-4.grafana.net/otlp/v1/logs`, the stack's OTLP/HTTP logs endpoint, for the events of capture and the pipeline; Grafana's Terraform provider (`grafana/grafana`) for alerting, IRM and Synthetic Monitoring ([ADR-0051](../decisions/0051-monitoring-configuration-as-code.md)) |
+| Data sources | UIDs in the stack `bikesharing`: Loki `grafanacloud-logs`, Prometheus `grafanacloud-prom` (Synthetic Monitoring's results), usage `grafanacloud-usage` |
 | Format | OTLP log records, JSON encoding ([ADR-0049](../decisions/0049-log-events-copied-to-monitoring-over-otlp.md)) |
 | Auth | Access policy token with the `logs:write` scope for the OTLP copy, one per emitter; stack service account token for Terraform; Synthetic Monitoring access token |
 | Update frequency | Pricing page and documentation updated by Grafana Labs |
@@ -31,6 +32,8 @@ Facts about the Grafana Cloud services the project uses, one section per service
 | The Free tier includes 50 GB of logs a month, kept for 14 days | [s018 › D2](../spikes/s018-monitoring-tool.md#d2-monitoring-tool) | 2026-11-17 |
 | The Free tier includes 100k synthetic check executions a month | [s018 › D2](../spikes/s018-monitoring-tool.md#d2-monitoring-tool) | 2026-11-17 |
 | IRM is included in the Free tier, for at most 3 active IRM users, with community support | [IRM](https://grafana.com/products/cloud/irm) | 2026-11-22 |
+| The Free tier needs no payment method: the project's account runs on it with none | Grafana Cloud console, billing page | 2026-11-22 |
+| The project's stack runs in an EU region, Germany (`prod-eu-west-4`) | Grafana Cloud console, stack details | 2026-11-22 |
 
 ### Alerting
 
@@ -52,7 +55,7 @@ Facts about the Grafana Cloud services the project uses, one section per service
 
 Checked when the owner creates the account ([d009 › Prerequisites](../designs/d009-monitoring.md#31-prerequisites)); each answer becomes a fact above.
 
-- Are tokens scoped to writing logs only, is the stack in an EU region, and does the Free tier need no payment method ([s018 › D8](../spikes/s018-monitoring-tool.md#d8-monitoring-tool-security-threats))?
+- Are tokens scoped to writing logs only ([s018 › D8](../spikes/s018-monitoring-tool.md#d8-monitoring-tool-security-threats))?
 - Does the Free tier offer template variables and data links, the SLO app, Loki recording rules, a scripted k6 check asserting a file's age, the IRM heartbeat and the usage data source ([s018 › P1](../spikes/s018-monitoring-tool.md#23-production-inputs))?
 - Which of the OTLP attributes `event`, `system`, `feed` and `rule` does Grafana Cloud promote to Loki labels?
 - Do message templates have the `tz` and `date` functions?
