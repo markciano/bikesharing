@@ -431,27 +431,7 @@ Options considered for the end instant:
 #### Observability
 
 - **Event convention:** the pipeline's events follow [ADR-0036](../decisions/0036-log-convention-across-components.md): JSON Lines with `ts`, `level`, `component`, `version`, `run_id` and `event` first. `component` is `pipeline`, `version` is the code version of D5, and `run_id` is a UUIDv7 that the shell generates with Python's standard library at the start of the run, so that the core and the rows' lineage do not depend on Modal (ADR-0046's rule 5) and run IDs sort by time. A one-off run carries the version `unreleased`.
-- **Events:** the core builds each event as a value with its own fields, and the shell writes it. The events are:
-
-  | Event | Level | Own fields |
-  |---|---|---|
-  | `run_started` | info | `end_instant`, `excluded_objects` |
-  | `objects_discovered` | info | per system: `listed`, `pending`, `full_sweep` |
-  | `stage_drained` | warn | `end_instant` (R19) |
-  | `batch_started` | info | `batch`, `objects`, `first_capture`, `last_capture` |
-  | `node_finished` | info | dbt's `node`, `status`, `duration_s`, `rows`, `num_failures` ([s017 › P4](../spikes/s017-dbt-in-the-pipeline.md#55-production-inputs)) |
-  | `rule_checked` | info, warn or error by outcome | `rule` (its DQR ID), `severity`, `status`, `failures` |
-  | `volume_not_evaluated` | info | `system`, `captured_at`, `captures_in_window` (DQR12) |
-  | `schema_drift_field` | warn | `system`, `field`, `change` (`added` or `dropped`) (DQR11) |
-  | `batch_committed` | info | `batch`, `rows_inserted`, `objects` |
-  | `batch_failed` | error | `batch`, `reason`, `error_type`, `error` (R20–R22) |
-  | `file_built` | info | `stations`, `data_instant` |
-  | `file_invalid` | error | `violations`, each with its path in the file (DQR14) |
-  | `page_deployed` | info | `tag`, `deploy_peak_memory_mb` |
-  | `page_deploy_failed` | error | `exit_code`, `output` (R31) |
-  | `heartbeat_failed` | warn | `signal`, `attempts`, `error_type` |
-  | `log_upload_failed` | warn | `error_type` (stdout only) |
-  | `run_finished` | info or error | `outcome`, `batches`, `rows_inserted`, `duration_s`, `peak_memory_mb`, `error_type`, `error` (an exception outside a batch, DI8) |
+- **Events:** the core builds each event as a value with its own fields, and the shell writes it. The events, with their level and own fields, are in the [observability catalog](../observability.md), whose registry is [`contracts/log-events.registry.json`](../../contracts/log-events.registry.json).
 
 - **Run measures:** `duration_s` is the run's wall-clock time, and `peak_memory_mb` the Python process's `ru_maxrss` from `RUSAGE_SELF`, in decimal MB ([s012 › D1](../spikes/s012-execution-target.md#d1-execution-platform)); `wrangler`'s own peak, from `RUSAGE_CHILDREN` once it exits, goes in `page_deployed`, since the container's limit counts both.
 - **Log object:** every event goes to stdout as it happens, which Modal keeps for its own retention, and is kept in memory for the run's object. At the run's end, whatever its outcome, the shell writes that object to `bikesharing-lakehouse` as `logs/pipeline/date=YYYY-MM-DD/<run_id>.jsonl` ([ADR-0035](../decisions/0035-cloud-resource-naming.md)); a lifecycle rule on `logs/pipeline/`, set by the owner, deletes it after 30 days. A failed upload is logged to stdout and does not change the run's outcome or its heartbeat signal. A run killed by its timeout or its memory limit writes no object, and its events stay only in Modal's logs; the heartbeat reports it.
