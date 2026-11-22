@@ -322,6 +322,8 @@ Grafana's alert rules, contact points, notification policies, synthetic check an
 
 The observability catalog of D5 is a registry of events with its schema, and a document. `contracts/log-events.registry.json` is the registry, the single source of each event of every component: its component, level, own fields, whether it needs an action from the owner, and the alerts that read it by name. `contracts/log-events.schema.json`, a JSON Schema (draft 2020-12) that the registry names in `$schema`, fixes the shape of an entry, and the registry test validates the registry against it. The registry is reference data written in the repository and read by several components, not data one component sends another, so it has no test vectors ([ADR-0050](../decisions/0050-contract-tests-by-contract-kind-with-native-schemas.md) covers the latter). `docs/observability.md`, beside `docs/data-quality.md`, holds the rest: the common fields of ADR-0036, the heartbeat checks, the alerts with their IDs, the catalog IDs they check and their urgency, and how alerts on an error budget work; it links to the registry for the events, and an alert's row does not list them. Terraform reads the registry to build each alert's event selector from the events that list it; ALR9 takes the events with `needs_action` that list no alert, and ALR14 every event the registry does not hold, so no event list is written by hand. The tests of capture and the pipeline check that every event they write is registered, and Terraform's tests that every alert ID the registry lists is an alert it declares. **#2** **#14**
 
+`docs/observability.md` opens as every catalog does ([docs › Catalogs](../../.claude/rules/docs/general.md)); its worked example follows one event from its registry entry to the alert that reads it and the notification on the owner's phone. **#15**
+
 `docs/observability.md` also holds the LogQL query of each feed's minutes given to the provider over the last 7 days, run in Grafana's Explore (R40); Grafana's dashboards are designed in T060.10, which may turn the query into a panel. **#12**
 
 A component, including a later one such as the page, adds its events to the registry in the design that designs its logs. `docs/observability.md` states the criterion by which an event needs an action from the owner; the registry test keeps an unclassified event from passing CI, and the path rule `.claude/rules/docs/observability.md`, scoped to the catalog's two files, holds the conventions for writing an entry, as `.claude/rules/docs/data-model.md` does for the data model. **#3**
@@ -461,6 +463,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 12 | [Observability catalog](#observability-catalog) | The provider's 7-day minutes as a LogQL query in `docs/observability.md`, run in Explore; no dashboard in this task (dashboards in T060.10) | Meets R40 with what Grafana ships, leaving every dashboard decision to the task that designs them | R40 | Plan |
 | 13 | [Error budget alerts](#error-budget-alerts), [D10](#d10-a-target-on-captures-own-missed-minutes-only) | ALR6's and ALR15's windows count only the minutes with an event of capture in Grafana; a minute with none is left to capture's heartbeat and to SQL over R2 (an SLI over valid events, SRE Workbook) **refines #6** **refines #7** | A gap in Grafana's ingest pages no one for data R2 holds, and leaves no alert blind for days | R12, R13, R39 | Plan review |
 | 14 | [Observability catalog](#observability-catalog) | Each registry event lists the alerts that read it by name; Terraform builds every alert's event selector from it, and ALR9 from the events with `needs_action` that list none; an alert's row in `docs/observability.md` lists no events (single source of truth) **refines #2** | No hand-written exclusion list for ALR9, and the link between alerts and events lives in one place | R16, R25 | Plan review |
+| 15 | [Observability catalog](#observability-catalog) | Every catalog opens with what it holds and what for, how to read an entry, and one worked example, as a rule in `.claude/rules/docs/general.md`; `docs/observability.md` follows it, the existing catalogs are aligned later (Diátaxis: reference with an explanatory entry point) | A reader new to the project understands the catalog without the designs | R25 | Plan review |
 
 ### 2.3 Architecture
 
@@ -484,6 +487,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │       │   ├── ci.md                           (modified)  Terraform's setup and lockfile install in a component job
 │       │   └── testing.md                      (modified)  monitoring/** in scope; the event registry, a reference document validated by its schema
 │       └── docs/
+│           ├── general.md                      (modified)  Catalogs open with what they hold, how to read an entry and a worked example (#15)
 │           └── observability.md                (new)       Conventions for writing a catalog entry (#3)
 ├── .github/workflows/
 │   └── ci.yml                                  (modified)  Job monitoring; the registry and its schema in the filters of capture, pipeline and monitoring
@@ -547,7 +551,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │       ├── integration/test_run.py             (modified)  Copy sent after the log upload and the ping, with log_upload_failed and heartbeat_failed
 │       └── integration/test_log_events_registry_contract.py (new) Registry valid against its schema; every pipeline event registered
 └── docs/
-    ├── observability.md                        (new)       The catalog: common fields, heartbeat checks, alerts, error budgets, notification layout, the provider's minutes query (#2, #3, #11, #12)
+    ├── observability.md                        (new)       The catalog: introduction and worked example, common fields, heartbeat checks, alerts, error budgets, notification layout, the provider's minutes query (#2, #3, #11, #12)
     ├── data-quality.md                         (modified)  DQM7, DQM10, DQM11 and DQR12
     ├── architecture.md                         (modified)  Monitoring as a building block, and its deployment
     ├── testing-strategy.md                     (modified)  The monitoring component and the registry tests
@@ -807,7 +811,7 @@ resource "grafana_rule_group" "this" {
 | R23 | Test | Every rule carries `alert_id` and the checked catalog IDs that the template reads | unit |
 | R23, R24 | Demonstration | A test notification shows the alert's ID and checked IDs, and its links open the catalog section, the alert's row and the events in Grafana's Explore | — |
 | R25 | Test | The registry is valid against its schema, each `component` and `event` pair appears once, and every event capture and the pipeline write is registered | contract |
-| R25, R26 | Inspection | `docs/observability.md` lists the common fields, the heartbeat checks, and every alert with its ID, checked IDs and urgency; the registry lists, for each event, the alerts that read it | — |
+| R25, R26 | Inspection | `docs/observability.md` opens with its introduction and worked example, and lists the common fields, the heartbeat checks, and every alert with its ID, checked IDs and urgency; the registry lists, for each event, the alerts that read it | — |
 | R27 | Test | The registry's levels are `info`, `warn` and `error`, and capture's log contract vectors use `warn` | contract |
 | R28, R29 | Test | `capture_volume`'s dbt unit tests flag a capture below 95% of the 7-day median and skip it with fewer than 60 captures in those 7 days | unit |
 | R28 | Inspection | `_VOLUME_WINDOW` in `shell/run.py` is 7 days | — |
