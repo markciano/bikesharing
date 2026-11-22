@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 13.
+- Current: Step 14, after the review point of Step 13.
 
 ## 1. Spec — what and why
 
@@ -1359,7 +1359,7 @@ The shell's one POST of the request, within its limit, raising on any failure.
 
 ### Step 13 — Pipeline: the copy in the run
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s13 send the pipeline's events to Grafana after each run`
 - **R:** R1, R3, R4, R6

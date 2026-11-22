@@ -526,7 +526,10 @@ def heartbeat_failed(
 
 
 def log_upload_failed(ts: datetime, *, error_type: str) -> Event:
-    """Build ``log_upload_failed``, at warn; it goes to stdout only.
+    """Build ``log_upload_failed``, at warn.
+
+    The R2 log object cannot hold it, so it goes to stdout and is kept for the
+    copy sent to Grafana.
 
     Parameters
     ----------
@@ -541,6 +544,26 @@ def log_upload_failed(ts: datetime, *, error_type: str) -> Event:
         The event.
     """
     return Event(ts, "warn", "log_upload_failed", {"error_type": error_type})
+
+
+def otlp_send_failed(ts: datetime, *, error_type: str) -> Event:
+    """Build ``otlp_send_failed``, at warn; it goes to stdout only.
+
+    It is emitted after the copy was sent, so the copy cannot hold it.
+
+    Parameters
+    ----------
+    ts : datetime
+        When the send failed.
+    error_type : str
+        The exception's type name.
+
+    Returns
+    -------
+    Event
+        The event.
+    """
+    return Event(ts, "warn", "otlp_send_failed", {"error_type": error_type})
 
 
 def run_finished(

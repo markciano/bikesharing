@@ -62,3 +62,15 @@ class EventLog:
             each ending in a newline. Empty if none was emitted.
         """
         return "".join(f"{line}\n" for line in self._lines)
+
+    def lines(self) -> tuple[str, ...]:
+        """Return every kept line, for the copy sent to monitoring.
+
+        Returns
+        -------
+        tuple[str, ...]
+            Every event emitted so far, in order, without newlines. Read after
+            the log's upload, it also holds the events emitted since ``body``
+            was read, such as ``log_upload_failed``.
+        """
+        return tuple(self._lines)

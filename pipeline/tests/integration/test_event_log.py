@@ -99,6 +99,49 @@ def test_body_is_empty_before_any_event() -> None:
     assert EventLog(CONTEXT, [], io.StringIO()).body() == ""
 
 
+# Verifies d009 R1
+def test_lines_hold_every_kept_line_in_order_including_log_upload_failed() -> None:
+    log = EventLog(CONTEXT, [], io.StringIO())
+    emitted = [
+        log.emit(events.run_started(TS, end_instant=None, excluded_objects=0)),
+        log.emit(events.log_upload_failed(TS, error_type="ClientError")),
+        log.emit(
+            events.heartbeat_failed(
+                TS, signal="fail", attempts=3, error_type="URLError"
+            )
+        ),
+    ]
+
+    assert log.lines() == tuple(emitted)
+    assert [json.loads(line)["event"] for line in log.lines()] == [
+        "run_started",
+        "log_upload_failed",
+        "heartbeat_failed",
+    ]
+
+
+def test_lines_are_empty_before_any_event() -> None:
+    assert EventLog(CONTEXT, [], io.StringIO()).lines() == ()
+
+
+# Verifies d009 R6
+def test_lines_redact_a_secret_they_would_carry() -> None:
+    log = EventLog(CONTEXT, ["otlp-token-value"], io.StringIO())
+
+    log.emit(
+        events.batch_failed(
+            TS,
+            batch=1,
+            reason="exception",
+            error_type="HTTPError",
+            error="401 with Basic otlp-token-value",
+        )
+    )
+
+    assert "otlp-token-value" not in "".join(log.lines())
+    assert "***" in log.lines()[0]
+
+
 # Verifies d008 R24
 def test_emit_redacts_a_secret_in_the_stream_and_in_the_body() -> None:
     stream = io.StringIO()
