@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 11.
+- Current: Step 12.
 
 ## 1. Spec — what and why
 
@@ -1295,7 +1295,7 @@ The run and the Modal app take their bounds from `run_settings.json`, with the v
 
 ### Step 11 — Pipeline: OTLP payload
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s11 build the pipeline's OTLP request`
 - **R:** R1, R2, R6
