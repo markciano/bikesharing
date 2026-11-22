@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Spec › Open questions, from OQ6. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
+- Current: Spec › Open questions, from OQ10. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5), the thresholds of ALR4, ALR7 and the heartbeat derived from the pipeline's cadence, so a change of cadence is one setting (D8); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
 
 ## 1. Spec — what and why
 
@@ -132,6 +132,30 @@ DQM10 keeps its target, at most one cadence plus one run ([d002 › R3](d002-req
 
 - **What would change it:** runs that bring the oldest data a visitor meets above one cadence plus one run: the cadence or the run's duration is reviewed, not the target, since it is what the page promises its visitor.
 
+#### D9. A missed minute's cause goes to whoever can act on it
+
+DQM11 gives each minute with no capture of a feed to capture or to the provider by who can act on it, since the indicator exists to tell the owner when to act on capture and when to do nothing ([data-quality › Quality indicators](../data-quality.md#quality-indicators)), following the SRE practice of attributing an error to whoever can fix it. A minute captured but missing from the station stock is the pipeline's, not a capture gap, and stays out of DQM11.
+
+| Cause the pass logs | Goes to |
+|---|---|
+| A response from the provider with no data: any HTTP error status, 403 and 404 included, on the feed (`feed_failed`) or on its index (`index_rejected`) | Provider |
+| A timeout reaching the provider | Provider |
+| A failure to write the response to R2 (`error_type` `write`) | Capture |
+| No pass logged for the minute | Capture |
+| A pass with no event for the feed | Capture |
+
+- **What would change it:** evidence that Bicing's 403 depends on how capture requests, such as the Cloudflare location the request leaves from (Hong Kong is suspected, not shown): the 403 then goes to capture, since capture can act on it. Timeouts that grow: whether capture's limit is too short is reviewed.
+
+Rejected: the HTTP status class (RFC 9110), 4xx to capture as a client error and 5xx to the provider. It reads the status class as an attribution, and would give capture Bicing's 403, about 32 minutes a day the owner has decided not to act on.
+
+#### D10. A target on capture's own missed minutes only
+
+DQM11 takes a target on the minutes D9 gives to capture: at most 30 minutes per feed and calendar month. The minutes given to the provider are measured and shown with no target, since the owner takes no action on them and DQM7 already bounds their effect on completeness (D7). Over the first 14.6 days of production pass logs (2026-11-07 10:19 to 2026-11-22 01:39 UTC), each dynamic feed lost 6 or 7 minutes to capture, each a single minute and at most one a day: four passes the cron never ran, the same minutes for every feed, and passes logged with no event for any feed; about 10 minutes a month. The provider took 13 and 15 minutes from AMBici's two feeds and 486 from Bicing's, 481 of them a 403, 32 a day at the median; no run of missed minutes lasted over 5 minutes ([`spikes/d009-baselines/capture-gaps/`](../../spikes/d009-baselines/capture-gaps/)). The target sits at about three times that baseline, which comes from two weeks only, following the SRE practice of D7: a target on what the owner can fix, set from measured performance and revised.
+
+- **What would change it:** the first full calendar month of production, December 2026, with a baseline clearly above or below about 10 minutes: the target is revised with that month.
+
+Rejected: a target per class, the provider's included. It repeats DQM7's per-system target, and a target the owner cannot act on prompts no action.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -168,7 +192,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ6 | Which target does DQM11, the minutes with no capture by cause, take from the first weeks of capture's logs? | D3 | [data-quality › Quality indicators](../data-quality.md#quality-indicators); evidence in `spikes/d009-baselines/capture-gaps/` |
 | OQ10 | Which further alerts does a discovery over the production events of capture and the pipeline propose? | D3 | First pass in D3; evidence in `spikes/d009-baselines/discovery/`; a candidate rule or indicator on the data goes to Out of scope, with the child that owns its table |
 | OQ7 | How does each alert reach the owner, by urgency, starting from the SRE split between page and ticket? | D3, OQ10 | [s018 › P3](../spikes/s018-monitoring-tool.md#23-production-inputs) |
 | OQ8 | Which health questions does a script answer that Grafana does not, and must it run from a phone? Out of scope if none. | D1 | [s013 › D5, P9](../spikes/s013-visualization-tool.md#55-production-inputs) |

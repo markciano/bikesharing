@@ -1,0 +1,84 @@
+# DQM11 capture gaps review — 2026-11-22T01:41:26Z
+
+## Span
+
+first                     | last                      | minutes
+--------------------------+---------------------------+--------
+2026-11-07 10:19:00+00:00 | 2026-11-22 01:39:00+00:00 | 21081  
+
+## Missed minutes per feed, class and cause
+
+source | feed             | class    | cause                              | minutes
+-------+------------------+----------+------------------------------------+--------
+ambici | free_bike_status | capture  | no pass logged                     | 4      
+ambici | free_bike_status | capture  | pass logged, no event for the feed | 2      
+ambici | free_bike_status | provider | http 522                           | 5      
+ambici | free_bike_status | provider | http 525                           | 4      
+ambici | free_bike_status | provider | http 502                           | 3      
+ambici | free_bike_status | provider | http 404                           | 2      
+ambici | free_bike_status | provider | http 520                           | 1      
+ambici | station_status   | capture  | no pass logged                     | 4      
+ambici | station_status   | capture  | pass logged, no event for the feed | 2      
+ambici | station_status   | provider | http 522                           | 4      
+ambici | station_status   | provider | http 525                           | 3      
+ambici | station_status   | provider | timeout -                          | 3      
+ambici | station_status   | provider | http 404                           | 2      
+ambici | station_status   | provider | http 520                           | 1      
+bicing | station_status   | capture  | no pass logged                     | 4      
+bicing | station_status   | capture  | pass logged, no event for the feed | 3      
+bicing | station_status   | provider | http 403                           | 481    
+bicing | station_status   | provider | http 503                           | 2      
+bicing | station_status   | provider | http 502                           | 2      
+bicing | station_status   | provider | timeout -                          | 1      
+
+## Missed minutes per feed, class and month
+
+source | feed             | month   | minutes | provider | capture | unclassified
+-------+------------------+---------+---------+----------+---------+-------------
+ambici | free_bike_status | 2026-11 | 21081   | 15       | 6       | 0           
+ambici | station_status   | 2026-11 | 21081   | 13       | 6       | 0           
+bicing | station_status   | 2026-11 | 21081   | 486      | 7       | 0           
+
+## Missed minutes per day, per feed and class (days with none count as 0)
+
+source | feed             | days | provider_p50 | provider_max | capture_p50 | capture_max | capture_total
+-------+------------------+------+--------------+--------------+-------------+-------------+--------------
+ambici | free_bike_status | 16   | 0.0000       | 8            | 0.0000      | 1           | 6            
+ambici | station_status   | 16   | 0.0000       | 8            | 0.0000      | 1           | 6            
+bicing | station_status   | 16   | 32.0000      | 40           | 0.0000      | 1           | 7            
+
+## Days with capture's own missed minutes
+
+source | feed             | day        | minutes | causes                            
+-------+------------------+------------+---------+-----------------------------------
+ambici | free_bike_status | 2026-11-07 | 1       | pass logged, no event for the feed
+ambici | free_bike_status | 2026-11-10 | 1       | no pass logged                    
+ambici | free_bike_status | 2026-11-11 | 1       | no pass logged                    
+ambici | free_bike_status | 2026-11-14 | 1       | no pass logged                    
+ambici | free_bike_status | 2026-11-18 | 1       | no pass logged                    
+ambici | free_bike_status | 2026-11-22 | 1       | pass logged, no event for the feed
+ambici | station_status   | 2026-11-07 | 1       | pass logged, no event for the feed
+ambici | station_status   | 2026-11-10 | 1       | no pass logged                    
+ambici | station_status   | 2026-11-11 | 1       | no pass logged                    
+ambici | station_status   | 2026-11-14 | 1       | no pass logged                    
+ambici | station_status   | 2026-11-18 | 1       | no pass logged                    
+ambici | station_status   | 2026-11-22 | 1       | pass logged, no event for the feed
+bicing | station_status   | 2026-11-07 | 1       | pass logged, no event for the feed
+bicing | station_status   | 2026-11-08 | 1       | pass logged, no event for the feed
+bicing | station_status   | 2026-11-10 | 1       | no pass logged                    
+bicing | station_status   | 2026-11-11 | 1       | no pass logged                    
+bicing | station_status   | 2026-11-14 | 1       | no pass logged                    
+bicing | station_status   | 2026-11-18 | 1       | no pass logged                    
+bicing | station_status   | 2026-11-22 | 1       | pass logged, no event for the feed
+
+## Runs of consecutive missed minutes, per feed and class
+
+source | feed             | class    | minutes_in_a_row | gaps | missed
+-------+------------------+----------+------------------+------+-------
+ambici | free_bike_status | capture  | 1                | 6    | 6     
+ambici | free_bike_status | provider | 1                | 15   | 15    
+ambici | station_status   | capture  | 1                | 6    | 6     
+ambici | station_status   | provider | 1                | 13   | 13    
+bicing | station_status   | capture  | 1                | 7    | 7     
+bicing | station_status   | provider | 1                | 416  | 416   
+bicing | station_status   | provider | 2-5              | 34   | 70    
