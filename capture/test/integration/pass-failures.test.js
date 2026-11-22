@@ -11,6 +11,7 @@ import { runPass } from "../../src/pass.js";
 import { extraFetch } from "../../src/schedule.js";
 import { SOURCES, requiredFeeds } from "../../src/sources.js";
 import { logKey, rawKey, runIdOf, stateKey } from "../../src/storage.js";
+import { expectRegistered } from "../registry.js";
 
 const LIMITS = env.TEST_LIMITS;
 const SIM = "https://sim.test";
@@ -132,11 +133,17 @@ async function capturedFeeds(runId) {
     .sort();
 }
 
-/** The raw text of a run's log object. @param {string} runId */
+/**
+ * The raw text of a run's log object. Every line read must be an event of the registry
+ * (d009, Observability catalog).
+ * @param {string} runId
+ */
 async function readLogText(runId) {
   const object = await env.BUCKET.get(logKey(runId));
   if (!object) throw new Error(`no log object for ${runId}`);
-  return object.text();
+  const text = await object.text();
+  expectRegistered(text.split("\n").filter(Boolean));
+  return text;
 }
 
 /**

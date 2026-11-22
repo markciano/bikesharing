@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 5.
+- Current: Step 6.
 
 ## 1. Spec — what and why
 
@@ -1067,7 +1067,7 @@ Capture's log contract and the events it writes take the single level name and f
 
 ### Step 5 — Capture: registry contract test
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `test: d009.s5 check capture's events against the registry`
 - **R:** R25, R27
