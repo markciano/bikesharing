@@ -30,7 +30,7 @@ The package follows a functional core and an imperative shell ([ADR-0046](../../
 
 General principles are in `testing.md`; reasons and detail in the [testing strategy](../../../docs/testing-strategy.md) (Python section).
 
-- Tool: pytest; `uv run --directory pipeline pytest` runs every test, `uv run --directory pipeline pytest tests/<level>` one level.
+- Tool: pytest; `uv run --directory pipeline pytest` runs every test, `uv run --directory pipeline pytest tests/<level>` one level; `bash pipeline/scripts/check-pipeline.sh` runs every check, from the project root.
 - Line coverage (pytest-cov) is reported, never enforced with a threshold. The source is set in `[tool.coverage.run] source`, so the CI command cannot widen the report to the test files.
 - Levels are folders under `pipeline/tests/`: `unit/` (mirrors `src/bikesharing/`) and `integration/`. There is no end-to-end level in the repository: the one-off run on Modal is the end-to-end check.
 - Naming: files `test_<module>.py`; functions `test_<behaviour>_<condition>`.

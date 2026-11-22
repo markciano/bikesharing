@@ -34,5 +34,6 @@ The configuration declares Grafana Cloud's alerting, synthetic check and watchdo
 General principles are in `testing.md`; reasons and detail in the [testing strategy](../../../docs/testing-strategy.md) (Monitoring section).
 
 - Tool: `terraform test`, with `mock_provider "grafana"` and `command = plan`, so no test reaches Grafana Cloud or needs a credential.
+- `bash monitoring/scripts/check-monitoring.sh` runs every check, from the project root.
 - Tests assert the planned attributes: each rule's query, threshold, labels and annotations, and each policy's routing. Whether Grafana evaluates and notifies them is shown end to end, never in a test.
 - Files in `monitoring/tests/`, named `<subject>.tftest.hcl`; each `run` block is named for the behaviour it checks.
