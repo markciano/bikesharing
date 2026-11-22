@@ -522,12 +522,12 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   ├── src/
 │   │   ├── otlp.js                             (new)       Builds the OTLP/HTTP JSON request from the pass's lines and sends it within its limit
 │   │   ├── log.js                              (modified)  warn and system (#4, #5); toLines serializes the events once, for the log and the copy
-│   │   ├── heartbeat.js                        (modified)  Signal from the pass of every fifth minute, by its scheduled time, when it stored the three dynamic feeds (#10)
+│   │   ├── schedule.js                         (modified)  The heartbeat at every minute that is a multiple of 5, by the pass's scheduled time (#10)
 │   │   ├── pass.js                             (modified)  Sends the copy after the log and the heartbeat
 │   │   └── worker.js                           (modified)  The send inside ctx.waitUntil; the token as a Worker secret
 │   └── test/
 │       ├── unit/otlp.test.js                   (new)       Request built from the lines; failed or late send changes nothing
-│       ├── unit/log.test.js, unit/heartbeat.test.js (modified) warn and system; the fifth-pass signal
+│       ├── unit/log.test.js, unit/schedule.test.js (modified) warn and system; the heartbeat at every fifth minute
 │       ├── integration/pass.test.js            (modified)  Order: log, heartbeat, copy
 │       └── contract/log-events-registry.test.js (new)      Registry valid against its schema; every capture event registered
 ├── pipeline/
@@ -559,8 +559,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
     ├── decisions/
     │   └── 0051-monitoring-configuration-as-code.md (new)  Monitoring configuration as code with Terraform (#1)
     └── designs/
-        ├── d004-bronze-data-capture.md         (modified)  D6, D9 with R20 and the level type, D10 with R19; links to the catalog
-        └── d008-pipeline-platform-and-walking-skeleton.md (modified) D4; links to the catalog
+        ├── d004-bronze-data-capture.md         (modified)  Links to the catalog
+        └── d008-pipeline-platform-and-walking-skeleton.md (modified) Links to the catalog
 ```
 
 ### 2.5 Components
