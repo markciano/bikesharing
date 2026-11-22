@@ -818,7 +818,7 @@ resource "grafana_rule_group" "this" {
 | R7, R8 | Test | ALR1 and ALR2 select the failed rules' events by severity, take `rule` from the event as a label, and carry `urgency = "ticket"` | unit |
 | R9 | Test | ALR3 selects the page's failed deployment event, as a ticket | unit |
 | R10 | Test | The synthetic check runs every 5 min from three probes with ALR4's threshold from `locals.tf`, and ALR4 fires on two failing probes, as a page | unit |
-| R10 | Demonstration | The k6 script passes on the page's live file and fails a probe with a threshold of 0 min, run from Grafana's synthetic check | — |
+| R10 | Demonstration | The k6 script passes on the page's live file from the deployed check, and fails with a threshold of 0 min in an ad hoc test run from Synthetic Monitoring's script editor, not saved, so the deployed check and ALR4 are unchanged | — |
 | R11 | Test | ALR5 counts minutes in a row with no clean capture per system and feed, fires over 10, as a page | unit |
 | R12, R13 | Test | The module builds three rules per system with the burn rates and windows of [Error budget alerts](#error-budget-alerts), each threshold the burn rate times `1 - target`, the error rate over the minutes with an event of capture only, both windows required, the 1 h and 6 h levels as pages and the 3 d level as a ticket; a target outside (0, 1) is rejected | unit |
 | R14 | Test | ALR7's thresholds derive from `run_settings.json`: 80% of the timeout and of the container's memory | unit |
@@ -1973,14 +1973,14 @@ The Demonstration rows of the [Test plan](#26-test-plan), and the notifications 
 #### Do
 
 1. Send a test page and a test ticket from Grafana.
-2. Run the synthetic check with ALR4's threshold set to 0 min for one probe, then restore it.
+2. In Synthetic Monitoring's script editor, run the check's script as an ad hoc test with ALR4's threshold set to 0 min, without saving it: the threshold is one setting of the check, shared by its three probes, so changing the deployed check would page the owner and leave Terraform's state behind.
 3. Open a test notification's links.
 4. Run the provider's minutes query in Explore, in the browser and the mobile app.
 
 #### Check
 
 - The test page rings on the phone until acknowledged, and the test ticket appears in the app's list with no notification: yes/no.
-- The k6 script passes on the live file and fails the probe with a threshold of 0 min (R10): yes/no.
+- The deployed check passes on the live file, the ad hoc test fails with a threshold of 0 min, and ALR4 did not fire (R10): yes/no.
 - The notification shows the alert's ID and checked IDs, and its links open the catalog section, the alert's row and the events in Explore (R23, R24): yes/no.
 - Explore shows events of capture and the pipeline and the synthetic check's results, in the browser and the app (R36), and the query shows each feed's minutes given to the provider over 7 days (R40): yes/no.
 
