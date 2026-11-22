@@ -65,4 +65,4 @@ Each component design applies the five answers below. "Paper" marks a statement 
 
 ### Moving tests
 
-When the `pull_request` run passes 10 min wall-clock, the slowest group of tests moves from the PR run to the `main` run, starting with the heaviest job. It stays in the local layer, and a red `main` run is fixed at once in a new PR. Today the run takes 42–52 s, so nothing moves (F39).
+When the `pull_request` run passes 10 min wall-clock, the slowest group of tests moves from the PR run to the `main` run, starting with the heaviest job. It stays in the local layer, and a red `main` run is fixed at once in a new PR. On 2026-11-20 the run took 1 min 58 s to 2 min 17 s, so nothing moves ([d008 › Implemented](designs/d008-pipeline-platform-and-walking-skeleton.md#41-implemented)).
