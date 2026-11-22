@@ -37,7 +37,7 @@ const ADAPTERS = Object.freeze({
  * @property {typeof LIMITS} limits
  * @property {string} runId
  * @property {Date} start
- * @property {(level: 'info' | 'warning' | 'error', event: string, fields: Record<string, unknown>) => void} log
+ * @property {(level: 'info' | 'warn' | 'error', event: string, fields: Record<string, unknown>) => void} log
  */
 
 /**
@@ -118,17 +118,17 @@ async function runSource(pass, source, extra) {
 async function captureFeed(pass, source, feed, url) {
   const fetched = await fetchSource(pass, source, url, feed);
   if (!fetched.ok) {
-    pass.log("error", "feed_failed", { source: source.id, feed, ...failedFields(fetched, 0) });
+    pass.log("error", "feed_failed", { system: source.id, feed, ...failedFields(fetched, 0) });
     return false;
   }
 
   const put = await putOnce(pass.bucket, rawKey(source.id, feed, pass.runId), fetched.body, pass.limits);
   if (!put.ok) {
-    pass.log("error", "feed_failed", { source: source.id, feed, ...writeFailedFields(fetched, put) });
+    pass.log("error", "feed_failed", { system: source.id, feed, ...writeFailedFields(fetched, put) });
     return false;
   }
   pass.log("info", "feed_captured", {
-    source: source.id,
+    system: source.id,
     feed,
     status: fetched.status,
     latency_ms: fetched.latencyMs,
@@ -149,7 +149,7 @@ async function captureFeed(pass, source, feed, url) {
  */
 async function refreshIndex(pass, source) {
   const adapter = ADAPTERS[source.kind];
-  const reject = (fields) => pass.log("error", "index_rejected", { source: source.id, ...fields });
+  const reject = (fields) => pass.log("error", "index_rejected", { system: source.id, ...fields });
 
   const fetched = await fetchSource(pass, source, source.indexUrl, null);
   if (!fetched.ok) return reject(failedFields(fetched, 0));
@@ -169,7 +169,7 @@ async function refreshIndex(pass, source) {
   if (!state.ok) return reject(writeFailedFields(fetched, state));
 
   pass.log("info", "index_refreshed", {
-    source: source.id,
+    system: source.id,
     status: fetched.status,
     latency_ms: fetched.latencyMs,
     bytes: fetched.body.byteLength,
@@ -182,7 +182,7 @@ async function refreshIndex(pass, source) {
 /**
  * Fetches one of the source's URLs, retrying a 403 once where the source says so
  * (ADR-0039, Retry a 403 only on sources where it is shown to be transient). Each retry
- * is logged as `fetch_retried` before the wait, at `warning` since it does not affect
+ * is logged as `fetch_retried` before the wait, at `warn` since it does not affect
  * the data; the caller logs the outcome (d006 D4, A retry is logged as its own event).
  * @param {Pass} pass
  * @param {import("./sources.js").Source} source
@@ -194,8 +194,8 @@ function fetchSource(pass, source, url, feed) {
   return fetchFeed(url, pass.limits, {
     retryOn403: source.retryOn403,
     onRetry: (retried) =>
-      pass.log("warning", "fetch_retried", {
-        source: source.id,
+      pass.log("warn", "fetch_retried", {
+        system: source.id,
         feed,
         status: retried.status,
         latency_ms: retried.latencyMs,
@@ -207,7 +207,7 @@ function fetchSource(pass, source, url, feed) {
 
 /**
  * Sends the heartbeat. A failed signal does not affect the data, so it is logged at
- * `warning` (d004 D10, Capture heartbeat).
+ * `warn` (d004 D10, Capture heartbeat).
  * @param {Pass} pass
  * @param {string} url
  * @returns {Promise<void>}
@@ -218,7 +218,7 @@ async function heartbeat(pass, url) {
     pass.log("info", "heartbeat_sent", { status: result.status, latency_ms: result.latencyMs });
     return;
   }
-  pass.log("warning", "heartbeat_failed", {
+  pass.log("warn", "heartbeat_failed", {
     status: result.status,
     latency_ms: result.latencyMs,
     error_type: result.errorType,

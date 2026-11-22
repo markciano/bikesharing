@@ -178,7 +178,7 @@ describe("a capture pass", () => {
     expect(await (await env.BUCKET.get(key)).text()).toBe("existing");
     const events = await readLog(runId);
     expect(events).toContainEqual(
-      expect.objectContaining({ event: "feed_captured", source: "ambici", feed: "station_status" }),
+      expect.objectContaining({ event: "feed_captured", system: "ambici", feed: "station_status" }),
     );
   });
 
@@ -195,7 +195,7 @@ describe("a capture pass", () => {
       expect(Object.keys(event).slice(0, 6)).toEqual(["ts", "level", "component", "version", "run_id", "event"]);
       expect(event).toMatchObject({ component: "capture", version: VERSION, run_id: runId });
     }
-    const captured = events.filter((e) => e.event === "feed_captured").map((e) => `${e.source}/${e.feed}`);
+    const captured = events.filter((e) => e.event === "feed_captured").map((e) => `${e.system}/${e.feed}`);
     expect(captured.sort()).toEqual(dynamicFeeds());
   });
 
@@ -224,7 +224,7 @@ describe("a capture pass", () => {
     expect(new Uint8Array(await stored.arrayBuffer())).toEqual(fixtureBytes(source, "gbfs"));
     expect((await readIndex(env.BUCKET, source)).refreshed_at).toBe(start.toISOString().replace(".000Z", "Z"));
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "index_refreshed", source, unknown_feeds: [] }),
+      expect.objectContaining({ event: "index_refreshed", system: source, unknown_feeds: [] }),
     );
   });
 });

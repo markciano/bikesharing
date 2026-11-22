@@ -11,7 +11,7 @@
           "level": "info",
           "event": "feed_captured",
           "fields": {
-            "source": "bicing",
+            "system": "bicing",
             "feed": "station_status",
             "status": 200,
             "latency_ms": 412,
@@ -21,7 +21,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}\n"
     },
     {
       "name": "feed_failed from an HTTP error",
@@ -33,7 +33,7 @@
           "level": "error",
           "event": "feed_failed",
           "fields": {
-            "source": "ambici",
+            "system": "ambici",
             "feed": "station_status",
             "status": 503,
             "latency_ms": 230,
@@ -43,7 +43,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.102Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_failed\",\"source\":\"ambici\",\"feed\":\"station_status\",\"status\":503,\"latency_ms\":230,\"attempts\":0,\"error_type\":\"http\",\"error\":\"HTTP 503\"}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.102Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_failed\",\"system\":\"ambici\",\"feed\":\"station_status\",\"status\":503,\"latency_ms\":230,\"attempts\":0,\"error_type\":\"http\",\"error\":\"HTTP 503\"}\n"
     },
     {
       "name": "feed_failed from a network failure: status and latency_ms are null",
@@ -55,7 +55,7 @@
           "level": "error",
           "event": "feed_failed",
           "fields": {
-            "source": "ambici",
+            "system": "ambici",
             "feed": "vehicle_status",
             "status": null,
             "latency_ms": null,
@@ -65,7 +65,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.315Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_failed\",\"source\":\"ambici\",\"feed\":\"vehicle_status\",\"status\":null,\"latency_ms\":null,\"attempts\":0,\"error_type\":\"network\",\"error\":\"Network connection lost.\"}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.315Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_failed\",\"system\":\"ambici\",\"feed\":\"vehicle_status\",\"status\":null,\"latency_ms\":null,\"attempts\":0,\"error_type\":\"network\",\"error\":\"Network connection lost.\"}\n"
     },
     {
       "name": "index_refreshed",
@@ -77,7 +77,7 @@
           "level": "info",
           "event": "index_refreshed",
           "fields": {
-            "source": "bicing",
+            "system": "bicing",
             "status": 200,
             "latency_ms": 188,
             "bytes": 1342,
@@ -87,7 +87,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.520Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"index_refreshed\",\"source\":\"bicing\",\"status\":200,\"latency_ms\":188,\"bytes\":1342,\"attempts\":1,\"recompressed\":false,\"unknown_feeds\":[]}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.520Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"index_refreshed\",\"system\":\"bicing\",\"status\":200,\"latency_ms\":188,\"bytes\":1342,\"attempts\":1,\"recompressed\":false,\"unknown_feeds\":[]}\n"
     },
     {
       "name": "index_refreshed with unknown feeds",
@@ -99,7 +99,7 @@
           "level": "info",
           "event": "index_refreshed",
           "fields": {
-            "source": "ambici",
+            "system": "ambici",
             "status": 200,
             "latency_ms": 201,
             "bytes": 1517,
@@ -112,7 +112,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.733Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"index_refreshed\",\"source\":\"ambici\",\"status\":200,\"latency_ms\":201,\"bytes\":1517,\"attempts\":1,\"recompressed\":true,\"unknown_feeds\":[\"geofencing_zones\",\"vehicle_availability\"]}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.733Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"index_refreshed\",\"system\":\"ambici\",\"status\":200,\"latency_ms\":201,\"bytes\":1517,\"attempts\":1,\"recompressed\":true,\"unknown_feeds\":[\"geofencing_zones\",\"vehicle_availability\"]}\n"
     },
     {
       "name": "index_rejected",
@@ -124,7 +124,7 @@
           "level": "error",
           "event": "index_rejected",
           "fields": {
-            "source": "bicing",
+            "system": "bicing",
             "status": 200,
             "latency_ms": 175,
             "attempts": 0,
@@ -133,7 +133,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.946Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"index_rejected\",\"source\":\"bicing\",\"status\":200,\"latency_ms\":175,\"attempts\":0,\"error_type\":\"invalid_index\",\"error\":\"required feed station_status is missing\"}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:04.946Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"index_rejected\",\"system\":\"bicing\",\"status\":200,\"latency_ms\":175,\"attempts\":0,\"error_type\":\"invalid_index\",\"error\":\"required feed station_status is missing\"}\n"
     },
     {
       "name": "heartbeat_sent",
@@ -159,7 +159,7 @@
           "run_id": "20261018T120003Z",
           "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
           "ts": "2026-10-18T12:00:05.371Z",
-          "level": "warning",
+          "level": "warn",
           "event": "heartbeat_failed",
           "fields": {
             "status": null,
@@ -169,7 +169,23 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:05.371Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"heartbeat_failed\",\"status\":null,\"latency_ms\":null,\"error_type\":\"timeout\",\"error\":\"heartbeat timed out after 5000 ms\"}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:05.371Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"heartbeat_failed\",\"status\":null,\"latency_ms\":null,\"error_type\":\"timeout\",\"error\":\"heartbeat timed out after 5000 ms\"}\n"
+    },
+    {
+      "name": "otlp_send_failed",
+      "inputs": [
+        {
+          "run_id": "20261018T120003Z",
+          "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
+          "ts": "2026-10-18T12:00:05.612Z",
+          "level": "warn",
+          "event": "otlp_send_failed",
+          "fields": {
+            "error_type": "timeout"
+          }
+        }
+      ],
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:05.612Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"otlp_send_failed\",\"error_type\":\"timeout\"}\n"
     },
     {
       "name": "two events of one pass, in order",
@@ -181,7 +197,7 @@
           "level": "info",
           "event": "feed_captured",
           "fields": {
-            "source": "bicing",
+            "system": "bicing",
             "feed": "station_status",
             "status": 200,
             "latency_ms": 412,
@@ -202,7 +218,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}\n{\"ts\":\"2026-10-18T12:00:05.158Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"heartbeat_sent\",\"status\":200,\"latency_ms\":96}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}\n{\"ts\":\"2026-10-18T12:00:05.158Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"heartbeat_sent\",\"status\":200,\"latency_ms\":96}\n"
     },
     {
       "name": "fetch_retried of a feed",
@@ -211,10 +227,10 @@
           "run_id": "20261018T120003Z",
           "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
           "ts": "2026-10-18T12:00:03.650Z",
-          "level": "warning",
+          "level": "warn",
           "event": "fetch_retried",
           "fields": {
-            "source": "bicing",
+            "system": "bicing",
             "feed": "station_status",
             "status": 403,
             "latency_ms": 85,
@@ -226,7 +242,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}\n"
     },
     {
       "name": "fetch_retried of an index: feed is null",
@@ -235,10 +251,10 @@
           "run_id": "20261018T120003Z",
           "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
           "ts": "2026-10-18T12:00:03.420Z",
-          "level": "warning",
+          "level": "warn",
           "event": "fetch_retried",
           "fields": {
-            "source": "bicing",
+            "system": "bicing",
             "feed": null,
             "status": 403,
             "latency_ms": 92,
@@ -250,7 +266,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.420Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":null,\"status\":403,\"latency_ms\":92,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.420Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":null,\"status\":403,\"latency_ms\":92,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}\n"
     },
     {
       "name": "fetch_retried whose body cannot be read: body is null",
@@ -259,10 +275,10 @@
           "run_id": "20261018T120003Z",
           "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
           "ts": "2026-10-18T12:00:03.650Z",
-          "level": "warning",
+          "level": "warn",
           "event": "fetch_retried",
           "fields": {
-            "source": "bicing",
+            "system": "bicing",
             "feed": "station_status",
             "status": 403,
             "latency_ms": 85,
@@ -274,7 +290,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-encoding\":\"gzip\",\"content-type\":\"text/html\"},\"body\":null}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-encoding\":\"gzip\",\"content-type\":\"text/html\"},\"body\":null}\n"
     },
     {
       "name": "fetch_retried whose body holds quotes and a line break: one line",
@@ -283,10 +299,10 @@
           "run_id": "20261018T120003Z",
           "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
           "ts": "2026-10-18T12:00:03.650Z",
-          "level": "warning",
+          "level": "warn",
           "event": "fetch_retried",
           "fields": {
-            "source": "bicing",
+            "system": "bicing",
             "feed": "station_status",
             "status": 403,
             "latency_ms": 85,
@@ -298,7 +314,7 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html; charset=utf-8\",\"retry-after\":\"60\"},\"body\":\"<p class=\\\"error\\\">Access denied</p>\\n<p>Retry later</p>\"}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html; charset=utf-8\",\"retry-after\":\"60\"},\"body\":\"<p class=\\\"error\\\">Access denied</p>\\n<p>Retry later</p>\"}\n"
     },
     {
       "name": "fetch_retried then feed_captured in one pass: status and latency_ms of the retry",
@@ -307,10 +323,10 @@
           "run_id": "20261018T120003Z",
           "version": "7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47",
           "ts": "2026-10-18T12:00:03.650Z",
-          "level": "warning",
+          "level": "warn",
           "event": "fetch_retried",
           "fields": {
-            "source": "bicing",
+            "system": "bicing",
             "feed": "station_status",
             "status": 403,
             "latency_ms": 85,
@@ -328,7 +344,7 @@
           "level": "info",
           "event": "feed_captured",
           "fields": {
-            "source": "bicing",
+            "system": "bicing",
             "feed": "station_status",
             "status": 200,
             "latency_ms": 640,
@@ -338,68 +354,72 @@
           }
         }
       ],
-      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}\n{\"ts\":\"2026-10-18T12:00:07.980Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":640,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}\n"
+      "jsonl": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}\n{\"ts\":\"2026-10-18T12:00:07.980Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":640,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}\n"
     }
   ],
   "invalid": [
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
       "reason": "component is missing"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
       "reason": "ts has no milliseconds"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T14:00:03.871+02:00\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "line": "{\"ts\":\"2026-10-18T14:00:03.871+02:00\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
       "reason": "ts has an offset other than Z"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
-      "reason": "level warn is not one of info, warning, error"
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "reason": "level warning is not one of info, warn, error"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_skipped\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "reason": "feed_captured has source, the field is named system"
+    },
+    {
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_skipped\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
       "reason": "event is not one of the events of D9"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:04.102Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_failed\",\"source\":\"ambici\",\"feed\":\"station_status\",\"status\":503,\"latency_ms\":230,\"attempts\":0,\"error_type\":\"dns\",\"error\":\"HTTP 503\"}",
+      "line": "{\"ts\":\"2026-10-18T12:00:04.102Z\",\"level\":\"error\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_failed\",\"system\":\"ambici\",\"feed\":\"station_status\",\"status\":503,\"latency_ms\":230,\"attempts\":0,\"error_type\":\"dns\",\"error\":\"HTTP 503\"}",
       "reason": "error_type is not one of the types of D9"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"2026-10-18T12:00:03Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"2026-10-18T12:00:03Z\",\"event\":\"feed_captured\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
       "reason": "run_id is not in the key format YYYYMMDDTHHMMSSZ"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latencyMs\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latencyMs\":412,\"bytes\":48213,\"attempts\":1,\"recompressed\":false}",
       "reason": "field name is in camelCase, not snake_case"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"recompressed\":false}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.871Z\",\"level\":\"info\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"feed_captured\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":200,\"latency_ms\":412,\"bytes\":48213,\"recompressed\":false}",
       "reason": "feed_captured has no attempts"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"set-cookie\":\"session=abc123; Path=/; HttpOnly\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"set-cookie\":\"session=abc123; Path=/; HttpOnly\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
       "reason": "headers holds set-cookie"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"x-header-01\":\"v\",\"x-header-02\":\"v\",\"x-header-03\":\"v\",\"x-header-04\":\"v\",\"x-header-05\":\"v\",\"x-header-06\":\"v\",\"x-header-07\":\"v\",\"x-header-08\":\"v\",\"x-header-09\":\"v\",\"x-header-10\":\"v\",\"x-header-11\":\"v\",\"x-header-12\":\"v\",\"x-header-13\":\"v\",\"x-header-14\":\"v\",\"x-header-15\":\"v\",\"x-header-16\":\"v\",\"x-header-17\":\"v\",\"x-header-18\":\"v\",\"x-header-19\":\"v\",\"x-header-20\":\"v\",\"x-header-21\":\"v\",\"x-header-22\":\"v\",\"x-header-23\":\"v\",\"x-header-24\":\"v\",\"x-header-25\":\"v\",\"x-header-26\":\"v\",\"x-header-27\":\"v\",\"x-header-28\":\"v\",\"x-header-29\":\"v\",\"x-header-30\":\"v\",\"x-header-31\":\"v\",\"x-header-32\":\"v\",\"x-header-33\":\"v\",\"x-header-34\":\"v\",\"x-header-35\":\"v\",\"x-header-36\":\"v\",\"x-header-37\":\"v\",\"x-header-38\":\"v\",\"x-header-39\":\"v\",\"x-header-40\":\"v\",\"x-header-41\":\"v\",\"x-header-42\":\"v\",\"x-header-43\":\"v\",\"x-header-44\":\"v\",\"x-header-45\":\"v\",\"x-header-46\":\"v\",\"x-header-47\":\"v\",\"x-header-48\":\"v\",\"x-header-49\":\"v\",\"x-header-50\":\"v\",\"x-header-51\":\"v\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"x-header-01\":\"v\",\"x-header-02\":\"v\",\"x-header-03\":\"v\",\"x-header-04\":\"v\",\"x-header-05\":\"v\",\"x-header-06\":\"v\",\"x-header-07\":\"v\",\"x-header-08\":\"v\",\"x-header-09\":\"v\",\"x-header-10\":\"v\",\"x-header-11\":\"v\",\"x-header-12\":\"v\",\"x-header-13\":\"v\",\"x-header-14\":\"v\",\"x-header-15\":\"v\",\"x-header-16\":\"v\",\"x-header-17\":\"v\",\"x-header-18\":\"v\",\"x-header-19\":\"v\",\"x-header-20\":\"v\",\"x-header-21\":\"v\",\"x-header-22\":\"v\",\"x-header-23\":\"v\",\"x-header-24\":\"v\",\"x-header-25\":\"v\",\"x-header-26\":\"v\",\"x-header-27\":\"v\",\"x-header-28\":\"v\",\"x-header-29\":\"v\",\"x-header-30\":\"v\",\"x-header-31\":\"v\",\"x-header-32\":\"v\",\"x-header-33\":\"v\",\"x-header-34\":\"v\",\"x-header-35\":\"v\",\"x-header-36\":\"v\",\"x-header-37\":\"v\",\"x-header-38\":\"v\",\"x-header-39\":\"v\",\"x-header-40\":\"v\",\"x-header-41\":\"v\",\"x-header-42\":\"v\",\"x-header-43\":\"v\",\"x-header-44\":\"v\",\"x-header-45\":\"v\",\"x-header-46\":\"v\",\"x-header-47\":\"v\",\"x-header-48\":\"v\",\"x-header-49\":\"v\",\"x-header-50\":\"v\",\"x-header-51\":\"v\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
       "reason": "headers has more than 50 entries"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789x\"}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789x\"}",
       "reason": "body is over 1,000 bytes"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"x-trace\":\"0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789x\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"x-trace\":\"0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789x\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
       "reason": "a header value is over 1,000 bytes"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":500,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":500,\"latency_ms\":85,\"headers\":{\"content-type\":\"text/html\",\"server\":\"nginx\"},\"body\":\"<html><body>403 Forbidden</body></html>\"}",
       "reason": "fetch_retried has a status other than 403"
     },
     {
-      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warning\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"source\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"body\":\"<html><body>403 Forbidden</body></html>\"}",
+      "line": "{\"ts\":\"2026-10-18T12:00:03.650Z\",\"level\":\"warn\",\"component\":\"capture\",\"version\":\"7f3c2a9e-1b4d-4c6a-8e2f-5d9b0a1c3e47\",\"run_id\":\"20261018T120003Z\",\"event\":\"fetch_retried\",\"system\":\"bicing\",\"feed\":\"station_status\",\"status\":403,\"latency_ms\":85,\"body\":\"<html><body>403 Forbidden</body></html>\"}",
       "reason": "fetch_retried has no headers"
     }
   ]

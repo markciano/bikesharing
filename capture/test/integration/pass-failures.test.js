@@ -21,13 +21,13 @@ const SEEDED_AT = "2026-11-07T00:07:00Z";
 /** The fields every event carries, and the own fields of each event (d004 D9, Capture logs). */
 const COMMON_FIELDS = ["ts", "level", "component", "version", "run_id", "event"];
 const OWN_FIELDS = {
-  feed_captured: ["source", "feed", "status", "latency_ms", "bytes", "attempts", "recompressed"],
-  feed_failed: ["source", "feed", "status", "latency_ms", "attempts", "error_type", "error"],
-  index_refreshed: ["source", "status", "latency_ms", "bytes", "attempts", "recompressed", "unknown_feeds"],
-  index_rejected: ["source", "status", "latency_ms", "attempts", "error_type", "error"],
+  feed_captured: ["system", "feed", "status", "latency_ms", "bytes", "attempts", "recompressed"],
+  feed_failed: ["system", "feed", "status", "latency_ms", "attempts", "error_type", "error"],
+  index_refreshed: ["system", "status", "latency_ms", "bytes", "attempts", "recompressed", "unknown_feeds"],
+  index_rejected: ["system", "status", "latency_ms", "attempts", "error_type", "error"],
   heartbeat_sent: ["status", "latency_ms"],
   heartbeat_failed: ["status", "latency_ms", "error_type", "error"],
-  fetch_retried: ["source", "feed", "status", "latency_ms", "headers", "body"],
+  fetch_retried: ["system", "feed", "status", "latency_ms", "headers", "body"],
 };
 
 /** @param {string} b64 */
@@ -175,7 +175,7 @@ describe("a capture pass with a failing source", () => {
 
     expect(await capturedFeeds(runId)).toEqual(dynamicFeeds().filter((f) => f !== "bicing/station_status"));
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "feed_failed", source: "bicing", feed: "station_status", error_type: "timeout" }),
+      expect.objectContaining({ event: "feed_failed", system: "bicing", feed: "station_status", error_type: "timeout" }),
     );
   });
 
@@ -189,7 +189,7 @@ describe("a capture pass with a failing source", () => {
     expect(await readLog(runId)).toContainEqual(
       expect.objectContaining({
         event: "feed_failed",
-        source: "ambici",
+        system: "ambici",
         feed: "station_status",
         status: 500,
         error_type: "http",
@@ -210,7 +210,7 @@ describe("a capture pass with a failing source", () => {
     const runId = await runAt(PLAIN_MINUTE, 12);
 
     const failed = new Map(
-      (await readLog(runId)).filter((e) => e.event === "feed_failed").map((e) => [`${e.source}/${e.feed}`, e]),
+      (await readLog(runId)).filter((e) => e.event === "feed_failed").map((e) => [`${e.system}/${e.feed}`, e]),
     );
     expect(failed.get(http500).latency_ms).toEqual(expect.any(Number));
     expect(failed.get(stalled).latency_ms).toEqual(expect.any(Number));
@@ -225,7 +225,7 @@ describe("a capture pass with a failing source", () => {
 
     expect(await capturedFeeds(runId)).not.toContain("bicing/station_status");
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "feed_failed", source: "bicing", feed: "station_status", error_type: "too_large" }),
+      expect.objectContaining({ event: "feed_failed", system: "bicing", feed: "station_status", error_type: "too_large" }),
     );
   });
 
@@ -236,7 +236,7 @@ describe("a capture pass with a failing source", () => {
     const runId = await runAt(PLAIN_MINUTE, 14);
 
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "feed_captured", source: "bicing", feed: "station_status", recompressed: true }),
+      expect.objectContaining({ event: "feed_captured", system: "bicing", feed: "station_status", recompressed: true }),
     );
   });
 });
@@ -254,11 +254,11 @@ describe("a capture pass with a 403", () => {
     const stored = await env.BUCKET.get(rawKey("bicing", "station_status", runId));
     expect(new Uint8Array(await stored.arrayBuffer())).toEqual(fixtureBytes("bicing", "station_status"));
     const events = await readLog(runId);
-    const retried = indexOf(events, { event: "fetch_retried", source: "bicing", feed: "station_status" });
-    const captured = indexOf(events, { event: "feed_captured", source: "bicing", feed: "station_status" });
+    const retried = indexOf(events, { event: "fetch_retried", system: "bicing", feed: "station_status" });
+    const captured = indexOf(events, { event: "feed_captured", system: "bicing", feed: "station_status" });
     expect(retried).toBeGreaterThanOrEqual(0);
     expect(captured).toBeGreaterThan(retried);
-    expect(events[retried]).toMatchObject({ level: "warning", status: 403, latency_ms: expect.any(Number) });
+    expect(events[retried]).toMatchObject({ level: "warn", status: 403, latency_ms: expect.any(Number) });
     expect(Object.keys(events[retried]).slice(-6)).toEqual(OWN_FIELDS.fetch_retried);
     expect(events[captured]).toMatchObject({ status: 200, latency_ms: expect.any(Number) });
   });
@@ -273,9 +273,9 @@ describe("a capture pass with a 403", () => {
 
     expect((await readIndex(env.BUCKET, "bicing")).refreshed_at).not.toBe(SEEDED_AT);
     const events = await readLog(runId);
-    const retried = indexOf(events, { event: "fetch_retried", source: "bicing", feed: null });
+    const retried = indexOf(events, { event: "fetch_retried", system: "bicing", feed: null });
     expect(retried).toBeGreaterThanOrEqual(0);
-    expect(indexOf(events, { event: "index_refreshed", source: "bicing" })).toBeGreaterThan(retried);
+    expect(indexOf(events, { event: "index_refreshed", system: "bicing" })).toBeGreaterThan(retried);
   });
 
   // Verifies d006 R2, R7
@@ -286,8 +286,8 @@ describe("a capture pass with a 403", () => {
 
     expect(await requestCount("forbidden/d006r2")).toBe(2);
     const events = await readLog(runId);
-    const retried = indexOf(events, { event: "fetch_retried", source: "bicing", feed: "station_status" });
-    const failed = indexOf(events, { event: "feed_failed", source: "bicing", feed: "station_status" });
+    const retried = indexOf(events, { event: "fetch_retried", system: "bicing", feed: "station_status" });
+    const failed = indexOf(events, { event: "feed_failed", system: "bicing", feed: "station_status" });
     expect(retried).toBeGreaterThanOrEqual(0);
     expect(failed).toBeGreaterThan(retried);
     expect(events[failed]).toMatchObject({ status: 403, error_type: "http" });
@@ -303,7 +303,7 @@ describe("a capture pass with a 403", () => {
     const events = await readLog(runId);
     expect(events.map((e) => e.event)).not.toContain("fetch_retried");
     expect(events).toContainEqual(
-      expect.objectContaining({ event: "feed_failed", source: "ambici", feed: "station_status", status: 403 }),
+      expect.objectContaining({ event: "feed_failed", system: "ambici", feed: "station_status", status: 403 }),
     );
   });
 });
@@ -320,7 +320,7 @@ describe("an index refresh that fails", () => {
 
     expect(await readIndex(env.BUCKET, "bicing")).toEqual(before);
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "index_rejected", source: "bicing", error_type: "invalid_index" }),
+      expect.objectContaining({ event: "index_rejected", system: "bicing", error_type: "invalid_index" }),
     );
   });
 
@@ -333,7 +333,7 @@ describe("an index refresh that fails", () => {
 
     expect(await readIndex(env.BUCKET, "bicing")).toEqual(before);
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "index_rejected", source: "bicing", error_type: "write" }),
+      expect.objectContaining({ event: "index_rejected", system: "bicing", error_type: "write" }),
     );
   });
 
@@ -346,7 +346,7 @@ describe("an index refresh that fails", () => {
 
     expect(await readIndex(env.BUCKET, "bicing")).toEqual(before);
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "index_rejected", source: "bicing", error_type: "write" }),
+      expect.objectContaining({ event: "index_rejected", system: "bicing", error_type: "write" }),
     );
   });
 
@@ -374,7 +374,7 @@ describe("an index refresh that fails", () => {
 
     expect(await readIndex(env.BUCKET, "bicing")).toEqual(before);
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "index_rejected", source: "bicing", error_type: "too_large" }),
+      expect.objectContaining({ event: "index_rejected", system: "bicing", error_type: "too_large" }),
     );
   });
 
@@ -387,7 +387,7 @@ describe("an index refresh that fails", () => {
     });
 
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "index_refreshed", source: "bicing", unknown_feeds: ["extra_feed"] }),
+      expect.objectContaining({ event: "index_refreshed", system: "bicing", unknown_feeds: ["extra_feed"] }),
     );
   });
 });
@@ -417,7 +417,7 @@ describe("a pass whose data writes fail", () => {
     const runId = await runAt(PLAIN_MINUTE, 40, { bucket: failingPuts(["raw/"]) });
 
     const failed = (await readLog(runId)).filter((e) => e.event === "feed_failed" && e.error_type === "write");
-    expect(failed.map((e) => `${e.source}/${e.feed}`).sort()).toEqual(dynamicFeeds());
+    expect(failed.map((e) => `${e.system}/${e.feed}`).sort()).toEqual(dynamicFeeds());
   });
 });
 
@@ -435,26 +435,26 @@ describe("the heartbeat of a pass", () => {
   });
 
   // Verifies d004 R20
-  it("logs a heartbeat answering HTTP 500 as heartbeat_failed warning and stores the data and the log", async () => {
+  it("logs a heartbeat answering HTTP 500 as heartbeat_failed warn and stores the data and the log", async () => {
     await seedIndexes();
 
     const runId = await runAt(HEARTBEAT_MINUTE, 51, { heartbeatUrl: `${SIM}/http-500/r20` });
 
     expect(await capturedFeeds(runId)).toEqual(dynamicFeeds());
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "heartbeat_failed", level: "warning", status: 500 }),
+      expect.objectContaining({ event: "heartbeat_failed", level: "warn", status: 500 }),
     );
   });
 
   // Verifies d004 R20
-  it("logs a heartbeat failing on the network as heartbeat_failed warning and stores the data and the log", async () => {
+  it("logs a heartbeat failing on the network as heartbeat_failed warn and stores the data and the log", async () => {
     await seedIndexes();
 
     const runId = await runAt(HEARTBEAT_MINUTE, 52, { heartbeatUrl: `${SIM}/heartbeat-network-error/r20` });
 
     expect(await capturedFeeds(runId)).toEqual(dynamicFeeds());
     expect(await readLog(runId)).toContainEqual(
-      expect.objectContaining({ event: "heartbeat_failed", level: "warning", status: null }),
+      expect.objectContaining({ event: "heartbeat_failed", level: "warn", status: null }),
     );
   });
 

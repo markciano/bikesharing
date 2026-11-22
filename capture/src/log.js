@@ -16,7 +16,7 @@ const COMPONENT = "capture";
  * in that order, then `fields`. Pure.
  * @param {LogContext} ctx
  * @param {Date} ts
- * @param {'info' | 'warning' | 'error'} level
+ * @param {'info' | 'warn' | 'error'} level
  * @param {string} event  One of the events of the capture log
  * @param {Record<string, unknown>} fields Its own fields, in snake_case
  * @returns {Record<string, unknown>}

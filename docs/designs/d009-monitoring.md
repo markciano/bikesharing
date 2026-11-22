@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 4.
+- Current: Step 5.
 
 ## 1. Spec — what and why
 
@@ -1030,7 +1030,7 @@ The indicators this design sets, in `docs/data-quality.md` (modified):
 
 ### Step 4 — Capture: `warn` and `system`
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat!: d009.s4 log capture's warn level and system field`
 - **R:** R27
