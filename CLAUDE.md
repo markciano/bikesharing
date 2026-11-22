@@ -75,7 +75,8 @@ Data engineering portfolio project on public bike sharing in the Barcelona area 
 │   ├── sources/            Source cards
 │   └── spikes/             Spike reports per system
 ├── capture/                Capture Worker (JS), with its own src/, test/ and scripts/
-├── contracts/              Shared contract files between components (vectors and schemas)
+├── contracts/              Shared contract files between components (vectors, schemas and the event registry)
+├── monitoring/             Grafana Cloud configuration as code (Terraform)
 ├── pipeline/               Pipeline (Python and dbt), with its own src/, dbt/, tests/ and scripts/
 ├── web/                    Public page (Cloudflare Worker)
 ├── scripts/                Repo-wide helper scripts
