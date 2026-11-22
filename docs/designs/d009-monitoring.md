@@ -88,7 +88,7 @@ An alert fires on a symptom that needs an action from the owner, not on each err
 | ALR12 | Grafana stops signalling the heartbeat service (watchdog) | Grafana | Every other alert runs in Grafana (D13) |
 | ALR13 | Grafana's use nears a limit of its Free tier: logs a month, synthetic check executions | Grafana | Past a limit, Grafana drops events or stops checking, and D1 is reviewed |
 | ALR14 | An event the observability catalog does not list reaches Grafana | Both | A new event to classify, which ALR9 would otherwise miss (D5) |
-| ALR15 | A feed's minutes given to capture in the calendar month near DQM11's target | Capture | Scattered single minutes, which neither ALR5 nor ALR6 sees, would break the target unnoticed (D10) |
+| ALR15 | A feed's minutes given to capture over the last 7 days exceed the 7-day share of DQM11's target | Capture | Scattered single minutes, which neither ALR5 nor ALR6 sees, would break the target unnoticed (D10) |
 
 The limits and costs of Cloudflare and Modal are watched by each provider's own usage and budget notifications, set in its console.
 
@@ -161,7 +161,7 @@ Rejected: the HTTP status class (RFC 9110), 4xx to capture as a client error and
 
 #### D10. A target on capture's own missed minutes only
 
-DQM11 takes a target on the minutes D9 gives to capture: at most 30 minutes per feed and calendar month. The minutes given to the provider are measured and shown with no target, since the owner takes no action on them and DQM7 already bounds their effect on completeness (D7). Over the first 14.6 days of production pass logs (2026-11-07 10:19 to 2026-11-22 01:39 UTC), each dynamic feed lost 6 or 7 minutes to capture, each a single minute and at most one a day: four passes the cron never ran, the same minutes for every feed, and passes logged with no event for any feed; about 10 minutes a month. The provider took 13 and 15 minutes from AMBici's two feeds and 486 from Bicing's, 481 of them a 403, 32 a day at the median; no run of missed minutes lasted over 5 minutes ([`spikes/d009-baselines/capture-gaps/`](../../spikes/d009-baselines/capture-gaps/)). The target sits at about three times that baseline, which comes from two weeks only, following the SRE practice of D7: a target on what the owner can fix, set from measured performance and revised. ALR15 warns before a feed breaks it.
+DQM11 takes a target on the minutes D9 gives to capture: at most 30 minutes per feed and calendar month. The minutes given to the provider are measured and shown with no target, since the owner takes no action on them and DQM7 already bounds their effect on completeness (D7). Over the first 14.6 days of production pass logs (2026-11-07 10:19 to 2026-11-22 01:39 UTC), each dynamic feed lost 6 or 7 minutes to capture, each a single minute and at most one a day: four passes the cron never ran, the same minutes for every feed, and passes logged with no event for any feed; about 10 minutes a month. The provider took 13 and 15 minutes from AMBici's two feeds and 486 from Bicing's, 481 of them a 403, 32 a day at the median; no run of missed minutes lasted over 5 minutes ([`spikes/d009-baselines/capture-gaps/`](../../spikes/d009-baselines/capture-gaps/)). The target sits at about three times that baseline, which comes from two weeks only, following the SRE practice of D7: a target on what the owner can fix, set from measured performance and revised. ALR15 warns when a feed's minutes given to capture over the last 7 days exceed the target's share for 7 days, 7 minutes, against about 3 a week today: Grafana keeps 14 days of events and cannot add up a calendar month, so the alert follows a rolling window, and the month's value is queried with SQL over R2 ([ADR-0036](../decisions/0036-log-convention-across-components.md)), as [s018 › D6](../spikes/s018-monitoring-tool.md#d6-quality-indicators-reach-the-tool-by-push) sets. **#6**
 
 - **What would change it:** the first full calendar month of production, December 2026, with a baseline clearly above or below about 10 minutes: the target is revised with that month.
 
@@ -187,7 +187,7 @@ Each alert is a page or a ticket, following the SRE split between alerts that in
 | ALR12 | Page, by email from the heartbeat service | Every other alert is silent; it cannot go through Grafana (D13) |
 | ALR13 | Ticket | Fires with margin before the limit |
 | ALR14 | Ticket | An event to classify, with no hurry |
-| ALR15 | Ticket | Fires with margin before the month's target |
+| ALR15 | Ticket | Capture getting worse on its own, which can wait for days |
 
 Rejected: every alert a page. Simpler, but fifteen alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead.
 
@@ -267,8 +267,8 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R36** Grafana shall show, over the last 14 days, the events of capture and the pipeline and the results of the synthetic check, in the browser and in the mobile app. (D1, D12)
 - **R37** The watchdog's signal URL shall be kept only in Grafana's notification setting, never in code. (D15)
 - **R38** Alert notifications shall carry no credentials and no visitor data. (D15)
-- **R39** When a feed's minutes given to capture in the calendar month exceed ALR15's share of DQM11's target, set in the Plan, Grafana shall raise ALR15 as a ticket. (D3, D10, D11)
-- **R40** Grafana shall show each feed's minutes given to the provider in the calendar month, with no target. (D10)
+- **R39** When a feed's minutes given to capture over the last 7 days exceed 7, the 7-day share of DQM11's target, Grafana shall raise ALR15 as a ticket. (D3, D10, D11, #6)
+- **R40** Grafana shall show each feed's minutes given to the provider over the last 7 days, with no target. (D10, #6)
 - **R41** Grafana's queries and alerts shall select events by the fields they carry, with no list of systems. (D1)
 
 ### 1.4 Done when
@@ -371,6 +371,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 3 | [Observability catalog](#observability-catalog) | The criterion for classifying an event in `docs/observability.md`, enforced by the registry test, with a path rule for writing entries; no line in the design template (poka-yoke) | The test already blocks an unclassified event; the template would repeat it in every design | R16, R22, R25 | Plan |
 | 4 | [Warning level](#warning-level) | `warn` for every component, OpenTelemetry's short severity name; capture changes from `warning`, and its logs in R2 are not rewritten (append-only logs) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | One name in queries from now on; the record stays as written | R27 | Plan |
 | 5 | [Field mapping](#field-mapping) | `system` for the bike sharing system in every component's log events; capture changes from `source` in its logs only (one name per concept, as OpenTelemetry's semantic conventions, in ADR-0040's vocabulary) **refines [d004 › D9](d004-bronze-data-capture.md#d9-capture-logs)** | Queries by system cover every component with one field | R41 | Plan |
+| 6 | [D10](#d10-a-target-on-captures-own-missed-minutes-only), [D3](#d3-alerts-on-symptoms-that-need-action) | ALR15 and the provider's minutes over a rolling 7 days in Grafana, from capture's events; DQM11's monthly value queried with SQL over R2 (alerts on rolling windows, SLO period measured from the durable store) | Grafana keeps 14 days; the pipeline needs no access to capture's logs | R39, R40 | Plan |
 
 ### 2.3 Architecture
 
