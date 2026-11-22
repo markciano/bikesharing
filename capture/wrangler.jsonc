@@ -20,6 +20,11 @@
   "version_metadata": {
     "binding": "CF_VERSION_METADATA"
   },
+  // The copy of each pass's events to Grafana Cloud; `OTLP_TOKEN` is a secret, not set here
+  // (d009, Sending the copy)
+  "vars": {
+    "OTLP_ENDPOINT": "https://otlp-gateway-prod-eu-west-4.grafana.net/otlp/v1/logs"
+  },
   // Workers Logs, the fallback for a failed log write (d004 D8, Capture failure behaviour)
   "observability": {
     "enabled": true

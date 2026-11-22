@@ -1,7 +1,7 @@
 // Unit tests of the pass log write: one object per pass, and the fallback to Workers Logs
 // through the console when the bucket keeps failing. The bucket is a fake binding.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildEvent, toJsonl, writeLog } from "../../src/log.js";
+import { buildEvent, toJsonl, toLines, writeLog } from "../../src/log.js";
 import { logKey } from "../../src/storage.js";
 
 const LIMITS = { retryDelayMs: 0 };
@@ -37,11 +37,23 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const LINES = toLines(EVENTS);
+
+describe("toLines", () => {
+  it("returns each event's JSON.stringify, in order, without a newline", () => {
+    expect(toLines(EVENTS)).toEqual(EVENTS.map((e) => JSON.stringify(e)));
+  });
+
+  it("returns no lines when there are no events", () => {
+    expect(toLines([])).toEqual([]);
+  });
+});
+
 describe("writeLog", () => {
-  it("writes the events as one JSON Lines object at the pass's log key", async () => {
+  it("writes the lines as one JSON Lines object at the pass's log key", async () => {
     const bucket = fakeBucket();
 
-    await writeLog(bucket, RUN_ID, EVENTS, LIMITS);
+    await writeLog(bucket, RUN_ID, LINES, LIMITS);
 
     expect(bucket.puts).toHaveLength(1);
     expect(bucket.puts[0].key).toBe(logKey(RUN_ID));
@@ -52,7 +64,7 @@ describe("writeLog", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    await writeLog(fakeBucket(), RUN_ID, EVENTS, LIMITS);
+    await writeLog(fakeBucket(), RUN_ID, LINES, LIMITS);
 
     expect(log).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
@@ -63,7 +75,7 @@ describe("writeLog", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    await writeLog(fakeBucket(new Error("R2 down")), RUN_ID, EVENTS, LIMITS);
+    await writeLog(fakeBucket(new Error("R2 down")), RUN_ID, LINES, LIMITS);
 
     expect(log.mock.calls).toEqual(EVENTS.map((e) => [JSON.stringify(e)]));
     expect(error).toHaveBeenCalledOnce();
@@ -74,6 +86,6 @@ describe("writeLog", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
 
-    await expect(writeLog(fakeBucket(new Error("R2 down")), RUN_ID, EVENTS, LIMITS)).resolves.toBeUndefined();
+    await expect(writeLog(fakeBucket(new Error("R2 down")), RUN_ID, LINES, LIMITS)).resolves.toBeUndefined();
   });
 });

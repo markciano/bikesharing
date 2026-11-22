@@ -4,7 +4,7 @@
 // bucket and the sources are the simulated ones in vitest.config.js.
 import { createExecutionContext, createScheduledController, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parseIndex } from "../../src/adapters/gbfs.js";
 import { readIndex, writeIndex } from "../../src/index-state.js";
 import { runPass } from "../../src/pass.js";
@@ -18,6 +18,7 @@ const LIMITS = env.TEST_LIMITS;
 const SIM = "https://sim.test";
 const VERSION = "test-version";
 const DAY = Date.UTC(2026, 10, 6);
+const OTLP_TOKEN = "test-credential";
 
 /** @param {string} b64 */
 const fromBase64 = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -70,16 +71,37 @@ function minuteWhere(pred) {
  * @param {number} second
  * @param {string} [heartbeatUrl]
  */
-async function runAt(scheduledTime, second, heartbeatUrl = `${SIM}/heartbeat/default`) {
+async function runAt(scheduledTime, second, heartbeatUrl = `${SIM}/heartbeat/default`, copy = {}) {
   const start = new Date(scheduledTime + second * 1000);
+  /** @type {Promise<unknown>[]} */
+  const pending = [];
   await runPass(scheduledTime, {
-    bucket: env.BUCKET,
+    bucket: copy.bucket ?? env.BUCKET,
     heartbeatUrl,
+    otlpEndpoint: copy.endpoint ?? `${SIM}/otlp/default`,
+    otlpToken: OTLP_TOKEN,
+    waitUntil: (promise) => {
+      copy.onWaitUntil?.();
+      pending.push(promise);
+    },
     version: VERSION,
     limits: LIMITS,
     now: () => start,
   });
+  await Promise.all(pending);
   return { runId: runIdOf(start), start };
+}
+
+/** What the simulated Grafana received on `otlp/<path>`. @param {string} path */
+async function otlpSeen(path) {
+  return (await fetch(`${SIM}/otlp-seen/${path}`)).json();
+}
+
+/** The line of every record of an OTLP request, in order. @param {{ body: string }} request */
+function recordLines(request) {
+  return JSON.parse(request.body).resourceLogs.flatMap((r) =>
+    r.scopeLogs.flatMap((s) => s.logRecords.map((record) => record.body.stringValue)),
+  );
 }
 
 /** Every key under `prefix`, across listing pages. @param {string} prefix */
@@ -132,8 +154,9 @@ describe("a capture pass", () => {
     for (const name of dynamicFeeds()) before.set(name, new Set(await listKeys(`raw/${name}/`)));
     const controller = createScheduledController({ scheduledTime: PLAIN_MINUTE, cron: "* * * * *" });
     const ctx = createExecutionContext();
+    const testEnv = { ...env, OTLP_ENDPOINT: `${SIM}/otlp/handler`, OTLP_TOKEN };
 
-    await worker.scheduled(controller, env, ctx);
+    await worker.scheduled(controller, testEnv, ctx);
     await waitOnExecutionContext(ctx);
 
     for (const name of dynamicFeeds()) {
@@ -232,5 +255,95 @@ describe("a capture pass", () => {
     expect(await readLog(runId)).toContainEqual(
       expect.objectContaining({ event: "index_refreshed", system: source, unknown_feeds: [] }),
     );
+  });
+});
+
+describe("a capture pass's copy to Grafana", () => {
+  // Verifies d009 R1
+  it("sends one request with one record per line written to R2, of every level, in order", async () => {
+    await seedIndexes();
+    const scheduledTime = minuteWhere((extra) => extra?.type === "feed");
+
+    const { runId } = await runAt(scheduledTime, 10, `${SIM}/heartbeat/d009-r1`, { endpoint: `${SIM}/otlp/r1` });
+
+    const written = (await (await env.BUCKET.get(logKey(runId))).text()).split("\n").filter(Boolean);
+    const seen = await otlpSeen("r1");
+    expect(seen).toHaveLength(1);
+    expect(seen[0].authorization).toBe(`Basic ${OTLP_TOKEN}`);
+    expect(recordLines(seen[0])).toEqual(written);
+  });
+
+  // Verifies d009 R1
+  it("copies the warn and error lines of a failing pass as well as the info ones", async () => {
+    await seedIndexes({ "bicing/station_status": `${SIM}/http-500/r1` });
+
+    const { runId } = await runAt(PLAIN_MINUTE, 11, undefined, { endpoint: `${SIM}/otlp/r1-levels` });
+
+    const levels = new Set((await readLog(runId)).map((e) => e.level));
+    expect(levels).toContain("error");
+    const copied = recordLines((await otlpSeen("r1-levels"))[0]).map((line) => JSON.parse(line).level);
+    expect(new Set(copied)).toEqual(levels);
+  });
+
+  // Verifies d009 R3
+  it.each([
+    ["http-500", "http"],
+    ["stall-body", "timeout"],
+    ["network-error", "network"],
+  ])("changes neither the log nor the heartbeat when Grafana answers %s, and writes otlp_send_failed", async (route, errorType) => {
+    await seedIndexes();
+    const scheduledTime = DAY + 5 * 60_000;
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const { runId } = await runAt(scheduledTime, 12, `${SIM}/heartbeat/r3-${route}`, { endpoint: `${SIM}/${route}/r3` });
+
+    expect(await requestCount(`heartbeat/r3-${route}`)).toBe(1);
+    expect(await readLog(runId)).toContainEqual(expect.objectContaining({ event: "heartbeat_sent" }));
+    const failed = log.mock.calls.map(([line]) => String(line)).filter((line) => line.includes('"otlp_send_failed"'));
+    expect(failed).toHaveLength(1);
+    expectRegistered(failed);
+    expect(JSON.parse(failed[0])).toMatchObject({ level: "warn", component: "capture", error_type: errorType });
+    log.mockRestore();
+  });
+
+  // Verifies d009 R4
+  it("writes the same R2 log whether the copy succeeds or fails", async () => {
+    await seedIndexes();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    // The run ID, the start and the measured latencies are the only lines' content that differ between runs.
+    const normalized = async ({ runId, start }) =>
+      (await (await env.BUCKET.get(logKey(runId))).text())
+        .replaceAll(runId, "RUN")
+        .replaceAll(start.toISOString(), "TS")
+        .replace(/"latency_ms":\d+/g, '"latency_ms":0');
+
+    const ok = await runAt(PLAIN_MINUTE, 13, undefined, { endpoint: `${SIM}/otlp/r4` });
+    const failed = await runAt(PLAIN_MINUTE, 14, undefined, { endpoint: `${SIM}/http-500/r4` });
+
+    expect(await normalized(failed)).toBe(await normalized(ok));
+    vi.restoreAllMocks();
+  });
+
+  // Verifies d009 R3
+  it("sends the copy after the log is written, through waitUntil", async () => {
+    await seedIndexes();
+    const order = [];
+    const bucket = {
+      get: (...args) => env.BUCKET.get(...args),
+      head: (...args) => env.BUCKET.head(...args),
+      put: async (key, ...rest) => {
+        const result = await env.BUCKET.put(key, ...rest);
+        if (key.startsWith("logs/")) order.push("log");
+        return result;
+      },
+    };
+
+    await runAt(PLAIN_MINUTE, 15, undefined, {
+      bucket,
+      endpoint: `${SIM}/otlp/order`,
+      onWaitUntil: () => order.push("copy"),
+    });
+
+    expect(order).toEqual(["log", "copy"]);
   });
 });

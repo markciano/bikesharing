@@ -6,7 +6,8 @@ import * as gbfs from "./adapters/gbfs.js";
 import { LIMITS, fetchFeed, gunzipText } from "./fetch.js";
 import { sendHeartbeat } from "./heartbeat.js";
 import { readIndex, writeIndex } from "./index-state.js";
-import { buildEvent, writeLog } from "./log.js";
+import { buildEvent, toLines, writeLog } from "./log.js";
+import { sendLogs } from "./otlp.js";
 import { extraFetch } from "./schedule.js";
 import { SOURCES, requiredFeeds } from "./sources.js";
 import { putOnce, rawKey, runIdOf } from "./storage.js";
@@ -24,6 +25,9 @@ const ADAPTERS = Object.freeze({
  * @typedef {object} PassDeps
  * @property {R2Bucket} bucket
  * @property {string} heartbeatUrl
+ * @property {string} otlpEndpoint `OTLP_ENDPOINT` variable
+ * @property {string} otlpToken `OTLP_TOKEN` secret, never logged
+ * @property {(promise: Promise<unknown>) => void} waitUntil `ctx.waitUntil`: keeps the copy running after the pass returns
  * @property {string} version
  * @property {readonly import("./sources.js").Source[]} [sources] Default `SOURCES`
  * @property {typeof LIMITS} [limits]      Default `LIMITS`
@@ -50,7 +54,7 @@ const ADAPTERS = Object.freeze({
  * @returns {Promise<void>}
  */
 export async function runPass(scheduledTime, deps) {
-  const { bucket, heartbeatUrl, version, sources = SOURCES, limits = LIMITS, now = () => new Date() } = deps;
+  const { bucket, heartbeatUrl, otlpEndpoint, otlpToken, waitUntil, version, sources = SOURCES, limits = LIMITS, now = () => new Date() } = deps;
   const start = now();
   const runId = runIdOf(start);
   /** @type {Record<string, unknown>[]} */
@@ -79,7 +83,31 @@ export async function runPass(scheduledTime, deps) {
     // losing the pass's log (d004 D8, Capture failure behaviour).
     console.error(err);
   } finally {
-    await writeLog(bucket, runId, events, limits);
+    // Serialized once: the R2 log and the copy hold the same lines (d009, Sending the copy).
+    const lines = toLines(events);
+    await writeLog(bucket, runId, lines, limits);
+    // After the log and the heartbeat, so the copy can never change either; the Worker
+    // lives until it ends, but the pass does not wait for it (d009 D2, The copy to Grafana
+    // never affects a run).
+    waitUntil(copyToGrafana({ endpoint: otlpEndpoint, token: otlpToken }, lines, limits, ctx, now));
+  }
+}
+
+/**
+ * Sends the pass's lines to Grafana. A failure goes to Workers Logs only, as the event
+ * `otlp_send_failed` at `warn`, since the R2 log is already written. Never throws.
+ * @param {import("./otlp.js").OtlpTarget} target
+ * @param {string[]} lines
+ * @param {typeof LIMITS} limits
+ * @param {import("./log.js").LogContext} ctx
+ * @param {() => Date} now
+ * @returns {Promise<void>}
+ */
+async function copyToGrafana(target, lines, limits, ctx, now) {
+  const failed = await sendLogs(target, lines, limits);
+  if (failed) {
+    const event = buildEvent(ctx, now(), "warn", "otlp_send_failed", { error_type: failed.errorType });
+    console.log(JSON.stringify(event));
   }
 }
 
