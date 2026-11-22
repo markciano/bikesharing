@@ -243,6 +243,16 @@ def test_log_upload_failed_is_a_warning() -> None:
     assert record["error_type"] == "ClientError"
 
 
+# Verifies d009 R3
+def test_otlp_send_failed_is_a_warning_with_its_error_type() -> None:
+    record = _line(events.otlp_send_failed(TS, error_type="TimeoutError"))
+
+    assert record["level"] == "warn"
+    assert record["event"] == "otlp_send_failed"
+    assert list(record)[6:] == ["error_type"]
+    assert record["error_type"] == "TimeoutError"
+
+
 @pytest.mark.parametrize(
     ("outcome", "level"), [("succeeded", "info"), ("failed", "error")]
 )

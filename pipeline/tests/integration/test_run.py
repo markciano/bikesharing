@@ -6,12 +6,14 @@ heartbeat's check a local HTTP stub, so a run executes the production code with
 no network beyond the loopback (d008, Tests and CI).
 """
 
+import functools
 import gzip
 import json
 import shutil
 import stat
 import sys
 import threading
+import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
@@ -31,6 +33,8 @@ from bikesharing.shell.delta import (
     local_lakehouse,
     processed_keys,
 )
+from bikesharing.shell.heartbeat import PingFailure, Signal
+from bikesharing.shell.otlp_exporter import OtlpTarget, send_logs
 from bikesharing.shell.run import (
     PublishTarget,
     RunConfig,
@@ -47,6 +51,7 @@ SCHEMA = json.loads(
 NOW = datetime(2026, 10, 22, 8, 0, tzinfo=UTC)
 VERSION = "0123456789abcdef0123456789abcdef01234567"
 SECRET = "cf-secret-token"
+OTLP_TOKEN = "b3RscC1pbnN0YW5jZTpvdGxwLXRva2Vu"
 
 AMBICI = [
     f"raw/ambici/station_status/2026-10-19/20261019T08{minute}45Z.json.gz"
@@ -485,6 +490,184 @@ def test_a_run_that_fails_pings_fail_with_run_finished_and_the_failing_event(
     assert {line["level"] for line in body} == {"error"}
 
 
+@dataclass
+class _Grafana:
+    """Grafana's OTLP endpoint stand-in: records each request and answers from a script."""
+
+    port: int
+    status: int = 200
+    delay_s: float = 0.0
+    requests: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def target(self) -> OtlpTarget:
+        return OtlpTarget(
+            endpoint=f"http://127.0.0.1:{self.port}/otlp/v1/logs", token=OTLP_TOKEN
+        )
+
+    def bodies(self) -> list[str]:
+        """Return the body of every record received, in order."""
+        return [
+            record["body"]["stringValue"]
+            for request in self.requests
+            for resource in request["resourceLogs"]
+            for scope in resource["scopeLogs"]
+            for record in scope["logRecords"]
+        ]
+
+
+@pytest.fixture
+def grafana() -> Iterator[_Grafana]:
+    state = _Grafana(port=0)
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            length = int(self.headers.get("Content-Length", "0"))
+            state.requests.append(json.loads(self.rfile.read(length)))
+            time.sleep(state.delay_s)
+            self.send_response(state.status)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, format: str, *args: object) -> None:
+            """Keep the test output free of the server's access log."""
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server.daemon_threads = True
+    state.port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield state
+    server.shutdown()
+    server.server_close()
+
+
+def _stdout_events(capsys: pytest.CaptureFixture[str]) -> list[dict[str, Any]]:
+    """Return the events written to stdout, leaving out any other output."""
+    found: list[dict[str, Any]] = []
+    for line in capsys.readouterr().out.splitlines():
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(record, dict) and "event" in record:
+            found.append(record)
+    return found
+
+
+# Verifies d009 R1
+def test_the_copy_holds_one_record_per_uploaded_line(
+    config: RunConfig, tmp_path: Path, grafana: _Grafana
+) -> None:
+    run(replace(config, otlp=grafana.target))
+
+    uploaded = [
+        line
+        for path in (tmp_path / "logs").rglob("*.jsonl")
+        for line in path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(grafana.requests) == 1
+    assert grafana.bodies() == uploaded
+
+
+# Verifies d009 R1
+def test_the_copy_adds_log_upload_failed_and_heartbeat_failed_after_the_uploaded_lines(
+    config: RunConfig,
+    tmp_path: Path,
+    grafana: _Grafana,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def failing_upload(*_: object) -> None:
+        raise OSError("bucket unreachable")
+
+    def failing_ping(url: str, signal: Signal, **_: object) -> PingFailure:
+        return PingFailure(signal=signal, attempts=3, error_type="URLError")
+
+    monkeypatch.setattr("bikesharing.shell.run.upload_log", failing_upload)
+    monkeypatch.setattr("bikesharing.shell.run.ping", failing_ping)
+
+    run(replace(config, otlp=grafana.target, heartbeat_url="http://unused/ping"))
+
+    names = [json.loads(body)["event"] for body in grafana.bodies()]
+    # The start ping fails before run_started; the last two events follow the
+    # upload and the success ping, which the R2 log cannot hold.
+    assert names[:2] == ["heartbeat_failed", "run_started"]
+    assert names[-3:] == ["run_finished", "log_upload_failed", "heartbeat_failed"]
+    assert "otlp_send_failed" not in names
+
+
+# Verifies d009 R3
+@pytest.mark.parametrize("failure", ["status", "stall"])
+def test_a_failing_or_stalling_target_changes_neither_the_outcome_nor_the_heartbeat(
+    config: RunConfig,
+    check: _Check,
+    grafana: _Grafana,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    failure: str,
+) -> None:
+    baseline = run(replace(config, heartbeat_url=check.url, otlp=grafana.target))
+    baseline_pings = [path for path, _ in check.requests]
+    check.requests.clear()
+    capsys.readouterr()
+    if failure == "status":
+        grafana.status = 500
+    else:
+        grafana.delay_s = 1.0
+        monkeypatch.setattr(
+            "bikesharing.shell.run.send_logs",
+            functools.partial(send_logs, timeout_s=0.2),
+        )
+
+    outcome = run(replace(config, heartbeat_url=check.url, otlp=grafana.target))
+
+    assert outcome == baseline == "succeeded"
+    assert [path for path, _ in check.requests] == baseline_pings
+    failed = _named(_stdout_events(capsys), "otlp_send_failed")
+    assert len(failed) == 1
+    assert failed[0]["level"] == "warn"
+    assert failed[0]["error_type"] in {"HTTPError", "TimeoutError"}
+
+
+# Verifies d009 R3
+def test_a_failed_run_still_fails_when_the_copy_fails(
+    config: RunConfig, check: _Check, grafana: _Grafana, bronze_folder: Path
+) -> None:
+    (bronze_folder / AMBICI[1]).write_bytes(b"not a gzip object")
+    grafana.status = 500
+
+    outcome = run(replace(config, heartbeat_url=check.url, otlp=grafana.target))
+
+    assert outcome == "failed"
+    assert [path for path, _ in check.requests][-1] == "/ping/check-id/fail"
+
+
+# Verifies d009 R4
+def test_the_uploaded_log_is_byte_identical_whether_the_copy_succeeds_or_fails(
+    config: RunConfig, tmp_path: Path, grafana: _Grafana
+) -> None:
+    # A second run would find nothing pending, so the failing send is compared
+    # with the lines it carried: the copy of the same run, whose log is already
+    # uploaded, holds exactly the log object's bytes.
+    grafana.status = 500
+
+    run(replace(config, otlp=grafana.target))
+
+    (log_object,) = (tmp_path / "logs").rglob("*.jsonl")
+    assert log_object.read_text(encoding="utf-8") == "".join(
+        f"{body}\n" for body in grafana.bodies()
+    )
+
+
+# Verifies d009 R1
+def test_a_run_without_a_target_sends_nothing(
+    config: RunConfig, grafana: _Grafana
+) -> None:
+    run(config)
+
+    assert grafana.requests == []
+
+
 def _environment() -> dict[str, str]:
     return {
         "CODE_VERSION": VERSION,
@@ -494,6 +677,8 @@ def _environment() -> dict[str, str]:
         "LAKEHOUSE_R2_SECRET_ACCESS_KEY": "lakehouse-secret",
         "CLOUDFLARE_API_TOKEN": "cloudflare-token",
         "HEARTBEAT_URL": "https://hc-ping.com/check-id",
+        "OTLP_ENDPOINT": "https://otlp.example/otlp/v1/logs",
+        "OTLP_TOKEN": "b3RscC10b2tlbg==",
     }
 
 
@@ -521,13 +706,18 @@ def test_the_scheduled_config_writes_to_r2_publishes_and_pings() -> None:
     assert config.publish.web_dir == REPO / "web"
     assert config.publish.api_token == "cloudflare-token"
     assert config.heartbeat_url == "https://hc-ping.com/check-id"
+    assert config.otlp == OtlpTarget(
+        endpoint="https://otlp.example/otlp/v1/logs", token="b3RscC10b2tlbg=="
+    )
     assert config.file_schema == SCHEMA
     assert (
         config.exclusion_list == REPO / "pipeline" / "config" / "excluded_objects.txt"
     )
     assert config.dbt_project_dir == DBT_PROJECT
     assert config.container_memory_mib == 4096
-    assert set(_environment().values()) - {VERSION} <= config.secrets
+    # Every value but the code version and the endpoint, which is no secret.
+    env = _environment()
+    assert set(env.values()) - {VERSION, env["OTLP_ENDPOINT"]} <= config.secrets
 
 
 # Verifies d008 R26
@@ -545,6 +735,7 @@ def test_the_one_off_config_holds_only_bronze_and_writes_locally() -> None:
     assert config.log_store is None
     assert config.publish is None
     assert config.heartbeat_url is None
+    assert config.otlp is None
     assert config.secrets == frozenset({"bronze-id", "bronze-secret"})
     assert config.file_schema == SCHEMA
 

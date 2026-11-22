@@ -5,8 +5,8 @@ bounded batches, and builds, validates and deploys the published file from the
 lakehouse's committed state (d008, Bronze reading and Publishing). A batch that
 does not commit stops the run with no further batch and no publishing, so the
 next run retries it (d008 D9, A failed batch halts the pipeline until T060.5).
-The run logs every step as an event, uploads its log at its end and pings its
-heartbeat check, and it never raises: every failure ends as a failed outcome
+The run logs every step as an event, uploads its log at its end, pings its
+heartbeat check and copies its events to Grafana, and it never raises: every failure ends as a failed outcome
 (d008, Observability).
 """
 
@@ -63,6 +63,7 @@ from bikesharing.shell.delta import (
 )
 from bikesharing.shell.event_log import EventLog
 from bikesharing.shell.heartbeat import Signal, ping
+from bikesharing.shell.otlp_exporter import OtlpTarget, send_logs
 from bikesharing.shell.publishing import deploy_page, write_published_file
 from bikesharing.shell.r2 import download_batch, list_keys, r2_store, upload_log
 from bikesharing.shell.run_settings import RUN_SETTINGS
@@ -147,6 +148,9 @@ class RunConfig:
         How far before the latest processed capture a listing starts.
     clock : Callable[[], datetime]
         The current instant, timezone-aware.
+    otlp : OtlpTarget or None
+        Where the run's events are copied to Grafana at its end; None sends
+        nothing.
     """
 
     version: str
@@ -166,6 +170,7 @@ class RunConfig:
     time_budget: timedelta
     lookback: timedelta
     clock: Callable[[], datetime]
+    otlp: OtlpTarget | None = None
 
 
 def _now() -> datetime:
@@ -191,6 +196,7 @@ def _config(
     log_store: ObjectStore | None,
     publish: PublishTarget | None,
     heartbeat_url: str | None,
+    otlp: OtlpTarget | None,
     secrets: frozenset[str],
 ) -> RunConfig:
     """Return a run's configuration, with the core's constants and the paths under ``root``."""
@@ -213,6 +219,7 @@ def _config(
         time_budget=RUN_SETTINGS.time_budget,
         lookback=settings.LISTING_LOOKBACK,
         clock=_now,
+        otlp=otlp,
     )
 
 
@@ -223,7 +230,7 @@ def _work_dir() -> Path:
 def scheduled_config(
     env: Mapping[str, str], *, root: Path, container_memory_mib: int
 ) -> RunConfig:
-    """Build the scheduled function's configuration: R2's lakehouse, the page and the heartbeat.
+    """Build the scheduled function's configuration: R2's lakehouse, the page, the heartbeat and the copy to Grafana.
 
     Parameters
     ----------
@@ -238,7 +245,7 @@ def scheduled_config(
     -------
     RunConfig
         A run that writes the lakehouse and its log to ``bikesharing-lakehouse``,
-        deploys the page and pings the heartbeat.
+        deploys the page, pings the heartbeat and sends its events to Grafana.
 
     Raises
     ------
@@ -254,6 +261,9 @@ def scheduled_config(
     lakehouse_secret = _required(env, "LAKEHOUSE_R2_SECRET_ACCESS_KEY")
     api_token = _required(env, "CLOUDFLARE_API_TOKEN")
     heartbeat_url = _required(env, "HEARTBEAT_URL")
+    otlp = OtlpTarget(
+        endpoint=_required(env, "OTLP_ENDPOINT"), token=_required(env, "OTLP_TOKEN")
+    )
     account_id = settings.CLOUDFLARE_ACCOUNT_ID
     return _config(
         root=root,
@@ -281,6 +291,7 @@ def scheduled_config(
             web_dir=root / _WEB, account_id=account_id, api_token=api_token
         ),
         heartbeat_url=heartbeat_url,
+        otlp=otlp,
         secrets=frozenset(
             {
                 bronze_id,
@@ -289,6 +300,7 @@ def scheduled_config(
                 lakehouse_secret,
                 api_token,
                 heartbeat_url,
+                otlp.token,
             }
         ),
     )
@@ -341,6 +353,7 @@ def one_off_config(
         log_store=None,
         publish=None,
         heartbeat_url=None,
+        otlp=None,
         secrets=frozenset({bronze_id, bronze_secret}),
     )
 
@@ -842,7 +855,27 @@ def _finish(
         _ping(state, "success")
     else:
         _ping(state, "fail", body="".join(_lines(finished, state.failing)))
+    _copy(state)
     return outcome
+
+
+def _copy(state: _Run) -> None:
+    """Send the run's events to Grafana, if a target is set, as the run's very last action.
+
+    The copy is best effort: a failure is logged to stdout and changes neither
+    the outcome nor the heartbeat, which are already set (d009 D2, The copy to
+    Grafana never affects a run).
+    """
+    target = state.config.otlp
+    if target is None:
+        return
+    try:
+        send_logs(target, state.log.lines())
+    # Any failure of the copy, whatever its cause, must leave the run unchanged.
+    except Exception as raised:  # noqa: BLE001
+        state.emit(
+            events.otlp_send_failed(state.now(), error_type=type(raised).__name__)
+        )
 
 
 def _lines(first: str, rest: Sequence[str]) -> Iterator[str]:
