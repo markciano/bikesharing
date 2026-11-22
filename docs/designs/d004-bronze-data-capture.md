@@ -61,13 +61,13 @@ Rejected: every 2 days or weekly for the daily feeds. Weekly saves about 1.2 MB 
 
 #### D4. Static feeds spread across passes
 
-Each capture pass carries the dynamic feeds and at most one extra fetch, either a static feed, an index refresh (D5) or the heartbeat (D10), so dynamic feeds are captured every minute and no extra fetch adds to another's CPU time. [s006](../spikes/s006-cloudflare-capture.md) measured about 5 ms for a dynamic pass and 23–28 ms with the 16 feeds of a static pass, which estimates 1.5 ms per added feed and about 6.5 ms for a pass with one extra fetch. Extra fetches run at fixed, distinct minutes; 132 of the 1,440 daily passes carry one. While a source has no valid index, its passes fetch only that index, in place of its feeds and extras (D8), so they cost less than a normal pass.
+Each capture pass carries the dynamic feeds and at most one extra fetch, either a static feed, an index refresh (D5) or the heartbeat (D10), so dynamic feeds are captured every minute and no extra fetch adds to another's CPU time. [s006](../spikes/s006-cloudflare-capture.md) measured about 5 ms for a dynamic pass and 23–28 ms with the 16 feeds of a static pass, which estimates 1.5 ms per added feed and about 6.5 ms for a pass with one extra fetch. Extra fetches run at fixed, distinct minutes; 396 of the 1,440 daily passes carry one. While a source has no valid index, its passes fetch only that index, in place of its feeds and extras (D8), so they cost less than a normal pass.
 
 CPU time can shift without any change of ours. During the spike's capture, median source latency moved from about 270 ms to 38 ms on 2026-10-29 at 22:07 UTC, and to about 145 ms on 2026-11-03 at about 08:00 UTC, while the average CPU per run rose from 2–3 ms to almost 5 ms; the only deployment was on 2026-10-14. Both shifts coincided with a change in the second at which the cron starts, which suggests a move of the Worker by Cloudflare; this is not confirmed. Passes with a static feed therefore keep a margin below the limit.
 
 Passes above 10 ms are acceptable while Cloudflare ends none of them. If it starts ending passes (outcome `exceededCpu`), run the passes with an extra fetch in their own executions. **DI12**
 
-Rejected: separate executions for static feeds from the start. They give the lowest peak, but add complexity and depend on Cloudflare starting two independent executions in the same minute, which is unverified.
+Rejected: separate executions for static feeds from the start. They give the lowest peak, but add complexity and depend on Cloudflare starting two independent executions in the same minute, which is unverified. **[d009 › #10](d009-monitoring.md#22-decision-summary)**
 
 #### D5. Hourly index refresh
 
@@ -82,7 +82,7 @@ Rejected:
 
 #### D6. Capture completeness target
 
-Each dynamic feed has a clean capture in at least 99.5% of the minutes of each calendar month, which allows 216 minutes of failures in a 30-day month. A minute is clean for a feed when an object of that feed is stored under `raw/` for that minute (D9). The first 33 h of production on its own, from 2026-11-09 12:00 to 2026-11-10 21:00 UTC, are checked against the same threshold; the monthly follow-up belongs to the data quality task (D7). **DI10** **DI13** Over 21 full days of the spike's capture (2026-10-15 to 2026-11-04), each feed reached 99.81–99.82%, or about 78 minutes per month, and fell below 99.5% on a single day. The target follows the SRE practice of an indicator with an objective and an error budget. Static feeds have no percentage, because one failure in a daily feed is a whole day without data; a failure there is handled as an individual event.
+Each dynamic feed has a clean capture in at least the share of the minutes of each calendar month that DQM7 sets for its system: 99.5% for AMBici, which allows 216 minutes of failures in a 30-day month, and 97% for Bicing, whose provider answers about 32 minutes a day with a 403. A minute is clean for a feed when an object of that feed is stored under `raw/` for that minute (D9). The first 33 h of production on its own, from 2026-11-09 12:00 to 2026-11-10 21:00 UTC, are checked against the same threshold; the monthly follow-up belongs to the data quality task (D7). **DI10** **DI13** Over 21 full days of the spike's capture (2026-10-15 to 2026-11-04), each feed reached 99.81–99.82%, or about 78 minutes per month, and fell below 99.5% on a single day. The target follows the SRE practice of an indicator with an objective and an error budget. Static feeds have no percentage, because one failure in a daily feed is a whole day without data; a failure there is handled as an individual event.
 
 A missed month leads to reviewing its cause, with no automatic action. If capture stays well above the target for several months, raise the target.
 
@@ -90,6 +90,8 @@ Rejected:
 
 - 99.9%: its 43-minute budget is below the failures already observed.
 - 99%: its 432-minute budget could hide a real degradation.
+
+**[d009 › D7](d009-monitoring.md#d7-capture-completeness-target-per-system)**
 
 #### D7. Quality questions answered from the pipeline
 
@@ -127,15 +129,15 @@ In capture, `component` is `capture` and `version` is the Worker's version ID.
 
 | Event | Level | Own fields |
 |---|---|---|
-| `feed_captured` | `info` | `source`, `feed`, `status`, `latency_ms`, `bytes`, `attempts`, `recompressed` |
-| `feed_failed` | `error` | `source`, `feed`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
-| `index_refreshed` | `info` | `source`, `status`, `latency_ms`, `bytes`, `attempts`, `recompressed`, `unknown_feeds` |
-| `index_rejected` | `error` | `source`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
-| `fetch_retried` | `warning` | `source`, `feed`, `status`, `latency_ms`, `headers`, `body` |
+| `feed_captured` | `info` | `system`, `feed`, `status`, `latency_ms`, `bytes`, `attempts`, `recompressed` |
+| `feed_failed` | `error` | `system`, `feed`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
+| `index_refreshed` | `info` | `system`, `status`, `latency_ms`, `bytes`, `attempts`, `recompressed`, `unknown_feeds` |
+| `index_rejected` | `error` | `system`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
+| `fetch_retried` | `warn` | `system`, `feed`, `status`, `latency_ms`, `headers`, `body` |
 | `heartbeat_sent` | `info` | `status`, `latency_ms` |
-| `heartbeat_failed` | `warning` | `status`, `latency_ms`, `error_type`, `error` |
+| `heartbeat_failed` | `warn` | `status`, `latency_ms`, `error_type`, `error` |
 
-`attempts` counts write attempts, and is 0 when the source fails. `status` and `latency_ms` are those of the request's last attempt; `fetch_retried` records a 403 about to be retried, with the first attempt's `status`, `latency_ms`, response `headers` and `body`, and `feed` null for an index. `error_type` is one of `http`, `timeout`, `network`, `too_large`, `write` or `invalid_index`; the event tells whether it came from a feed, an index or the heartbeat. `level` is `info`, `warning` for a failure that does not affect the data, such as the heartbeat's, or `error`. `unknown_feeds` lists the feeds in the index that are not listed in D3, and is usually empty; a feed that the source removes makes the index invalid (D8). `recompressed` is true when the response did not arrive as gzip and capture compressed it before storing; capture relies on an undocumented option to keep the source's gzip ([s006](../spikes/s006-cloudflare-capture.md), F9), so this flags a change in the source or the runtime.
+`attempts` counts write attempts, and is 0 when the source fails. `status` and `latency_ms` are those of the request's last attempt; `fetch_retried` records a 403 about to be retried, with the first attempt's `status`, `latency_ms`, response `headers` and `body`, and `feed` null for an index. `error_type` is one of `http`, `timeout`, `network`, `too_large`, `write` or `invalid_index`; the event tells whether it came from a feed, an index or the heartbeat. `level` is `info`, `warn` for a failure that does not affect the data, such as the heartbeat's, or `error`. `system` names the bike sharing system, which bronze keys and capture's code call the source. Logs written before T060.2 carry `source` and `warning`, and are not rewritten. `unknown_feeds` lists the feeds in the index that are not listed in D3, and is usually empty; a feed that the source removes makes the index invalid (D8). `recompressed` is true when the response did not arrive as gzip and capture compressed it before storing; capture relies on an undocumented option to keep the source's gzip ([s006](../spikes/s006-cloudflare-capture.md), F9), so this flags a change in the source or the runtime.
 
 These fields answer the following capture questions, the starting point for querying the logs ([d007](d007-pipeline-design.md), OQ5):
 
@@ -158,21 +160,22 @@ Rejected:
 
 - Daily compaction in capture: reading 1,440 objects does not fit the 10 ms CPU limit.
 - Logging failures only: it loses the latency and sizes of clean captures, which revealed the latency shifts and set the timeout in D8.
-- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **DL4** **DL7** **DL14** **[d006 › D4](d006-capture-retry-on-403.md#d4-a-retry-is-logged-as-its-own-event)** **[d005 › D26](d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)**
+- Showing the origin only through a prefix in the event name (`capture.feed_captured`): it needs no ADR change, but mixes two meanings in one field and depends on a naming convention. **DL4** **DL7** **DL14** **[d006 › D4](d006-capture-retry-on-403.md#d4-a-retry-is-logged-as-its-own-event)** **[d005 › D26](d005-data-model.md#d26-timeliness-and-completeness-of-the-feeds)** **[d009 › #4, #5](d009-monitoring.md#22-decision-summary)**
 
 #### D10. Capture heartbeat
 
-Capture signals a heartbeat to Healthchecks.io once per hour, the service [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) chose for the pipeline, which emails the owner when no signal arrives within the period plus 1 h of grace. The monitor sits outside Cloudflare, because a stopped Worker cannot report its own stop. The pass sends the signal only if it stored all three dynamic feeds listed in D3, so the signal means that data is being stored, not just that the Worker ran: an outage of R2 or of a source that lasts for hours also raises the alert. The goal is that capture never stays down for days unnoticed, which an alert within about 2 h meets, rather than a fast reaction. A failed signal does not affect capture, and is logged as `heartbeat_failed` (D9) without the signal URL (D12).
+Capture signals a heartbeat to Healthchecks.io from the pass of every fifth minute, by its scheduled time, so the Worker keeps no state between passes. Healthchecks.io, the service [ADR-0031](../decisions/0031-heartbeat-alerts-for-the-pipeline.md) chose for the pipeline, emails the owner when no signal arrives within a period of 10 min plus 10 min of grace. The monitor sits outside Cloudflare, because a stopped Worker cannot report its own stop. The pass sends the signal only if it stored all three dynamic feeds listed in D3, so the signal means that data is being stored, not just that the Worker ran: an outage of R2 or of a source also raises the alert. A capture that stores nothing is reported in about 20 min. A failed signal does not affect capture, and is logged as `heartbeat_failed` (D9) without the signal URL (D12).
 
-One failed signal does not alert, since the next one arrives within the grace. An outage shorter than about an hour may raise no alert, and shows in completeness (D6) instead. The signal costs nothing on Cloudflare's Free plan: it is an outgoing request from an existing pass.
+One failed signal, such as one of Bicing's scattered 403s, does not alert, since the next ones arrive within the grace. An outage shorter than about 10 min may raise no alert, and shows in completeness (D6) instead. The signal costs nothing on Cloudflare's Free plan: it is an outgoing request from an existing pass.
 
 What this alert does not cover: a static feed or an index failing repeatedly, and a source returning HTTP 200 with frozen data, both quality checks in T060; and CPU peaks, which the Worker cannot measure. **[d007 › D4](d007-pipeline-design.md#d4-data-quality-in-four-classes)**
 
 Rejected:
 
-- Every minute or every 5 minutes: faster alerts than the owner can act on, at a higher CPU cost.
-- Twice a day: the same cost as hourly, with alerts up to about 24 h late.
+- Once per hour with 1 h of grace: a capture that stores nothing goes unnoticed for about 2 h.
 - A signal on every run, whatever it stored: it would miss a Worker that runs but stores nothing.
+
+**[d009 › #10](d009-monitoring.md#22-decision-summary)**
 
 #### D11. Switch from spike capture to production
 
@@ -225,7 +228,7 @@ One STRIDE pass over D1–D11 keeps the threats with a real chance or a lasting 
 - **R16** The capture shall log the events and fields listed in D9, including `unknown_feeds` and `fetch_retried`. (D7, D9, [d006 › D4](d006-capture-retry-on-403.md#d4-a-retry-is-logged-as-its-own-event))
 - **R17** When the heartbeat pass has stored all three dynamic feeds listed in D3, the capture shall send the heartbeat signal. (D10)
 - **R18** If the heartbeat pass has not stored all three dynamic feeds listed in D3, then the capture shall not send the heartbeat signal. (D10)
-- **R19** If no signal arrives within 1 h plus 1 h of grace, then the monitor shall email the owner. (D10)
+- **R19** If no signal arrives within 10 min plus 10 min of grace, then the monitor shall email the owner. (D10, [d009 › #10](d009-monitoring.md#22-decision-summary))
 - **R20** If the heartbeat signal fails, then the capture shall continue unaffected and log the failure. (D9, D10)
 - **R21** The production Worker shall run only from its cron trigger, with no HTTP handler, and its public URL shall stay disabled. (D12, TH1)
 - **R22** If a response exceeds 10 MB, then the capture shall reject it and log the failure. (D12, TH2)
@@ -300,13 +303,13 @@ Options considered:
 
 #### Pass schedule
 
-`schedule.js` holds the calendar as an explicit table, keyed by the event's `scheduledTime` in UTC, not by the clock, so a late pass still makes its extra fetch. Each source's index refresh comes 5 minutes before its `station_information`, which then uses the refreshed URLs; minute `:00` carries no extra fetch.
+`schedule.js` holds the calendar as an explicit table, keyed by the event's `scheduledTime` in UTC, not by the clock, so a late pass still makes its extra fetch. Each source's index refresh comes 5 minutes before its `station_information`, which then uses the refreshed URLs. The heartbeat runs at every minute that is a multiple of 5, between the other extra fetches, which fall at minutes ending in 2 or 7.
 
 | Minute of every hour | Extra fetch |
 |---|---|
+| `:00`, `:05`, … `:55` | Heartbeat |
 | `:07` | Bicing index |
 | `:12` | Bicing `station_information` |
-| `:22` | Heartbeat |
 | `:37` | AMBici index |
 | `:42` | AMBici `station_information` |
 
@@ -327,7 +330,7 @@ The 12 daily feeds run at minute `:52` of every even hour, alternating sources, 
 | 20:52 | Bicing | `gbfs_versions` |
 | 22:52 | AMBici | `system_hours` |
 
-This gives 5 × 24 + 12 = 132 extra fetches per day (D4).
+This gives (12 + 4) × 24 + 12 = 396 extra fetches per day (D4). **[d009 › #10](d009-monitoring.md#22-decision-summary)**
 
 Options considered for the daily feeds:
 
@@ -837,7 +840,7 @@ export async function writeIndex(bucket, sourceId, state, limits);
  * in that order, then `fields` (D9). Pure.
  * @param {LogContext} ctx
  * @param {Date} ts
- * @param {'info' | 'warning' | 'error'} level
+ * @param {'info' | 'warn' | 'error'} level
  * @param {string} event  One of the events of D9
  * @param {Record<string, unknown>} fields Its own fields, in snake_case
  * @returns {Record<string, unknown>}
@@ -953,7 +956,7 @@ Integration tests run the `scheduled` handler in workerd with in-memory R2 and t
 | R1 | Demonstration | Post-deploy smoke test: each dynamic feed has a new object that passes `gunzip -t` ([Deployment](#deployment)) | — |
 | R2 | Test | Over the 1,440 minutes of a day, `extraFetch` returns each source's `station_information` 24 times, at `:12` and `:42` | unit |
 | R3 | Test | Over the 1,440 minutes of a day, `extraFetch` returns each of the 12 daily feeds once | unit |
-| R4 | Test | `extraFetch` returns an extra fetch at exactly 132 minutes per day, those of [Pass schedule](#pass-schedule); every hourly and daily feed in `SOURCES` appears in the schedule | unit |
+| R4 | Test | `extraFetch` returns an extra fetch at exactly 396 minutes per day, those of [Pass schedule](#pass-schedule); every hourly and daily feed in `SOURCES` appears in the schedule | unit |
 | R4 | Test | A pass at a static feed's minute stores the dynamic feeds and that feed only | integration |
 | R5 | Test | Over the 1,440 minutes of a day, `extraFetch` returns each source's index 24 times, at `:07` and `:37` | unit |
 | R6 | Test | With an index in `state/` that points a feed to a new URL, the pass fetches that URL and stores its response | integration |
@@ -972,10 +975,10 @@ Integration tests run the `scheduled` handler in workerd with in-memory R2 and t
 | R15 | Test | `buildEvent` and `toJsonl` produce the valid cases of `contracts/capture-logs.json` | contract |
 | R16 | Test | Each event of D9 is logged with its fields: `unknown_feeds` for an index with an extra feed, `recompressed: true` for a fixture served without gzip | integration |
 | R16 | Demonstration | Post-deploy smoke test: the pass's log has `recompressed: false` and the deployed version ID ([Deployment](#deployment)) | — |
-| R17 | Test | At minute `:22` with every dynamic feed stored, the pass sends one request to the heartbeat URL and logs `heartbeat_sent` | integration |
-| R18 | Test | At minute `:22` with one dynamic feed failed, the pass sends no request to the heartbeat URL | integration |
-| R19 | Demonstration | With the check configured, no signal for 1 h plus the grace sends the owner an email | — |
-| R20 | Test | A heartbeat answering HTTP 500, or failing on the network, logs `heartbeat_failed` at `warning`; the pass's data and log are stored | integration |
+| R17 | Test | At minute `:05` with every dynamic feed stored, the pass sends one request to the heartbeat URL and logs `heartbeat_sent` | integration |
+| R18 | Test | At minute `:05` with one dynamic feed failed, the pass sends no request to the heartbeat URL | integration |
+| R19 | Demonstration | With the check configured, no signal for 10 min plus the grace sends the owner an email | — |
+| R20 | Test | A heartbeat answering HTTP 500, or failing on the network, logs `heartbeat_failed` at `warn`; the pass's data and log are stored | integration |
 | R21 | Test | The default export of `worker.js` has `scheduled` and no `fetch` | unit |
 | R21 | Inspection | `wrangler.jsonc` sets `workers_dev` and `preview_urls` to `false`; after deploy, the dashboard shows no public URL | — |
 | R22 | Test | A body over `maxBytes` with no `content-length` is logged as `feed_failed` with `error_type: too_large` and nothing is stored; an index over `maxBytes` once decompressed is rejected | integration |
