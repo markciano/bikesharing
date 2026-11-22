@@ -325,6 +325,32 @@ describe("a capture pass's copy to Grafana", () => {
   });
 
   // Verifies d009 R3
+  it("keeps the log and does not throw when waitUntil throws", async () => {
+    await seedIndexes();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const start = new Date(PLAIN_MINUTE + 16_000);
+
+    await expect(
+      runPass(PLAIN_MINUTE, {
+        bucket: env.BUCKET,
+        heartbeatUrl: `${SIM}/heartbeat/default`,
+        otlpEndpoint: `${SIM}/otlp/waituntil-throws`,
+        otlpToken: OTLP_TOKEN,
+        waitUntil: () => {
+          throw new Error("waitUntil rejected");
+        },
+        version: VERSION,
+        limits: LIMITS,
+        now: () => start,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(await readLog(runIdOf(start))).not.toHaveLength(0);
+    expect(String(error.mock.calls[0])).toContain("waitUntil rejected");
+    vi.restoreAllMocks();
+  });
+
+  // Verifies d009 R3
   it("sends the copy after the log is written, through waitUntil", async () => {
     await seedIndexes();
     const order = [];
