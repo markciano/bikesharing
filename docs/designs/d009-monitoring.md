@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › Components; File layout written. Components agreed with the owner: `capture/src/otlp.js`; `core/otlp_payload.py` with `shell/otlp_exporter.py`; `core/settings.py` with the shape of `run_settings.json`; `contracts/log-events.schema.json`; the module `monitoring/modules/error_budget_alert`. Then Test plan, then What does not change, which holds: `pipeline/modal_one_off.py` gets no monitoring Secret (d008 › Observability).
+- Current: Plan › Test plan; Components written. Check there capture's heartbeat limit: `heartbeat.js` says 10 s, Thresholds says capture's send uses 5 s "as capture's heartbeat". Then What does not change, which holds: `pipeline/modal_one_off.py` gets no monitoring Secret (d008 › Observability).
 
 ## 1. Spec — what and why
 
@@ -417,7 +417,7 @@ DQR12 follows D6 in the model `capture_volume`: the median takes the captures of
 
 Notifications follow Alertmanager's grouping, which Grafana Alerting implements: an alert fires one instance per set of labels and stays firing while its condition holds, the notification policy groups instances by alert ID and system into one notification, repeats it every 4 h while it fires, Grafana's default `repeat_interval`, and sends one notice when it resolves. A page's repeats join its alert group in IRM, which notifies until the owner acknowledges it, so a failure that lasts hours pages once per alert and system.
 
-The pipeline's cadence, time budget, timeout and container memory live in one data file, `pipeline/src/bikesharing/core/run_settings.json`: `settings.py` loads it and keeps exposing the same typed constants, which Modal's app and image files read for the schedule, the timeout and the container memory, and Terraform reads it with `jsondecode(file(...))`, so the pipeline and its thresholds change together. The period and grace of the heartbeat's check stay in Healthchecks.io's console, outside Terraform (ADR-0051), and the catalog states that a change of cadence also changes them there. **#9**
+The pipeline's cadence, time budget, timeout and container memory live in one data file, `pipeline/src/bikesharing/core/run_settings.json`: the core parses it into typed settings and the shell reads it once, as the functional core and imperative shell set ([ADR-0046](../decisions/0046-functional-core-imperative-shell-for-the-pipeline.md)), for the run and for Modal's app and image files, which take the schedule, the timeout and the container memory from it; Terraform reads it with `jsondecode(file(...))`, so the pipeline and its thresholds change together. The period and grace of the heartbeat's check stay in Healthchecks.io's console, outside Terraform (ADR-0051), and the catalog states that a change of cadence also changes them there. **#9**
 
 #### Capture silence
 
@@ -453,7 +453,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 6 | [D10](#d10-a-target-on-captures-own-missed-minutes-only), [D3](#d3-alerts-on-symptoms-that-need-action) | ALR15 and the provider's minutes over a rolling 7 days in Grafana, from capture's events; DQM11's monthly value queried with SQL over R2 (alerts on rolling windows, SLO period measured from the durable store) | Grafana keeps 14 days; the pipeline needs no access to capture's logs | R39, R40 | Plan |
 | 7 | [Error budget alerts](#error-budget-alerts) | ALR6 as LogQL alert rules built by a Terraform module, with the SRE Workbook's multiwindow, multi-burn-rate levels; not Grafana's SLO app | Fewer parts, every window within 14 days; moving to the SLO app later keeps the same queries | R12, R13 | Plan |
 | 8 | [Thresholds](#thresholds) | The pipeline's thresholds as formulas over its cadence, time budget and container (ALR4 at DQM10's target, ALR7 at 80% of each limit, ALR8 at 2 cadences), a 5-minute synthetic check and a 10 s send; capture's ALR5 over 10 minutes in a row, ALR8 at 5 min and a 5 s send; ALR13 at 80% of each Free tier limit; the watchdog signalling every 5 min to a check with 10 min of grace | Thresholds follow the pipeline as it grows and its cadence is tuned, with no rewrite; the others stay quiet at what production shows and warn with margin | R5, R10, R11, R14, R15, R19, R20, R21 | Plan |
-| 9 | [Thresholds](#thresholds) | The pipeline's run settings in one JSON data file read by `settings.py` and by Terraform (single source of truth, configuration as data) | A change of cadence is one edit; no copy to keep aligned | R10, R14, R15 | Plan |
+| 9 | [Thresholds](#thresholds) | The pipeline's run settings in one JSON data file read by the pipeline and by Terraform (single source of truth, configuration as data) | A change of cadence is one edit; no copy to keep aligned | R10, R14, R15 | Plan |
 | 10 | [Capture silence](#capture-silence) | ALR5 and ALR6 only while capture's events reach Grafana; a silent capture raises ALR8, and capture's heartbeat on every fifth pass, with 10 min of period and 10 min of grace, reports a capture that stores nothing (dead man's switch) **refines [d004 › D10](d004-bronze-data-capture.md#d10-capture-heartbeat)** | No page for a broken send; a dead capture reported in about 20 min instead of 2 h | R11, R12, R13, R15, R42, R43 | Plan |
 | 11 | [Notifications](#notifications) | A message template of the project's own: alert ID, summary and checked IDs; where; the value against its threshold and since when, in Madrid's local time; then links to the item's catalog section, the alert's row and its events; no rule text copied (link, don't copy; actionable alerts show the value that fired) | Read on a phone, enough to tell a page from a wait; the item's text lives in its catalog only | R23, R24, R38 | Plan |
 
@@ -511,7 +511,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   ├── wrangler.jsonc                          (modified)  OTLP endpoint as a variable
 │   ├── src/
 │   │   ├── otlp.js                             (new)       Builds the OTLP/HTTP JSON request from the pass's lines and sends it within its limit
-│   │   ├── log.js                              (modified)  warn and system (#4, #5)
+│   │   ├── log.js                              (modified)  warn and system (#4, #5); toLines serializes the events once, for the log and the copy
 │   │   ├── heartbeat.js                        (modified)  Signal on every fifth pass that stored the three dynamic feeds (#10)
 │   │   ├── pass.js                             (modified)  Sends the copy after the log and the heartbeat
 │   │   └── worker.js                           (modified)  The send inside ctx.waitUntil; the token as a Worker secret
@@ -525,16 +525,19 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   ├── modal_app.py                            (modified)  That Secret on the scheduled function only; the schedule from the cadence in settings (#9)
 │   ├── src/bikesharing/
 │   │   ├── core/run_settings.json              (new)       Cadence, time budget, timeout and container memory (#9)
-│   │   ├── core/settings.py                    (modified)  Loads run_settings.json into the same typed constants
+│   │   ├── core/settings.py                    (modified)  RunSettings and its pure parser; TIME_BUDGET moves into it
+│   │   ├── core/events.py                      (modified)  otlp_send_failed, at warn, stdout only
 │   │   ├── core/otlp_payload.py                (new)       Builds the OTLP/HTTP JSON request from the run's lines
-│   │   ├── shell/otlp_exporter.py              (new)       Sends it within its limit; a failure goes to stdout
-│   │   └── shell/run.py                        (modified)  Sends the copy after the log upload; 7-day volume history (DQR12)
+│   │   ├── shell/event_log.py                  (modified)  lines(): the kept lines, for the copy
+│   │   ├── shell/otlp_exporter.py              (new)       Sends it within its limit, one attempt; raises on failure
+│   │   ├── shell/run_settings.py               (new)       Reads run_settings.json once into RUN_SETTINGS
+│   │   └── shell/run.py                        (modified)  Sends the copy after the log upload and the ping, a failure to stdout; OTLP target in the scheduled config; 7-day volume history (DQR12)
 │   ├── dbt/models/silver/
 │   │   ├── capture_volume.sql                  (modified)  7-day median, 95% threshold (DQR12)
 │   │   └── silver.yml                          (modified)  capture_volume's unit tests for the new window and threshold
 │   └── tests/
 │       ├── unit/core/test_otlp_payload.py      (new)       Request built from the lines
-│       ├── unit/core/test_settings.py          (new)       Constants loaded from run_settings.json
+│       ├── unit/core/test_settings.py          (new)       Settings parsed from data; invalid data rejected
 │       ├── integration/test_otlp_exporter.py   (new)       Failed or late send changes nothing
 │       ├── integration/test_run.py             (modified)  Copy sent after the log upload
 │       └── integration/test_log_events_registry_contract.py (new) Registry valid against its schema; every pipeline event registered
@@ -552,14 +555,216 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 <!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
-#### `<ComponentName>`
+#### OTLP request mapping
 
-- **Responsibility:** `<one sentence>`
-- **Location:** `path/to/file`
+Both components build the same OTLP/HTTP JSON `ExportLogsServiceRequest` from a pass's or run's JSON lines, following [Field mapping](#field-mapping):
+
+- **Resources:** one `resourceLogs` per distinct `component` and `version`, in order of first appearance, with resource attributes `service.name` and `service.version`; one `scopeLogs` in each, with scope name the component.
+- **Records:** one log record per line, in order: `timeUnixNano` from `ts`, as a decimal string; `severityText` the `level`, and `severityNumber` 9, 13 or 17; `body` the line itself as `stringValue`, never serialized again (R6).
+- **Attributes:** every field of the line except `ts`, `level`, `component` and `version`, in the line's order: a string as `stringValue`, a boolean as `boolValue`, an integer as `intValue` (a decimal string), any other number as `doubleValue`, an array or object as `stringValue` with its JSON; a `null` field is left out.
+- **Empty:** no lines, no request.
+
+#### Capture's OTLP sender
+
+- **Responsibility:** builds the pass's OTLP request from its lines and sends it once within its time limit, never throwing.
+- **Location:** `capture/src/otlp.js`
+- **Contract:**
+
+```js
+/**
+ * @typedef {object} OtlpTarget
+ * @property {string} endpoint `OTLP_ENDPOINT` variable: Grafana Cloud's OTLP/HTTP logs URL, ending in `/v1/logs`
+ * @property {string} token    `OTLP_TOKEN` secret: the Basic credential, base64 of `<instance ID>:<token>`
+ */
+
+/**
+ * @typedef {{ errorType: 'http' | 'timeout' | 'network', status: number | null, error: string }} OtlpSendFailed
+ */
+
+/** OTLP severity number of each level (OpenTelemetry Logs data model). */
+export const SEVERITY_NUMBER = Object.freeze({ info: 9, warn: 13, error: 17 });
+
+/**
+ * The pass's `ExportLogsServiceRequest`, as the OTLP request mapping sets. Pure.
+ * @param {string[]} lines The pass's JSON lines, as written to R2, without their newline
+ * @returns {object}
+ */
+export function buildLogsRequest(lines) {}
+
+/**
+ * One POST of `buildLogsRequest(lines)` to `target.endpoint`, with `Authorization: Basic <token>`,
+ * aborted by `AbortSignal.timeout(limits.otlpTimeoutMs)`, 5 s in production. Never throws.
+ * @param {OtlpTarget} target
+ * @param {string[]} lines
+ * @param {{ otlpTimeoutMs: number }} limits
+ * @returns {Promise<OtlpSendFailed | null>} `null` when Grafana answers 2xx, or when there are no lines
+ */
+export async function sendLogs(target, lines, limits) {}
+```
+
+- **Callers:** `log.js` exports `toLines(events)`, each event's `JSON.stringify`, and `writeLog` takes those lines; `pass.js` serializes the pass's events once and, after the log and the heartbeat, passes the same lines to `sendLogs` inside `ctx.waitUntil`. A failure is written to Workers Logs only, with `console.log`, as the event `otlp_send_failed` at `warn` with `error_type`; the pass's outcome does not change (R3–R5).
+
+#### Pipeline's OTLP payload and exporter
+
+- **Responsibility:** the core builds the run's OTLP request from its lines; the shell sends it once within its time limit and raises on any failure.
+- **Location:** `pipeline/src/bikesharing/core/otlp_payload.py`, `pipeline/src/bikesharing/shell/otlp_exporter.py`
 - **Contract:**
 
 ```python
+# core/otlp_payload.py
+SEVERITY_NUMBER: Final[Mapping[str, int]] = MappingProxyType(
+    {"info": 9, "warn": 13, "error": 17}
+)
+
+def logs_request(lines: Sequence[str]) -> dict[str, Any]:
+    """The run's ExportLogsServiceRequest, as the OTLP request mapping sets."""
+
+# shell/otlp_exporter.py
+@dataclass(frozen=True)
+class OtlpTarget:
+    endpoint: str  # OTLP_ENDPOINT: Grafana Cloud's OTLP/HTTP logs URL, ending in /v1/logs
+    token: str  # OTLP_TOKEN: the Basic credential, base64 of <instance ID>:<token>
+
+def send_logs(
+    target: OtlpTarget, lines: Sequence[str], *, timeout_s: float = 10.0
+) -> None:
+    """One POST of logs_request(lines) with urllib; returns at once with no lines.
+
+    Raises OSError on a non-2xx answer, a timeout or a network error.
+    """
 ```
+
+- **Callers:** `EventLog.lines() -> tuple[str, ...]` returns the kept lines that `body()` joins. `scheduled_config` reads `OTLP_ENDPOINT` and `OTLP_TOKEN` into the run's configuration as an `OtlpTarget`; `one_off_config` sets none, so a one-off run sends nothing. `run` sends after the log upload and the heartbeat ping, and catches any exception as it does for the upload, emitting `otlp_send_failed(ts, *, error_type)` at `warn`, to stdout only; the outcome does not change (R3–R5).
+
+#### Pipeline's run settings
+
+- **Responsibility:** the core parses the run settings and checks them; the shell reads their file once (#9).
+- **Location:** `pipeline/src/bikesharing/core/run_settings.json`, `pipeline/src/bikesharing/core/settings.py`, `pipeline/src/bikesharing/shell/run_settings.py`
+- **Contract:**
+
+```json
+{ "cadence_min": 15, "time_budget_s": 420, "timeout_s": 600, "container_memory_mib": 4096 }
+```
+
+```python
+# core/settings.py
+@dataclass(frozen=True)
+class RunSettings:
+    cadence: timedelta
+    time_budget: timedelta
+    timeout: timedelta
+    container_memory_mib: int
+
+def parse_run_settings(data: Mapping[str, object]) -> RunSettings:
+    """Parse the decoded run_settings.json.
+
+    Raises ValueError when a key is missing or unknown, a value is not a
+    positive integer, cadence_min does not divide 60, or the time budget is
+    not below the timeout and the timeout below the cadence (d008 D6).
+    """
+
+def schedule_cron(settings: RunSettings) -> str:
+    """The run's cron expression, "*/<cadence_min> * * * *"."""
+
+# shell/run_settings.py
+RUN_SETTINGS: Final[RunSettings]  # parse_run_settings of the file, read once at import
+```
+
+- **Callers:** `run.py` takes the time budget from `RUN_SETTINGS`, which replaces `settings.TIME_BUDGET`; `modal_image.py` sets `MEMORY_MIB` and `TIMEOUT_S` from it, and `modal_app.py` its schedule with `schedule_cron`, so `modal_one_off.py` keeps importing the same names unchanged.
+
+#### Event registry schema
+
+- **Responsibility:** fixes the shape of the event registry, which names it in `$schema`.
+- **Location:** `contracts/log-events.schema.json`
+- **Contract:**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "log-events.schema.json",
+  "title": "Log events registry",
+  "type": "object",
+  "required": ["$schema", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "const": "./log-events.schema.json" },
+    "events": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/event" } }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$" },
+    "event": {
+      "type": "object",
+      "required": ["event", "component", "level", "fields", "needs_action", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "event": { "$ref": "#/$defs/name" },
+        "component": { "enum": ["capture", "pipeline"] },
+        "level": { "enum": ["info", "warn", "error"] },
+        "fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/name",
+            "not": { "enum": ["ts", "level", "component", "version", "run_id", "event"] }
+          }
+        },
+        "needs_action": { "type": "boolean" },
+        "description": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
+```
+
+- **Beyond the schema:** each pair of `component` and `event` appears once, which JSON Schema cannot express; the registry tests of capture and the pipeline check it with the other rules of [Observability catalog](#observability-catalog). A later component adds itself to the `component` enum.
+
+#### Error budget alert module
+
+- **Responsibility:** builds ALR6's three burn-rate levels for one system as one Grafana rule group (#7).
+- **Location:** `monitoring/modules/error_budget_alert/`
+- **Contract:**
+
+```hcl
+# variables.tf
+variable "system" {
+  description = "Bike sharing system the alert covers, as capture's events name it in `system`."
+  type        = string
+}
+
+variable "target" {
+  description = "The system's DQM7 target as a fraction; its budget is 1 - target."
+  type        = number
+  validation {
+    condition     = var.target > 0 && var.target < 1
+    error_message = "target is a fraction between 0 and 1."
+  }
+}
+
+variable "folder_uid" {
+  description = "Grafana folder that holds the rule group."
+  type        = string
+}
+
+variable "loki_datasource_uid" {
+  description = "Loki data source the queries run on."
+  type        = string
+}
+
+# main.tf
+locals {
+  levels = {
+    page_1h   = { urgency = "page", burn_rate = 14.4, long = "1h", short = "5m" }
+    page_6h   = { urgency = "page", burn_rate = 6, long = "6h", short = "30m" }
+    ticket_3d = { urgency = "ticket", burn_rate = 1, long = "3d", short = "6h" }
+  }
+}
+
+resource "grafana_rule_group" "this" {
+  # One rule per entry of local.levels.
+}
+```
+
+- **Rules:** each rule fires when the error rate of [Error budget alerts](#error-budget-alerts) over the burn rate times `1 - var.target` holds in both its windows, and only while capture's events reach Grafana (#10). It carries the labels `alert_id = "ALR6"`, `system` and `urgency`, and the annotations the message template reads (#11). The module has no outputs; `alert_rules.tf` calls it once per system.
 
 ### 2.6 Test plan
 
