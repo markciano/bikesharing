@@ -88,6 +88,7 @@ An alert fires on a symptom that needs an action from the owner, not on each err
 | ALR12 | Grafana stops signalling the heartbeat service (watchdog) | Grafana | Every other alert runs in Grafana (D13) |
 | ALR13 | Grafana's use nears a limit of its Free tier: logs a month, synthetic check executions | Grafana | Past a limit, Grafana drops events or stops checking, and D1 is reviewed |
 | ALR14 | An event the observability catalog does not list reaches Grafana | Both | A new event to classify, which ALR9 would otherwise miss (D5) |
+| ALR15 | A feed's minutes given to capture in the calendar month near DQM11's target | Capture | Scattered single minutes, which neither ALR5 nor ALR6 sees, would break the target unnoticed (D10) |
 
 The limits and costs of Cloudflare and Modal are watched by each provider's own usage and budget notifications, set in its console.
 
@@ -160,7 +161,7 @@ Rejected: the HTTP status class (RFC 9110), 4xx to capture as a client error and
 
 #### D10. A target on capture's own missed minutes only
 
-DQM11 takes a target on the minutes D9 gives to capture: at most 30 minutes per feed and calendar month. The minutes given to the provider are measured and shown with no target, since the owner takes no action on them and DQM7 already bounds their effect on completeness (D7). Over the first 14.6 days of production pass logs (2026-11-07 10:19 to 2026-11-22 01:39 UTC), each dynamic feed lost 6 or 7 minutes to capture, each a single minute and at most one a day: four passes the cron never ran, the same minutes for every feed, and passes logged with no event for any feed; about 10 minutes a month. The provider took 13 and 15 minutes from AMBici's two feeds and 486 from Bicing's, 481 of them a 403, 32 a day at the median; no run of missed minutes lasted over 5 minutes ([`spikes/d009-baselines/capture-gaps/`](../../spikes/d009-baselines/capture-gaps/)). The target sits at about three times that baseline, which comes from two weeks only, following the SRE practice of D7: a target on what the owner can fix, set from measured performance and revised.
+DQM11 takes a target on the minutes D9 gives to capture: at most 30 minutes per feed and calendar month. The minutes given to the provider are measured and shown with no target, since the owner takes no action on them and DQM7 already bounds their effect on completeness (D7). Over the first 14.6 days of production pass logs (2026-11-07 10:19 to 2026-11-22 01:39 UTC), each dynamic feed lost 6 or 7 minutes to capture, each a single minute and at most one a day: four passes the cron never ran, the same minutes for every feed, and passes logged with no event for any feed; about 10 minutes a month. The provider took 13 and 15 minutes from AMBici's two feeds and 486 from Bicing's, 481 of them a 403, 32 a day at the median; no run of missed minutes lasted over 5 minutes ([`spikes/d009-baselines/capture-gaps/`](../../spikes/d009-baselines/capture-gaps/)). The target sits at about three times that baseline, which comes from two weeks only, following the SRE practice of D7: a target on what the owner can fix, set from measured performance and revised. ALR15 warns before a feed breaks it.
 
 - **What would change it:** the first full calendar month of production, December 2026, with a baseline clearly above or below about 10 minutes: the target is revised with that month.
 
@@ -186,8 +187,9 @@ Each alert is a page or a ticket, following the SRE split between alerts that in
 | ALR12 | Page, by email from the heartbeat service | Every other alert is silent; it cannot go through Grafana (D13) |
 | ALR13 | Ticket | Fires with margin before the limit |
 | ALR14 | Ticket | An event to classify, with no hurry |
+| ALR15 | Ticket | Fires with margin before the month's target |
 
-Rejected: every alert a page. Simpler, but fourteen alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead.
+Rejected: every alert a page. Simpler, but fifteen alerts that interrupt alike lead to alert fatigue, which D3 avoids. Rejected as well: a ticket as a notification that does not insist; the owner reviews tickets in the app instead.
 
 #### D12. No health script
 
@@ -213,8 +215,8 @@ One STRIDE pass covers what this task adds to the tool that [s018 › D8](../spi
 
 | # | Threat (STRIDE) | Impact | Control | Requirement |
 |---|---|---|---|---|
-| `TH1` | Tampering: the watchdog's signal URL (ALR12) leaks | False signals keep the check green while Grafana is silent | The URL is kept only in Grafana's notification setting, never in code; it reaches that one check only and is rotated in Healthchecks.io; the risk is accepted as for the heartbeat ([s012 › TH11](../spikes/s012-execution-target.md#d3-pipeline-security)) | |
-| `TH2` | Information disclosure: a notification is read on a locked or lost phone | What fails and where is seen | Notifications carry IDs, system and version, never credentials or visitor data; their links lead to Grafana, behind sign-in with two-factor authentication (s018 › TH1) | |
+| `TH1` | Tampering: the watchdog's signal URL (ALR12) leaks | False signals keep the check green while Grafana is silent | The URL is kept only in Grafana's notification setting, never in code; it reaches that one check only and is rotated in Healthchecks.io; the risk is accepted as for the heartbeat ([s012 › TH11](../spikes/s012-execution-target.md#d3-pipeline-security)) | R37 |
+| `TH2` | Information disclosure: a notification is read on a locked or lost phone | What fails and where is seen | Notifications carry IDs, system and version, never credentials or visitor data; their links lead to Grafana, behind sign-in with two-factor authentication (s018 › TH1) | R38 |
 
 ### 1.3 Requirements
 
@@ -227,7 +229,45 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 - Optional: Where <feature is included>, the <system> shall <response>.
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
-- **R1** `<EARS statement>` (D`<N>`)
+- **R1** When capture or the pipeline writes a log event, of any level, the component shall send a copy of it to Grafana Cloud. (D1)
+- **R2** The sending code of each component shall send every event with no list of the systems or events it sends. (D1)
+- **R3** If a send to Grafana fails or reaches its time limit, then the component shall end the run with the same outcome and heartbeat signal as with a send that succeeds. (D2)
+- **R4** The component shall write to R2 the same events whether or not the send to Grafana succeeds. (D2)
+- **R5** If a send to Grafana has not ended within its time limit, set in the Plan, then the component shall abandon it. (D2)
+- **R6** The component shall apply to the copy sent to Grafana the redaction of secrets of [d008 › Observability](d008-pipeline-platform-and-walking-skeleton.md#observability). (D2)
+- **R7** When a runtime rule of severity error fails, Grafana shall raise ALR1 as a ticket, labelled with the rule's ID taken from the event. (D3, D4, D11)
+- **R8** When a runtime rule of severity warn fails, Grafana shall raise ALR2 as a ticket, labelled with the rule's ID taken from the event. (D3, D4, D11)
+- **R9** When the page's deployment fails, Grafana shall raise ALR3 as a ticket. (D3, D11)
+- **R10** When at least two of the synthetic check's three probes find a published file older than DQM10's target, or cannot read it, Grafana shall raise ALR4 as a page. (D3, D8, D11, D14)
+- **R11** When a feed has had no clean capture for more minutes in a row than ALR5's threshold, set in the Plan, Grafana shall raise ALR5 as a page. (D3, D11)
+- **R12** When a system's DQM7 error budget burns at the fast burn rate set in the Plan, Grafana shall raise ALR6 as a page. (D3, D7, D11)
+- **R13** When a system's DQM7 error budget burns at the slow burn rate set in the Plan, Grafana shall raise ALR6 as a ticket. (D3, D7, D11)
+- **R14** When a pipeline run's `duration_s` or `peak_memory_mb` exceeds ALR7's share of its limit, set in the Plan, Grafana shall raise ALR7 as a ticket. (D3, D11)
+- **R15** When a component has sent no event to Grafana for longer than ALR8's threshold, set in the Plan, Grafana shall raise ALR8 as a ticket. (D3, D11)
+- **R16** When an event that the observability catalog marks as actionable, and that no other alert covers, reaches Grafana, Grafana shall raise ALR9 as a ticket. (D3, D5, D11)
+- **R17** When an `index_refreshed` event lists `unknown_feeds`, Grafana shall raise ALR10 as a ticket. (D3, D11)
+- **R18** When a pass logs a cause of a missed minute that D9's table does not list, Grafana shall raise ALR11 as a ticket. (D3, D9, D11)
+- **R19** Grafana shall keep ALR12 always firing, signalling the heartbeat service once every period set in the Plan. (D13)
+- **R20** If the heartbeat service receives no signal of ALR12 within its period and grace time, then the heartbeat service shall email the owner. (D11, D13)
+- **R21** When Grafana's use of a Free tier limit, logs a month or synthetic check executions, exceeds ALR13's threshold, set in the Plan, Grafana shall raise ALR13 as a ticket. (D3, D11)
+- **R22** When an event that the observability catalog does not list reaches Grafana, Grafana shall raise ALR14 as a ticket. (D3, D5, D11)
+- **R23** Each alert notification shall show the alert's ID and the catalog IDs it checks. (D4)
+- **R24** Each alert notification shall link to the events in Grafana that raised it. (D4)
+- **R25** The observability catalog shall list, for every event of capture and the pipeline, its level, its own fields, whether it needs an action from the owner, and the alerts that read it. (D5)
+- **R26** The observability catalog shall list every alert with its ID, the catalog IDs it checks and its urgency. (D4, D5)
+- **R27** The observability catalog shall give one name to the warning level of capture and the pipeline. (D5)
+- **R28** When a capture of a system lists fewer than 95% of the median number of stations of that system's captures in the 7 days before its capture instant, the pipeline shall flag it under DQR12. (D6)
+- **R29** While a system has fewer than 60 captures in the 7 days before a capture instant, the pipeline shall not evaluate DQR12 for that capture. (D6)
+- **R30** The data quality catalog shall set DQM7's target to at least 99.5% of the minutes of each calendar month for AMBici and 97% for Bicing. (D7)
+- **R31** DQM11 shall give each minute with no capture of a feed to the provider or to capture by the cause its pass logs, as D9's table sets. (D9)
+- **R32** DQM11 shall leave out a minute captured but missing from the station stock. (D9)
+- **R33** The data quality catalog shall set DQM11's target to at most 30 minutes given to capture per feed and calendar month, with no target on the minutes given to the provider. (D10)
+- **R34** When a page fires, Grafana shall notify the owner in the Grafana mobile app, at any hour, until the owner acknowledges it. (D11)
+- **R35** When a ticket fires, Grafana shall add it to the app's list of alerts with no notification, until the owner closes it. (D11)
+- **R36** Grafana shall show the health of capture, the pipeline and the page over the last 14 days, in the browser and in the mobile app. (D12)
+- **R37** The watchdog's signal URL shall be kept only in Grafana's notification setting, never in code. (D15)
+- **R38** Alert notifications shall carry no credentials and no visitor data. (D15)
+- **R39** When a feed's minutes given to capture in the calendar month exceed ALR15's share of DQM11's target, set in the Plan, Grafana shall raise ALR15 as a ticket. (D3, D10, D11)
 
 ### 1.4 Done when
 
