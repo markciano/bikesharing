@@ -1,0 +1,301 @@
+# Production events discovery — 2026-11-22T01:50:20Z
+
+## Span per component
+
+component | events | runs  | first                            | last
+----------+--------+-------+----------------------------------+---------------------------------
+capture   | 65593  | 21090 | 2026-11-07 10:19:39.809000+00:00 | 2026-11-22 01:49:43.129000+00:00
+pipeline  | 7069   | 132   | 2026-11-20 17:26:28.136000+00:00 | 2026-11-22 01:46:10.924000+00:00
+
+## Inventory per component, event and level
+
+component | event                | level   | events | runs  | days | first                            | last
+----------+----------------------+---------+--------+-------+------+----------------------------------+---------------------------------
+capture   | feed_captured        | info    | 63619  | 21086 | 16   | 2026-11-07 10:20:40.251000+00:00 | 2026-11-22 01:49:43.129000+00:00
+capture   | feed_failed          | error   | 523    | 504   | 16   | 2026-11-07 11:43:41.839000+00:00 | 2026-11-22 01:45:46.426000+00:00
+capture   | fetch_retried        | warning | 396    | 386   | 13   | 2026-11-10 14:11:41.402000+00:00 | 2026-11-22 01:45:41.122000+00:00
+capture   | heartbeat_sent       | info    | 347    | 347   | 16   | 2026-11-07 10:22:41.643000+00:00 | 2026-11-22 01:22:40.581000+00:00
+capture   | index_refreshed      | info    | 700    | 697   | 16   | 2026-11-07 10:19:39.809000+00:00 | 2026-11-22 01:37:40.912000+00:00
+capture   | index_rejected       | error   | 8      | 8     | 6    | 2026-11-07 14:07:41.069000+00:00 | 2026-11-15 21:07:45.085000+00:00
+pipeline  | batch_committed      | info    | 376    | 123   | 3    | 2026-11-20 17:27:53.536000+00:00 | 2026-11-22 01:45:51.822000+00:00
+pipeline  | batch_started        | info    | 376    | 123   | 3    | 2026-11-20 17:27:34.401000+00:00 | 2026-11-22 01:45:21.496000+00:00
+pipeline  | file_built           | info    | 132    | 132   | 3    | 2026-11-20 17:29:02.119000+00:00 | 2026-11-22 01:46:00.221000+00:00
+pipeline  | node_finished        | info    | 3516   | 132   | 3    | 2026-11-20 17:27:43.649000+00:00 | 2026-11-22 01:45:59.771000+00:00
+pipeline  | objects_discovered   | info    | 132    | 132   | 3    | 2026-11-20 17:27:34.166000+00:00 | 2026-11-22 01:45:21.484000+00:00
+pipeline  | page_deploy_failed   | error   | 6      | 6     | 1    | 2026-11-20 17:29:06.311000+00:00 | 2026-11-20 18:13:25.341000+00:00
+pipeline  | page_deployed        | info    | 126    | 126   | 3    | 2026-11-20 18:15:53.561000+00:00 | 2026-11-22 01:46:10.923000+00:00
+pipeline  | rule_checked         | info    | 2012   | 132   | 3    | 2026-11-20 17:27:47.292000+00:00 | 2026-11-22 01:46:00.221000+00:00
+pipeline  | run_finished         | error   | 6      | 6     | 1    | 2026-11-20 17:29:06.338000+00:00 | 2026-11-20 18:13:25.356000+00:00
+pipeline  | run_finished         | info    | 126    | 126   | 3    | 2026-11-20 18:15:53.576000+00:00 | 2026-11-22 01:46:10.924000+00:00
+pipeline  | run_started          | info    | 132    | 132   | 3    | 2026-11-20 17:26:28.136000+00:00 | 2026-11-22 01:45:07.206000+00:00
+pipeline  | stage_drained        | warn    | 9      | 9     | 1    | 2026-11-20 17:31:13.068000+00:00 | 2026-11-20 19:32:03.475000+00:00
+pipeline  | volume_not_evaluated | info    | 120    | 1     | 1    | 2026-11-20 17:27:47.667000+00:00 | 2026-11-20 17:27:47.672000+00:00
+
+## Fields per event, with the events carrying each
+
+component | event                | fields
+----------+----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+capture   | feed_captured        | attempts (63619), bytes (63619), component (63619), event (63619), feed (63619), latency_ms (63619), level (63619), recompressed (63619), source (63619), status (63619), version (63619)
+capture   | feed_failed          | attempts (523), component (523), error (523), error_type (523), event (523), feed (523), latency_ms (523), level (523), source (523), status (523), version (523)
+capture   | fetch_retried        | body (396), component (396), event (396), feed (396), headers (396), latency_ms (396), level (396), source (396), status (396), version (396)
+capture   | heartbeat_sent       | component (347), event (347), latency_ms (347), level (347), status (347), version (347)
+capture   | index_refreshed      | attempts (700), bytes (700), component (700), event (700), latency_ms (700), level (700), recompressed (700), source (700), status (700), unknown_feeds (700), version (700)
+capture   | index_rejected       | attempts (8), component (8), error (8), error_type (8), event (8), latency_ms (8), level (8), source (8), status (8), version (8)
+pipeline  | batch_committed      | batch (376), component (376), event (376), level (376), objects (376), rows_inserted (376), version (376)
+pipeline  | batch_started        | batch (376), component (376), event (376), first_capture (376), last_capture (376), level (376), objects (376), version (376)
+pipeline  | file_built           | component (132), data_instant (132), event (132), level (132), stations (132), version (132)
+pipeline  | node_finished        | component (3516), duration_s (3516), event (3516), level (3516), node (3516), num_failures (3516), rows (3516), status (3516), version (3516)
+pipeline  | objects_discovered   | ambici (132), bicing (132), component (132), event (132), level (132), version (132)
+pipeline  | page_deploy_failed   | component (6), event (6), exit_code (6), level (6), output (6), version (6)
+pipeline  | page_deployed        | component (126), deploy_peak_memory_mb (126), event (126), level (126), tag (126), version (126)
+pipeline  | rule_checked         | component (2012), event (2012), failures (2012), level (2012), rule (2012), severity (2012), status (2012), version (2012)
+pipeline  | run_finished         | batches (132), component (132), duration_s (132), error (132), error_type (132), event (132), level (132), outcome (132), peak_memory_mb (132), rows_inserted (132), version (132)
+pipeline  | run_started          | component (132), end_instant (132), event (132), excluded_objects (132), level (132), version (132)
+pipeline  | stage_drained        | component (9), end_instant (9), event (9), level (9), version (9)
+pipeline  | volume_not_evaluated | captured_at (120), captures_in_window (120), component (120), event (120), level (120), system (120), version (120)
+
+## Values of fields with at most 12 distinct values
+
+component | event                | key              | values
+----------+----------------------+------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+capture   | feed_captured        | attempts         | 1: 63616, 2: 3
+capture   | feed_captured        | component        | capture: 63619
+capture   | feed_captured        | event            | feed_captured: 63619
+capture   | feed_captured        | feed             | station_status: 41674, free_bike_status: 21072, station_information: 698, geofencing_zones: 30, vehicle_types: 30, system_information: 29, system_pricing_plans: 28, system_regions: 28, system_hours: 15, gbfs_versions: 15
+capture   | feed_captured        | level            | info: 63619
+capture   | feed_captured        | recompressed     | false: 63619
+capture   | feed_captured        | source           | ambici: 42586, bicing: 21033
+capture   | feed_captured        | status           | 200: 63619
+capture   | feed_captured        | version          | 002cf8bf-7c5b-44d7-bdb0-1d71bc6d6d8e: 49935, 01e81a53-c5f0-4f50-a007-668275d1d1e4: 9690, c486861d-8604-417e-a44a-28a83a0acaf1: 3994
+capture   | feed_failed          | attempts         | 0: 523
+capture   | feed_failed          | component        | capture: 523
+capture   | feed_failed          | error            | HTTP 403: 488, HTTP 522: 9, HTTP 525: 8, HTTP 502: 5, The operation was aborted due to timeout: 5, HTTP 404: 4, HTTP 503: 2, HTTP 520: 2
+capture   | feed_failed          | error_type       | http: 518, timeout: 5
+capture   | feed_failed          | event            | feed_failed: 523
+capture   | feed_failed          | feed             | station_status: 501, free_bike_status: 16, station_information: 5, system_regions: 1
+capture   | feed_failed          | level            | error: 523
+capture   | feed_failed          | source           | bicing: 493, ambici: 30
+capture   | feed_failed          | status           | 403: 488, 522: 9, 525: 8, null: 5, 502: 5, 404: 4, 503: 2, 520: 2
+capture   | feed_failed          | version          | 002cf8bf-7c5b-44d7-bdb0-1d71bc6d6d8e: 423, 01e81a53-c5f0-4f50-a007-668275d1d1e4: 70, c486861d-8604-417e-a44a-28a83a0acaf1: 30
+capture   | fetch_retried        | body             | <html>
+<head><title>403 Forbidden</title></head>
+<body>
+<center><h1>403 Forbidden</h1></center>
+</body>
+</html>
+: 396
+capture   | fetch_retried        | component        | capture: 396
+capture   | fetch_retried        | event            | fetch_retried: 396
+capture   | fetch_retried        | feed             | station_status: 386, station_information: 5, null: 4, system_regions: 1
+capture   | fetch_retried        | level            | warning: 396
+capture   | fetch_retried        | source           | bicing: 396
+capture   | fetch_retried        | status           | 403: 396
+capture   | fetch_retried        | version          | 002cf8bf-7c5b-44d7-bdb0-1d71bc6d6d8e: 396
+capture   | heartbeat_sent       | component        | capture: 347
+capture   | heartbeat_sent       | event            | heartbeat_sent: 347
+capture   | heartbeat_sent       | level            | info: 347
+capture   | heartbeat_sent       | status           | 200: 347
+capture   | heartbeat_sent       | version          | 002cf8bf-7c5b-44d7-bdb0-1d71bc6d6d8e: 272, 01e81a53-c5f0-4f50-a007-668275d1d1e4: 52, c486861d-8604-417e-a44a-28a83a0acaf1: 23
+capture   | index_refreshed      | attempts         | 1: 700
+capture   | index_refreshed      | bytes            | 345: 263, 265: 249, 264: 88, 346: 66, 344: 24, 266: 8, 343: 1, 263: 1
+capture   | index_refreshed      | component        | capture: 700
+capture   | index_refreshed      | event            | index_refreshed: 700
+capture   | index_refreshed      | level            | info: 700
+capture   | index_refreshed      | recompressed     | false: 700
+capture   | index_refreshed      | source           | ambici: 354, bicing: 346
+capture   | index_refreshed      | status           | 200: 700
+capture   | index_refreshed      | unknown_feeds    | []: 700
+capture   | index_refreshed      | version          | 002cf8bf-7c5b-44d7-bdb0-1d71bc6d6d8e: 550, 01e81a53-c5f0-4f50-a007-668275d1d1e4: 106, c486861d-8604-417e-a44a-28a83a0acaf1: 44
+capture   | index_rejected       | attempts         | 0: 8
+capture   | index_rejected       | component        | capture: 8
+capture   | index_rejected       | error            | HTTP 403: 8
+capture   | index_rejected       | error_type       | http: 8
+capture   | index_rejected       | event            | index_rejected: 8
+capture   | index_rejected       | latency_ms       | 686: 1, 190: 1, 637: 1, 760: 1, 551: 1, 588: 1, 576: 1, 806: 1
+capture   | index_rejected       | level            | error: 8
+capture   | index_rejected       | source           | bicing: 8
+capture   | index_rejected       | status           | 403: 8
+capture   | index_rejected       | version          | 002cf8bf-7c5b-44d7-bdb0-1d71bc6d6d8e: 4, c486861d-8604-417e-a44a-28a83a0acaf1: 2, 01e81a53-c5f0-4f50-a007-668275d1d1e4: 2
+pipeline  | batch_committed      | component        | pipeline: 376
+pipeline  | batch_committed      | event            | batch_committed: 376
+pipeline  | batch_committed      | level            | info: 376
+pipeline  | batch_committed      | version          | df7225d0ad4a8091413d77d02a43481cab56a4ad: 330, 6aad50a30e332ef198cf806ff15f896ae860111f: 42, 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 4
+pipeline  | batch_started        | component        | pipeline: 376
+pipeline  | batch_started        | event            | batch_started: 376
+pipeline  | batch_started        | level            | info: 376
+pipeline  | batch_started        | version          | df7225d0ad4a8091413d77d02a43481cab56a4ad: 330, 6aad50a30e332ef198cf806ff15f896ae860111f: 42, 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 4
+pipeline  | file_built           | component        | pipeline: 132
+pipeline  | file_built           | event            | file_built: 132
+pipeline  | file_built           | level            | info: 132
+pipeline  | file_built           | stations         | 780: 65, 781: 52, 782: 3, 778: 3, 772: 2, 779: 2, 750: 1, 777: 1, 751: 1, 775: 1, 760: 1
+pipeline  | file_built           | version          | df7225d0ad4a8091413d77d02a43481cab56a4ad: 119, 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 8, 6aad50a30e332ef198cf806ff15f896ae860111f: 5
+pipeline  | node_finished        | component        | pipeline: 3516
+pipeline  | node_finished        | event            | node_finished: 3516
+pipeline  | node_finished        | level            | info: 3516
+pipeline  | node_finished        | node             | test.bikesharing.DQR1.502d7d39e7: 376, model.bikesharing.capture_volume: 376, test.bikesharing.DQR11.bb1d7cde6d: 376, test.bikesharing.DQR12.fa4384632b: 376, test.bikesharing.DQR13.cfd1f622a0: 376, model.bikesharing.stg_ambici__station_status: 376, model.bikesharing.schema_drift: 376, model.bikesharing.stg_bicing__station_status: 376, model.bikesharing.station_stock: 376, model.bikesharing.latest_station_count: 132
+pipeline  | node_finished        | num_failures     | null: 2012, 0: 1504
+pipeline  | node_finished        | rows             | null: 3516
+pipeline  | node_finished        | status           | success: 2012, pass: 1504
+pipeline  | node_finished        | version          | df7225d0ad4a8091413d77d02a43481cab56a4ad: 3089, 6aad50a30e332ef198cf806ff15f896ae860111f: 383, 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 44
+pipeline  | objects_discovered   | component        | pipeline: 132
+pipeline  | objects_discovered   | event            | objects_discovered: 132
+pipeline  | objects_discovered   | level            | info: 132
+pipeline  | objects_discovered   | version          | df7225d0ad4a8091413d77d02a43481cab56a4ad: 119, 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 8, 6aad50a30e332ef198cf806ff15f896ae860111f: 5
+pipeline  | page_deploy_failed   | component        | pipeline: 6
+pipeline  | page_deploy_failed   | event            | page_deploy_failed: 6
+pipeline  | page_deploy_failed   | exit_code        | 1: 6
+pipeline  | page_deploy_failed   | level            | error: 6
+pipeline  | page_deploy_failed   | output           |
+ ⛅️ wrangler 4.165.0
+────────────────────
+🌀 Building list of assets...
+✨ Read 1 file from the assets directory /repo/web/public
+🌀 Starting asset upload...
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/b88ece5b9aad94b83f1710afa6d24070/workers/scripts/bikesharing-web/assets-upload-session) failed.[0m
+
+  No access to the specified resource.
+
+  If you think this is a bug, please open an issue at: [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+🪵  Logs were written to "/root/.config/.wrangler/logs/wrangler-2026-11-20_17-46-02_341.log"
+: 1,
+ ⛅️ wrangler 4.165.0
+────────────────────
+🌀 Building list of assets...
+✨ Read 1 file from the assets directory /repo/web/public
+🌀 Starting asset upload...
+🌀 Found 1 new or modified static asset to upload. Proceeding with upload...
++ /latest-station-count.json
+Uploaded 1 of 1 asset
+✨ Success! Uploaded 1 file (1.05 sec)
+
+Total Upload: 0.31 KiB / gzip: 0.22 KiB
+Uploaded bikesharing-web (3.15 sec)
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/b88ece5b9aad94b83f1710afa6d24070/workers/workers/bikesharing-web) failed.[0m
+
+  This Worker does not exist on your account. [code: 10007]
+
+  If you think this is a bug, please open an issue at: [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+🪵  Logs were written to "/root/.config/.wrangler/logs/wrangler-2026-11-20_18-13-20_556.log"
+: 1,
+ ⛅️ wrangler 4.165.0
+────────────────────
+🌀 Building list of assets...
+✨ Read 1 file from the assets directory /repo/web/public
+🌀 Starting asset upload...
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/b88ece5b9aad94b83f1710afa6d24070/workers/scripts/bikesharing-web/assets-upload-session) failed.[0m
+
+  No access to the specified resource.
+
+  If you think this is a bug, please open an issue at: [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+🪵  Logs were written to "/root/.config/.wrangler/logs/wrangler-2026-11-20_17-31-22_538.log"
+: 1,
+ ⛅️ wrangler 4.165.0
+────────────────────
+🌀 Building list of assets...
+✨ Read 1 file from the assets directory /repo/web/public
+🌀 Starting asset upload...
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/b88ece5b9aad94b83f1710afa6d24070/workers/scripts/bikesharing-web/assets-upload-session) failed.[0m
+
+  No access to the specified resource.
+
+  If you think this is a bug, please open an issue at: [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+🪵  Logs were written to "/root/.config/.wrangler/logs/wrangler-2026-11-20_18-00-46_817.log"
+: 1,
+ ⛅️ wrangler 4.165.0
+────────────────────
+🌀 Building list of assets...
+✨ Read 1 file from the assets directory /repo/web/public
+🌀 Starting asset upload...
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/b88ece5b9aad94b83f1710afa6d24070/workers/scripts/bikesharing-web/assets-upload-session) failed.[0m
+
+  No access to the specified resource.
+
+  If you think this is a bug, please open an issue at: [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+🪵  Logs were written to "/root/.config/.wrangler/logs/wrangler-2026-11-20_17-59-14_094.log"
+: 1,
+ ⛅️ wrangler 4.165.0
+────────────────────
+🌀 Building list of assets...
+✨ Read 1 file from the assets directory /repo/web/public
+🌀 Starting asset upload...
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/b88ece5b9aad94b83f1710afa6d24070/workers/scripts/bikesharing-web/assets-upload-session) failed.[0m
+
+  No access to the specified resource.
+
+  If you think this is a bug, please open an issue at: [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+
+🪵  Logs were written to "/root/.config/.wrangler/logs/wrangler-2026-11-20_17-29-04_285.log"
+: 1
+pipeline  | page_deploy_failed   | version          | 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 6
+pipeline  | page_deployed        | component        | pipeline: 126
+pipeline  | page_deployed        | event            | page_deployed: 126
+pipeline  | page_deployed        | level            | info: 126
+pipeline  | page_deployed        | tag              | df7225d0ad4a8091413d77d02a43481cab56a4ad: 119, 6aad50a30e332ef198cf806ff15f896ae860111f: 5, 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 2
+pipeline  | page_deployed        | version          | df7225d0ad4a8091413d77d02a43481cab56a4ad: 119, 6aad50a30e332ef198cf806ff15f896ae860111f: 5, 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 2
+pipeline  | rule_checked         | component        | pipeline: 2012
+pipeline  | rule_checked         | event            | rule_checked: 2012
+pipeline  | rule_checked         | failures         | 0: 2012
+pipeline  | rule_checked         | level            | info: 2012
+pipeline  | rule_checked         | rule             | DQR11: 376, DQR1: 376, DQR13: 376, DQR2: 376, DQR12: 376, DQR14: 132
+pipeline  | rule_checked         | severity         | error: 1260, warn: 752
+pipeline  | rule_checked         | status           | pass: 2012
+pipeline  | rule_checked         | version          | df7225d0ad4a8091413d77d02a43481cab56a4ad: 1769, 6aad50a30e332ef198cf806ff15f896ae860111f: 215, 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 28
+pipeline  | run_finished         | component        | pipeline: 132
+pipeline  | run_finished         | error            | null: 132
+pipeline  | run_finished         | error_type       | null: 132
+pipeline  | run_finished         | event            | run_finished: 132
+pipeline  | run_finished         | level            | info: 126, error: 6
+pipeline  | run_finished         | outcome          | succeeded: 126, failed: 6
+pipeline  | run_finished         | version          | df7225d0ad4a8091413d77d02a43481cab56a4ad: 119, 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 8, 6aad50a30e332ef198cf806ff15f896ae860111f: 5
+pipeline  | run_started          | component        | pipeline: 132
+pipeline  | run_started          | end_instant      | null: 119, 2026-10-14T22:00:00.000Z: 8, 2026-10-20T22:00:00.000Z: 5
+pipeline  | run_started          | event            | run_started: 132
+pipeline  | run_started          | excluded_objects | 0: 132
+pipeline  | run_started          | level            | info: 132
+pipeline  | run_started          | version          | df7225d0ad4a8091413d77d02a43481cab56a4ad: 119, 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 8, 6aad50a30e332ef198cf806ff15f896ae860111f: 5
+pipeline  | stage_drained        | component        | pipeline: 9
+pipeline  | stage_drained        | end_instant      | 2026-10-14T22:00:00.000Z: 7, 2026-10-20T22:00:00.000Z: 2
+pipeline  | stage_drained        | event            | stage_drained: 9
+pipeline  | stage_drained        | level            | warn: 9
+pipeline  | stage_drained        | version          | 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 7, 6aad50a30e332ef198cf806ff15f896ae860111f: 2
+pipeline  | volume_not_evaluated | component        | pipeline: 120
+pipeline  | volume_not_evaluated | event            | volume_not_evaluated: 120
+pipeline  | volume_not_evaluated | level            | info: 120
+pipeline  | volume_not_evaluated | system           | bicing: 60, ambici: 60
+pipeline  | volume_not_evaluated | version          | 67db3e08d39ce8ed5d1b4d4224fcaf6aeaf81a04: 120
+
+## Daily rhythm of events not at level info (days with none count as 0)
+
+component | event              | level   | days | days_seen | median_per_day | worst_day | total
+----------+--------------------+---------+------+-----------+----------------+-----------+------
+capture   | feed_failed        | error   | 16   | 16        | 33.5000        | 59        | 523
+capture   | fetch_retried      | warning | 16   | 13        | 32.0000        | 41        | 396
+capture   | index_rejected     | error   | 16   | 6         | 0.0000         | 2         | 8
+pipeline  | stage_drained      | warn    | 3    | 1         | 0.0000         | 9         | 9
+pipeline  | run_finished       | error   | 3    | 1         | 0.0000         | 6         | 6
+pipeline  | page_deploy_failed | error   | 3    | 1         | 0.0000         | 6         | 6

@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Spec › Open questions, from OQ10. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5), the thresholds of ALR4, ALR7 and the heartbeat derived from the pipeline's cadence, so a change of cadence is one setting (D8); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
+- Current: Spec › Open questions, from OQ7. D6 changes `capture_volume.sql`, the history window in `run.py`, their dbt unit tests, DQR12 in `data-quality.md` and d008 › D4; D7 changes DQM7 in `data-quality.md` and d004 › D6; D10 sets DQM11's target in `data-quality.md`: all planned in File layout. Evidence for OQ4, OQ5, OQ6 and OQ10 comes from DuckDB scripts in `spikes/d009-baselines/`, one subfolder per question, reading R2 from the owner's machine with the bronze and lakehouse read-only keys of `.env`. Parked for the Plan: one name for the warning level (D5), where the observability catalog lives (D5), the thresholds of ALR4, ALR7 and the heartbeat derived from the pipeline's cadence, so a change of cadence is one setting (D8); parked, to propose: a design-skill rule to explain each ID with an example in conversation.
 
 ## 1. Spec — what and why
 
@@ -70,7 +70,7 @@ Rejected: resending later from R2 what did not arrive. Grafana would be complete
 
 #### D3. Alerts on symptoms that need action
 
-An alert fires on a symptom that needs an action from the owner, not on each error, following the SRE practice of alerting on symptoms with every alert actionable: capture's single source failures, 57 in 22 days, mostly recover on the next pass ([d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)). The list below is a first pass, which the discovery over production events extends (OQ10); thresholds come from those events or from the Plan, and each alert's urgency from OQ7.
+An alert fires on a symptom that needs an action from the owner, not on each error, following the SRE practice of alerting on symptoms with every alert actionable: capture's single source failures, 57 in 22 days, mostly recover on the next pass ([d004 › D8](d004-bronze-data-capture.md#d8-capture-failure-behaviour)). The list was checked against every event capture and the pipeline wrote in production, 14.6 days of capture and 1.5 days of the pipeline ([`spikes/d009-baselines/discovery/`](../../spikes/d009-baselines/discovery/)); thresholds come from those events or from the Plan, and each alert's urgency from OQ7.
 
 | # | Situation | Source | Why |
 |---|---|---|---|
@@ -82,7 +82,8 @@ An alert fires on a symptom that needs an action from the owner, not on each err
 | ALR6 | Capture burns its monthly error budget (DQM7, 99.5%) at a rate that would exhaust it | Capture | The standard SLO burn-rate alert |
 | ALR7 | A run nears its time or memory limit (`duration_s`, `peak_memory_mb`) | Pipeline | Warns before the timeout or a memory kill ends runs ([ADR-0027](../decisions/0027-modal-as-execution-platform.md)) |
 | ALR8 | A component sends no events to Grafana for N minutes | Both | The send is broken (D2) |
-| ALR9 | Any other event of the warning level, such as `heartbeat_failed` or `log_upload_failed` | Both | Single warnings of low urgency |
+| ALR9 | Any other event of the warning level, such as `heartbeat_failed`, `log_upload_failed` or `stage_drained`, but `fetch_retried` | Both | Single warnings of low urgency; a retry that succeeds needs no action and one that fails is a `feed_failed`, while `fetch_retried` comes about 32 times a day |
+| ALR10 | A provider's index lists a feed capture does not know (`unknown_feeds` of `index_refreshed`) | Capture | A change in the source for the owner to evaluate, which nothing else shows |
 
 An indicator built by a later child reaches these alerts by adding its target to the mechanism ALR4–ALR6 prove, as [d007 › D1](d007-pipeline-design.md#d1-build-by-vertical-slice) sets (Out of scope).
 
@@ -128,7 +129,7 @@ Rejected: 99.5% for both, with the minutes lost to a 403 left out of DQM7. One t
 
 #### D8. Page data age keeps its target
 
-DQM10 keeps its target, at most one cadence plus one run ([d002 › R3](d002-requirements.md#requirements)), since production meets it: today one cadence is 15 min and a run lasts up to about 7 min, so about 22 min. Over 8.7 h of steady state (from 2026-11-21 03:03 UTC, 37 deployments, the runs before it catching up on the weeks captured earlier), the oldest data a visitor met, just before the next deployment, was 16.8 min at the median and 19.6 min at most; runs lasted 90 s at the median and 421 s at most, 15 min apart ([`spikes/d009-baselines/indicator-targets/`](../../spikes/d009-baselines/indicator-targets/)). These are the walking skeleton's figures, a baseline: runs grow as later children add models, and the target, stated relative to the cadence and the run, follows them without being rewritten, while ALR7 and ALR4 watch that growth. A target is kept when production meets it, following the SRE practice of D7. Where ALR4 sets its threshold is a Plan decision (D3).
+DQM10 keeps its target, at most one cadence plus one run ([d002 › R3](d002-requirements.md#requirements)), since production meets it: today one cadence is 15 min and a run lasts up to about 7 min, so about 22 min. Over 22.7 h of steady state (2026-11-21 03:03 to 2026-11-22 01:46 UTC, 93 deployments, the runs before it catching up on the weeks captured earlier), the oldest data a visitor met, just before the next deployment, was 16.8 min at the median and 19.6 min at most, measured from the latest capture instant each run's `file_built` logs; runs lasted 127 s at the median and 421 s at most, 15 min apart ([`spikes/d009-baselines/indicator-targets/`](../../spikes/d009-baselines/indicator-targets/)). These are the walking skeleton's figures, a baseline: runs grow as later children add models, and the target, stated relative to the cadence and the run, follows them without being rewritten, while ALR7 and ALR4 watch that growth. A target is kept when production meets it, following the SRE practice of D7. Where ALR4 sets its threshold is a Plan decision (D3).
 
 - **What would change it:** runs that bring the oldest data a visitor meets above one cadence plus one run: the cadence or the run's duration is reviewed, not the target, since it is what the page promises its visitor.
 
@@ -192,8 +193,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| OQ10 | Which further alerts does a discovery over the production events of capture and the pipeline propose? | D3 | First pass in D3; evidence in `spikes/d009-baselines/discovery/`; a candidate rule or indicator on the data goes to Out of scope, with the child that owns its table |
-| OQ7 | How does each alert reach the owner, by urgency, starting from the SRE split between page and ticket? | D3, OQ10 | [s018 › P3](../spikes/s018-monitoring-tool.md#23-production-inputs) |
+| OQ7 | How does each alert reach the owner, by urgency, starting from the SRE split between page and ticket? | D3 | [s018 › P3](../spikes/s018-monitoring-tool.md#23-production-inputs) |
 | OQ8 | Which health questions does a script answer that Grafana does not, and must it run from a phone? Out of scope if none. | D1 | [s013 › D5, P9](../spikes/s013-visualization-tool.md#55-production-inputs) |
 
 ## 2. Plan — how
