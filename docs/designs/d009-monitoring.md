@@ -114,7 +114,7 @@ Rejected: an alert named after the item it checks, with no ID of its own. It is 
 
 #### D5. One observability catalog, built here
 
-This task absorbs T074 and builds the observability catalog: one document that holds, for every component, its log events with their level and own fields, the common fields of [ADR-0036](../decisions/0036-log-convention-across-components.md), the heartbeat checks, and the signals and alerts that read them, alerts included with their IDs (D4). It becomes the source the designs link to, following link, don't copy: d004 and d008 keep their decisions and link to it for the events. The task walks every event of capture and the pipeline to map them to Grafana and to find alerts, so the catalog is written once, from that walk. The level of a failure that does not affect the data is written `warning` by capture and `warn` by the pipeline; the catalog fixes one name for both. Each event in the catalog states whether it needs an action from the owner, which ALR9 reads, and a design that adds or changes an event classifies it when it designs its logs; ALR14 catches an event no design classified. Where the catalog lives, and how a later component, such as the page in T041, adds its events, are settled in the Plan.
+This task absorbs T074 and builds the observability catalog: one catalog, a document with its machine-readable registry of events, that holds, for every component, its log events with their level and own fields, the common fields of [ADR-0036](../decisions/0036-log-convention-across-components.md), the heartbeat checks, and the signals and alerts that read them, alerts included with their IDs (D4). It becomes the source the designs link to, following link, don't copy: d004 and d008 keep their decisions and link to it for the events. The task walks every event of capture and the pipeline to map them to Grafana and to find alerts, so the catalog is written once, from that walk. The level of a failure that does not affect the data is written `warning` by capture and `warn` by the pipeline; the catalog fixes one name for both. Each event in the catalog states whether it needs an action from the owner, which ALR9 reads, and a design that adds or changes an event classifies it when it designs its logs; ALR14 catches an event no design classified. Where the catalog lives, and how a later component, such as the page in T041, adds its events, are settled in the Plan. **#2**
 
 Rejected: T074 kept apart, after this task. This design would be shorter, but the events would be walked twice, and the alerts' IDs would have no place until T074.
 
@@ -315,6 +315,12 @@ Inputs about the how, left to this task by earlier spikes and designs; each link
 
 Grafana's alert rules, contact points, notification policies, synthetic check and watchdog are declared as code with Terraform and Grafana's official provider, and the owner applies them from the owner's machine, with Terraform's state kept there, ignored by Git ([ADR-0051](../decisions/0051-monitoring-configuration-as-code.md)). Each change is reviewed on a diff and checked in CI, and a lost or suspended account is recreated with one apply. Secrets, such as the watchdog's signal URL, enter as variables from `.env`, never in the code (R37). **#1**
 
+#### Observability catalog
+
+The observability catalog of D5 is two files. `contracts/log-events.json` is the registry of events, the single source of each event of every component: its component, level, own fields and whether it needs an action from the owner. `docs/observability.md`, beside `docs/data-quality.md`, holds the rest: the common fields of ADR-0036, the heartbeat checks, the alerts with their IDs, the catalog IDs they check and their urgency, and how alerts on an error budget work; it links to the registry for the events. Terraform reads the registry to build the event lists of ALR9 and ALR14, and the tests of capture and the pipeline check that every event they write is registered. **#2**
+
+A component, including a later one such as the page, adds its events to the registry in the design that designs its logs. `docs/observability.md` states the criterion by which an event needs an action from the owner; the registry test keeps an unclassified event from passing CI, and the path rule `.claude/rules/docs/observability.md`, scoped to the catalog's two files, holds the conventions for writing an entry, as `.claude/rules/docs/data-model.md` does for the data model. **#3**
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -327,6 +333,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | 1 | [Grafana configuration](#grafana-configuration) | Grafana's alerting, synthetic check and watchdog as code with Terraform and Grafana's official provider, applied by the owner (Infrastructure as Code); [ADR-0051](../decisions/0051-monitoring-configuration-as-code.md) | Reviewed on a diff, checked in CI, recreated with one apply | R7–R22, R34, R35, R37 | Plan |
+| 2 | [Observability catalog](#observability-catalog), [D5](#d5-one-observability-catalog-built-here) | The catalog's events in a machine-readable registry, `contracts/log-events.json`, its single source; `docs/observability.md` holds the rest and links to it (a registry as in OpenTelemetry's semantic conventions) | Terraform and the components' tests read the same list; each fact lives in one place | R16, R22, R25, R26 | Plan |
+| 3 | [Observability catalog](#observability-catalog) | The criterion for classifying an event in `docs/observability.md`, enforced by the registry test, with a path rule for writing entries; no line in the design template (poka-yoke) | The test already blocks an unclassified event; the template would repeat it in every design | R16, R22, R25 | Plan |
 
 ### 2.3 Architecture
 
