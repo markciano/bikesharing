@@ -3,11 +3,12 @@ paths:
   - "pipeline/**"
   - "capture/**"
   - "contracts/**"
+  - "monitoring/**"
 ---
 
 # Testing rules (all languages)
 
-Reasons and per-component detail: [testing strategy](../../../docs/testing-strategy.md); read only the section of the component you touch. Tool-specific rules are in `python.md`, `sql.md` and `cloudflare-worker.md`.
+Reasons and per-component detail: [testing strategy](../../../docs/testing-strategy.md); read only the section of the component you touch. Tool-specific rules are in `python.md`, `sql.md`, `cloudflare-worker.md` and `terraform.md`.
 
 ## Principles
 
@@ -32,5 +33,6 @@ Reasons and per-component detail: [testing strategy](../../../docs/testing-strat
 
 - A contract is tested as soon as it is defined, before either side is written.
 - Format and behaviour contracts (keys, naming, encoding) use shared test vectors in `contracts/` at the root, owned by no component: one JSON file per contract, with `valid` cases (input → expected output) and `invalid` cases, each breaking exactly one rule and stating its `reason`.
+- Reference data that several components read, such as the event registry, is a document, not data one component sends another, so it has no vectors: a JSON Schema in `contracts/` fixes its shape, and each component that reads it validates it against the schema and checks its own use of it, such as every event it writes being registered.
 - Producer and consumer tests read the same file by relative path. Binary payloads are built in memory by the tests.
 - A contract change makes the valid data stop meeting it; the vectors never relax it.
