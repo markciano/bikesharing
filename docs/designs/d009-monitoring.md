@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 9.
+- Current: Step 10.
 
 ## 1. Spec — what and why
 
@@ -1222,7 +1222,7 @@ Each pass sends its lines to Grafana after its log and its heartbeat, and the se
 
 ### Step 9 — Pipeline: run settings (core)
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s9 parse the pipeline's run settings`
 - **R:** —

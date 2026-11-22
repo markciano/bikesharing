@@ -1,0 +1,1 @@
+{ "cadence_min": 15, "time_budget_s": 420, "timeout_s": 600, "container_memory_mib": 4096 }
