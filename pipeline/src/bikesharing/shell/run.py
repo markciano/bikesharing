@@ -65,6 +65,7 @@ from bikesharing.shell.event_log import EventLog
 from bikesharing.shell.heartbeat import Signal, ping
 from bikesharing.shell.publishing import deploy_page, write_published_file
 from bikesharing.shell.r2 import download_batch, list_keys, r2_store, upload_log
+from bikesharing.shell.run_settings import RUN_SETTINGS
 
 # The paths a run reads under its root: the repository locally and in tests,
 # /repo in Modal's image, which holds the same relative paths.
@@ -209,7 +210,7 @@ def _config(
         container_memory_mib=container_memory_mib,
         end_instant=settings.END_INSTANT,
         max_objects=settings.MAX_OBJECTS_PER_BATCH,
-        time_budget=settings.TIME_BUDGET,
+        time_budget=RUN_SETTINGS.time_budget,
         lookback=settings.LISTING_LOOKBACK,
         clock=_now,
     )

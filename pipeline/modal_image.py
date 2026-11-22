@@ -18,17 +18,21 @@ from pathlib import Path
 
 import modal
 
+from bikesharing.shell.run_settings import RUN_SETTINGS
+
 # The container's hard limit and its reservation, in MiB, which Modal measures in
 # binary units. `run` takes it to size DuckDB's memory limit (d008, Run operation on
 # Modal).
-MEMORY_MIB = 4096
+MEMORY_MIB = RUN_SETTINGS.container_memory_mib
 
-# A run's timeout, in seconds: below the 15-minute cadence (d008 D6, Provisional run
-# bounds).
-TIMEOUT_S = 600
+# A run's timeout, in seconds: below the cadence (d008 D6, Provisional run bounds).
+TIMEOUT_S = int(RUN_SETTINGS.timeout.total_seconds())
 
 # Where the repository's files sit in the image, as `run` reads them.
 REMOTE_ROOT = Path("/repo")
+
+# Where Modal mounts the Python sources `add_local_python_source` ships.
+REMOTE_SOURCE_ROOT = Path("/root")
 
 # The `uv` that installs the locked dependencies in the image, pinned like any other
 # tool of a build that ends up holding secrets. It is the version `uv.lock` was
@@ -153,6 +157,9 @@ def _build_image() -> modal.Image:
     web_dir = REPO_DIR / "web"
     remote_web = REMOTE_ROOT / "web"
     schema = "contracts/latest-station-count.schema.json"
+    run_settings_file = (
+        PIPELINE_DIR / "src" / "bikesharing" / "core" / "run_settings.json"
+    )
 
     return (
         modal.Image.from_registry(f"python:{python_patch}-slim-bookworm")
@@ -196,6 +203,12 @@ def _build_image() -> modal.Image:
         # Modal mounts only the entrypoint's own file, so this module, which the app
         # modules import, travels with the package.
         .add_local_python_source("bikesharing", "modal_image")
+        # `add_local_python_source` leaves out non-Python files, and the container
+        # imports `modal_image` again, which reads the run settings from the package.
+        .add_local_file(
+            run_settings_file,
+            str(REMOTE_SOURCE_ROOT / "bikesharing" / "core" / "run_settings.json"),
+        )
     )
 
 

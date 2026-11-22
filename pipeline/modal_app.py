@@ -12,7 +12,9 @@ import os
 
 import modal
 
+from bikesharing.core.settings import schedule_cron
 from bikesharing.shell.run import run, scheduled_config
+from bikesharing.shell.run_settings import RUN_SETTINGS
 from modal_image import (
     BRONZE_READ_SECRET,
     DEPLOY_SECRET,
@@ -27,7 +29,7 @@ from modal_image import (
 )
 
 APP_NAME = "bikesharing-pipeline"
-CRON = "*/15 * * * *"
+CRON = schedule_cron(RUN_SETTINGS)
 
 app = modal.App(APP_NAME)
 
