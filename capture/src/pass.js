@@ -89,7 +89,12 @@ export async function runPass(scheduledTime, deps) {
     // After the log and the heartbeat, so the copy can never change either; the Worker
     // lives until it ends, but the pass does not wait for it (d009 D2, The copy to Grafana
     // never affects a run).
-    waitUntil(copyToGrafana({ endpoint: otlpEndpoint, token: otlpToken }, lines, limits, ctx, now));
+    try {
+      waitUntil(copyToGrafana({ endpoint: otlpEndpoint, token: otlpToken }, lines, limits, ctx, now));
+    } catch (err) {
+      // The log is already written: a failure to hand over the copy must not fail the pass.
+      console.error(err);
+    }
   }
 }
 
