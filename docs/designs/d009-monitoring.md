@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 2.
+- Current: Step 3.
 
 ## 1. Spec — what and why
 
@@ -954,7 +954,7 @@ The observability catalog's machine-readable half: every event of capture and th
 
 ### Step 2 — Observability catalog
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: d009.s2 add the observability catalog`
 - **R:** R25, R26

@@ -127,15 +127,7 @@ Capture writes one log object per pass as JSON Lines, under `logs/date=<YYYY-MM-
 
 In capture, `component` is `capture` and `version` is the Worker's version ID.
 
-| Event | Level | Own fields |
-|---|---|---|
-| `feed_captured` | `info` | `system`, `feed`, `status`, `latency_ms`, `bytes`, `attempts`, `recompressed` |
-| `feed_failed` | `error` | `system`, `feed`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
-| `index_refreshed` | `info` | `system`, `status`, `latency_ms`, `bytes`, `attempts`, `recompressed`, `unknown_feeds` |
-| `index_rejected` | `error` | `system`, `status`, `latency_ms`, `attempts`, `error_type`, `error` |
-| `fetch_retried` | `warn` | `system`, `feed`, `status`, `latency_ms`, `headers`, `body` |
-| `heartbeat_sent` | `info` | `status`, `latency_ms` |
-| `heartbeat_failed` | `warn` | `status`, `latency_ms`, `error_type`, `error` |
+Capture's events, with their level and own fields, are in the [observability catalog](../observability.md), whose registry is [`contracts/log-events.registry.json`](../../contracts/log-events.registry.json).
 
 `attempts` counts write attempts, and is 0 when the source fails. `status` and `latency_ms` are those of the request's last attempt; `fetch_retried` records a 403 about to be retried, with the first attempt's `status`, `latency_ms`, response `headers` and `body`, and `feed` null for an index. `error_type` is one of `http`, `timeout`, `network`, `too_large`, `write` or `invalid_index`; the event tells whether it came from a feed, an index or the heartbeat. `level` is `info`, `warn` for a failure that does not affect the data, such as the heartbeat's, or `error`. `system` names the bike sharing system, which bronze keys and capture's code call the source. Logs written before T060.2 carry `source` and `warning`, and are not rewritten. `unknown_feeds` lists the feeds in the index that are not listed in D3, and is usually empty; a feed that the source removes makes the index invalid (D8). `recompressed` is true when the response did not arrive as gzip and capture compressed it before storing; capture relies on an undocumented option to keep the source's gzip ([s006](../spikes/s006-cloudflare-capture.md), F9), so this flags a change in the source or the runtime.
 
