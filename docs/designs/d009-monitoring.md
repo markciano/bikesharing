@@ -18,9 +18,9 @@ Kind: a build task builds code or configuration and has every block. A document-
 Phase: the blocks and reviews completed. A document-only task shows only Spec · Plan · Plan review.
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
-- State: Ready for implementation 🎬
+- State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 1.
+- Current: Step 2.
 
 ## 1. Spec — what and why
 
@@ -82,7 +82,7 @@ An alert fires on a symptom that needs an action from the owner, not on each err
 | ALR6 | Capture burns its monthly error budget (DQM7, each system's target) at a rate that would exhaust it | Capture | The standard SLO burn-rate alert |
 | ALR7 | A run nears its time or memory limit (`duration_s`, `peak_memory_mb`) | Pipeline | Warns before the timeout or a memory kill ends runs ([ADR-0027](../decisions/0027-modal-as-execution-platform.md)) |
 | ALR8 | A component sends no events to Grafana for N minutes | Both | The send is broken (D2) |
-| ALR9 | An event the observability catalog marks as actionable and no other alert covers, such as `heartbeat_failed`, `log_upload_failed` or `stage_drained` | Both | Single warnings of low urgency; `fetch_retried`, about 32 a day, is not actionable: a retry that succeeds needs no action and one that fails is a `feed_failed` |
+| ALR9 | An event the observability catalog marks as actionable and no other alert covers, such as `stage_drained` | Both | Single warnings of low urgency; an event is actionable when one occurrence needs the owner and no other signal reports it: `fetch_retried`, about 32 a day, is not, since a retry that succeeds needs no action and one that fails is a `feed_failed`; nor are `heartbeat_failed`, whose missing signal the heartbeat service reports, and `log_upload_failed`, whose events stay in Grafana and whose lasting R2 failure fails the batches too |
 | ALR10 | A provider's index lists a feed capture does not know (`unknown_feeds` of `index_refreshed`) | Capture | A change in the source for the owner to evaluate, which nothing else shows |
 | ALR11 | A pass logs a cause of a missed minute that D9's table does not list | Capture | A new cause to classify (D9) |
 | ALR12 | Grafana stops signalling the heartbeat service (watchdog) | Grafana | Every other alert runs in Grafana (D13) |
@@ -322,7 +322,7 @@ Grafana's alert rules, contact points, notification policies, synthetic check an
 
 #### Observability catalog
 
-The observability catalog of D5 is a registry of events with its schema, and a document. `contracts/log-events.registry.json` is the registry, the single source of each event of every component: its component, level, own fields, whether it needs an action from the owner, and the alerts that read it by name. `contracts/log-events.schema.json`, a JSON Schema (draft 2020-12) that the registry names in `$schema`, fixes the shape of an entry, and the registry test validates the registry against it. The registry is reference data written in the repository and read by several components, not data one component sends another, so it has no test vectors ([ADR-0050](../decisions/0050-contract-tests-by-contract-kind-with-native-schemas.md) covers the latter). `docs/observability.md`, beside `docs/data-quality.md`, holds the rest: the common fields of ADR-0036, the heartbeat checks, the alerts with their IDs, the catalog IDs they check and their urgency, and how alerts on an error budget work; it links to the registry for the events, and an alert's row does not list them. Terraform reads the registry to build each alert's event selector from the events that list it; ALR9 takes the events with `needs_action` that list no alert, and ALR14 every event the registry does not hold, so no event list is written by hand. The tests of capture and the pipeline check that every event they write is registered, and Terraform's tests that every alert ID the registry lists is an alert it declares. **#2** **#14**
+The observability catalog of D5 is a registry of events with its schema, and a document. `contracts/log-events.registry.json` is the registry, the single source of each event of every component: its component, the levels it is written at (one, or several for an event whose level follows its outcome, such as `rule_checked`), own fields, whether it needs an action from the owner, and the alerts that read it by name. `contracts/log-events.schema.json`, a JSON Schema (draft 2020-12) that the registry names in `$schema`, fixes the shape of an entry, and the registry test validates the registry against it. The registry is reference data written in the repository and read by several components, not data one component sends another, so it has no test vectors ([ADR-0050](../decisions/0050-contract-tests-by-contract-kind-with-native-schemas.md) covers the latter). `docs/observability.md`, beside `docs/data-quality.md`, holds the rest: the common fields of ADR-0036, the heartbeat checks, the alerts with their IDs, the catalog IDs they check and their urgency, and how alerts on an error budget work; it links to the registry for the events, and an alert's row does not list them. Terraform reads the registry to build each alert's event selector from the events that list it; ALR9 takes the events with `needs_action` that list no alert, and ALR14 every event the registry does not hold, so no event list is written by hand. The tests of capture and the pipeline check that every event they write is registered, and Terraform's tests that every alert ID the registry lists is an alert it declares. **#2** **#14**
 
 `docs/observability.md` opens as every catalog does ([docs › Catalogs](../../.claude/rules/docs/general.md)); its worked example follows one event from its registry entry to the alert that reads it and the notification on the owner's phone. **#15**
 
@@ -445,7 +445,7 @@ Each component sends its events over OTLP/HTTP with JSON encoding, as [ADR-0049]
 
 A send that fails or reaches its limit is written to the platform's own logs, Workers Logs or stdout as `log_upload_failed` is, and changes nothing else: the R2 log is already written and the outcome and heartbeat signal are already set (R3–R5).
 
-The copy is built from the same JSON lines written to R2, never serialized again, so each line reaches Grafana as the body of its record and the redaction each component applies before writing reaches the copy with no code of its own (R4, R6). The pipeline's copy also carries the events emitted after the upload, `log_upload_failed` and `heartbeat_failed`, which the R2 log cannot hold, so that ALR9 reads them; capture pings its heartbeat before writing its log, so its copy is the R2 log's lines.
+The copy is built from the same JSON lines written to R2, never serialized again, so each line reaches Grafana as the body of its record and the redaction each component applies before writing reaches the copy with no code of its own (R4, R6). The pipeline's copy also carries the events emitted after the upload, `log_upload_failed` and `heartbeat_failed`, which the R2 log cannot hold, so that Grafana holds every event of the run; capture pings its heartbeat before writing its log, so its copy is the R2 log's lines.
 
 ### 2.2 Decision summary
 
@@ -503,7 +503,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 ├── .github/workflows/
 │   └── ci.yml                                  (modified)  Job monitoring; the registry and its schema in the filters of capture, pipeline and monitoring
 ├── contracts/
-│   ├── log-events.registry.json                (new)       Every component's events: component, level, own fields, needs action, alerts that read it (#2, #14)
+│   ├── log-events.registry.json                (new)       Every component's events: component, levels, own fields, needs action, alerts that read it (#2, #14)
 │   ├── log-events.schema.json                  (new)       JSON Schema (draft 2020-12) of a registry entry (#2)
 │   └── capture-logs.json                       (modified)  Vectors with warn and system (#4, #5)
 ├── monitoring/                                 (new)       Grafana Cloud configuration as code (#1)
@@ -543,7 +543,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │       ├── unit/log.test.js, unit/schedule.test.js (modified) warn and toLines; the heartbeat at every fifth minute
 │       ├── integration/pass.test.js            (modified)  warn and system; the heartbeat at :05; order: log, heartbeat, copy; every logged event registered
 │       ├── integration/pass-failures.test.js   (modified)  warn and system; every logged event registered
-│       ├── registry.js                         (new)       expectRegistered: each line names a capture event of the registry, with its level
+│       ├── registry.js                         (new)       expectRegistered: each line names a capture event of the registry, at one of its levels
 │       └── contract/log-events-registry.test.js (new)      Registry valid against its schema; the registry's capture events match the log contract's vectors
 ├── pipeline/
 │   ├── modal_image.py                          (modified)  The monitoring token's Modal Secret; container memory and timeout from settings, and run_settings.json added to the image (#9)
@@ -726,12 +726,17 @@ RUN_SETTINGS: Final[RunSettings]  # parse_run_settings of the file, read once at
     "name": { "type": "string", "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$" },
     "event": {
       "type": "object",
-      "required": ["event", "component", "level", "fields", "needs_action", "alerts", "description"],
+      "required": ["event", "component", "levels", "fields", "needs_action", "alerts", "description"],
       "additionalProperties": false,
       "properties": {
         "event": { "$ref": "#/$defs/name" },
         "component": { "enum": ["capture", "pipeline"] },
-        "level": { "enum": ["info", "warn", "error"] },
+        "levels": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["info", "warn", "error"] }
+        },
         "fields": {
           "type": "array",
           "uniqueItems": true,
@@ -902,7 +907,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 
 ### Step 1 — Event registry and its schema
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s1 add the log events registry and its schema`
 - **R:** R25, R27
@@ -1077,8 +1082,8 @@ Capture's side of the event registry: the registry is valid, and it holds exactl
 - `capture/test/contract/log-events-registry.test.js` (new), read by relative path as `capture-logs.test.js` reads its vectors:
   - the registry is valid against `contracts/log-events.schema.json`, draft 2020-12;
   - each pair of `component` and `event` appears once;
-  - the registry's `capture` events and the events of the valid vectors of `contracts/capture-logs.json` are the same set, each with the same level.
-- `capture/test/registry.js` (new): `expectRegistered(lines)`, which asserts that each JSON line names a `capture` event of the registry, at the registry's level.
+  - the registry's `capture` events and the events of the valid vectors of `contracts/capture-logs.json` are the same set, each vector at one of its event's levels.
+- `capture/test/registry.js` (new): `expectRegistered(lines)`, which asserts that each JSON line names a `capture` event of the registry, at one of its registered levels.
 - `capture/test/integration/pass.test.js` and `capture/test/integration/pass-failures.test.js` (modified): each test that reads a pass's R2 log passes its lines to `expectRegistered`, so an event capture writes with no entry fails CI.
 - Tests: the contract rows of R25 and R27.
 
@@ -1441,7 +1446,7 @@ The pipeline's side of the event registry, as Step 5 is capture's.
 - `pipeline/tests/integration/test_log_events_registry_contract.py` (new):
   - the registry is valid against `contracts/log-events.schema.json` with `jsonschema`'s draft 2020-12 validator;
   - each pair of `component` and `event` appears once;
-  - the registry's `pipeline` events and the events `core/events.py` defines are the same set, each with the same level.
+  - the registry's `pipeline` events and the events `core/events.py` defines are the same set, each at one of its registered levels.
 - Tests: the contract rows of R25 and R27, the pipeline's side.
 
 #### Reads
@@ -2049,3 +2054,5 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
 | DI1 | [Prerequisites](#31-prerequisites) | The owner signs in to Grafana Cloud with GitHub, whose second factor is GitHub Mobile, in place of TOTP on Grafana's own sign-in | The account's second factor lives with the sign-in provider; GitHub's covers it | Prerequisites |
+| DI2 | [Event registry schema](#event-registry-schema), [Observability catalog](#observability-catalog) | An entry lists `levels`, every level the event is written at, in place of one `level` | `rule_checked` and `run_finished` take their level from their outcome; one level would misstate them | Step 1 |
+| DI3 | [D3](#d3-alerts-on-symptoms-that-need-action) | An event needs action when one occurrence needs the owner and no other signal reports it; `heartbeat_failed` and `log_upload_failed` do not, and leave ALR9 | Another signal covers each: the heartbeat service, Grafana's copy and `batch_failed` | Step 1 |

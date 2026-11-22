@@ -1,0 +1,239 @@
+{
+  "$schema": "./log-events.schema.json",
+  "events": [
+    {
+      "event": "feed_captured",
+      "component": "capture",
+      "levels": ["info"],
+      "fields": ["system", "feed", "status", "latency_ms", "bytes", "attempts", "recompressed"],
+      "needs_action": false,
+      "alerts": ["ALR5", "ALR6", "ALR15"],
+      "description": "A feed's response was fetched and stored in bronze."
+    },
+    {
+      "event": "feed_failed",
+      "component": "capture",
+      "levels": ["error"],
+      "fields": ["system", "feed", "status", "latency_ms", "attempts", "error_type", "error"],
+      "needs_action": false,
+      "alerts": ["ALR5", "ALR6", "ALR11", "ALR15"],
+      "description": "A feed was not stored in the pass, because the source failed or the write to R2 did."
+    },
+    {
+      "event": "fetch_retried",
+      "component": "capture",
+      "levels": ["warn"],
+      "fields": ["system", "feed", "status", "latency_ms", "headers", "body"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "A request answered with a 403 is about to be retried, with the first attempt's response."
+    },
+    {
+      "event": "heartbeat_failed",
+      "component": "capture",
+      "levels": ["warn"],
+      "fields": ["status", "latency_ms", "error_type", "error"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "The pass's ping to the heartbeat check failed."
+    },
+    {
+      "event": "heartbeat_sent",
+      "component": "capture",
+      "levels": ["info"],
+      "fields": ["status", "latency_ms"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "The pass pinged the heartbeat check."
+    },
+    {
+      "event": "index_refreshed",
+      "component": "capture",
+      "levels": ["info"],
+      "fields": ["system", "status", "latency_ms", "bytes", "attempts", "recompressed", "unknown_feeds"],
+      "needs_action": false,
+      "alerts": ["ALR10"],
+      "description": "A system's feed index was fetched, validated and stored, with the feeds it lists that capture does not know."
+    },
+    {
+      "event": "index_rejected",
+      "component": "capture",
+      "levels": ["error"],
+      "fields": ["system", "status", "latency_ms", "attempts", "error_type", "error"],
+      "needs_action": false,
+      "alerts": ["ALR11", "ALR15"],
+      "description": "A system's feed index could not be fetched, was invalid or could not be stored."
+    },
+    {
+      "event": "otlp_send_failed",
+      "component": "capture",
+      "levels": ["warn"],
+      "fields": ["error_type"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "The pass's copy of its events to Grafana failed; written to Workers Logs only."
+    },
+    {
+      "event": "batch_committed",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["batch", "rows_inserted", "objects"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "A batch's rows were committed to the lakehouse."
+    },
+    {
+      "event": "batch_failed",
+      "component": "pipeline",
+      "levels": ["error"],
+      "fields": ["batch", "reason", "error_type", "error"],
+      "needs_action": true,
+      "alerts": ["ALR1"],
+      "description": "A batch failed and the pipeline halts at it."
+    },
+    {
+      "event": "batch_started",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["batch", "objects", "first_capture", "last_capture"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "A batch of bronze objects started, with its capture range."
+    },
+    {
+      "event": "file_built",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["stations", "data_instant"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "The published file was built, with the instant of its data."
+    },
+    {
+      "event": "file_invalid",
+      "component": "pipeline",
+      "levels": ["error"],
+      "fields": ["violations"],
+      "needs_action": true,
+      "alerts": ["ALR1"],
+      "description": "The published file broke its schema and was not deployed."
+    },
+    {
+      "event": "heartbeat_failed",
+      "component": "pipeline",
+      "levels": ["warn"],
+      "fields": ["signal", "attempts", "error_type"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "A ping to the heartbeat check failed after its attempts."
+    },
+    {
+      "event": "log_upload_failed",
+      "component": "pipeline",
+      "levels": ["warn"],
+      "fields": ["error_type"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "The run's log object could not be written to R2."
+    },
+    {
+      "event": "node_finished",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["node", "status", "duration_s", "rows", "num_failures"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "One node of dbt's build finished, with its outcome."
+    },
+    {
+      "event": "objects_discovered",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["ambici", "bicing"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "Discovery listed bronze, with one field per system holding its listed and pending objects and whether it swept in full."
+    },
+    {
+      "event": "otlp_send_failed",
+      "component": "pipeline",
+      "levels": ["warn"],
+      "fields": ["error_type"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "The run's copy of its events to Grafana failed; written to stdout only."
+    },
+    {
+      "event": "page_deploy_failed",
+      "component": "pipeline",
+      "levels": ["error"],
+      "fields": ["exit_code", "output"],
+      "needs_action": true,
+      "alerts": ["ALR3"],
+      "description": "The page's deployment failed."
+    },
+    {
+      "event": "page_deployed",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["tag", "deploy_peak_memory_mb"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "The page was deployed with the new published file."
+    },
+    {
+      "event": "rule_checked",
+      "component": "pipeline",
+      "levels": ["info", "warn", "error"],
+      "fields": ["rule", "severity", "status", "failures"],
+      "needs_action": false,
+      "alerts": ["ALR2"],
+      "description": "A runtime data quality rule was checked, at the level its outcome sets."
+    },
+    {
+      "event": "run_finished",
+      "component": "pipeline",
+      "levels": ["info", "error"],
+      "fields": ["outcome", "batches", "rows_inserted", "duration_s", "peak_memory_mb", "error_type", "error"],
+      "needs_action": false,
+      "alerts": ["ALR7"],
+      "description": "The run ended, with its outcome, duration and peak memory."
+    },
+    {
+      "event": "run_started",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["end_instant", "excluded_objects"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "A run started, with the end instant of its stage."
+    },
+    {
+      "event": "schema_drift_field",
+      "component": "pipeline",
+      "levels": ["warn"],
+      "fields": ["system", "field", "change"],
+      "needs_action": true,
+      "alerts": ["ALR2"],
+      "description": "A field was added to or dropped from a system's feed."
+    },
+    {
+      "event": "stage_drained",
+      "component": "pipeline",
+      "levels": ["warn"],
+      "fields": ["end_instant"],
+      "needs_action": true,
+      "alerts": [],
+      "description": "No object is left in bronze before the stage's end instant."
+    },
+    {
+      "event": "volume_not_evaluated",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["system", "captured_at", "captures_in_window"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "The volume drop rule was not evaluated for a capture, for lack of captures in its window."
+    }
+  ]
+}

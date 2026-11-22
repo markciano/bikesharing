@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "log-events.schema.json",
+  "title": "Log events registry",
+  "type": "object",
+  "required": ["$schema", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "const": "./log-events.schema.json" },
+    "events": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/event" } }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$" },
+    "event": {
+      "type": "object",
+      "required": ["event", "component", "levels", "fields", "needs_action", "alerts", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "event": { "$ref": "#/$defs/name" },
+        "component": { "enum": ["capture", "pipeline"] },
+        "levels": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["info", "warn", "error"] }
+        },
+        "fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/name",
+            "not": { "enum": ["ts", "level", "component", "version", "run_id", "event"] }
+          }
+        },
+        "needs_action": { "type": "boolean" },
+        "alerts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^ALR[1-9][0-9]*$" }
+        },
+        "description": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
