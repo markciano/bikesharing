@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 12.
+- Current: Step 13.
 
 ## 1. Spec — what and why
 
@@ -1327,7 +1327,7 @@ The pure function that turns a run's lines into the OTLP request, the same mappi
 
 ### Step 12 — Pipeline: OTLP exporter
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s12 send the pipeline's OTLP request`
 - **R:** R5
