@@ -515,7 +515,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   ├── locals.tf                               (new)       Reads the event registry and the pipeline's run settings; derives the thresholds (#8, #9)
 │   ├── alert_rules.tf                          (new)       ALR rules, ALR12's watchdog rule included
 │   ├── contact_points.tf                       (new)       IRM and the watchdog's webhook
-│   ├── irm.tf                                  (new)       IRM integration, the pages' route and the two escalation chains (#16)
+│   ├── irm.tf                                  (new)       IRM integration with its message templates, the pages' route and the two escalation chains (#16, DI7)
 │   ├── notification_policies.tf                (new)       Grouping by alert ID and system, repeat intervals, the pages' active time interval, the watchdog's policy
 │   ├── message_template.tf                     (new)       The notification template resource (#11)
 │   ├── templates/notification.tmpl             (new)       The notification layout (#11)
@@ -1977,7 +1977,7 @@ Grafana's alerts, contact points, synthetic check and the watchdog are live.
 
 ### Step 31 — Demonstrations
 
-- **Status:** 💤 todo
+- **Status:** ⛔ blocked
 - **Who:** Owner
 - **Commit:** —
 - **R:** R10, R23, R24, R34, R35, R36, R40
@@ -2069,6 +2069,7 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 | DI4 | [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) | A scheduled run whose `OTLP_ENDPOINT` or `OTLP_TOKEN` is missing or empty starts and sends no copy, in place of refusing to start | The copy never affects a run (D2); ALR8 reports a component with no events in Grafana | Step 13 |
 | DI5 | [Thresholds](#thresholds), [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) | The pipeline's send time limit (R5) bounds each socket operation, as the heartbeat's pings do, not the send as a whole | A server answering a byte at a time is not a case worth a thread and a deadline; the outcome and the heartbeat are already set when it happens | Step 13 |
 | DI6 | [Notification routing](#notification-routing) | The IRM user a page's chain notifies is named by a variable without default, `irm_owner_username`, set in `.env` and read by `irm.tf` | IRM's notify step takes a user, and the owner's username stays out of the repository, as the page's base URL does | Step 20 |
+| DI7 | [Notification routing](#notification-routing), [File layout](#24-file-layout) | The IRM integration declares its web and mobile app message templates as `{{ payload.message }}` in `irm.tf`, so IRM shows the layout of `project.message`, in place of its own layout built from labels and annotations | IRM's default template ignores the payload's `message`, so the alert's ID, checks and links (R23, R24) did not reach the owner; Terraform keeps it as code ([ADR-0051](../decisions/0051-monitoring-configuration-as-code.md)) | Step 31 |
 | DI7 | [Thresholds](#thresholds) | ALR5 fires on a dynamic feed seen in the last 24 h that has no `feed_captured` in the last 11 minutes, the threshold plus one minute, whatever the cause, in place of counting failure events | LogQL cannot count minutes in a row; a window with no clean capture covers a pass with no event too, which "any cause" includes, and a failure count missed it | Step 22 |
 | DI8 | [Error budget alerts](#error-budget-alerts) | ALR15 and ALR5 take the dynamic feeds from a list in `locals.tf`, `free_bike_status` and `station_status`, in place of detecting them from the counts | A static feed, fetched once a day, would show nearly all its passes with no event; the dynamic feeds are known from d004 D3 | Step 22 |
 | DI9 | [Error budget alerts](#error-budget-alerts), [Error budget alert module](#error-budget-alert-module) | ALR6 counts as captured the minutes with a `feed_captured` of `station_status`, the feed that holds the station stock, taken from a list in `locals.tf` and given to the module as `stock_feed`; the module also takes `capture_silent_s`, ALR8's threshold, for the guard of R42 | DQM7 counts the minutes with a capture in the station stock, and a count over any feed would miss a stock outage while another feed captures; the module cannot read the root's locals | Step 23 |
