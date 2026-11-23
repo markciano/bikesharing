@@ -420,6 +420,8 @@ Every alert but ALR12 goes to one contact point of type IRM, on an IRM integrati
 
 The notification policy for pages has an active time interval from 08:00 to 23:00, `Europe/Madrid`, every day, following Alertmanager's active time intervals: outside it, Grafana holds the notification and sends it when the interval opens, if the alert still fires. Tickets and ALR12 have none. IRM's integration, route and chains are declared in Terraform with the provider's service account token (ADR-0051); the owner's personal rules for important notifications, and their override of Do Not Disturb, are set in the app, since Terraform would need one more token for them. **#16**
 
+The integration's web and mobile app message templates are `{{ payload.message }}`, so IRM shows the layout of `project.message` (the alert's ID, checks and links), in place of its own layout built from the alert's labels and annotations. **DI7**
+
 #### Watchdog
 
 ALR12 is an alert rule whose condition always holds, with a notification policy of its own that sends it every 5 min, its `repeat_interval`, to a webhook contact point on the watchdog's check in Healthchecks.io, never through IRM (D13). That policy is the first in the tree and matches `alert_id = "ALR12"` with no `continue`, so the policy for pages never routes ALR12 to IRM, although it carries `urgency = "page"` as D11 sets. The check's URL enters Terraform as a sensitive variable from `.env` (R37).
