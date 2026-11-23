@@ -18,9 +18,9 @@ Kind: a build task builds code or configuration and has every block. A document-
 Phase: the blocks and reviews completed. A document-only task shows only Spec · Plan · Plan review.
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
-- State: In progress 🔄
+- State: Complete ✅
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 29, run by the owner: deployed on 2026-11-20, the three stages, the independent validation of the station stock (DI14), Do 3, Do 6 and Do 7 are in Close › Implemented, and the first load is drained with `END_INSTANT` removed. Still to do: Do 4 and Do 5, over the 48 h of scheduled runs that end at 03:00 UTC on 2026-11-23 (DI15), recorded from a branch recreated from `main`. For Do 4, a scheduled run's 43 s split into discovery 10.6 s, the batch 13.7 s, the gold file 6.9 s and the page's deployment 11.5 s (run `01a1fc27-7d5a-73ef-ab6d-d3db58030700`), and whether discovery grows with `processed_objects` is still open. Do 5 subtracts the validation's requests to bronze, listed in its gitignored `out/requests.log`, from R2's metrics, and the owner revokes the validation's read-only token when it ends. The task's issue is #63: its PRs carry `Refs #63`, and the closing one `Closes #63`.
+- Current: —
 
 ## 1. Spec — what and why
 
@@ -2433,7 +2433,7 @@ D6's reference batch: a one-off run, from the task's branch, of one full batch o
 
 ### Step 29 — Production rollout
 
-- **Status:** 🔄 in progress
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** one per stage, `feat: d008.s29 move the end instant to <stage>`, and the closing one, `docs: d008.s29 record the production checks`
 - **R:** R9, R17
@@ -2539,6 +2539,9 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
   - **Daily pattern:** the three phases that reach R2 rise and fall together hour by hour, up to twice as slow from 16:00 to 23:00 local time, with no drop at local midnight. This points at a factor common to the run, such as I/O to R2, rather than at the day's partition alone.
   - **Margin:** the slowest run took 341 s, against ALR7's 480 s and the 600 s timeout ([d009 › Thresholds](d009-monitoring.md#thresholds)).
   - **R2 reads:** over the window, from Cloudflare's GraphQL Analytics API, 1,263,034 GetObject on `bikesharing-lakehouse`, about 6,600 per run and 19 M a month, above R2's free tier of 10 M Class B; and 161,760 on `bikesharing-bronze`, about 840 per run, more than the pending objects a run downloads explain.
+- TODO(T077): compare R2's operations and storage with s010's cost model, recalibrate it and set Cloudflare's R2 alerts once the reads are fixed (DI16) — T077
+  - **Measure so far:** the window's operations and storage per bucket, in [`spikes/t077-run-time-and-r2-reads/`](../../spikes/t077-run-time-and-r2-reads/).
+  - **Operation classes:** unconfirmed. The query groups conditional PutObject with PutObject and reports ListObjectsV2 as ListObjects, and no DeleteObjects ran in the window.
 
 ### 4.3 Decisions taken during implementation
 
@@ -2564,5 +2567,8 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 | DI11 | [Component structure](#component-structure), [Tests and CI](#tests-and-ci), [Step 25](#step-25--modal-app) | ADR-0046's rule 4 is a test of `modal_app.py`'s imports from its syntax tree, in `test_platform_separation.py`, not an import-linter contract | Import-linter takes only packages as root packages and `modal_app.py` is a single module; the test checks the same direct imports and fails the PR like a contract | Step 25 |
 | DI12 | [Environments and configuration](#environments-and-configuration), [`modal_app`](#modal_app), [Component structure](#component-structure), [Tests and CI](#tests-and-ci), [Step 25](#step-25--modal-app) | The one-off function moves to its own Modal app in `modal_one_off.py`, the image and the Secrets' references to `modal_image.py`, and `modal_app.py` keeps the scheduled function only; R26 and R27 become a test of the one-off module's names | `modal run` creates every function of its app: `scheduled_run`, with production's credentials, ran during Step 28's one-off run and only the empty code version stopped it; least privilege per app makes R26 and R27 hold whatever the owner's shell holds; also, the image's `uv sync` takes `--default-index https://pypi.org/simple`, since Modal's builder mirror makes `--locked` fail on the lockfile's index, and installs `libatomic1`, which Node's binary links | Step 28 |
 | DI13 | [3.1 Prerequisites](#31-prerequisites) › P8 | The pipeline's Cloudflare token is created from the "Edit Cloudflare Workers" template, not with the `Workers: Edit` permission alone | The page's deployment uploads assets: with `Workers: Edit` alone `wrangler` and the same API call failed on `assets-upload-session` with "No access to the specified resource", and the template's token deployed the page | Step 29 |
-| DI14 | [Done when](#14-done-when), [Step 29](#step-29--production-rollout) | The station stock is also checked against bronze by `spikes/d008-s29-validation/`, a read-only script the owner runs through and after the drain with its own R2 token, read-only on `bikesharing-lakehouse` and with an expiry, held in `.env` as `LAKEHOUSE_READ_R2_*` and revoked when the validation ends | Source-to-target testing: DQR13 counts rows and the dbt tests check structure, so only a re-derivation of the values from bronze finds a wrong one; least privilege, apart from the pipeline's read-write pair, which stays a Modal Secret | Step 29 |
+| DI14 | [Done when](#14-done-when), [Step 29](#step-29--production-rollout) | The station stock is also checked against bronze by `spikes/d008-s29-validation/`, a read-only script the owner runs through and after the drain with its own R2 token, read-only on `bikesharing-lakehouse` and with an expiry, held in `.env` as `LAKEHOUSE_READ_R2_*` and revoked when the validation ends **→ DI17** | Source-to-target testing: DQR13 counts rows and the dbt tests check structure, so only a re-derivation of the values from bronze finds a wrong one; least privilege, apart from the pipeline's read-write pair, which stays a Modal Secret | Step 29 |
 | DI15 | [Cost recalibration](#cost-recalibration) › Window, [Done when](#14-done-when) | The cost recalibration measures 48 h of scheduled runs instead of 14 days | Steady-state measurement over a representative sample: the runs follow a fixed 15-minute cadence over a capture of fixed cadence, so R2's operations do not depend on the day of the week; 192 runs keep sampling noise out of the totals, and Cloudflare's alerts catch a deviation later | Step 29 |
+| DI16 | [Cost recalibration](#cost-recalibration), [Done when](#14-done-when), [Step 29](#step-29--production-rollout) › Do 5 | Do 5 is suspended: R2's operations and storage over the window are measured, and the comparison with the cost model, its recalibration and Cloudflare's R2 alerts wait for T077's fix | The lakehouse's reads, about 19 M Class B a month, come from a behaviour T077 is to fix, so a model recalibrated on them would be stale once it is fixed | Step 29 |
+| DI17 | [Step 29](#step-29--production-rollout) | The validation's read-only R2 token is kept after the validation, until its expiry, instead of being revoked **refines DI14** | T077 reads the runs' log objects with it; its expiry bounds the exposure | Step 29 |
+| DI18 | [Step 29](#step-29--production-rollout) | The task closes after Step 29, with no final review session | The steps' review points reviewed the code as it was built, and the pipeline has run in production since 2026-11-20 with every check of Done when but DI16's held | Step 29 |
