@@ -185,7 +185,7 @@
       "event": "rule_checked",
       "component": "pipeline",
       "levels": ["info", "warn", "error"],
-      "fields": ["rule", "severity", "status", "failures"],
+      "fields": ["rule", "rule_severity", "status", "failures"],
       "needs_action": false,
       "alerts": ["ALR2"],
       "description": "A runtime data quality rule was checked, at the level its outcome sets."

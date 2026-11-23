@@ -253,7 +253,9 @@ def rule_checked(
     rule : str
         The rule's DQR ID.
     severity : {"error", "warn"}
-        The rule's configured severity.
+        The rule's configured severity, written as ``rule_severity``: Loki
+        reads a ``severity`` attribute as the log level, which this field is
+        not (d009 DI10, Field mapping).
     status : {"pass", "warn", "fail", "error"}
         The check's outcome.
     failures : int
@@ -269,7 +271,12 @@ def rule_checked(
         ts,
         _RULE_LEVELS[status],
         "rule_checked",
-        {"rule": rule, "severity": severity, "status": status, "failures": failures},
+        {
+            "rule": rule,
+            "rule_severity": severity,
+            "status": status,
+            "failures": failures,
+        },
     )
 
 

@@ -14,7 +14,7 @@ The catalog has two parts. [`contracts/log-events.registry.json`](../contracts/l
 
 The pipeline checks the runtime rule DQR12 on a capture of Bicing and finds that it lists fewer stations than 95% of the 7-day median. The run follows this path:
 
-1. The run writes the event `rule_checked` with `rule` `DQR12`, `severity` `warn` and `status` `fail`, at level `warn`. It goes to R2 and, as a copy, to Grafana.
+1. The run writes the event `rule_checked` with `rule` `DQR12`, `rule_severity` `warn` and `status` `fail`, at level `warn`. It goes to R2 and, as a copy, to Grafana.
 2. The registry entry of `rule_checked` (component `pipeline`) lists `ALR2` in `alerts`, so ALR2 reads it. ALR2 is a ticket: a rule of severity warn blocks nothing.
 3. Grafana raises ALR2 with the rule's ID, `DQR12`, taken from the event, groups it by alert and system, and sends it to IRM as a ticket.
 4. The ticket enters the list of alerts of the Grafana mobile app with no notification, until the owner closes it. It reads:
@@ -60,6 +60,10 @@ Every component writes `warn` for a failure that does not affect the data and `s
 Logs are append-only, so capture's logs in R2 written before the change keep `warning` and `source`. A query over both periods accepts `warn` or `warning` and `system` or `source`.
 
 - TODO(T060.2): record here the version of capture and the date from which it writes `warn` and `system`, after its deployment (Step 32).
+
+The pipeline's `rule_checked` writes the rule's configured severity as `rule_severity`, since Loki reads an attribute named `severity` as the log level ([d009 › DI10](designs/d009-monitoring.md#43-decisions-taken-during-implementation)). Its logs written before the change keep `severity`, and a query over both periods accepts `rule_severity` or `severity`.
+
+- TODO(T060.2): record here the version of the pipeline and the date from which it writes `rule_severity`, after its deployment.
 
 ## Heartbeat checks
 

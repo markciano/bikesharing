@@ -218,7 +218,9 @@ def test_two_batches_commit_in_one_process_and_log_each_rule(
     assert _processed(delta_path) == set(AMBICI + BICING)
     assert _stock_rows(delta_path) == _processed_stations(delta_path) > 0
     assert [e["objects"] for e in _named(events, "batch_committed")] == [4, 3]
-    assert {(e["rule"], e["severity"]) for e in _named(events, "rule_checked")} == {
+    assert {
+        (e["rule"], e["rule_severity"]) for e in _named(events, "rule_checked")
+    } == {
         ("DQR1", "error"),
         ("DQR2", "error"),
         ("DQR11", "warn"),
