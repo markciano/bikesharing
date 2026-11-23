@@ -720,6 +720,23 @@ def test_the_scheduled_config_writes_to_r2_publishes_and_pings() -> None:
     assert set(env.values()) - {VERSION, env["OTLP_ENDPOINT"]} <= config.secrets
 
 
+# Verifies d009 R3
+@pytest.mark.parametrize(
+    "missing", [["OTLP_TOKEN"], ["OTLP_ENDPOINT"], ["OTLP_ENDPOINT", "OTLP_TOKEN"]]
+)
+def test_the_scheduled_config_without_its_otlp_variables_runs_with_no_copy(
+    missing: list[str],
+) -> None:
+    env = _environment()
+    for name in missing:
+        env[name] = ""
+
+    config = scheduled_config(env, root=REPO, container_memory_mib=4096)
+
+    assert config.otlp is None
+    assert "" not in config.secrets
+
+
 # Verifies d008 R26
 def test_the_one_off_config_holds_only_bronze_and_writes_locally() -> None:
     env = {
