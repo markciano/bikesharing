@@ -25,7 +25,7 @@ locals {
   registry     = jsondecode(file("${path.module}/../../../contracts/log-events.registry.json"))
   events_regex = join("|", sort(distinct([for e in local.registry.events : e.event if contains(e.alerts, "ALR6")])))
   passes       = "{service_name=\"capture\"} | event=~\"${local.events_regex}\" | system=\"${var.system}\""
-  clean        = "{service_name=\"capture\", detected_level=\"info\"} | event=~\"${local.events_regex}\" | system=\"${var.system}\" | feed=\"${var.stock_feed}\""
+  clean        = "{service_name=\"capture\"} | detected_level=\"info\" | event=~\"${local.events_regex}\" | system=\"${var.system}\" | feed=\"${var.stock_feed}\""
 
   budget = 1 - var.target
 
