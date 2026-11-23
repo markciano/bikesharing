@@ -12,6 +12,7 @@ variables {
   loki_datasource_uid       = "loki-uid"
   prometheus_datasource_uid = "prometheus-uid"
   usage_datasource_uid      = "usage-uid"
+  page_base_url             = "https://page.example.invalid"
 }
 
 # Verifies d009 R37

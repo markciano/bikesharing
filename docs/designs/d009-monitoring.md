@@ -1552,7 +1552,7 @@ The `monitoring/` component's stack, as `.claude/rules/code/dependencies.md` set
 The provider configured from variables, secrets only from `.env`, and the check that CI runs.
 
 - `monitoring/providers.tf` (new): the provider's `url`, `auth`, `sm_url` and `sm_access_token` from variables.
-- `monitoring/variables.tf` (new): the variables of the File layout; the tokens and the watchdog's URL `sensitive` with no default (R37); the data source UIDs with no default, set from `.env`; the systems' DQM7 targets, the page's base URL as its deployment in `web/` serves it, the published files, the three probes and the GitHub base URL with their defaults.
+- `monitoring/variables.tf` (new): the variables of the File layout; the tokens and the watchdog's URL `sensitive` with no default (R37); the data source UIDs with no default, set from `.env`; the systems' DQM7 targets, the published files, the three probes and the GitHub base URL with their defaults; the page's base URL as its deployment in `web/` serves it has no default and comes from `.env`, so that the owner's `workers.dev` account name stays out of the repository.
 - `.env.example` (modified): each secret and data source UID as an empty `TF_VAR_<name>`.
 - `monitoring/scripts/check-monitoring.sh` (new): `terraform fmt -check -recursive`, `init -backend=false -lockfile=readonly`, `validate` and `test`, as CI runs them.
 - `monitoring/tests/alerting.tftest.hcl` (new): `mock_provider "grafana"` and `command = plan`; the first run block asserts with `issensitive` that the watchdog's URL variable is sensitive (R37). That it has no default cannot be asserted by `terraform test`, since a missing variable fails the plan, and is inspected instead.
