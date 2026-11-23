@@ -1,6 +1,6 @@
 -- Each capture of the batch against the median number of stations of its
--- system's captures in the 24 h before it (d008 D4, Volume drop against a
--- rolling median).
+-- system's captures in the 7 days before it (d009 D6, Volume drop at 95% of a
+-- 7-day median).
 with
 
 ambici as (
@@ -71,13 +71,15 @@ windowed as (
     -- load in chronological stages).
     select
         captures.*,
-        count(*) over trailing_day as captures_in_window,
-        median(captures.station_count) over trailing_day as median_station_count
+        count(*) over trailing_week as captures_in_window,
+        median(captures.station_count)
+            over trailing_week
+            as median_station_count
     from captures
-    window trailing_day as (
+    window trailing_week as (
         partition by captures.system
         order by captures.captured_at
-        range between interval '24 hours' preceding and current row
+        range between interval '7 days' preceding and current row
         exclude current row
     )
 
@@ -91,12 +93,12 @@ final as (
         station_count,
         captures_in_window::integer as captures_in_window,
         median_station_count::double as median_station_count,
-        -- The threshold, window and minimum baseline are provisional, to be
-        -- reviewed against production runs (d008 D4, Volume drop against a
-        -- rolling median).
+        -- The 95% threshold over 7 days follows the production captures, where
+        -- a 24 h median absorbed a sustained drop (d009 D6, Volume drop at 95%
+        -- of a 7-day median).
         case
             when captures_in_window < 60 then 'not_evaluated'
-            when station_count < 0.9 * median_station_count then 'drop'
+            when station_count < 0.95 * median_station_count then 'drop'
             else 'ok'
         end as status
     from windowed
