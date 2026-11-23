@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 29.
+- Current: Step 30.
 
 ## 1. Spec — what and why
 
@@ -1922,7 +1922,7 @@ Capture sends its events to Grafana, and its heartbeat check follows the new cad
 
 ### Step 29 — Deploy the pipeline
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **R:** —
