@@ -479,3 +479,235 @@ run "every_event_rule_fires_on_one_event" {
     error_message = "Every event rule must fire at once on a count above 0, with no data as OK."
   }
 }
+
+# The threshold rules are looked up by name; one() fails the run if a rule is missing
+# or declared twice. A rule with a guard has four steps: the query (A), its threshold
+# (B), the guard's query (C) and the math that holds B only while C has data (D).
+
+# Verifies d009 R11
+run "alr5_selects_the_dynamic_feeds_seen_that_have_no_clean_capture_in_the_window_and_is_a_page" {
+  command = plan
+
+  # The window is one minute more than the threshold, so over 10 minutes in a row with
+  # no clean capture of a feed fires, whatever the cause: a failure or a pass with no
+  # event. Only a dynamic feed seen in the last 24 h is watched.
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR5"]).data[0].model).expr ==
+      "sum by (system, feed, service_name, service_version) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | feed=~\"free_bike_status|station_status\" [24h])) unless on (system, feed) sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"info\"} | event=~\"feed_captured|feed_failed\" | feed=~\"free_bike_status|station_status\" [11m]))"
+    )
+    error_message = "ALR5 must select the dynamic feeds seen in the last 24 h that have no clean capture in the last 11 minutes."
+  }
+
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR5"]).data[1].model).conditions[0].evaluator.type == "gt" &&
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR5"]).data[1].model).conditions[0].evaluator.params[0] == 0 &&
+      local.alr5_minutes_in_a_row + 1 == 11
+    )
+    error_message = "ALR5 must fire on any feed left by the query, whose window is the threshold plus one minute."
+  }
+
+  assert {
+    condition     = local.capture_dynamic_feeds == ["free_bike_status", "station_status"]
+    error_message = "The dynamic feeds must be those capture fetches every minute."
+  }
+
+  assert {
+    condition     = one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR5"]).labels.urgency == "page"
+    error_message = "ALR5 must be a page."
+  }
+}
+
+# Verifies d009 R42
+run "alr5_holds_only_while_capture_has_events_within_alr8s_threshold" {
+  command = plan
+
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR5"]).data[2].model).expr ==
+      "sum(count_over_time({service_name=\"capture\"} [${local.alr8_capture_silent_s}s]))" &&
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR5"]).data[3].model).type == "math" &&
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR5"]).data[3].model).expression == "$B && $C" &&
+      one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR5"]).condition == "D"
+    )
+    error_message = "ALR5 must fire only when its threshold holds and capture has events in ALR8's window."
+  }
+}
+
+# Verifies d009 R14
+run "alr7_alerts_on_the_run_duration_and_the_peak_memory_as_tickets" {
+  command = plan
+
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR7 duration"]).data[0].model).expr ==
+      "max by (service_name, service_version) (max_over_time({service_name=\"pipeline\"} | event=~\"run_finished\" | unwrap duration_s | __error__=\"\" [${local.run_settings.cadence_min}m]))" &&
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR7 duration"]).data[1].model).conditions[0].evaluator.params[0] == local.alr7_duration_s
+    )
+    error_message = "ALR7 must alert when a run's duration passes its threshold."
+  }
+
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR7 memory"]).data[0].model).expr ==
+      "max by (service_name, service_version) (max_over_time({service_name=\"pipeline\"} | event=~\"run_finished\" | unwrap peak_memory_mb | __error__=\"\" [${local.run_settings.cadence_min}m]))" &&
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR7 memory"]).data[1].model).conditions[0].evaluator.params[0] == local.alr7_memory_mb
+    )
+    error_message = "ALR7 must alert when a run's peak memory passes its threshold."
+  }
+
+  assert {
+    condition = alltrue([
+      for r in grafana_rule_group.thresholds.rule :
+      r.labels.urgency == "ticket"
+      if r.labels.alert_id == "ALR7"
+    ])
+    error_message = "ALR7 must be a ticket."
+  }
+}
+
+# Verifies d009 R15
+run "alr8_alerts_per_component_when_it_has_no_event_within_its_threshold_as_a_ticket" {
+  command = plan
+
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR8 capture"]).data[0].model).expr ==
+      "absent_over_time({service_name=\"capture\"} [${local.alr8_capture_silent_s}s])" &&
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR8 pipeline"]).data[0].model).expr ==
+      "absent_over_time({service_name=\"pipeline\"} [${local.alr8_pipeline_silent_s}s])"
+    )
+    error_message = "ALR8 must watch each component's events over its own threshold."
+  }
+
+  assert {
+    condition = alltrue([
+      for r in grafana_rule_group.thresholds.rule :
+      r.labels.urgency == "ticket" && r.labels.component == "{{ $labels.service_name }}"
+      if r.labels.alert_id == "ALR8"
+    ])
+    error_message = "ALR8 must be a ticket that names the silent component."
+  }
+}
+
+# Verifies d009 R21
+run "alr13_alerts_on_the_free_tiers_logs_and_check_executions_as_tickets" {
+  command = plan
+
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR13 logs"]).data[0].model).expr == "max(grafanacloud_org_logs_usage)" &&
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR13 logs"]).data[1].model).conditions[0].evaluator.params[0] == local.alr13_logs_gb &&
+      one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR13 logs"]).data[0].datasource_uid == var.usage_datasource_uid
+    )
+    error_message = "ALR13 must read the logs' use of the month from the usage data source against its threshold."
+  }
+
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR13 checks"]).data[0].model).expr == "max(grafanacloud_org_sm_billable_check_executions)" &&
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR13 checks"]).data[1].model).conditions[0].evaluator.params[0] == local.alr13_synthetic_executions &&
+      one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR13 checks"]).data[0].datasource_uid == var.usage_datasource_uid
+    )
+    error_message = "ALR13 must read the check executions of the month from the usage data source against its threshold."
+  }
+
+  assert {
+    condition = alltrue([
+      for r in grafana_rule_group.thresholds.rule :
+      r.labels.urgency == "ticket"
+      if r.labels.alert_id == "ALR13"
+    ])
+    error_message = "ALR13 must be a ticket."
+  }
+}
+
+# Verifies d009 R39
+run "alr15_adds_the_passes_with_no_event_to_the_failures_given_to_capture_over_seven_days" {
+  command = plan
+
+  # The passes are the largest count of a system's feeds; the passes with no event are
+  # counted for the dynamic feeds only, since a static feed is fetched less often.
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR15"]).data[0].model).expr ==
+      "((max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" [7d]))) - on (system) group_right () (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" | feed=~\"free_bike_status|station_status\" [7d])))) + on (system, feed) (sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"error\"} | event=~\"feed_captured|feed_failed|index_rejected\" | error_type!~\"http|timeout\" [7d])))) or (max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" [7d]))) - on (system) group_right () (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" | feed=~\"free_bike_status|station_status\" [7d]))))"
+    )
+    error_message = "ALR15 must add a feed's failures the provider is not given to its passes with no event."
+  }
+
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR15"]).data[1].model).conditions[0].evaluator.params[0] == local.alr15_minutes_given_to_capture &&
+      one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR15"]).labels.urgency == "ticket"
+    )
+    error_message = "ALR15 must be a ticket that fires over the minutes given to capture of 7 days."
+  }
+}
+
+# Verifies d009 R19
+run "alr12_always_holds_and_a_missing_condition_still_fires" {
+  command = plan
+
+  assert {
+    condition = (
+      jsondecode(one(grafana_rule_group.watchdog.rule).data[0].model).type == "math" &&
+      jsondecode(one(grafana_rule_group.watchdog.rule).data[0].model).expression == "1" &&
+      jsondecode(one(grafana_rule_group.watchdog.rule).data[1].model).conditions[0].evaluator.type == "gt" &&
+      jsondecode(one(grafana_rule_group.watchdog.rule).data[1].model).conditions[0].evaluator.params[0] == 0 &&
+      one(grafana_rule_group.watchdog.rule).condition == "B"
+    )
+    error_message = "ALR12's condition must always hold."
+  }
+
+  assert {
+    condition = (
+      one(grafana_rule_group.watchdog.rule).labels.alert_id == "ALR12" &&
+      one(grafana_rule_group.watchdog.rule).labels.urgency == "page" &&
+      one(grafana_rule_group.watchdog.rule).no_data_state == "Alerting" &&
+      one(grafana_rule_group.watchdog.rule).for == "0s"
+    )
+    error_message = "ALR12 must be a page that fires at once, even with no data."
+  }
+}
+
+# Verifies d009 R41
+run "every_threshold_rule_that_splits_by_system_groups_by_it_and_none_names_one" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      for r in grafana_rule_group.thresholds.rule :
+      length(regexall("by \\(system[,)]", jsondecode(r.data[0].model).expr)) > 0
+      if contains(["ALR5", "ALR15"], r.labels.alert_id)
+    ])
+    error_message = "ALR5 and ALR15 must group by system."
+  }
+
+  assert {
+    condition = alltrue([
+      for r in concat(grafana_rule_group.thresholds.rule, grafana_rule_group.watchdog.rule) :
+      length(regexall("(?i)ambici|bicing", join("", [for d in r.data : d.model]))) == 0
+    ])
+    error_message = "No threshold rule may name a system."
+  }
+}
+
+# Verifies d009 R23
+run "every_threshold_rule_carries_its_id_urgency_and_a_summary" {
+  command = plan
+
+  assert {
+    condition     = toset([for r in grafana_rule_group.thresholds.rule : r.labels.alert_id]) == toset(["ALR5", "ALR7", "ALR8", "ALR13", "ALR15"])
+    error_message = "The threshold rules must be ALR5, ALR7, ALR8, ALR13 and ALR15."
+  }
+
+  assert {
+    condition = alltrue([
+      for r in grafana_rule_group.thresholds.rule :
+      startswith(r.name, r.labels.alert_id) && contains(["page", "ticket"], r.labels.urgency) && length(r.annotations.summary) > 0
+    ])
+    error_message = "Every threshold rule must carry its ID, an urgency and a summary."
+  }
+}

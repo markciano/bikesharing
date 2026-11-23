@@ -37,6 +37,17 @@ locals {
   # normal operation (d009, Thresholds).
   alr5_minutes_in_a_row = 10
 
+  # ALR5 watches a feed seen in the last 24 h, so a feed that exists but sends no event
+  # is still watched through a day of silence; a longer silence is ALR8's and the
+  # heartbeat's.
+  alr5_feed_seen_window = "24h"
+
+  # The feeds capture fetches in every pass (d004 D3, Feed cadence): station_status
+  # of each source and free_bike_status of AMBici. A static feed is fetched once a day,
+  # so the alerts that count a feed's minutes leave it out. It duplicates capture's
+  # source table, so a new dynamic feed is added here too.
+  capture_dynamic_feeds = ["free_bike_status", "station_status"]
+
   # The watchdog policy's repeat_interval: the signal must reach Healthchecks.io well
   # inside its period of 5 min and grace of 10 min.
   alr12_repeat_interval = "5m"
@@ -49,6 +60,10 @@ locals {
   # The 7-day share of DQM11's target of 30 minutes a month given to capture per feed
   # (d009 D10, A target on capture's own missed minutes only).
   alr15_minutes_given_to_capture = 7
+
+  # Grafana keeps 14 days of events and cannot add up a calendar month, so ALR15 follows
+  # a rolling window of the 7 days the threshold above is shared for.
+  alr15_window = "7d"
 
   # Event selectors, built from the registry.
 
