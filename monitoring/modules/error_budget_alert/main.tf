@@ -29,12 +29,14 @@ locals {
   budget = 1 - var.target
 
   # The error rate over a window: one minus the minutes with a clean capture over the
-  # passes that reached Grafana.
+  # passes that reached Grafana. A window with passes and no clean capture has no series
+  # for the clean side, so the `or` gives it 0 (a series of the passes' labels times 0):
+  # the error rate is then 1, not an empty result that never fires, which would silence
+  # the alert in a total outage of a system's captures.
   error_rate = {
-    for k, v in local.levels : k => {
-      long  = "1 - max by (system) (sum by (system, feed) (count_over_time(${local.clean} [${v.long}]))) / max by (system) (sum by (system, feed) (count_over_time(${local.passes} [${v.long}])))"
-      short = "1 - max by (system) (sum by (system, feed) (count_over_time(${local.clean} [${v.short}]))) / max by (system) (sum by (system, feed) (count_over_time(${local.passes} [${v.short}])))"
-    }
+    for window in distinct(flatten([for v in local.levels : [v.long, v.short]])) : window => (
+      "1 - (max by (system) (sum by (system, feed) (count_over_time(${local.clean} [${window}]))) or (0 * max by (system) (sum by (system, feed) (count_over_time(${local.passes} [${window}]))))) / max by (system) (sum by (system, feed) (count_over_time(${local.passes} [${window}])))"
+    )
   }
 
   guard = "sum(count_over_time({service_name=\"capture\"} [${var.capture_silent_s}s]))"
@@ -86,7 +88,7 @@ resource "grafana_rule_group" "this" {
           refId     = "A"
           queryType = "instant"
           instant   = true
-          expr      = local.error_rate[rule.key].long
+          expr      = local.error_rate[rule.value.long]
         })
       }
 
@@ -103,7 +105,7 @@ resource "grafana_rule_group" "this" {
           refId     = "B"
           queryType = "instant"
           instant   = true
-          expr      = local.error_rate[rule.key].short
+          expr      = local.error_rate[rule.value.short]
         })
       }
 
