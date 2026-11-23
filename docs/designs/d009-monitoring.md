@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 28.
+- Current: Step 29.
 
 ## 1. Spec — what and why
 
@@ -1893,7 +1893,7 @@ The build reaches `main`; the task stays open until the checks of Step 32.
 
 ### Step 28 — Deploy capture
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **R:** R43
