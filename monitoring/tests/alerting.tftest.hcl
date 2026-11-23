@@ -796,9 +796,20 @@ run "alr6_computes_the_error_rate_from_the_clean_captures_over_the_passes_that_r
   assert {
     condition = (
       jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_1h")]).data[0].model).expr ==
-      "1 - max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"info\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h]))) / max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h])))"
+      "1 - (max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"info\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h]))) or (0 * max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h]))))) / max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h])))"
     )
     error_message = "The error rate must be one minus the clean captures over the passes in the window."
+  }
+
+  # A system with passes and no clean capture has no numerator series; the `or` gives it
+  # 0, so its error rate is 1 and not an empty result that never fires.
+  assert {
+    condition = alltrue([
+      for r in grafana_rule_group.this.rule :
+      strcontains(jsondecode(r.data[0].model).expr, ") or (0 * max by (system)") &&
+      strcontains(jsondecode(r.data[1].model).expr, ") or (0 * max by (system)")
+    ])
+    error_message = "The error rate must count a window with no clean capture as 0 clean captures."
   }
 
   # Bicing's target of 97% leaves a budget of 0.03.
