@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 20.
+- Current: Step 20's review point (code and security), then Step 21.
 
 ## 1. Spec — what and why
 
@@ -1612,7 +1612,7 @@ Every threshold and event list the rules use, derived from the registry and the 
 
 ### Step 20 — Monitoring: contact points, policies and template
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s20 route and lay out the alert notifications`
 - **R:** R19, R23, R24, R34, R35, R38, R44
@@ -2058,3 +2058,4 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 | DI3 | [D3](#d3-alerts-on-symptoms-that-need-action) | An event needs action when one occurrence needs the owner and no other signal reports it; `heartbeat_failed` and `log_upload_failed` do not, and leave ALR9 | Another signal covers each: the heartbeat service, Grafana's copy and `batch_failed` | Step 1 |
 | DI4 | [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) | A scheduled run whose `OTLP_ENDPOINT` or `OTLP_TOKEN` is missing or empty starts and sends no copy, in place of refusing to start | The copy never affects a run (D2); ALR8 reports a component with no events in Grafana | Step 13 |
 | DI5 | [Thresholds](#thresholds), [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) | The pipeline's send time limit (R5) bounds each socket operation, as the heartbeat's pings do, not the send as a whole | A server answering a byte at a time is not a case worth a thread and a deadline; the outcome and the heartbeat are already set when it happens | Step 13 |
+| DI6 | [Notification routing](#notification-routing) | The IRM user a page's chain notifies is named by a variable without default, `irm_owner_username`, set in `.env` and read by `irm.tf` | IRM's notify step takes a user, and the owner's username stays out of the repository, as the page's base URL does | Step 20 |

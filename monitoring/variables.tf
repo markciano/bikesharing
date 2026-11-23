@@ -55,6 +55,11 @@ variable "page_base_url" {
   }
 }
 
+variable "irm_owner_username" {
+  description = "Username of the owner's Grafana IRM user, whom the pages' escalation chain notifies; set in .env, so that it stays out of the repository."
+  type        = string
+}
+
 variable "published_files" {
   description = "Files the page serves, under its base URL, whose data age ALR4's check reads; a child that publishes another file adds it."
   type        = list(string)

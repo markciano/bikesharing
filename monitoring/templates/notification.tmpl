@@ -1,0 +1,25 @@
+{{/*
+  The one notification layout (docs/observability.md, Notification layout). It reads only
+  an alert's labels and annotations, plus its state and start time, never an event's body
+  or a query's values, so it carries no credentials and no visitor data (d009 R38).
+
+  Labels read:      alert_id, component, system, feed, version (those the alert carries).
+  Annotations read: summary, checks (catalog IDs), value, threshold,
+                    catalog_section (anchor in docs/data-quality.md: runtime-rules or
+                    quality-indicators), events_query (the LogQL of the events that raised it).
+  Terraform fills github_base_url and loki_datasource_uid when it renders the file.
+*/}}
+{{ define "project.message" -}}
+{{ range .Alerts -}}
+[{{ .Status | toUpper }}] [{{ .Labels.alert_id }}] {{ .Annotations.summary }}{{ with .Annotations.checks }} · checks: {{ . }}{{ end }}
+  {{ .Labels.component }}{{ with .Labels.system }} · system: {{ . }}{{ end }}{{ with .Labels.feed }} · feed: {{ . }}{{ end }}{{ with .Labels.version }} · version: {{ . }}{{ end }}
+  {{ with .Annotations.value }}{{ . }} · {{ end }}{{ with .Annotations.threshold }}threshold: {{ . }} · {{ end }}since {{ .StartsAt | tz "Europe/Madrid" | date "15:04 MST" }}
+{{- with .Annotations.catalog_section }}
+  → rule: ${github_base_url}/blob/main/docs/data-quality.md#{{ . }}
+{{- end }}
+  → this alert: ${github_base_url}/blob/main/docs/observability.md#alerts
+{{- with .Annotations.events_query }}
+  → events: {{ $.ExternalURL }}/explore?left={{ printf "{\"datasource\":\"${loki_datasource_uid}\",\"queries\":[{\"refId\":\"A\",\"expr\":%q}],\"range\":{\"from\":\"now-6h\",\"to\":\"now\"}}" . | urlquery }}
+{{- end }}
+{{ end -}}
+{{ end }}
