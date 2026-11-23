@@ -102,7 +102,11 @@ locals {
   ]))
   alr9_event_regex = join("|", local.alr9_events)
 
-  # ALR14: every event the registry holds, so `event!~"..."` finds one it does not.
-  registered_events       = sort(distinct([for e in local.registry.events : e.event]))
-  registered_events_regex = join("|", local.registered_events)
+  # ALR14: every event the registry holds, so `event!~"..."` finds one it does not, in
+  # the streams of the components the registry holds; the synthetic check writes its own
+  # logs to the same Loki, with no `event`, and those are not ours to register.
+  registered_events           = sort(distinct([for e in local.registry.events : e.event]))
+  registered_events_regex     = join("|", local.registered_events)
+  registered_components       = sort(distinct([for e in local.registry.events : e.component]))
+  registered_components_regex = join("|", local.registered_components)
 }
