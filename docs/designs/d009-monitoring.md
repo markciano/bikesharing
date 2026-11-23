@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 16.
+- Current: Step 17, after the review point of Step 16.
 
 ## 1. Spec — what and why
 
@@ -1467,7 +1467,7 @@ The pipeline's side of the event registry, as Step 5 is capture's.
 
 ### Step 16 — Pipeline: DQR12 over 7 days at 95%
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s16 judge capture volume against a 7-day median`
 - **R:** R28, R29

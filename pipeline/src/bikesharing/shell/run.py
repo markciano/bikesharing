@@ -81,7 +81,7 @@ _ASSETS_DIR: Final = "public"
 # The window over which capture_volume takes each capture's median, so the
 # history holds the captures before the batch's first one in that window
 # (d008 #14, Transformation in dbt).
-_VOLUME_WINDOW: Final = timedelta(hours=24)
+_VOLUME_WINDOW: Final = timedelta(days=7)
 _CHECKED_STATUSES: Final = frozenset({"pass", "warn", "fail", "error"})
 
 

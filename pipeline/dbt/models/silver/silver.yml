@@ -139,7 +139,7 @@ models:
   - name: capture_volume
     description: >-
       Each capture of the batch against the median number of stations of its system's
-      captures in the 24 h before it, from the history and the batch's own earlier
+      captures in the 7 days before it, from the history and the batch's own earlier
       captures: the audit of DQR12, and the station count the shell records per
       object.
     config:
@@ -467,10 +467,10 @@ unit_tests:
            code_version: 4553811a0c9e2b7f1d3e5a6b8c0d2e4f6a8b0c1d}
 
   # Verifies DQR12
-  - name: capture_volume_flags_a_drop_below_90_percent_of_the_median
+  - name: capture_volume_flags_a_drop_below_95_percent_of_the_median
     description: >-
-      Against a median of 237 stations, whose mean is 191, a capture of 214 is `ok`
-      and one of 213 is a `drop`; the second's window holds the first, a capture of
+      Against a median of 237 stations, whose mean is 191, a capture of 226 is `ok`
+      and one of 225 is a `drop`; the second's window holds the first, a capture of
       the batch.
     model: capture_volume
     given:
@@ -484,7 +484,7 @@ unit_tests:
               {
                   'stations': (
                       select list({'station_id': i::varchar})
-                      from range(214) as r (i)
+                      from range(226) as r (i)
                   )
               } as data,
               '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz'
@@ -497,7 +497,7 @@ unit_tests:
               {
                   'stations': (
                       select list({'station_id': i::varchar})
-                      from range(213) as r (i)
+                      from range(225) as r (i)
                   )
               } as data,
               '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085845Z.json.gz'
@@ -528,15 +528,59 @@ unit_tests:
           from range(60) as r (i)
     expect:
       rows:
-        - {system: ambici, captured_at: "2026-10-19 08:57:45+00", station_count: 214,
+        - {system: ambici, captured_at: "2026-10-19 08:57:45+00", station_count: 226,
            captures_in_window: 60, median_station_count: 237.0, status: ok}
-        - {system: ambici, captured_at: "2026-10-19 08:58:45+00", station_count: 213,
+        - {system: ambici, captured_at: "2026-10-19 08:58:45+00", station_count: 225,
            captures_in_window: 61, median_station_count: 237.0, status: drop}
 
   # Verifies DQR12
-  - name: capture_volume_does_not_evaluate_with_fewer_than_60_captures_in_24_h
+  - name: capture_volume_does_not_flag_a_capture_at_95_percent_of_a_7_day_median
     description: >-
-      A capture with 59 captures of its system in the 24 h before it, one more being
+      Against a median of 200 stations from captures 2 days old, a capture of 190,
+      exactly 95%, is `ok`: the window reaches back 7 days, not 24 h.
+    model: capture_volume
+    given:
+      - input: source('ambici', 'station_status')
+        format: sql
+        rows: |
+          select
+              null::bigint as last_updated,
+              null::integer as ttl,
+              null::varchar as version,
+              {
+                  'stations': (
+                      select list({'station_id': i::varchar})
+                      from range(190) as r (i)
+                  )
+              } as data,
+              '/work/bronze/raw/ambici/station_status/2026-10-19/20261019T085745Z.json.gz'
+                  as filename
+      - input: source('bicing', 'station_status')
+        format: sql
+        rows: *no_bicing_objects
+      - input: source('lakehouse', 'capture_history')
+        format: sql
+        rows: |
+          select
+              'key-' || i::varchar as key,
+              'ambici' as system,
+              'station_status' as feed,
+              '2026-10-17 07:57:45+00'::timestamptz + i * interval '1 minute'
+                  as captured_at,
+              200 as station_count,
+              'processed' as status,
+              'run-0' as run_id,
+              'check' as code_version
+          from range(60) as r (i)
+    expect:
+      rows:
+        - {system: ambici, captured_at: "2026-10-19 08:57:45+00", station_count: 190,
+           captures_in_window: 60, median_station_count: 200.0, status: ok}
+
+  # Verifies DQR12
+  - name: capture_volume_does_not_evaluate_with_fewer_than_60_captures_in_7_days
+    description: >-
+      A capture with 59 captures of its system in the 7 days before it, one more being
       older, is `not_evaluated`; so is a capture whose system has none, with a null
       median, though the other system has some.
     model: capture_volume
@@ -580,7 +624,7 @@ unit_tests:
               'key-old' as key,
               'ambici' as system,
               'station_status' as feed,
-              '2026-10-18 08:56:45+00'::timestamptz as captured_at,
+              '2026-10-12 08:56:45+00'::timestamptz as captured_at,
               237 as station_count,
               'processed' as status,
               'run-0' as run_id,
