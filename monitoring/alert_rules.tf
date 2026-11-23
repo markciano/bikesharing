@@ -62,6 +62,8 @@ locals {
       checks          = ""
       catalog_section = ""
     }
+    # A failure with no error_type also fires: an unknown cause goes to capture and is
+    # reported, the fail-safe default of d009 D9.
     ALR11 = {
       summary         = "A pass logged a cause of a missed minute that DQM11 does not classify"
       selector        = "{service_name=\"capture\"} | event=~\"${local.alert_event_regex["ALR11"]}\" | error_type!~\"${join("|", local.classified_error_types)}\""
@@ -69,6 +71,8 @@ locals {
       checks          = "DQM11"
       catalog_section = "quality-indicators"
     }
+    # A line with no event field also fires: it breaks ADR-0036's log convention, so it
+    # is reported as an event to classify.
     ALR14 = {
       summary         = "An event the registry does not hold reached Grafana"
       selector        = "{service_name=~\".+\"} | event!~\"${local.registered_events_regex}\""
