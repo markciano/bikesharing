@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 14, after the review point of Step 13.
+- Current: Step 15, after the review point of Step 14.
 
 ## 1. Spec — what and why
 
@@ -1399,7 +1399,7 @@ Each scheduled run sends its lines after its log upload and its heartbeat ping, 
 
 ### Step 14 — Pipeline: monitoring Modal Secret
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s14 give the scheduled function the monitoring Secret`
 - **R:** —
