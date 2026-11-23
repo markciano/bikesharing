@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 17, after the review point of Step 16.
+- Current: Step 18.
 
 ## 1. Spec — what and why
 
@@ -892,7 +892,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
 - **tenv**, the version manager that installs the Terraform release `monitoring/.terraform-version` pins and verifies its SHA256 and HashiCorp's PGP signature by default: `brew install tenv` (4.16.9 or later). Verify: `tenv --version`.
-- **Terraform 1.17.1**, the pin of `monitoring/.terraform-version`, the latest patch released at least two weeks before it was chosen. Grafana's provider is `~> 4.54` in `versions.tf`, with 4.54.0 locked, or the newer release Step 17 keeps. Installed by tenv on first use. Verify: `terraform version` inside `monitoring/` prints `Terraform v1.17.1`.
+- **Terraform 1.17.1**, the pin of `monitoring/.terraform-version`, the latest patch released at least two weeks before it was chosen. Grafana's provider is `~> 4.54.0` in `versions.tf`, with 4.54.0 locked: 4.55.0 was released less than two weeks before Step 17. Installed by tenv on first use. Verify: `terraform version` inside `monitoring/` prints `Terraform v1.17.1`.
 - **Grafana Cloud account** on the Free tier, with its stack in an EU region and no payment method. Verify in the console: the stack's region and the billing page. Record both in Close (Done when).
 - **Free tier features** checked at account set-up: template variables and data links, the SLO app, Loki recording rules, a scripted k6 check asserting a file's age, the IRM heartbeat and the usage data source ALR13 reads. Two or more missing reopen s018's choice of tool ([s018 › P1](../spikes/s018-monitoring-tool.md#23-production-inputs)). Also checked: which of `event`, `system`, `feed` and `rule` Grafana Cloud promotes to Loki labels ([Field mapping](#field-mapping)), and whether message templates have the `tz` and `date` functions ([Notifications](#notifications)). Record each outcome before Step 1 as a fact of [Grafana Cloud's source card](../sources/grafana-cloud.md), closing its open question: Steps 20–24 write their queries and template from it.
 - **Account values**, none of them secret: the stack's OTLP/HTTP logs endpoint, ending in `/v1/logs`, and the UIDs of its Loki, Prometheus (where the synthetic check's results land) and usage data sources. Record them before Step 1 in the source card's Access, and set the UIDs in `.env` as Terraform variables. Verify: each UID is listed in the console under Connections › Data sources.
@@ -1504,7 +1504,7 @@ DQR12 follows D6, in the model, the history the shell reads, and the catalog, in
 
 ### Step 17 — Monitoring: Terraform pin, provider and lockfile
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `build: d009.s17 pin Terraform and Grafana's provider`
 - **R:** —
@@ -1516,7 +1516,7 @@ DQR12 follows D6, in the model, the history the shell reads, and the catalog, in
 The `monitoring/` component's stack, as `.claude/rules/code/dependencies.md` sets for Terraform.
 
 - `monitoring/.terraform-version` (new): `1.17.1` ([Prerequisites](#31-prerequisites)).
-- `monitoring/versions.tf` (new): `required_version` as a compatibility range that includes 1.17.1, and `grafana/grafana` at `~> 4.54`.
+- `monitoring/versions.tf` (new): `required_version` as a compatibility range that includes 1.17.1, and `grafana/grafana` at `~> 4.54.0`.
 - `monitoring/.terraform.lock.hcl` (new): written by `terraform providers lock` with the hashes of `darwin_arm64`, the owner's machine, and `linux_amd64`, CI's; the version it records is at least two weeks old (Do 3).
 - `.gitignore` (modified): Terraform's state files and `.terraform/`.
 
