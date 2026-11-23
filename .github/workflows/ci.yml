@@ -19,6 +19,7 @@ jobs:
     outputs:
       capture: ${{ steps.filter.outputs.capture }}
       pipeline: ${{ steps.filter.outputs.pipeline }}
+      monitoring: ${{ steps.filter.outputs.monitoring }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -34,6 +35,14 @@ jobs:
               - 'contracts/bronze-keys.json'
               - 'contracts/latest-station-count.schema.json'
               - 'contracts/latest-station-count.json'
+              - 'contracts/log-events.registry.json'
+              - 'contracts/log-events.schema.json'
+              - '.github/workflows/ci.yml'
+            monitoring:
+              - 'monitoring/**'
+              - 'contracts/log-events.registry.json'
+              - 'contracts/log-events.schema.json'
+              - 'pipeline/src/bikesharing/core/run_settings.json'
               - '.github/workflows/ci.yml'
 
   docs:
@@ -83,10 +92,36 @@ jobs:
       - run: uv sync --locked
       - run: bash scripts/check-pipeline.sh
 
+  monitoring:
+    needs: changes
+    if: needs.changes.outputs.monitoring == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+    defaults:
+      run:
+        working-directory: monitoring
+    steps:
+      - uses: actions/checkout@v7
+      # setup-terraform takes no version file, so its version is read from the pin.
+      - id: terraform-version
+        run: echo "version=$(tr -d '[:space:]' < .terraform-version)" >> "$GITHUB_OUTPUT"
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ steps.terraform-version.outputs.version }}
+          terraform_wrapper: false
+      - run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - uses: actions/cache@v6
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: terraform-plugins-${{ runner.os }}-${{ hashFiles('monitoring/.terraform.lock.hcl') }}
+      - run: bash scripts/check-monitoring.sh
+
   # The only required check. `if: always()` keeps it from being skipped when a
   # job fails; a job skipped by its path filter passes.
   ci-passed:
-    needs: [changes, docs, capture, pipeline]
+    needs: [changes, docs, capture, pipeline, monitoring]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10

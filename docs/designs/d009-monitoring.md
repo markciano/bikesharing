@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 25.
+- Current: Step 26.
 
 ## 1. Spec — what and why
 
@@ -1803,7 +1803,7 @@ ALR4's check from three probes, and the last alert, which completes the set the 
 
 ### Step 25 — CI job monitoring and filters
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `ci: d009.s25 add the monitoring job and the registry to the filters`
 - **R:** —
@@ -1814,7 +1814,7 @@ ALR4's check from three probes, and the last alert, which completes the set the 
 
 The `monitoring` component in CI, and every job that reads a shared file runs when it changes.
 
-- `.github/workflows/ci.yml` (modified): the job `monitoring`, following `.claude/rules/code/ci.md`, running `bash monitoring/scripts/check-monitoring.sh`; its filter holds `monitoring/**`, the event registry, its schema and `pipeline/src/bikesharing/core/run_settings.json`, which Terraform reads; the filters of `capture` and `pipeline` add the registry and its schema.
+- `.github/workflows/ci.yml` (modified): the job `monitoring`, following `.claude/rules/code/ci.md`, running `bash scripts/check-monitoring.sh`; its filter holds `monitoring/**`, the event registry, its schema and `pipeline/src/bikesharing/core/run_settings.json`, which Terraform reads; the filters of `capture` and `pipeline` add the registry and its schema.
 - `docs/testing-strategy.md` (modified): the monitoring component's section, and the registry tests of capture and the pipeline.
 
 #### Reads
