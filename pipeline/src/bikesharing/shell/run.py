@@ -10,6 +10,7 @@ heartbeat check and copies its events to Grafana, and it never raises: every fai
 (d008, Observability).
 """
 
+import contextlib
 import json
 import resource
 import shutil
@@ -881,9 +882,12 @@ def _copy(state: _Run) -> None:
         send_logs(target, state.log.lines())
     # Any failure of the copy, whatever its cause, must leave the run unchanged.
     except Exception as raised:  # noqa: BLE001
-        state.emit(
-            events.otlp_send_failed(state.now(), error_type=type(raised).__name__)
-        )
+        # Reporting the failure is as best effort as the copy: the run never
+        # raises, so a failure here, such as a clock that fails, is dropped.
+        with contextlib.suppress(Exception):
+            state.emit(
+                events.otlp_send_failed(state.now(), error_type=type(raised).__name__)
+            )
 
 
 def _lines(first: str, rest: Sequence[str]) -> Iterator[str]:

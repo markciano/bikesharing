@@ -630,6 +630,29 @@ def test_a_failing_or_stalling_target_changes_neither_the_outcome_nor_the_heartb
 
 
 # Verifies d009 R3
+def test_a_run_whose_clock_fails_while_reporting_the_copy_still_returns_its_outcome(
+    config: RunConfig, grafana: _Grafana, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    broken = False
+
+    def failing_send(*_: object, **__: object) -> None:
+        nonlocal broken
+        broken = True
+        raise OSError("unreachable")
+
+    def clock() -> datetime:
+        if broken:
+            raise RuntimeError("clock failed")
+        return NOW
+
+    monkeypatch.setattr("bikesharing.shell.run.send_logs", failing_send)
+
+    outcome = run(replace(config, otlp=grafana.target, clock=clock))
+
+    assert outcome == "succeeded"
+
+
+# Verifies d009 R3
 def test_a_failed_run_still_fails_when_the_copy_fails(
     config: RunConfig, check: _Check, grafana: _Grafana, bronze_folder: Path
 ) -> None:
