@@ -146,7 +146,8 @@ def test_rule_checked_takes_its_level_from_its_status(status: str, level: str) -
 
     assert record["level"] == level
     assert record["rule"] == "DQR5"
-    assert record["severity"] == "error"
+    assert record["rule_severity"] == "error"
+    assert "severity" not in record
     assert record["status"] == status
     assert record["failures"] == 0
 
