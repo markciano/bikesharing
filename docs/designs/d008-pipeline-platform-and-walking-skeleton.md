@@ -2470,17 +2470,75 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 
 <!-- Component — what was delivered; tests passing. In a document-only task: Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. -->
 
-- **Reference batch (Step 28):** a `one_off_run` from the task's branch on 2026-11-20, over the real bronze up to the configured end instant. It listed 106,103 objects (53,262 of AMBici and 52,841 of Bicing) in a full sweep that took about 74 s, and processed 4 batches: three of 360 objects and a last one of 245, 516,597 rows in all. The first batch, of 360 objects, inserted 140,094 rows in 9.3 s. `run_finished` reports `outcome` `succeeded`, `duration_s` 106.1 and `peak_memory_mb` 1,358 (about 1,295 MiB, 32% of the container's 4 GiB), and no rule failed. D6's bound of 360 objects is confirmed, `MAX_OBJECTS_PER_BATCH` stays, and the peak, with DuckDB's default 17 threads, leaves the `threads` of #30 as it is. The same run from `modal_one_off.py` (DI12) created only `one_off_run` and gave `duration_s` 132.9 and `peak_memory_mb` 1,437 (about 1,370 MiB, 33% of 4 GiB), with the same 516,597 rows.
-- **First deployment and stages 1 and 2 (Step 29):** `deploy.sh` deployed `main` on 2026-11-20 and the smoke test's `run_started` carried its SHA (R9). Stage 1 (`END_INSTANT` 2026-10-15, the first day of captures) drained in one run: 4 batches, 516,597 rows, 158.6 s and a `peak_memory_mb` of 1,417 (about 1,351 MiB, 33% of the container's 4 GiB). Stage 2 (2026-10-21, the first week) drained in three runs: 42 batches, 5,672,976 rows, a maximum of 455.0 s, the 7-minute budget plus the batch in progress, and a maximum `peak_memory_mb` of 2,318 (about 2,210 MiB, 54%). Each stage logged `stage_drained`, and no rule of severity error or warn failed. Runs that follow one another share a container, so their `peak_memory_mb` is the container's high-water mark, and Do 4 compares only scheduled runs. The page's deployment failed until the token had DI13's permissions; its first successful upload then returned `This Worker does not exist` (code 10007) in a later call, and the next run deployed. The Healthchecks.io check has a 15-minute period and 15 minutes of grace (R17), and alerts on a failure and on a recovery.
-- **Stage 3 and the end instant's removal (Step 29):** `END_INSTANT` was removed at `df7225d` and the pipeline drained the rest of bronze from 19:42 UTC on 2026-11-20. The last run with a backlog started at 02:56 UTC on 2026-11-21 and took 421 s, the 7-minute budget, with 9 batches and 1,139,470 rows. The next run found 7 pending objects per system, so the first load was drained. The stage's maximum `peak_memory_mb` was 2,428 (about 2,316 MiB, 57% of the container's 4 GiB), and no rule of severity error or warn failed. The scheduled runs that follow list incrementally (`full_sweep` false, 67 to 75 objects listed per system) and process 1 batch in 43 to 70 s; their `peak_memory_mb` is about 1,200 in a new container.
-- **Independent validation of the station stock (Step 29):** `spikes/d008-s29-validation/` re-derives the table's values from bronze with its own code, read-only. Its first run, at 03:28 UTC on 2026-11-21 over the table at the end of stage 3 (41,660,274 rows, 107,396 captures), found no difference: the counts of 6 day-system pairs, 36 captures field by field, the ranges and nulls of every row (TR8, TR9) and the local keys of every capture matched, with the 25 hours of 2026-10-25 (ADR-0041) in both systems. It took 98 s and made 100 list and 4,844 get requests to bronze.
-- **Limits, CI and clean-up (Step 29):** Modal's usage limit is the $30 monthly credit and its spend limit is $1 (TH7), with $0.53 spent by 2026-11-21. The last three `pull_request` runs, on 2026-11-20, took 1 min 58 s to 2 min 17 s from creation to last update, under the 10 min that moves tests ([testing-strategy.md › Moving tests](../testing-strategy.md#moving-tests)). Both `bikesharing-t0601-tag-probe` resources, the Worker and the Modal app, are deleted.
+- **Reference batch (Step 28):** a `one_off_run` from the task's branch on 2026-11-20, over the real bronze up to the configured end instant.
+  - **Discovery:** a full sweep listed 106,103 objects (53,262 of AMBici and 52,841 of Bicing) in about 74 s.
+  - **Batches:** 4, three of 360 objects and a last one of 245, 516,597 rows in all; the first inserted 140,094 rows in 9.3 s. No rule failed.
+  - **Run:** `run_finished` reports `outcome` `succeeded`. The same run from `modal_one_off.py` (DI12) created only `one_off_run`, with the same 516,597 rows:
+
+    | Run from | `duration_s` | `peak_memory_mb` | Share of the container's 4 GiB |
+    |---|---|---|---|
+    | `modal_app.py` | 106.1 | 1,358 (about 1,295 MiB) | 32% |
+    | `modal_one_off.py` | 132.9 | 1,437 (about 1,370 MiB) | 33% |
+
+  - **Result:** D6's bound of 360 objects is confirmed and `MAX_OBJECTS_PER_BATCH` stays; the peak, with DuckDB's default 17 threads, leaves the `threads` of #30 as it is.
+- **First deployment and stages 1 and 2 (Step 29):** `deploy.sh` deployed `main` on 2026-11-20 and the smoke test's `run_started` carried its SHA (R9).
+
+  | Stage | `END_INSTANT` | Runs | Batches | Rows | Maximum run time | Maximum `peak_memory_mb` |
+  |---|---|---|---|---|---|---|
+  | 1 | 2026-10-15, the first day of captures | 1 | 4 | 516,597 | 158.6 s | 1,417 (about 1,351 MiB, 33% of 4 GiB) |
+  | 2 | 2026-10-21, the first week | 3 | 42 | 5,672,976 | 455.0 s, the 7-minute budget plus the batch in progress | 2,318 (about 2,210 MiB, 54%) |
+
+  - **Checks:** each stage logged `stage_drained`, and no rule of severity error or warn failed.
+  - **Memory:** runs that follow one another share a container, so their `peak_memory_mb` is the container's high-water mark, and Do 4 compares only scheduled runs.
+  - **Page's deployment:** it failed until the token had DI13's permissions; its first successful upload then returned `This Worker does not exist` (code 10007) in a later call, and the next run deployed.
+  - **Heartbeat:** the Healthchecks.io check has a 15-minute period and 15 minutes of grace (R17), and alerts on a failure and on a recovery.
+- **Stage 3 and the end instant's removal (Step 29):** `END_INSTANT` was removed at `df7225d` and the pipeline drained the rest of bronze from 19:42 UTC on 2026-11-20.
+  - **Last run with a backlog:** started at 02:56 UTC on 2026-11-21 and took 421 s, the 7-minute budget, with 9 batches and 1,139,470 rows. The next run found 7 pending objects per system, so the first load was drained.
+  - **Checks:** the stage's maximum `peak_memory_mb` was 2,428 (about 2,316 MiB, 57% of the container's 4 GiB), and no rule of severity error or warn failed.
+  - **Scheduled runs after it:** they list incrementally (`full_sweep` false, 67 to 75 objects listed per system) and process 1 batch in 43 to 70 s; their `peak_memory_mb` is about 1,200 in a new container.
+- **Independent validation of the station stock (Step 29):** `spikes/d008-s29-validation/` re-derives the table's values from bronze with its own code, read-only.
+  - **First run:** at 03:28 UTC on 2026-11-21, over the table at the end of stage 3 (41,660,274 rows, 107,396 captures). It took 98 s and made 100 list and 4,844 get requests to bronze.
+  - **Result:** no difference. These matched, with the 25 hours of 2026-10-25 (ADR-0041) in both systems:
+    - the counts of 6 day-system pairs;
+    - 36 captures, field by field;
+    - the ranges and nulls of every row (TR8, TR9);
+    - the local keys of every capture.
+- **Limits, CI and clean-up (Step 29):**
+  - **Modal:** its usage limit is the $30 monthly credit and its spend limit is $1 (TH7), with $0.53 spent by 2026-11-21.
+  - **CI:** the last three `pull_request` runs, on 2026-11-20, took 1 min 58 s to 2 min 17 s from creation to last update, under the 10 min that moves tests ([testing-strategy.md › Moving tests](../testing-strategy.md#moving-tests)).
+  - **Clean-up:** both `bikesharing-t0601-tag-probe` resources, the Worker and the Modal app, are deleted.
+- **Run time, memory and the platform's review (Step 29):** the 192 scheduled runs of the [Cost recalibration](#cost-recalibration) window, read from their log objects. All ran `df7225d` and ended `succeeded`.
+
+  | Measure | Median | p95 | Maximum | Reopens ADR-0027 at |
+  |---|---|---|---|---|
+  | `duration_s` | 128.5 | 234.8 | 341.3 | 60 s or less |
+  | `peak_memory_mb` | 1,395 | 1,558 | 2,428 | 2 GB or less |
+
+  - **Memory's maximum:** 2,428 is stage 3's high-water mark, carried by the first run in a shared container; the five slowest runs peaked at 1,604 at most.
+  - **Full sweeps:** the two of the window took 196 and 198 s, within the 7-minute budget.
+  - **Platform:** normal runs stay under 2 GB, the case where Google Cloud Run jobs and Fly.io Machines could pass the cost cut of [ADR-0027](../decisions/0027-modal-as-execution-platform.md) ([d007 › Carried-over inputs](d007-pipeline-design.md#carried-over-inputs)). The owner keeps ADR-0027: Modal meets the pipeline's needs, and a move would cost development time with no need behind it.
+  - **Cadence:** kept at 15 min; the slowest run takes 38% of the interval.
 
 ### 4.2 Known gaps at close
 
 <!-- What the task leaves undone or imperfect, each with the task that covers it and its `TODO(TNNN)` marker (CLAUDE.md › Pending items): requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
 
-- `<gap>` — TNNN
+- TODO(T077): find why the run time grows and the runs read so many objects from R2, and fix it — T077
+  - **Measure:** the 192 scheduled runs of the [Cost recalibration](#cost-recalibration) window, from their log objects; each phase is the time between the events that open and close it.
+
+    | Phase | Mean | First 12 h | Last 12 h |
+    |---|---|---|---|
+    | Batch work outside dbt's nodes: downloads, reads, Delta writes, dbt's start-up | 66.3 s | 44.4 s | 84.8 s |
+    | Discovery | 37.2 s | 35.1 s | 43.7 s |
+    | Gold file | 17.7 s | 16.8 s | 20.4 s |
+    | Page's deployment | 8.0 s | 7.8 s | 7.8 s |
+    | dbt's nodes | 1.0 s | 1.0 s | 1.0 s |
+    | Whole run | 130.7 s | 105.9 s | 158.0 s |
+
+  - **Growth:** at the same early-morning hours, discovery grows by about 10 s a day and batch work by 15–20 s, so discovery grows with the processed objects.
+  - **Daily pattern:** the three phases that reach R2 rise and fall together hour by hour, up to twice as slow from 16:00 to 23:00 local time, with no drop at local midnight. This points at a factor common to the run, such as I/O to R2, rather than at the day's partition alone.
+  - **Margin:** the slowest run took 341 s, against ALR7's 480 s and the 600 s timeout ([d009 › Thresholds](d009-monitoring.md#thresholds)).
+  - **R2 reads:** over the window, from Cloudflare's GraphQL Analytics API, 1,263,034 GetObject on `bikesharing-lakehouse`, about 6,600 per run and 19 M a month, above R2's free tier of 10 M Class B; and 161,760 on `bikesharing-bronze`, about 840 per run, more than the pending objects a run downloads explain.
 
 ### 4.3 Decisions taken during implementation
 
