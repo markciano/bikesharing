@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 30.
+- Current: Step 31.
 
 ## 1. Spec — what and why
 
@@ -1948,7 +1948,7 @@ The scheduled pipeline sends its events to Grafana; a one-off run sends nothing.
 
 ### Step 30 — Watchdog and `terraform apply`
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **R:** R20
