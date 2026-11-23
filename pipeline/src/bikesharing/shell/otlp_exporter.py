@@ -45,6 +45,8 @@ def send_logs(
         The run's JSON lines, without their newline.
     timeout_s : float, default 10.0
         The timeout of the connection and of each read, the heartbeat's limit.
+        It limits each socket operation, not the send as a whole: a server that
+        answers a byte at a time can outlast it, as for the heartbeat's pings.
 
     Raises
     ------
