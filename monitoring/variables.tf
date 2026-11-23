@@ -44,11 +44,10 @@ variable "usage_datasource_uid" {
   type        = string
 }
 
-# TODO(T041): replace the workers.dev address with a custom domain, if one is bought.
+# TODO(T041): set it to the custom domain, if one is bought.
 variable "page_base_url" {
-  description = "Base URL of the page as web/'s deployment serves it, without a trailing slash."
+  description = "Base URL of the page as web/'s deployment serves it, without a trailing slash; set in .env, so that the owner's account name stays out of the repository."
   type        = string
-  default     = "https://bikesharing-web.zarek-90.workers.dev"
 
   validation {
     condition     = startswith(var.page_base_url, "https://") && !endswith(var.page_base_url, "/")
