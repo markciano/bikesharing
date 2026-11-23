@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 18.
+- Current: Step 18's review point (security), then Step 19.
 
 ## 1. Spec — what and why
 
@@ -1540,7 +1540,7 @@ The `monitoring/` component's stack, as `.claude/rules/code/dependencies.md` set
 
 ### Step 18 — Monitoring: provider, variables and check script
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `build: d009.s18 configure Grafana's provider and the monitoring checks`
 - **R:** R37
