@@ -38,6 +38,14 @@ pipeline/dbt/target/
 pipeline/dbt/logs/
 pipeline/dbt/.user.yml
 
+# Terraform (the state stays on the owner's machine, ADR-0051)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+
 # The page's file, written by each run
 web/public/
 *.egg-info/
