@@ -20,11 +20,12 @@ locals {
 
   # The events ALR6 reads come from the registry, never written by hand. A pass writes
   # one of them for each dynamic feed, so the largest count among a system's feeds is
-  # its passes that reached Grafana; a clean capture is an event of info level.
+  # its passes that reached Grafana; a clean capture is an event of info level of the
+  # feed that holds the station stock, the minutes DQM7 counts.
   registry     = jsondecode(file("${path.module}/../../../contracts/log-events.registry.json"))
   events_regex = join("|", sort(distinct([for e in local.registry.events : e.event if contains(e.alerts, "ALR6")])))
   passes       = "{service_name=\"capture\"} | event=~\"${local.events_regex}\" | system=\"${var.system}\""
-  clean        = "{service_name=\"capture\", detected_level=\"info\"} | event=~\"${local.events_regex}\" | system=\"${var.system}\""
+  clean        = "{service_name=\"capture\", detected_level=\"info\"} | event=~\"${local.events_regex}\" | system=\"${var.system}\" | feed=\"${var.stock_feed}\""
 
   budget = 1 - var.target
 

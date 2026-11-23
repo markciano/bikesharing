@@ -198,6 +198,24 @@ locals {
 
   # Fields every rule defines, so the rules share one type.
   threshold_rules = {
+    # A failing probe has `probe_success` 0 for its latest result, read over two
+    # cadences of the check so that one late result is still seen; the rule fires when
+    # more probes fail than one, so a single probe's network never pages (d009 D14).
+    ALR4 = {
+      alert_id        = "ALR4"
+      urgency         = "page"
+      summary         = "A file the page serves has data older than its target, or cannot be read"
+      datasource_uid  = var.prometheus_datasource_uid
+      expr            = "sum by (job, instance) (1 - last_over_time(probe_success{job=~\"${local.synthetic_check_job_prefix}.+\"}[${local.synthetic_check_frequency_s * 2 / 60}m]))"
+      threshold       = local.alr4_probes_to_confirm - 1
+      guard_expr      = ""
+      value           = "{{ printf \"%.0f\" $values.A.Value }} of ${length(var.probes)} probes failing"
+      threshold_text  = "at least ${local.alr4_probes_to_confirm} probes"
+      events_query    = ""
+      checks          = "DQM10"
+      catalog_section = "quality-indicators"
+      labels          = { component = "page" }
+    }
     ALR5 = {
       alert_id        = "ALR5"
       urgency         = "page"
@@ -443,6 +461,7 @@ module "error_budget_alert" {
   target              = each.value
   folder_uid          = grafana_folder.alerts.uid
   loki_datasource_uid = var.loki_datasource_uid
+  stock_feed          = local.alr6_stock_feed
   capture_silent_s    = local.alr8_capture_silent_s
 }
 

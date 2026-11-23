@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 24.
+- Current: Step 25.
 
 ## 1. Spec — what and why
 
@@ -353,7 +353,7 @@ Every component names the bike sharing system `system` in its log events, as the
 
 #### Error budget alerts
 
-ALR6 follows the SRE Workbook's multiwindow, multi-burn-rate alert, written as LogQL alert rules over capture's events. For each system and window, the error rate is one minus the minutes with a `feed_captured` over the minutes DQM7 counts in the window in which capture's events reach Grafana, the passes that reached it. Grafana counts those passes as the largest count, among capture's feeds, of `feed_captured` and `feed_failed` events in the window: every pass writes one of the two for each dynamic feed and sends all its events in one request, so a pass that reached Grafana counts once in every dynamic feed, while a static feed, fetched less often, never holds the largest count. A feed's minutes with no event, the cause D9 gives to capture as a pass with no event for the feed, are those passes minus the feed's `feed_captured` and `feed_failed` events, counted for the dynamic feeds only, which ALR15 adds to its count. **DI8** A minute with no pass in Grafana, whether a pass the cron never ran, a pass that wrote no feed event or a gap in Grafana's ingest, counts in no window: Grafana cannot tell the two apart, capture's heartbeat reports a capture that stores nothing (#10), and DQM7's monthly value over R2 counts every minute. The burn rate is that error rate over the system's budget, one minus its DQM7 target (D7). A level fires when both its windows exceed its burn rate: the long one shows the burn is serious, the short one that it is still going on.
+ALR6 follows the SRE Workbook's multiwindow, multi-burn-rate alert, written as LogQL alert rules over capture's events. For each system and window, the error rate is one minus the minutes with a `feed_captured` of the feed that holds the station stock, the minutes DQM7 counts, over the minutes in the window in which capture's events reach Grafana, the passes that reached it. A window with passes and no `feed_captured` counts as 0 minutes captured, so a total outage gives an error rate of 1. **DI9** Grafana counts those passes as the largest count, among capture's feeds, of `feed_captured` and `feed_failed` events in the window: every pass writes one of the two for each dynamic feed and sends all its events in one request, so a pass that reached Grafana counts once in every dynamic feed, while a static feed, fetched less often, never holds the largest count. A feed's minutes with no event, the cause D9 gives to capture as a pass with no event for the feed, are those passes minus the feed's `feed_captured` and `feed_failed` events, counted for the dynamic feeds only, which ALR15 adds to its count. **DI8** A minute with no pass in Grafana, whether a pass the cron never ran, a pass that wrote no feed event or a gap in Grafana's ingest, counts in no window: Grafana cannot tell the two apart, capture's heartbeat reports a capture that stores nothing (#10), and DQM7's monthly value over R2 counts every minute. The burn rate is that error rate over the system's budget, one minus its DQM7 target (D7). A level fires when both its windows exceed its burn rate: the long one shows the burn is serious, the short one that it is still going on.
 
 | Level | Burn rate | Long window | Short window | Budget spent in the long window |
 |---|---|---|---|---|
@@ -789,6 +789,11 @@ variable "folder_uid" {
 
 variable "loki_datasource_uid" {
   description = "Loki data source the queries run on."
+  type        = string
+}
+
+variable "stock_feed" {
+  description = "Feed that holds the station stock, as capture's events name it in `feed`; its clean captures are the minutes DQM7 counts."
   type        = string
 }
 
@@ -1760,7 +1765,7 @@ ALR6's three burn-rate levels, one rule group per system.
 
 ### Step 24 — Monitoring: synthetic check
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s24 check the published files' age from outside`
 - **R:** R10, R16, R22
@@ -2066,3 +2071,4 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 | DI6 | [Notification routing](#notification-routing) | The IRM user a page's chain notifies is named by a variable without default, `irm_owner_username`, set in `.env` and read by `irm.tf` | IRM's notify step takes a user, and the owner's username stays out of the repository, as the page's base URL does | Step 20 |
 | DI7 | [Thresholds](#thresholds) | ALR5 fires on a dynamic feed seen in the last 24 h that has no `feed_captured` in the last 11 minutes, the threshold plus one minute, whatever the cause, in place of counting failure events | LogQL cannot count minutes in a row; a window with no clean capture covers a pass with no event too, which "any cause" includes, and a failure count missed it | Step 22 |
 | DI8 | [Error budget alerts](#error-budget-alerts) | ALR15 and ALR5 take the dynamic feeds from a list in `locals.tf`, `free_bike_status` and `station_status`, in place of detecting them from the counts | A static feed, fetched once a day, would show nearly all its passes with no event; the dynamic feeds are known from d004 D3 | Step 22 |
+| DI9 | [Error budget alerts](#error-budget-alerts), [Error budget alert module](#error-budget-alert-module) | ALR6 counts as captured the minutes with a `feed_captured` of `station_status`, the feed that holds the station stock, taken from a list in `locals.tf` and given to the module as `stock_feed`; the module also takes `capture_silent_s`, ALR8's threshold, for the guard of R42 | DQM7 counts the minutes with a capture in the station stock, and a count over any feed would miss a stock outage while another feed captures; the module cannot read the root's locals | Step 23 |
