@@ -250,9 +250,10 @@ def scheduled_config(
     Raises
     ------
     ValueError
-        If ``CODE_VERSION`` or any secret is missing or empty: a run never
-        starts without its code version (d008 #20, Environments and
-        configuration).
+        If ``CODE_VERSION`` or any secret but the OTLP pair is missing or empty:
+        a run never starts without its code version (d008 #20, Environments
+        and configuration). Without ``OTLP_ENDPOINT`` or ``OTLP_TOKEN`` the
+        run starts and sends no copy.
     """
     version = _required(env, "CODE_VERSION")
     bronze_id = _required(env, "BRONZE_R2_ACCESS_KEY_ID")
@@ -261,8 +262,15 @@ def scheduled_config(
     lakehouse_secret = _required(env, "LAKEHOUSE_R2_SECRET_ACCESS_KEY")
     api_token = _required(env, "CLOUDFLARE_API_TOKEN")
     heartbeat_url = _required(env, "HEARTBEAT_URL")
-    otlp = OtlpTarget(
-        endpoint=_required(env, "OTLP_ENDPOINT"), token=_required(env, "OTLP_TOKEN")
+    # The copy to Grafana is best effort: without both variables the run goes
+    # on with no copy, and Grafana's silence alert reports it (d009 D2, The
+    # copy to Grafana never affects a run).
+    otlp_endpoint = env.get("OTLP_ENDPOINT", "")
+    otlp_token = env.get("OTLP_TOKEN", "")
+    otlp = (
+        OtlpTarget(endpoint=otlp_endpoint, token=otlp_token)
+        if otlp_endpoint and otlp_token
+        else None
     )
     account_id = settings.CLOUDFLARE_ACCOUNT_ID
     return _config(
@@ -300,7 +308,7 @@ def scheduled_config(
                 lakehouse_secret,
                 api_token,
                 heartbeat_url,
-                otlp.token,
+                *({otlp.token} if otlp is not None else ()),
             }
         ),
     )

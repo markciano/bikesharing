@@ -666,7 +666,7 @@ def send_logs(
     """
 ```
 
-- **Callers:** `EventLog.lines() -> tuple[str, ...]` returns every kept line, in order; read after the heartbeat ping, it holds the lines `body()` uploaded followed by any `log_upload_failed` or `heartbeat_failed`. `scheduled_config` reads `OTLP_ENDPOINT` and `OTLP_TOKEN` into the run's configuration as an `OtlpTarget`; `one_off_config` sets none, so a one-off run sends nothing. `run` sends after the log upload and the heartbeat ping, and catches any exception as it does for the upload, emitting `otlp_send_failed(ts, *, error_type)` at `warn`, to stdout only; the outcome does not change (R3–R5).
+- **Callers:** `EventLog.lines() -> tuple[str, ...]` returns every kept line, in order; read after the heartbeat ping, it holds the lines `body()` uploaded followed by any `log_upload_failed` or `heartbeat_failed`. `scheduled_config` reads `OTLP_ENDPOINT` and `OTLP_TOKEN` into the run's configuration as an `OtlpTarget`, and sets none when either is missing or empty, so the run starts and sends nothing; `one_off_config` sets none, so a one-off run sends nothing. **DI4** `run` sends after the log upload and the heartbeat ping, and catches any exception as it does for the upload, emitting `otlp_send_failed(ts, *, error_type)` at `warn`, to stdout only; the outcome does not change (R3–R5).
 
 #### Pipeline's run settings
 
@@ -2056,3 +2056,4 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 | DI1 | [Prerequisites](#31-prerequisites) | The owner signs in to Grafana Cloud with GitHub, whose second factor is GitHub Mobile, in place of TOTP on Grafana's own sign-in | The account's second factor lives with the sign-in provider; GitHub's covers it | Prerequisites |
 | DI2 | [Event registry schema](#event-registry-schema), [Observability catalog](#observability-catalog) | An entry lists `levels`, every level the event is written at, in place of one `level` | `rule_checked` and `run_finished` take their level from their outcome; one level would misstate them | Step 1 |
 | DI3 | [D3](#d3-alerts-on-symptoms-that-need-action) | An event needs action when one occurrence needs the owner and no other signal reports it; `heartbeat_failed` and `log_upload_failed` do not, and leave ALR9 | Another signal covers each: the heartbeat service, Grafana's copy and `batch_failed` | Step 1 |
+| DI4 | [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) | A scheduled run whose `OTLP_ENDPOINT` or `OTLP_TOKEN` is missing or empty starts and sends no copy, in place of refusing to start | The copy never affects a run (D2); ALR8 reports a component with no events in Grafana | Step 13 |
