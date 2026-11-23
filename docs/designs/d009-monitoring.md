@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 15, after the review point of Step 14.
+- Current: Step 16.
 
 ## 1. Spec — what and why
 
@@ -1432,7 +1432,7 @@ The OTLP endpoint and token reach the scheduled function only.
 
 ### Step 15 — Pipeline: registry contract test
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `test: d009.s15 check the pipeline's events against the registry`
 - **R:** R25, R27
