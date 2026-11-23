@@ -28,14 +28,14 @@ locals {
   event_rules = {
     ALR1 = {
       summary         = "A runtime rule of severity error failed"
-      selector        = "{service_name=\"pipeline\", detected_level=\"error\"} | event=~\"${local.alert_event_regex["ALR1"]}\""
+      selector        = "{service_name=\"pipeline\"} | detected_level=\"error\" | event=~\"${local.alert_event_regex["ALR1"]}\""
       group_by        = ["rule"]
       checks          = "{{ $labels.rule }}"
       catalog_section = "runtime-rules"
     }
     ALR2 = {
       summary         = "A runtime rule of severity warn failed"
-      selector        = "{service_name=\"pipeline\", detected_level=\"warn\"} | event=~\"${local.alert_event_regex["ALR2"]}\""
+      selector        = "{service_name=\"pipeline\"} | detected_level=\"warn\" | event=~\"${local.alert_event_regex["ALR2"]}\""
       group_by        = ["rule"]
       checks          = "{{ $labels.rule }}"
       catalog_section = "runtime-rules"
@@ -170,7 +170,7 @@ locals {
   # them.
   alr5_window_min = local.alr5_minutes_in_a_row + 1
   alr5_events     = "{service_name=\"capture\"} | event=~\"${local.alert_event_regex["ALR5"]}\" | ${local.dynamic_feeds_filter}"
-  alr5_clean      = "{service_name=\"capture\", detected_level=\"info\"} | event=~\"${local.alert_event_regex["ALR5"]}\" | ${local.dynamic_feeds_filter}"
+  alr5_clean      = "{service_name=\"capture\"} | detected_level=\"info\" | event=~\"${local.alert_event_regex["ALR5"]}\" | ${local.dynamic_feeds_filter}"
 
   # The window ALR8 gives capture: while its events reach Grafana within it, ALR5 holds
   # (d009, Capture silence), so a broken send never pages for data that R2 holds.
@@ -191,7 +191,7 @@ locals {
   alr15_passes     = "max by (system) (${local.alr15_per_feed})"
   alr15_dynamic    = "sum by (system, feed) (count_over_time(${local.alr15_events} | ${local.dynamic_feeds_filter} [${local.alr15_window}]))"
   alr15_no_event   = "(${local.alr15_passes} - on (system) group_right () (${local.alr15_dynamic}))"
-  alr15_given_fail = "sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"error\"} | event=~\"${local.alert_event_regex["ALR15"]}\" | error_type!~\"${join("|", local.provider_error_types)}\" [${local.alr15_window}]))"
+  alr15_given_fail = "sum by (system, feed) (count_over_time({service_name=\"capture\"} | detected_level=\"error\" | event=~\"${local.alert_event_regex["ALR15"]}\" | error_type!~\"${join("|", local.provider_error_types)}\" [${local.alr15_window}]))"
   # A feed with no failure given to capture has no second series, so `or` keeps its
   # passes with no event.
   alr15_expr = "(${local.alr15_no_event} + on (system, feed) (${local.alr15_given_fail})) or ${local.alr15_no_event}"

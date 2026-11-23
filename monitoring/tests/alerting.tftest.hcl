@@ -317,7 +317,7 @@ run "alr1_and_alr2_select_the_failed_rules_by_level_take_the_rule_from_the_event
   assert {
     condition = (
       jsondecode(one([for r in grafana_rule_group.events.rule : r if r.labels.alert_id == "ALR1"]).data[0].model).expr ==
-      "sum by (system, service_name, service_version, rule) (count_over_time({service_name=\"pipeline\", detected_level=\"error\"} | event=~\"batch_failed|file_invalid\" [5m]))"
+      "sum by (system, service_name, service_version, rule) (count_over_time({service_name=\"pipeline\"} | detected_level=\"error\" | event=~\"batch_failed|file_invalid\" [5m]))"
     )
     error_message = "ALR1 must count the pipeline's error-level events of its rules, by system and rule."
   }
@@ -325,7 +325,7 @@ run "alr1_and_alr2_select_the_failed_rules_by_level_take_the_rule_from_the_event
   assert {
     condition = (
       jsondecode(one([for r in grafana_rule_group.events.rule : r if r.labels.alert_id == "ALR2"]).data[0].model).expr ==
-      "sum by (system, service_name, service_version, rule) (count_over_time({service_name=\"pipeline\", detected_level=\"warn\"} | event=~\"rule_checked|schema_drift_field\" [5m]))"
+      "sum by (system, service_name, service_version, rule) (count_over_time({service_name=\"pipeline\"} | detected_level=\"warn\" | event=~\"rule_checked|schema_drift_field\" [5m]))"
     )
     error_message = "ALR2 must count the pipeline's warn-level events of its rules, by system and rule."
   }
@@ -505,7 +505,7 @@ run "alr5_selects_the_dynamic_feeds_seen_that_have_no_clean_capture_in_the_windo
   assert {
     condition = (
       jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR5"]).data[0].model).expr ==
-      "sum by (system, feed, service_name, service_version) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | feed=~\"free_bike_status|station_status\" [24h])) unless on (system, feed) sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"info\"} | event=~\"feed_captured|feed_failed\" | feed=~\"free_bike_status|station_status\" [11m]))"
+      "sum by (system, feed, service_name, service_version) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | feed=~\"free_bike_status|station_status\" [24h])) unless on (system, feed) sum by (system, feed) (count_over_time({service_name=\"capture\"} | detected_level=\"info\" | event=~\"feed_captured|feed_failed\" | feed=~\"free_bike_status|station_status\" [11m]))"
     )
     error_message = "ALR5 must select the dynamic feeds seen in the last 24 h that have no clean capture in the last 11 minutes."
   }
@@ -643,7 +643,7 @@ run "alr15_adds_the_passes_with_no_event_to_the_failures_given_to_capture_over_s
   assert {
     condition = (
       jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR15"]).data[0].model).expr ==
-      "((max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" [7d]))) - on (system) group_right () (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" | feed=~\"free_bike_status|station_status\" [7d])))) + on (system, feed) (sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"error\"} | event=~\"feed_captured|feed_failed|index_rejected\" | error_type!~\"http|timeout\" [7d])))) or (max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" [7d]))) - on (system) group_right () (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" | feed=~\"free_bike_status|station_status\" [7d]))))"
+      "((max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" [7d]))) - on (system) group_right () (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" | feed=~\"free_bike_status|station_status\" [7d])))) + on (system, feed) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | detected_level=\"error\" | event=~\"feed_captured|feed_failed|index_rejected\" | error_type!~\"http|timeout\" [7d])))) or (max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" [7d]))) - on (system) group_right () (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed|index_rejected\" | feed=~\"free_bike_status|station_status\" [7d]))))"
     )
     error_message = "ALR15 must add a feed's failures the provider is not given to its passes with no event."
   }
@@ -810,7 +810,7 @@ run "alr6_computes_the_error_rate_from_the_clean_captures_over_the_passes_that_r
   assert {
     condition = (
       jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_1h")]).data[0].model).expr ==
-      "1 - (max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"info\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" | feed=\"station_status\" [1h]))) or (0 * max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h]))))) / max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h])))"
+      "1 - (max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | detected_level=\"info\" | event=~\"feed_captured|feed_failed\" | system=\"bicing\" | feed=\"station_status\" [1h]))) or (0 * max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h]))))) / max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h])))"
     )
     error_message = "The error rate must be one minus the clean captures over the passes in the window."
   }

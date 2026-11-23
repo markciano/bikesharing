@@ -336,18 +336,18 @@ Every component writes `warn` for a failure that does not affect the data, OpenT
 
 #### Field mapping
 
-Each event maps to an OTLP log record. Of the fields the components send, Grafana Cloud turns into Loki labels only the resource attribute `service.name` and the severity, following Loki's practice of low-cardinality labels; every log record attribute stays as structured metadata, which queries filter after the stream selector ([Grafana Cloud › Logs](../sources/grafana-cloud.md#logs)):
+Each event maps to an OTLP log record. Of the fields the components send, Grafana Cloud turns into a Loki label only the resource attribute `service.name`, following Loki's practice of low-cardinality labels; the severity and every log record attribute stay as structured metadata, which queries filter after the stream selector ([Grafana Cloud › Logs](../sources/grafana-cloud.md#logs)):
 
 | ADR-0036 field | OTLP | Loki |
 |---|---|---|
 | `component` | resource `service.name` | label `service_name` |
 | `version` | resource `service.version` | structured metadata |
 | `ts` | `timeUnixNano` | the record's time |
-| `level` | `severityText` and `severityNumber` (9 `info`, 13 `warn`, 17 `error`) | label `detected_level` |
+| `level` | `severityText` and `severityNumber` (9 `info`, 13 `warn`, 17 `error`) | structured metadata `detected_level` |
 | `event`, `system`, `feed`, `rule`, `run_id` and every other own field | attributes | structured metadata |
 | the JSON line | body | the line shown |
 
-Queries and alerts select capture's or the pipeline's stream by `service_name` and filter `event`, `system`, `feed` and `rule` after it, as in `{service_name="capture"} | event="feed_failed"`.
+Queries and alerts select capture's or the pipeline's stream by `service_name` and filter `detected_level`, `event`, `system`, `feed` and `rule` after it, as in `{service_name="capture"} | detected_level="error" | event="feed_failed"`; a selector with `detected_level` between the braces matches no stream. **DI11**
 
 Every component names the bike sharing system `system` in its log events, as the pipeline does and as GBFS names it ([ADR-0040](../decisions/0040-model-vocabulary-from-gbfs-3-0.md)); capture, which wrote `source`, changes its log events and its log contract with #4, while its code and bronze keys keep `source`. Capture's logs already in R2 keep `source`, and the catalog records the change as for #4. **#5**
 
@@ -2073,3 +2073,4 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 | DI8 | [Error budget alerts](#error-budget-alerts) | ALR15 and ALR5 take the dynamic feeds from a list in `locals.tf`, `free_bike_status` and `station_status`, in place of detecting them from the counts | A static feed, fetched once a day, would show nearly all its passes with no event; the dynamic feeds are known from d004 D3 | Step 22 |
 | DI9 | [Error budget alerts](#error-budget-alerts), [Error budget alert module](#error-budget-alert-module) | ALR6 counts as captured the minutes with a `feed_captured` of `station_status`, the feed that holds the station stock, taken from a list in `locals.tf` and given to the module as `stock_feed`; the module also takes `capture_silent_s`, ALR8's threshold, for the guard of R42 | DQM7 counts the minutes with a capture in the station stock, and a count over any feed would miss a stock outage while another feed captures; the module cannot read the root's locals | Step 23 |
 | DI10 | [Field mapping](#field-mapping), `contracts/log-events.registry.json` | The pipeline's `rule_checked` writes the rule's configured severity as `rule_severity`, in place of `severity` | Loki takes an attribute named `severity` as the log level, so a passing rule of severity `error` showed `detected_level=error` and ALR2 would fire on it; a domain name that does not collide follows OpenTelemetry's naming guidance, and a test against Grafana Cloud's OTLP endpoint showed `detected_level=info` with it | Step 29 |
+| DI11 | [Field mapping](#field-mapping) | The alerts that select by level (ALR1, ALR2, ALR5, ALR6, ALR15) filter `detected_level` after the stream selector, in place of between its braces | `detected_level` is structured metadata, not a label of the stream, so a selector with it matches nothing: ALR5 and ALR6 fired with capture healthy and ALR1 and ALR2 could never fire; the plan tests checked the query string, not Loki's result, and the owner's query in Explore showed it | Step 30 |
