@@ -18,9 +18,9 @@ Kind: a build task builds code or configuration and has every block. A document-
 Phase: the blocks and reviews completed. A document-only task shows only Spec · Plan · Plan review.
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
-- State: In progress 🔄
+- State: Complete ✅
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 32.
+- Current: —
 
 ## 1. Spec — what and why
 
@@ -265,7 +265,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R33** The data quality catalog shall set DQM11's target to at most 30 minutes given to capture per feed and calendar month, with no target on the minutes given to the provider. (D10)
 - **R34** When a page other than ALR12 fires between 08:00 and 23:00, Madrid time, Grafana shall notify the owner in the Grafana mobile app with an important notification every 5 min, up to 6 times, until the owner acknowledges it. (D11, #16)
 - **R35** When a ticket fires, Grafana shall add it to the app's list of alerts with no notification, until the owner closes it. (D11)
-- **R36** Grafana shall show, over the last 14 days, the events of capture and the pipeline and the results of the synthetic check, in the browser, on the computer and on the phone. (D1, D12, DI8)
+- **R36** Grafana shall show, over the last 14 days, the events of capture and the pipeline and the results of the synthetic check, in the browser, on the computer and on the phone. (D1, D12, DI14)
 - **R37** The watchdog's signal URL shall be kept only in Grafana's notification setting, never in code. (D15)
 - **R38** Alert notifications shall carry no credentials and no visitor data. (D15)
 - **R39** When a feed's minutes given to capture over the last 7 days, among the minutes capture's events reach Grafana, exceed 7, the 7-day share of DQM11's target, Grafana shall raise ALR15 as a ticket. (D3, D10, D11, #6, #13)
@@ -420,7 +420,7 @@ Every alert but ALR12 goes to one contact point of type IRM, on an IRM integrati
 
 The notification policy for pages has an active time interval from 08:00 to 23:00, `Europe/Madrid`, every day, following Alertmanager's active time intervals: outside it, Grafana holds the notification and sends it when the interval opens, if the alert still fires. Tickets and ALR12 have none. IRM's integration, route and chains are declared in Terraform with the provider's service account token (ADR-0051); the owner's personal rules for important notifications, and their override of Do Not Disturb, are set in the app, since Terraform would need one more token for them. **#16**
 
-The integration's web and mobile app message templates are `{{ payload.message }}`, so IRM shows the layout of `project.message` (the alert's ID, checks and links), in place of its own layout built from the alert's labels and annotations. **DI7**
+The integration's web and mobile app message templates are `{{ payload.message }}`, so IRM shows the layout of `project.message` (the alert's ID, checks and links), in place of its own layout built from the alert's labels and annotations. **DI13**
 
 #### Watchdog
 
@@ -517,7 +517,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 │   ├── locals.tf                               (new)       Reads the event registry and the pipeline's run settings; derives the thresholds (#8, #9)
 │   ├── alert_rules.tf                          (new)       ALR rules, ALR12's watchdog rule included
 │   ├── contact_points.tf                       (new)       IRM and the watchdog's webhook
-│   ├── irm.tf                                  (new)       IRM integration with its message templates, the pages' route and the two escalation chains (#16, DI7)
+│   ├── irm.tf                                  (new)       IRM integration with its message templates, the pages' route and the two escalation chains (#16, DI13)
 │   ├── notification_policies.tf                (new)       Grouping by alert ID and system, repeat intervals, the pages' active time interval, the watchdog's policy
 │   ├── message_template.tf                     (new)       The notification template resource (#11)
 │   ├── templates/notification.tmpl             (new)       The notification layout (#11)
@@ -2011,7 +2011,7 @@ The Demonstration rows of the [Test plan](#26-test-plan), and the notifications 
 
 ### Step 32 — Production checks and close
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** `docs: d009.s32 record the production checks and close`
 - **R:** —
@@ -2049,11 +2049,23 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 
 <!-- Component — what was delivered; tests passing. In a document-only task: Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. -->
 
+- Event registry and observability catalog — `contracts/log-events.registry.json`, its schema and `docs/observability.md`, with DQM7, DQM10 and DQM11 in the data quality catalog; registry contract tests passing in capture and the pipeline.
+- Capture — `warn` and `system`, the heartbeat at every fifth minute and the OTLP copy of every pass's events; unit and integration tests passing. Deployed as Worker version `2f68178a-be4f-4bfc-99d7-a29ce8f9d544` on 2026-11-23.
+- Pipeline — run settings, the OTLP payload and exporter, the copy in every run and DQR12 over 7 days at 95%; unit and integration tests passing. Deployed from version `8b20ef7ca29e0cebdacf07fcb59b0fa598c01874` on 2026-11-23.
+- Monitoring — Grafana Cloud's alerts, contact points, IRM routing, error budget module, synthetic check and watchdog as Terraform in `monitoring/`, applied by the owner; `terraform test` passing in the CI job `monitoring`.
+
+Done when, checked:
+
+- Grafana Cloud account: tokens scoped to `logs:write` only, one per emitter; the stack in an EU region, Germany (`prod-eu-west-4`); the Free tier with no payment method. Recorded on 2026-11-22 in [Grafana Cloud's source card](../sources/grafana-cloud.md), with the Free tier features of [Prerequisites](#31-prerequisites).
+- Security controls of [s018 › D8](../spikes/s018-monitoring-tool.md#d8-monitoring-tool-security-threats), checked in the console: a second factor on the owner's sign-in, through GitHub Mobile (DI1); the owner as the only user (TH1); no public dashboard or shared snapshot (TH3).
+- A test page rang on the owner's phone until acknowledged, and a test ticket entered the app's list with no notification (Step 31).
+- With production data, after the merge, on 2026-11-23: events of capture and of the pipeline reach Grafana; the watchdog's check is green in Healthchecks.io; the synthetic check reads the page from its three probes; a real alert's links in IRM open the catalog section and the events in Explore (R23, R24).
+
 ### 4.2 Known gaps at close
 
 <!-- What the task leaves undone or imperfect, each with the task that covers it and its `TODO(TNNN)` marker (CLAUDE.md › Pending items): requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
 
-- `<gap>` — TNNN
+None.
 
 ### 4.3 Decisions taken during implementation
 
@@ -2072,11 +2084,11 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 | DI4 | [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) | A scheduled run whose `OTLP_ENDPOINT` or `OTLP_TOKEN` is missing or empty starts and sends no copy, in place of refusing to start | The copy never affects a run (D2); ALR8 reports a component with no events in Grafana | Step 13 |
 | DI5 | [Thresholds](#thresholds), [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) | The pipeline's send time limit (R5) bounds each socket operation, as the heartbeat's pings do, not the send as a whole | A server answering a byte at a time is not a case worth a thread and a deadline; the outcome and the heartbeat are already set when it happens | Step 13 |
 | DI6 | [Notification routing](#notification-routing) | The IRM user a page's chain notifies is named by a variable without default, `irm_owner_username`, set in `.env` and read by `irm.tf` | IRM's notify step takes a user, and the owner's username stays out of the repository, as the page's base URL does | Step 20 |
-| DI7 | [Notification routing](#notification-routing), [File layout](#24-file-layout) | The IRM integration declares its web and mobile app message templates as `{{ payload.message }}` in `irm.tf`, so IRM shows the layout of `project.message`, in place of its own layout built from labels and annotations | IRM's default template ignores the payload's `message`, so the alert's ID, checks and links (R23, R24) did not reach the owner; Terraform keeps it as code ([ADR-0051](../decisions/0051-monitoring-configuration-as-code.md)) | Step 31 |
-| DI8 | [R36](#13-requirements) | R36's mobile app is Grafana's own web in the phone's browser, which the IRM app opens from its links: Grafana has no app with Explore for this set-up, and the page is the same as on the computer, so the Demonstration is run on the computer | The result does not depend on the device; no other app shows events | Step 31 |
 | DI7 | [Thresholds](#thresholds) | ALR5 fires on a dynamic feed seen in the last 24 h that has no `feed_captured` in the last 11 minutes, the threshold plus one minute, whatever the cause, in place of counting failure events | LogQL cannot count minutes in a row; a window with no clean capture covers a pass with no event too, which "any cause" includes, and a failure count missed it | Step 22 |
 | DI8 | [Error budget alerts](#error-budget-alerts) | ALR15 and ALR5 take the dynamic feeds from a list in `locals.tf`, `free_bike_status` and `station_status`, in place of detecting them from the counts | A static feed, fetched once a day, would show nearly all its passes with no event; the dynamic feeds are known from d004 D3 | Step 22 |
 | DI9 | [Error budget alerts](#error-budget-alerts), [Error budget alert module](#error-budget-alert-module) | ALR6 counts as captured the minutes with a `feed_captured` of `station_status`, the feed that holds the station stock, taken from a list in `locals.tf` and given to the module as `stock_feed`; the module also takes `capture_silent_s`, ALR8's threshold, for the guard of R42 | DQM7 counts the minutes with a capture in the station stock, and a count over any feed would miss a stock outage while another feed captures; the module cannot read the root's locals | Step 23 |
 | DI10 | [Field mapping](#field-mapping), `contracts/log-events.registry.json` | The pipeline's `rule_checked` writes the rule's configured severity as `rule_severity`, in place of `severity` | Loki takes an attribute named `severity` as the log level, so a passing rule of severity `error` showed `detected_level=error` and ALR2 would fire on it; a domain name that does not collide follows OpenTelemetry's naming guidance, and a test against Grafana Cloud's OTLP endpoint showed `detected_level=info` with it | Step 29 |
 | DI11 | [Field mapping](#field-mapping) | The alerts that select by level (ALR1, ALR2, ALR5, ALR6, ALR15) filter `detected_level` after the stream selector, in place of between its braces | `detected_level` is structured metadata, not a label of the stream, so a selector with it matches nothing: ALR5 and ALR6 fired with capture healthy and ALR1 and ALR2 could never fire; the plan tests checked the query string, not Loki's result, and the owner's query in Explore showed it | Step 30 |
 | DI12 | [Observability catalog](#observability-catalog) | ALR14 selects the streams of the components the registry holds, taken from it, in place of every stream with a `service_name` | The synthetic check writes its own logs to Loki under its job name, with no `event`, so ALR14 fired on them with no event of ours unregistered | Step 30 |
+| DI13 | [Notification routing](#notification-routing), [File layout](#24-file-layout) | The IRM integration declares its web and mobile app message templates as `{{ payload.message }}` in `irm.tf`, so IRM shows the layout of `project.message`, in place of its own layout built from labels and annotations | IRM's default template ignores the payload's `message`, so the alert's ID, checks and links (R23, R24) did not reach the owner; Terraform keeps it as code ([ADR-0051](../decisions/0051-monitoring-configuration-as-code.md)) | Step 31 |
+| DI14 | [R36](#13-requirements) | R36's mobile app is Grafana's own web in the phone's browser, which the IRM app opens from its links: Grafana has no app with Explore for this set-up, and the page is the same as on the computer, so the Demonstration is run on the computer | The result does not depend on the device; no other app shows events | Step 31 |

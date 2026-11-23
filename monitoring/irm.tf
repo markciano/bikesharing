@@ -13,7 +13,7 @@ resource "grafana_oncall_integration" "alerting" {
 
   # IRM's own layout is built from the alert's labels and annotations and ignores the
   # message the contact point sends; these show that message, the layout of
-  # project.message with the alert's ID, checks and links (d009 R23, R24, DI7).
+  # project.message with the alert's ID, checks and links (d009 R23, R24, DI13).
   templates {
     web {
       message = "{{ payload.message }}"
