@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 27.
+- Current: Step 28.
 
 ## 1. Spec — what and why
 
@@ -1866,7 +1866,7 @@ The `monitoring` component in CI, and every job that reads a shared file runs wh
 
 ### Step 27 — PR and merge
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **R:** —
