@@ -46,6 +46,16 @@ Each component design applies the five answers below. "Paper" marks a statement 
 4. **Where:** one shared file per contract in `contracts/` at the root, owned by no component, read by relative path by the producer tests and the consumer tests (F35); inside the path filters of every component job that reads it.
 5. **Runs:** inside the test runs of both sides, so a contract change fails both (F18, F35).
 
+The event registry (`contracts/log-events.registry.json`) is reference data, so it has a JSON Schema (`contracts/log-events.schema.json`) and no vectors. Each reader checks it against the schema and its own use of it: capture (`test/contract/log-events-registry.test.js`) and the pipeline (`tests/integration/test_log_events_registry_contract.py`) check that every event they write is registered, and `monitoring/` builds its alerts from it. The registry and its schema are in the path filters of the `capture`, `pipeline` and `monitoring` jobs.
+
+#### Terraform (`monitoring/`)
+
+1. **When:** tests before the configuration they verify, as in Python; a rule's test is written with its alert.
+2. **Type:** unit, `terraform test` with a mocked provider, in plan mode: it verifies each rule's query, threshold, labels and routing as planned, not that Grafana evaluates them. Static checks: `terraform fmt -check`, `terraform validate`. What only the live service shows (that an alert fires and notifies) is a demonstration in the design's Done when ([d009 › Test plan](designs/d009-monitoring.md#26-test-plan)).
+3. **Format:** files `<topic>.tftest.hcl`, one `run` block per behaviour, named after it; assertions on planned values, with the files the configuration reads through `file(...)` read the same way in the test.
+4. **Where:** `monitoring/tests/`; the provider is pinned in `versions.tf` and locked in `.terraform.lock.hcl`, Terraform in `.terraform-version`.
+5. **Runs:** locally before each commit through `monitoring/scripts/check-monitoring.sh`, which runs format, init with the locked provider, validate and test, with no network call to Grafana Cloud and no credential. The same script runs in the `monitoring` job of the PR run and the `main` run. Its path filter holds `monitoring/**` and the files Terraform reads from outside it: the event registry, its schema and `pipeline/src/bikesharing/core/run_settings.json`.
+
 #### Docs (Markdown)
 
 1. **When:** no test is written; every Markdown change in the lint scope is linted (F49, T023).
