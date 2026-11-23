@@ -33,6 +33,18 @@ locals {
   # within one run's interval.
   synthetic_check_frequency_s = 300
 
+  # Longer than a request to a static file needs, so a slow answer is read and judged
+  # by the age of its data and not cut off; the check's frequency stays well above it.
+  synthetic_check_timeout_ms = 30000
+
+  # ALR4 fires when at least two of the three probes fail a file, since the age of a
+  # file is the same from every location and a single failing probe points to its own
+  # network (d009 D14, The synthetic check confirms a failure from two of three probes).
+  alr4_probes_to_confirm = 2
+
+  # Prefix of every check's job, which ALR4 selects in Prometheus.
+  synthetic_check_job_prefix = "published_file_age_"
+
   # Twice the longest run of minutes with no clean capture measured, 5; stays quiet in
   # normal operation (d009, Thresholds).
   alr5_minutes_in_a_row = 10
@@ -47,6 +59,11 @@ locals {
   # so the alerts that count a feed's minutes leave it out. It duplicates capture's
   # source table, so a new dynamic feed is added here too.
   capture_dynamic_feeds = ["free_bike_status", "station_status"]
+
+  # The feed that holds the station stock, whose clean captures are the minutes DQM7
+  # counts and so the ones ALR6 measures (d009 D7, Capture completeness target per
+  # system). It duplicates capture's source table, as the list above does.
+  alr6_stock_feed = "station_status"
 
   # The watchdog policy's repeat_interval: the signal must reach Healthchecks.io well
   # inside its period of 5 min and grace of 10 min.

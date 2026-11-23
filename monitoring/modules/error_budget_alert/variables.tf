@@ -25,6 +25,11 @@ variable "loki_datasource_uid" {
   type        = string
 }
 
+variable "stock_feed" {
+  description = "Feed that holds the station stock, as capture's events name it in `feed`; its clean captures are the minutes DQM7 counts."
+  type        = string
+}
+
 variable "capture_silent_s" {
   description = "Seconds with no capture event after which ALR8 fires; the rules hold only while capture has an event within them, so a broken send never pages for data that R2 holds."
   type        = number

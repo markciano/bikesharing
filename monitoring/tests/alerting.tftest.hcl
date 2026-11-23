@@ -1,7 +1,18 @@
 # Tests of the alerting configuration against a mocked provider: nothing reaches
 # Grafana Cloud and no credential is needed (d009, Test plan). The values below are
 # placeholders, never real secrets.
-mock_provider "grafana" {}
+mock_provider "grafana" {
+  # The probes' IDs exist only in Grafana; the check looks them up by name.
+  mock_data "grafana_synthetic_monitoring_probes" {
+    defaults = {
+      probes = {
+        Frankfurt = 11
+        Paris     = 12
+        London    = 13
+      }
+    }
+  }
+}
 
 variables {
   grafana_url               = "https://stack.example.invalid"
@@ -699,8 +710,8 @@ run "every_threshold_rule_carries_its_id_urgency_and_a_summary" {
   command = plan
 
   assert {
-    condition     = toset([for r in grafana_rule_group.thresholds.rule : r.labels.alert_id]) == toset(["ALR5", "ALR7", "ALR8", "ALR13", "ALR15"])
-    error_message = "The threshold rules must be ALR5, ALR7, ALR8, ALR13 and ALR15."
+    condition     = toset([for r in grafana_rule_group.thresholds.rule : r.labels.alert_id]) == toset(["ALR4", "ALR5", "ALR7", "ALR8", "ALR13", "ALR15"])
+    error_message = "The threshold rules must be ALR4, ALR5, ALR7, ALR8, ALR13 and ALR15."
   }
 
   assert {
@@ -732,6 +743,7 @@ run "alr6_has_three_levels_per_system_with_their_burn_rates_windows_and_threshol
     folder_uid          = "folder-uid"
     loki_datasource_uid = "loki-uid"
     capture_silent_s    = 300
+    stock_feed          = "station_status"
   }
 
   assert {
@@ -789,14 +801,16 @@ run "alr6_computes_the_error_rate_from_the_clean_captures_over_the_passes_that_r
     folder_uid          = "folder-uid"
     loki_datasource_uid = "loki-uid"
     capture_silent_s    = 300
+    stock_feed          = "station_status"
   }
 
   # The passes are the largest count of a feed's events; a clean capture is an event of
-  # info level, as ALR5 reads it. The events come from the registry.
+  # info level, as ALR5 reads it, of the feed that holds the station stock, which is what
+  # DQM7 counts. The events come from the registry.
   assert {
     condition = (
       jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_1h")]).data[0].model).expr ==
-      "1 - (max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"info\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h]))) or (0 * max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h]))))) / max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h])))"
+      "1 - (max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"info\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" | feed=\"station_status\" [1h]))) or (0 * max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h]))))) / max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h])))"
     )
     error_message = "The error rate must be one minus the clean captures over the passes in the window."
   }
@@ -833,6 +847,7 @@ run "alr6_pages_on_the_fast_levels_and_tickets_on_the_slow_one" {
     folder_uid          = "folder-uid"
     loki_datasource_uid = "loki-uid"
     capture_silent_s    = 300
+    stock_feed          = "station_status"
   }
 
   assert {
@@ -859,6 +874,7 @@ run "alr6_holds_only_while_capture_has_events_within_the_silence_threshold" {
     folder_uid          = "folder-uid"
     loki_datasource_uid = "loki-uid"
     capture_silent_s    = 300
+    stock_feed          = "station_status"
   }
 
   assert {
@@ -886,7 +902,114 @@ run "alr6_rejects_a_target_outside_zero_and_one" {
     folder_uid          = "folder-uid"
     loki_datasource_uid = "loki-uid"
     capture_silent_s    = 300
+    stock_feed          = "station_status"
   }
 
   expect_failures = [var.target]
+}
+
+# The check is looked up by the file it reads; one() fails the run if there is none or
+# two. The probes' IDs come from the mock above.
+
+# Verifies d009 R10
+run "alr4_check_reads_each_published_file_every_five_minutes_from_the_three_probes" {
+  command = plan
+
+  assert {
+    condition = (
+      one(values(grafana_synthetic_monitoring_check.published_file_age)).frequency == local.synthetic_check_frequency_s * 1000 &&
+      local.synthetic_check_frequency_s == 300 &&
+      toset(one(values(grafana_synthetic_monitoring_check.published_file_age)).probes) == toset([11, 12, 13])
+    )
+    error_message = "The check must run every 5 min from the three probes named in the variable."
+  }
+
+  assert {
+    condition     = one(values(grafana_synthetic_monitoring_check.published_file_age)).timeout == local.synthetic_check_timeout_ms && local.synthetic_check_timeout_ms == 30000
+    error_message = "The check's timeout must be the named local, 30 s."
+  }
+
+  assert {
+    condition     = length(grafana_synthetic_monitoring_check.published_file_age) == length(var.published_files) && contains(keys(grafana_synthetic_monitoring_check.published_file_age), "latest-station-count.json")
+    error_message = "There must be one check for each published file."
+  }
+}
+
+# Verifies d009 R10
+run "alr4_check_script_carries_the_file_url_and_the_threshold_and_measures_the_data_age" {
+  command = plan
+
+  assert {
+    condition = (
+      strcontains(one(one(one(values(grafana_synthetic_monitoring_check.published_file_age)).settings).scripted).script, "\"max_age_s\":${local.alr4_max_age_s}") &&
+      strcontains(one(one(one(values(grafana_synthetic_monitoring_check.published_file_age)).settings).scripted).script, "\"url\":\"${var.page_base_url}/latest-station-count.json\"")
+    )
+    error_message = "The script must carry the file's URL under the page's base URL and ALR4's threshold."
+  }
+
+  assert {
+    condition = (
+      strcontains(one(one(one(values(grafana_synthetic_monitoring_check.published_file_age)).settings).scripted).script, "data_instant") &&
+      !strcontains(one(one(one(values(grafana_synthetic_monitoring_check.published_file_age)).settings).scripted).script, "Last-Modified")
+    )
+    error_message = "The script must measure the age from data_instant and not from Last-Modified."
+  }
+}
+
+# Verifies d009 R10
+run "alr4_check_script_sends_no_credential" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      for word in ["Authorization", "Bearer", "token", "headers", "params"] :
+      !strcontains(one(one(one(values(grafana_synthetic_monitoring_check.published_file_age)).settings).scripted).script, word)
+    ])
+    error_message = "The script may fetch the public file only, with no header or credential."
+  }
+}
+
+# Verifies d009 R10
+run "alr4_fires_when_at_least_two_of_the_three_probes_fail_as_a_page" {
+  command = plan
+
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR4"]).data[0].model).expr ==
+      "sum by (job, instance) (1 - last_over_time(probe_success{job=~\"published_file_age_.+\"}[10m]))" &&
+      one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR4"]).data[0].datasource_uid == var.prometheus_datasource_uid
+    )
+    error_message = "ALR4 must count the probes that fail each published file, in the Prometheus data source."
+  }
+
+  # Failing probes are above 1 when at least two of the three fail.
+  assert {
+    condition = (
+      local.alr4_probes_to_confirm == 2 &&
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR4"]).data[1].model).conditions[0].evaluator.type == "gt" &&
+      jsondecode(one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR4"]).data[1].model).conditions[0].evaluator.params[0] == local.alr4_probes_to_confirm - 1 &&
+      one([for r in grafana_rule_group.thresholds.rule : r if r.name == "ALR4"]).labels.urgency == "page"
+    )
+    error_message = "ALR4 must be a page that fires on more than one failing probe."
+  }
+}
+
+# Verifies d009 R16, R22
+run "every_alert_the_registry_cites_is_declared_by_terraform" {
+  command = plan
+
+  # ALR6 is declared by the module, whose rule group the root cannot read; its own runs
+  # test it.
+  assert {
+    condition = alltrue([
+      for id in local.alert_ids :
+      contains(concat(
+        [for r in grafana_rule_group.events.rule : r.labels.alert_id],
+        [for r in grafana_rule_group.thresholds.rule : r.labels.alert_id],
+        [for r in grafana_rule_group.watchdog.rule : r.labels.alert_id],
+        ["ALR6"],
+      ), id)
+    ])
+    error_message = "The registry cites an alert ID that no rule declares."
+  }
 }
