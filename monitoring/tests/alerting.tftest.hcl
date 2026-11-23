@@ -711,3 +711,171 @@ run "every_threshold_rule_carries_its_id_urgency_and_a_summary" {
     error_message = "Every threshold rule must carry its ID, an urgency and a summary."
   }
 }
+
+# ALR6's module is planned on its own: it has no outputs, so a run block that names it
+# reads its rule group directly. The rules are looked up by name; one() fails the run if
+# a level is missing or declared twice. A rule has five steps: the error rate over the
+# long window (A) and over the short one (B), the guard's query (C), the math that holds
+# both windows over the threshold while C has data (D) and its threshold (E).
+
+# Verifies d009 R12
+run "alr6_has_three_levels_per_system_with_their_burn_rates_windows_and_thresholds" {
+  command = plan
+
+  module {
+    source = "./modules/error_budget_alert"
+  }
+
+  variables {
+    system              = "ambici"
+    target              = 0.995
+    folder_uid          = "folder-uid"
+    loki_datasource_uid = "loki-uid"
+    capture_silent_s    = 300
+  }
+
+  assert {
+    condition = toset([for r in grafana_rule_group.this.rule : r.name]) == toset([
+      "ALR6 ambici page_1h", "ALR6 ambici page_6h", "ALR6 ambici ticket_3d",
+    ])
+    error_message = "The module must build one rule per level."
+  }
+
+  # The budget is 1 - target = 0.005, so the thresholds are 14.4, 6 and 1 times it.
+  assert {
+    condition = (
+      strcontains(jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_1h")]).data[0].model).expr, "[1h]") &&
+      strcontains(jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_1h")]).data[1].model).expr, "[5m]") &&
+      jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_1h")]).data[3].model).expression == "($A > ${14.4 * (1 - 0.995)}) && ($B > ${14.4 * (1 - 0.995)}) && $C"
+    )
+    error_message = "The 1 h level must compare 1 h and 5 min with 14.4 times the budget."
+  }
+
+  assert {
+    condition = (
+      strcontains(jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_6h")]).data[0].model).expr, "[6h]") &&
+      strcontains(jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_6h")]).data[1].model).expr, "[30m]") &&
+      jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_6h")]).data[3].model).expression == "($A > ${6 * (1 - 0.995)}) && ($B > ${6 * (1 - 0.995)}) && $C"
+    )
+    error_message = "The 6 h level must compare 6 h and 30 min with 6 times the budget."
+  }
+
+  assert {
+    condition = (
+      strcontains(jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "ticket_3d")]).data[0].model).expr, "[3d]") &&
+      strcontains(jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "ticket_3d")]).data[1].model).expr, "[6h]") &&
+      jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "ticket_3d")]).data[3].model).expression == "($A > ${1 * (1 - 0.995)}) && ($B > ${1 * (1 - 0.995)}) && $C"
+    )
+    error_message = "The 3 d level must compare 3 d and 6 h with 1 times the budget."
+  }
+
+  assert {
+    condition     = grafana_rule_group.this.folder_uid == "folder-uid" && alltrue([for r in grafana_rule_group.this.rule : r.labels.system == "ambici" && r.labels.alert_id == "ALR6"])
+    error_message = "Every rule must carry the system and ALR6's ID, in the given folder."
+  }
+}
+
+# Verifies d009 R12
+run "alr6_computes_the_error_rate_from_the_clean_captures_over_the_passes_that_reached_grafana" {
+  command = plan
+
+  module {
+    source = "./modules/error_budget_alert"
+  }
+
+  variables {
+    system              = "bicing"
+    target              = 0.97
+    folder_uid          = "folder-uid"
+    loki_datasource_uid = "loki-uid"
+    capture_silent_s    = 300
+  }
+
+  # The passes are the largest count of a feed's events; a clean capture is an event of
+  # info level, as ALR5 reads it. The events come from the registry.
+  assert {
+    condition = (
+      jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_1h")]).data[0].model).expr ==
+      "1 - max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\", detected_level=\"info\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h]))) / max by (system) (sum by (system, feed) (count_over_time({service_name=\"capture\"} | event=~\"feed_captured|feed_failed\" | system=\"bicing\" [1h])))"
+    )
+    error_message = "The error rate must be one minus the clean captures over the passes in the window."
+  }
+
+  # Bicing's target of 97% leaves a budget of 0.03.
+  assert {
+    condition     = jsondecode(one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "ticket_3d")]).data[3].model).expression == "($A > ${1 * (1 - 0.97)}) && ($B > ${1 * (1 - 0.97)}) && $C"
+    error_message = "The threshold must follow the system's own target."
+  }
+}
+
+# Verifies d009 R13
+run "alr6_pages_on_the_fast_levels_and_tickets_on_the_slow_one" {
+  command = plan
+
+  module {
+    source = "./modules/error_budget_alert"
+  }
+
+  variables {
+    system              = "ambici"
+    target              = 0.995
+    folder_uid          = "folder-uid"
+    loki_datasource_uid = "loki-uid"
+    capture_silent_s    = 300
+  }
+
+  assert {
+    condition = (
+      one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_1h")]).labels.urgency == "page" &&
+      one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "page_6h")]).labels.urgency == "page" &&
+      one([for r in grafana_rule_group.this.rule : r if endswith(r.name, "ticket_3d")]).labels.urgency == "ticket"
+    )
+    error_message = "The 1 h and 6 h levels must be pages and the 3 d level a ticket."
+  }
+}
+
+# Verifies d009 R42
+run "alr6_holds_only_while_capture_has_events_within_the_silence_threshold" {
+  command = plan
+
+  module {
+    source = "./modules/error_budget_alert"
+  }
+
+  variables {
+    system              = "ambici"
+    target              = 0.995
+    folder_uid          = "folder-uid"
+    loki_datasource_uid = "loki-uid"
+    capture_silent_s    = 300
+  }
+
+  assert {
+    condition = alltrue([
+      for r in grafana_rule_group.this.rule :
+      jsondecode(r.data[2].model).expr == "sum(count_over_time({service_name=\"capture\"} [300s]))" &&
+      strcontains(jsondecode(r.data[3].model).expression, "$C") &&
+      r.condition == "E"
+    ])
+    error_message = "Every ALR6 rule must fire only when capture has events in the silence threshold's window."
+  }
+}
+
+# Verifies d009 R12
+run "alr6_rejects_a_target_outside_zero_and_one" {
+  command = plan
+
+  module {
+    source = "./modules/error_budget_alert"
+  }
+
+  variables {
+    system              = "ambici"
+    target              = 1
+    folder_uid          = "folder-uid"
+    loki_datasource_uid = "loki-uid"
+    capture_silent_s    = 300
+  }
+
+  expect_failures = [var.target]
+}

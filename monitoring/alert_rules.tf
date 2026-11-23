@@ -432,6 +432,20 @@ resource "grafana_rule_group" "thresholds" {
   }
 }
 
+# ALR6, the error budget burn: one rule group per system, from its DQM7 target (d009 D7,
+# Capture completeness target per system). A new system is one more entry of the
+# variable.
+module "error_budget_alert" {
+  source   = "./modules/error_budget_alert"
+  for_each = var.dqm7_targets
+
+  system              = each.key
+  target              = each.value
+  folder_uid          = grafana_folder.alerts.uid
+  loki_datasource_uid = var.loki_datasource_uid
+  capture_silent_s    = local.alr8_capture_silent_s
+}
+
 # The watchdog's rule: its condition always holds, and no data fires it too, so the
 # signal reaches the check as long as Grafana evaluates and notifies (d009 D13, A
 # watchdog outside Grafana watches its alerting). Its own policy sends it, never IRM.
