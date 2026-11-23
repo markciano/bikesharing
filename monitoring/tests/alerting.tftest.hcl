@@ -13,6 +13,7 @@ variables {
   prometheus_datasource_uid = "prometheus-uid"
   usage_datasource_uid      = "usage-uid"
   page_base_url             = "https://page.example.invalid"
+  irm_owner_username        = "owner"
 }
 
 # Verifies d009 R37
@@ -133,5 +134,164 @@ run "alr14_knows_every_registered_event" {
   assert {
     condition     = length(local.registered_events) == length(distinct(local.registered_events)) && split("|", local.registered_events_regex) == local.registered_events
     error_message = "The registered events must be listed once, and the regular expression must join them."
+  }
+}
+
+# Verifies d009 R34, R35
+run "every_alert_reaches_irm_by_default" {
+  command = plan
+
+  assert {
+    condition     = grafana_notification_policy.root.contact_point == grafana_contact_point.irm.name
+    error_message = "The root policy's default contact point must be IRM."
+  }
+
+  assert {
+    condition     = toset(grafana_notification_policy.root.group_by) == toset(["alert_id", "system"]) && grafana_notification_policy.root.repeat_interval == "4h"
+    error_message = "The root policy must group by alert ID and system and repeat every 4 h."
+  }
+
+  assert {
+    condition     = grafana_oncall_integration.alerting.type == "grafana_alerting"
+    error_message = "The IRM integration must be of type grafana_alerting."
+  }
+}
+
+# Verifies d009 R34
+run "a_page_chain_notifies_the_owner_as_important_waits_five_minutes_and_repeats" {
+  command = plan
+
+  assert {
+    condition     = grafana_oncall_escalation.page_notify.type == "notify_persons" && grafana_oncall_escalation.page_notify.important == true && grafana_oncall_escalation.page_notify.position == 0
+    error_message = "A page's first step must notify the owner as important."
+  }
+
+  assert {
+    condition     = grafana_oncall_escalation.page_wait.type == "wait" && grafana_oncall_escalation.page_wait.duration == 300 && grafana_oncall_escalation.page_wait.position == 1
+    error_message = "A page's second step must wait 5 min."
+  }
+
+  assert {
+    condition     = grafana_oncall_escalation.page_repeat.type == "repeat_escalation" && grafana_oncall_escalation.page_repeat.position == 2
+    error_message = "A page's third step must repeat the chain from the beginning."
+  }
+
+  assert {
+    condition     = grafana_oncall_route.page.routing_type == "jinja2" && strcontains(grafana_oncall_route.page.routing_regex, "commonLabels.urgency") && strcontains(grafana_oncall_route.page.routing_regex, "page")
+    error_message = "The pages' route must match the alert's urgency label."
+  }
+}
+
+# Verifies d009 R35
+run "a_ticket_chain_has_no_steps" {
+  command = plan
+
+  # An id exists only after apply; a known one lets the plan compare which chain a step hangs from.
+  override_resource {
+    target          = grafana_oncall_escalation_chain.page
+    values          = { id = "page-chain" }
+    override_during = plan
+  }
+
+  override_resource {
+    target          = grafana_oncall_escalation_chain.ticket
+    values          = { id = "ticket-chain" }
+    override_during = plan
+  }
+
+  # The chain exists and is the integration's default route; every step declared in
+  # irm.tf hangs from the pages' chain, so the ticket's has none.
+  assert {
+    condition     = grafana_oncall_escalation_chain.ticket.name == "ticket" && grafana_oncall_escalation_chain.page.name == "page"
+    error_message = "Both escalation chains must exist."
+  }
+
+  assert {
+    condition = alltrue([
+      for s in [
+        grafana_oncall_escalation.page_notify,
+        grafana_oncall_escalation.page_wait,
+        grafana_oncall_escalation.page_repeat,
+      ] : s.escalation_chain_id == "page-chain"
+    ])
+    error_message = "Every escalation step must belong to the pages' chain."
+  }
+}
+
+# Verifies d009 R44
+run "the_pages_policy_is_active_from_08_to_23_madrid_time_and_no_other_has_an_interval" {
+  command = plan
+
+  assert {
+    condition = (
+      grafana_mute_timing.pages_active.intervals[0].times[0].start == "08:00" &&
+      grafana_mute_timing.pages_active.intervals[0].times[0].end == "23:00" &&
+      grafana_mute_timing.pages_active.intervals[0].location == "Europe/Madrid"
+    )
+    error_message = "The pages' interval must be 08:00 to 23:00, Europe/Madrid."
+  }
+
+  assert {
+    condition = (
+      toset(grafana_notification_policy.root.policy[1].active_timings) == toset([grafana_mute_timing.pages_active.name]) &&
+      length(coalesce(grafana_notification_policy.root.policy[0].active_timings, [])) == 0
+    )
+    error_message = "Only the pages' policy has an active time interval."
+  }
+}
+
+# Verifies d009 R19
+run "alr12_goes_to_the_watchdog_every_five_minutes_first_and_nothing_else_reaches_it" {
+  command = plan
+
+  assert {
+    condition = (
+      grafana_notification_policy.root.policy[0].contact_point == grafana_contact_point.watchdog.name &&
+      grafana_notification_policy.root.policy[0].repeat_interval == local.alr12_repeat_interval &&
+      grafana_notification_policy.root.policy[0].continue == false &&
+      one(grafana_notification_policy.root.policy[0].matcher).value == "ALR12"
+    )
+    error_message = "ALR12's policy must be the first, match its ID, repeat every 5 min and not continue."
+  }
+
+  assert {
+    condition = (
+      one(grafana_notification_policy.root.policy[1].matcher).value == "page" &&
+      grafana_notification_policy.root.policy[1].contact_point == grafana_contact_point.irm.name &&
+      length(grafana_notification_policy.root.policy) == 2
+    )
+    error_message = "The pages' policy must go to IRM and no other policy may exist."
+  }
+
+  assert {
+    condition     = one(grafana_contact_point.watchdog.webhook).url == var.watchdog_url
+    error_message = "The watchdog's contact point must use the sensitive URL variable."
+  }
+}
+
+# Verifies d009 R23, R24
+run "the_template_shows_the_ids_and_links_the_catalogs_and_the_events" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      strcontains(grafana_message_template.notification.template, ".Labels.alert_id"),
+      strcontains(grafana_message_template.notification.template, ".Annotations.checks"),
+      strcontains(grafana_message_template.notification.template, "docs/data-quality.md"),
+      strcontains(grafana_message_template.notification.template, "docs/observability.md"),
+      strcontains(grafana_message_template.notification.template, "/explore?left="),
+      strcontains(grafana_message_template.notification.template, var.github_base_url),
+    ])
+    error_message = "The template must show the alert ID and checked IDs, and link the catalogs and Explore."
+  }
+}
+
+# Verifies d009 R38
+run "the_template_reads_no_event_body_or_value" {
+  command = plan
+
+  assert {
+    condition     = length(regexall("\\.(Values|ValueString|Body|SilenceURL|GeneratorURL)", grafana_message_template.notification.template)) == 0
+    error_message = "The template may read only an alert's labels and annotations, and its own state and times."
   }
 }
