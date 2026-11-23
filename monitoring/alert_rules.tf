@@ -75,7 +75,7 @@ locals {
     # is reported as an event to classify.
     ALR14 = {
       summary         = "An event the registry does not hold reached Grafana"
-      selector        = "{service_name=~\".+\"} | event!~\"${local.registered_events_regex}\""
+      selector        = "{service_name=~\"${local.registered_components_regex}\"} | event!~\"${local.registered_events_regex}\""
       group_by        = ["event"]
       checks          = ""
       catalog_section = ""

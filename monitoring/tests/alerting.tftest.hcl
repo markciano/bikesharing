@@ -146,6 +146,13 @@ run "alr14_knows_every_registered_event" {
     condition     = length(local.registered_events) == length(distinct(local.registered_events)) && split("|", local.registered_events_regex) == local.registered_events
     error_message = "The registered events must be listed once, and the regular expression must join them."
   }
+
+  assert {
+    condition = toset(split("|", local.registered_components_regex)) == toset([
+      for e in jsondecode(file("../contracts/log-events.registry.json")).events : e.component
+    ])
+    error_message = "ALR14 must select exactly the components the registry holds."
+  }
 }
 
 # Verifies d009 R34, R35
@@ -424,9 +431,9 @@ run "alr14_counts_the_events_the_registry_does_not_hold_as_a_ticket" {
   assert {
     condition = (
       jsondecode(one([for r in grafana_rule_group.events.rule : r if r.labels.alert_id == "ALR14"]).data[0].model).expr ==
-      "sum by (system, service_name, service_version, event) (count_over_time({service_name=~\".+\"} | event!~\"${local.registered_events_regex}\" [5m]))"
+      "sum by (system, service_name, service_version, event) (count_over_time({service_name=~\"${local.registered_components_regex}\"} | event!~\"${local.registered_events_regex}\" [5m]))"
     )
-    error_message = "ALR14 must count, in every component, the events outside the registry."
+    error_message = "ALR14 must count, in every component the registry holds, the events outside the registry."
   }
 
   assert {
