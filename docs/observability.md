@@ -57,9 +57,7 @@ A design that adds or changes an event classifies it when it designs its logs, a
 
 Every component writes `warn` for a failure that does not affect the data and `system` for the bike sharing system, as the pipeline does ([d009 › Warning level and Field mapping](designs/d009-monitoring.md#warning-level)). Capture's code and bronze keys keep `source`.
 
-Logs are append-only, so capture's logs in R2 written before the change keep `warning` and `source`. A query over both periods accepts `warn` or `warning` and `system` or `source`.
-
-- TODO(T060.2): record here the version of capture and the date from which it writes `warn` and `system`, after its deployment (Step 32).
+Logs are append-only, so capture's logs in R2 written before the change keep `warning` and `source`. Capture writes `warn` and `system` from its Worker version `2f68178a-be4f-4bfc-99d7-a29ce8f9d544`, deployed on 2026-11-23. A query over both periods accepts `warn` or `warning` and `system` or `source`.
 
 The pipeline's `rule_checked` writes the rule's configured severity as `rule_severity`, since Loki reads an attribute named `severity` as the log level ([d009 › DI10](designs/d009-monitoring.md#43-decisions-taken-during-implementation)). The pipeline writes `rule_severity` from version `8b20ef7ca29e0cebdacf07fcb59b0fa598c01874`, deployed on 2026-11-23. Its logs written before that keep `severity`, and a query over both periods accepts `rule_severity` or `severity`.
 
