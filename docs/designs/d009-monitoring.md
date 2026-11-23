@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 31.
+- Current: Step 32.
 
 ## 1. Spec — what and why
 
@@ -265,7 +265,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R33** The data quality catalog shall set DQM11's target to at most 30 minutes given to capture per feed and calendar month, with no target on the minutes given to the provider. (D10)
 - **R34** When a page other than ALR12 fires between 08:00 and 23:00, Madrid time, Grafana shall notify the owner in the Grafana mobile app with an important notification every 5 min, up to 6 times, until the owner acknowledges it. (D11, #16)
 - **R35** When a ticket fires, Grafana shall add it to the app's list of alerts with no notification, until the owner closes it. (D11)
-- **R36** Grafana shall show, over the last 14 days, the events of capture and the pipeline and the results of the synthetic check, in the browser and in the mobile app. (D1, D12)
+- **R36** Grafana shall show, over the last 14 days, the events of capture and the pipeline and the results of the synthetic check, in the browser, on the computer and on the phone. (D1, D12, DI8)
 - **R37** The watchdog's signal URL shall be kept only in Grafana's notification setting, never in code. (D15)
 - **R38** Alert notifications shall carry no credentials and no visitor data. (D15)
 - **R39** When a feed's minutes given to capture over the last 7 days, among the minutes capture's events reach Grafana, exceed 7, the 7-day share of DQM11's target, Grafana shall raise ALR15 as a ticket. (D3, D10, D11, #6, #13)
@@ -860,7 +860,7 @@ resource "grafana_rule_group" "this" {
 | R34, R35 | Test | Every alert but ALR12 reaches the IRM contact point, the root policy's default; the pages' route leads to a chain that notifies the owner as important, waits 5 min and repeats 5 times; the default route leads to a chain with no steps | unit |
 | R34, R35 | Demonstration | A test page rings on the phone as an important notification until acknowledged, and a test ticket enters the app's list with no notification | — |
 | R44 | Test | The pages' policy is active from 08:00 to 23:00, `Europe/Madrid`, every day; tickets' and ALR12's policies have no time interval | unit |
-| R36 | Demonstration | Grafana's Explore, in the browser and the mobile app, shows events of capture and the pipeline, and the synthetic check's results, over the last 14 days | — |
+| R36 | Demonstration | Grafana's Explore, in the browser of the computer, shows events of capture and the pipeline, and the synthetic check's results, over the last 14 days | — |
 | R37 | Test | The watchdog's URL variable is sensitive, asserted with `issensitive` | unit |
 | R37 | Inspection | No signal URL in the repository; its variable has no default; `.env.example` holds it empty | — |
 | R38 | Inspection | The template reads only the alert's labels and annotations, and no annotation holds an event's body | — |
@@ -1979,9 +1979,9 @@ Grafana's alerts, contact points, synthetic check and the watchdog are live.
 
 ### Step 31 — Demonstrations
 
-- **Status:** ⛔ blocked
+- **Status:** ✅ done
 - **Who:** Owner
-- **Commit:** —
+- **Commit:** `docs: d009.s31 record R36's phone as Grafana's web and the demonstration results`
 - **R:** R10, R23, R24, R34, R35, R36, R40
 - **Model:** sonnet · medium
 - **Review:** no
@@ -2007,7 +2007,7 @@ The Demonstration rows of the [Test plan](#26-test-plan), and the notifications 
 - The test page rings on the phone until acknowledged, and the test ticket appears in the app's list with no notification: yes/no.
 - The deployed check passes on the live file, the ad hoc test fails with a threshold of 0 min, and ALR4 did not fire (R10): yes/no.
 - The notification shows the alert's ID and checked IDs, and its links open the catalog section, the alert's row and the events in Explore (R23, R24): yes/no.
-- Explore shows events of capture and the pipeline and the synthetic check's results, in the browser and the app (R36), and the query shows each feed's minutes given to the provider over 7 days (R40): yes/no.
+- Explore shows events of capture and the pipeline and the synthetic check's results, in the computer's browser (R36), and the query shows each feed's minutes given to the provider over 7 days (R40): yes/no.
 
 ### Step 32 — Production checks and close
 
@@ -2031,13 +2031,14 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 
 #### Do
 
-1. Check that events of capture and of the pipeline reach Grafana, the watchdog's check is green, and the synthetic check reads the page from its three probes.
+1. Check that events of capture and of the pipeline reach Grafana, the watchdog's check is green, and the synthetic check reads the page from its three probes. In a real alert's notification in IRM, open the links `→ rule` and `→ events` (R23, R24), left unchecked in Step 31.
 2. Record the outcomes, the account's facts and security controls, and capture's deployed version and date.
 3. Open the PR `T060.2: Monitoring capture and pipeline` with `Closes #64`, and merge it as in Step 27.
 
 #### Check
 
 - Every item of Done when is recorded in Close: yes/no.
+- A real alert's links open the catalog section and the events in Explore (R23, R24): yes/no.
 - `grep -rn "TODO(T060.2)" .` finds nothing: yes/no.
 
 ## 4. Close
@@ -2072,6 +2073,7 @@ The checks of [Done when](#14-done-when) on production data, and the records tha
 | DI5 | [Thresholds](#thresholds), [Pipeline's OTLP payload and exporter](#pipelines-otlp-payload-and-exporter) | The pipeline's send time limit (R5) bounds each socket operation, as the heartbeat's pings do, not the send as a whole | A server answering a byte at a time is not a case worth a thread and a deadline; the outcome and the heartbeat are already set when it happens | Step 13 |
 | DI6 | [Notification routing](#notification-routing) | The IRM user a page's chain notifies is named by a variable without default, `irm_owner_username`, set in `.env` and read by `irm.tf` | IRM's notify step takes a user, and the owner's username stays out of the repository, as the page's base URL does | Step 20 |
 | DI7 | [Notification routing](#notification-routing), [File layout](#24-file-layout) | The IRM integration declares its web and mobile app message templates as `{{ payload.message }}` in `irm.tf`, so IRM shows the layout of `project.message`, in place of its own layout built from labels and annotations | IRM's default template ignores the payload's `message`, so the alert's ID, checks and links (R23, R24) did not reach the owner; Terraform keeps it as code ([ADR-0051](../decisions/0051-monitoring-configuration-as-code.md)) | Step 31 |
+| DI8 | [R36](#13-requirements) | R36's mobile app is Grafana's own web in the phone's browser, which the IRM app opens from its links: Grafana has no app with Explore for this set-up, and the page is the same as on the computer, so the Demonstration is run on the computer | The result does not depend on the device; no other app shows events | Step 31 |
 | DI7 | [Thresholds](#thresholds) | ALR5 fires on a dynamic feed seen in the last 24 h that has no `feed_captured` in the last 11 minutes, the threshold plus one minute, whatever the cause, in place of counting failure events | LogQL cannot count minutes in a row; a window with no clean capture covers a pass with no event too, which "any cause" includes, and a failure count missed it | Step 22 |
 | DI8 | [Error budget alerts](#error-budget-alerts) | ALR15 and ALR5 take the dynamic feeds from a list in `locals.tf`, `free_bike_status` and `station_status`, in place of detecting them from the counts | A static feed, fetched once a day, would show nearly all its passes with no event; the dynamic feeds are known from d004 D3 | Step 22 |
 | DI9 | [Error budget alerts](#error-budget-alerts), [Error budget alert module](#error-budget-alert-module) | ALR6 counts as captured the minutes with a `feed_captured` of `station_status`, the feed that holds the station stock, taken from a list in `locals.tf` and given to the module as `stock_feed`; the module also takes `capture_silent_s`, ALR8's threshold, for the guard of R42 | DQM7 counts the minutes with a capture in the station stock, and a count over any feed would miss a stock outage while another feed captures; the module cannot read the root's locals | Step 23 |
