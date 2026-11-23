@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 26.
+- Current: Step 27.
 
 ## 1. Spec — what and why
 
@@ -1837,7 +1837,7 @@ The `monitoring` component in CI, and every job that reads a shared file runs wh
 
 ### Step 26 — Architecture
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: d009.s26 add monitoring to the architecture`
 - **R:** —
