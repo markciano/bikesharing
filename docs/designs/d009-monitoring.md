@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 21.
+- Current: Step 22.
 
 ## 1. Spec — what and why
 
@@ -1649,7 +1649,7 @@ Where each alert goes and what its notification shows.
 
 ### Step 21 — Monitoring: alerts on events
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s21 alert on the events that need action`
 - **R:** R7, R8, R9, R16, R17, R18, R22, R23, R41
