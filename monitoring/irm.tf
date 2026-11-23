@@ -11,6 +11,18 @@ resource "grafana_oncall_integration" "alerting" {
   name = "Grafana Alerting"
   type = "grafana_alerting"
 
+  # IRM's own layout is built from the alert's labels and annotations and ignores the
+  # message the contact point sends; these show that message, the layout of
+  # project.message with the alert's ID, checks and links (d009 R23, R24, DI7).
+  templates {
+    web {
+      message = "{{ payload.message }}"
+    }
+    mobile_app {
+      message = "{{ payload.message }}"
+    }
+  }
+
   # The default route takes every alert group that no other route matches: the tickets.
   default_route {
     escalation_chain_id = grafana_oncall_escalation_chain.ticket.id
