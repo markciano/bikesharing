@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 18's review point (security), then Step 19.
+- Current: Step 20.
 
 ## 1. Spec — what and why
 
@@ -1578,7 +1578,7 @@ The provider configured from variables, secrets only from `.env`, and the check 
 
 ### Step 19 — Monitoring: locals
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s19 derive the alerts' thresholds and event selectors`
 - **R:** R14, R15, R16, R22

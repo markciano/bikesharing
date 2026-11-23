@@ -1,0 +1,76 @@
+# Every threshold and event list the alert rules use. A threshold that depends on the
+# pipeline's settings is derived from run_settings.json, so a change of cadence, time
+# budget or container size changes it with no rewrite; a fixed one states its reason.
+# Event lists come from the event registry, never written by hand (d009 D5, Observability
+# catalog; d009, Thresholds).
+
+locals {
+  registry     = jsondecode(file("${path.module}/../contracts/log-events.registry.json"))
+  run_settings = jsondecode(file("${path.module}/../pipeline/src/bikesharing/core/run_settings.json"))
+
+  # Thresholds derived from the pipeline's settings.
+
+  # ALR4 fires at the target the page promises its visitor: a run's cadence plus its
+  # time budget (d009 D8, Page data age keeps its target).
+  alr4_max_age_s = local.run_settings.cadence_min * 60 + local.run_settings.time_budget_s
+
+  # ALR7 warns at 80% of each limit that ends a run, the practice for capacity limits.
+  alr7_duration_s = local.run_settings.timeout_s * 0.8
+  # Modal sizes the container in MiB and the event's peak_memory_mb is decimal MB.
+  alr7_memory_mb = ceil(local.run_settings.container_memory_mib * 1048576 / 1000000 * 0.8)
+
+  # ALR8 lets one lost send go, since the copy is best-effort (d009 D2, The copy to
+  # Grafana never affects a run): the pipeline is silent after 2 cadences.
+  alr8_pipeline_silent_s = local.run_settings.cadence_min * 2 * 60
+
+  # Fixed thresholds.
+
+  # Capture runs one pass a minute (d004, Bronze data capture), so 5 minutes with no
+  # event is five passes missing: a broken send, not a single failure (R42).
+  alr8_capture_silent_s = 300
+
+  # The check runs more often than the pipeline's cadence, so a stale file is seen
+  # within one run's interval.
+  synthetic_check_frequency_s = 300
+
+  # Twice the longest run of minutes with no clean capture measured, 5; stays quiet in
+  # normal operation (d009, Thresholds).
+  alr5_minutes_in_a_row = 10
+
+  # The watchdog policy's repeat_interval: the signal must reach Healthchecks.io well
+  # inside its period of 5 min and grace of 10 min.
+  alr12_repeat_interval = "5m"
+
+  # ALR13 warns at 80% of each Free tier limit (50 GB of logs, 100k synthetic check
+  # executions a month), as ALR7 does for a capacity limit.
+  alr13_logs_gb              = 40
+  alr13_synthetic_executions = 80000
+
+  # The 7-day share of DQM11's target of 30 minutes a month given to capture per feed
+  # (d009 D10, A target on capture's own missed minutes only).
+  alr15_minutes_given_to_capture = 7
+
+  # Event selectors, built from the registry.
+
+  # The same event name may be registered by two components, so every list is distinct.
+  alert_ids = sort(distinct(flatten([for e in local.registry.events : e.alerts])))
+
+  # Each alert's events: those whose `alerts` list holds its ID.
+  alert_events = {
+    for id in local.alert_ids :
+    id => sort(distinct([for e in local.registry.events : e.event if contains(e.alerts, id)]))
+  }
+
+  # The same lists as a LogQL regular expression for `event=~"..."`.
+  alert_event_regex = { for id, names in local.alert_events : id => join("|", names) }
+
+  # ALR9: events the owner must act on that no alert reads by name.
+  alr9_events = sort(distinct([
+    for e in local.registry.events : e.event if e.needs_action && length(e.alerts) == 0
+  ]))
+  alr9_event_regex = join("|", local.alr9_events)
+
+  # ALR14: every event the registry holds, so `event!~"..."` finds one it does not.
+  registered_events       = sort(distinct([for e in local.registry.events : e.event]))
+  registered_events_regex = join("|", local.registered_events)
+}
