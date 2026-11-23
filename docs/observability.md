@@ -61,9 +61,7 @@ Logs are append-only, so capture's logs in R2 written before the change keep `wa
 
 - TODO(T060.2): record here the version of capture and the date from which it writes `warn` and `system`, after its deployment (Step 32).
 
-The pipeline's `rule_checked` writes the rule's configured severity as `rule_severity`, since Loki reads an attribute named `severity` as the log level ([d009 › DI10](designs/d009-monitoring.md#43-decisions-taken-during-implementation)). Its logs written before the change keep `severity`, and a query over both periods accepts `rule_severity` or `severity`.
-
-- TODO(T060.2): record here the version of the pipeline and the date from which it writes `rule_severity`, after its deployment.
+The pipeline's `rule_checked` writes the rule's configured severity as `rule_severity`, since Loki reads an attribute named `severity` as the log level ([d009 › DI10](designs/d009-monitoring.md#43-decisions-taken-during-implementation)). The pipeline writes `rule_severity` from version `8b20ef7ca29e0cebdacf07fcb59b0fa598c01874`, deployed on 2026-11-23. Its logs written before that keep `severity`, and a query over both periods accepts `rule_severity` or `severity`.
 
 ## Heartbeat checks
 
