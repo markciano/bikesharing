@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 23.
+- Current: Step 24.
 
 ## 1. Spec — what and why
 
@@ -790,6 +790,11 @@ variable "folder_uid" {
 variable "loki_datasource_uid" {
   description = "Loki data source the queries run on."
   type        = string
+}
+
+variable "capture_silent_s" {
+  description = "Seconds with no capture event after which ALR8 fires; the rules hold only while capture has an event within them."
+  type        = number
 }
 
 # main.tf
@@ -1721,7 +1726,7 @@ The rules that fire on a count or a measure over a window, and the rule the watc
 
 ### Step 23 — Monitoring: error budget module
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d009.s23 alert on each system's error budget burn`
 - **R:** R12, R13, R42
