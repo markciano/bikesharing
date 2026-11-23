@@ -52,6 +52,10 @@ LAKEHOUSE_WRITE_SECRET = (
 )
 DEPLOY_SECRET = ("bikesharing-pipeline-deploy", ["CLOUDFLARE_API_TOKEN"])
 HEARTBEAT_SECRET = ("bikesharing-pipeline-heartbeat", ["HEARTBEAT_URL"])
+MONITORING_SECRET = (
+    "bikesharing-pipeline-monitoring",
+    ["OTLP_ENDPOINT", "OTLP_TOKEN"],
+)
 
 # Files of a local checkout that must not reach the image: dbt's and Wrangler's
 # working folders, installed packages and local credentials.
