@@ -32,6 +32,8 @@ Facts about the Grafana Cloud services the project uses, one section per service
 |---|---|---|
 | The Free tier includes 50 GB of logs a month, kept for 14 days | [s018 › D2](../spikes/s018-monitoring-tool.md#d2-monitoring-tool) | 2026-11-17 |
 | The Free tier includes 100k synthetic check executions a month | [s018 › D2](../spikes/s018-monitoring-tool.md#d2-monitoring-tool) | 2026-11-17 |
+| Loki queries count against a monthly allowance of 100 times the logs the stack writes; on a paid plan, the queried GB beyond it are billed | [Logs invoice](https://grafana.com/docs/grafana-cloud/cost-management-and-billing/understand-your-invoice/logs-invoice/) | 2026-11-24 |
+| Alert rule evaluations count against the query allowance like Explore and dashboard queries; the Loki Query Fair Usage dashboard, in the GrafanaCloud folder, shows the queried bytes per query type, `grafana-alert` among them, and per rule | [Control query usage costs](https://grafana.com/docs/grafana-cloud/cost-management-and-billing/reduce-costs/logs-costs/control-query-usage-costs/) | 2026-11-24 |
 | IRM is included in the Free tier, for at most 3 active IRM users, with community support | [IRM](https://grafana.com/products/cloud/irm) | 2026-11-22 |
 | The Free tier needs no payment method: the project's account runs on it with none | Grafana Cloud console, billing page | 2026-11-22 |
 | The project's stack runs in an EU region, Germany (`prod-eu-west-4`) | Grafana Cloud console, stack details | 2026-11-22 |
@@ -76,3 +78,4 @@ Facts about the Grafana Cloud services the project uses, one section per service
 Checked when the owner creates the account ([d009 › Prerequisites](../designs/d009-monitoring.md#31-prerequisites)); each answer becomes a fact above.
 
 - Does an alert group routed to an escalation chain with no steps enter IRM's list of alert groups, in the browser and the app, with no notification?
+- What does the Free tier do when the query allowance is exceeded: throttle, reject queries or nothing? TODO(T078.1): confirm it.
