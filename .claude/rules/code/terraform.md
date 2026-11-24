@@ -27,7 +27,10 @@ The configuration declares Grafana Cloud's alerting, synthetic check and watchdo
 - Every alert's event list, ALR9's and ALR14's included, is built from the event registry, never written by hand: an alert selects the events whose `alerts` list its ID.
 - Every alert rule carries the labels `alert_id` and `urgency` (`page` or `ticket`), `system` where it applies, and the annotations the message template reads; the template reads only labels and annotations.
 - A secret, such as a token or the watchdog's signal URL, is a `sensitive` variable with no default, set from `.env` as `TF_VAR_<name>`; never in code or in a `.tfvars` file.
-- `terraform plan` and `apply` against Grafana Cloud are operational actions, run by the owner only.
+- `terraform plan` and `apply` against Grafana Cloud are operational actions, run by the owner only. Claude gives the owner these steps, run from `monitoring/` in one terminal:
+  - `set -a; source ../.env; set +a` exports the `TF_VAR_*` values;
+  - `terraform plan -out=<name>.tfplan` saves the plan; Claude states beforehand the count of changes and the resources it expects, and an extra change or any destroy stops the apply until its block of `terraform show -no-color <name>.tfplan` is read;
+  - `terraform apply <name>.tfplan` applies that saved plan only, then the plan file is deleted, since it can hold secrets.
 
 ## Testing
 
