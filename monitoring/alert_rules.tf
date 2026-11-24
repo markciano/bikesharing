@@ -6,6 +6,13 @@ resource "grafana_folder" "alerts" {
   title = "Bike sharing alerts"
 }
 
+# Alerts whose rules stay defined but Grafana does not evaluate: their queries read days
+# of logs every minute, so they are paused until their cost is reviewed.
+# TODO(T078): review the cost of ALR6's and ALR15's queries and resume them.
+locals {
+  paused_alerts = ["ALR6", "ALR15"]
+}
+
 # Rules that fire on an event: one event selected in the window fires the rule at once.
 # Event lists come from the registry through locals.tf, never written by hand.
 
@@ -351,6 +358,7 @@ resource "grafana_rule_group" "thresholds" {
       name      = rule.key
       condition = rule.value.guard_expr == "" ? "B" : "D"
       for       = "0s"
+      is_paused = contains(local.paused_alerts, rule.value.alert_id)
       # No series means the condition does not hold, not a missing measure.
       no_data_state  = "OK"
       exec_err_state = "Error"
@@ -463,6 +471,7 @@ module "error_budget_alert" {
   loki_datasource_uid = var.loki_datasource_uid
   stock_feed          = local.alr6_stock_feed
   capture_silent_s    = local.alr8_capture_silent_s
+  paused              = contains(local.paused_alerts, "ALR6")
 }
 
 # The watchdog's rule: its condition always holds, and no data fires it too, so the
