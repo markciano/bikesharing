@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Draft 📝
 - Phase: [x] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
-- Current: Method › Approach, from the start. Candidate for Q2's count: the counting proxy of [s010 › Probe A](s010-storage-table-format.md#a-delta-on-r2) (#37, #39 there), which gave exact requests per operation class against R2.
+- Current: Method › Approach: approval pending of two probes proposed: A, the checkpoint cycle from the runs' existing logs (Q1); B, a count per call through the counting proxy of [s010 › Probe A](s010-storage-table-format.md#a-delta-on-r2) (Q2). Parked for Approach: R2's hourly sawtooth may already answer Q1 in count, leaving only time for Probe A.
 
 ## 1. Questions — what we need to know
 
@@ -29,6 +29,17 @@ Current: where work resumes, with only the context the next session needs: the s
 <!-- 2–4 sentences: the decisions this spike takes, which of them depend on evidence and why, and the spikes or designs it builds on. -->
 
 The pipeline's scheduled runs get slower every day and read far more objects from R2 than they process, as measured at d008's close ([d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close)): about 6,600 GetObject per run on `bikesharing-lakehouse`, a bucket of about 2,250 objects. This spike finds the causes and chooses the fix for each one, which is built outside the spike (D1). Reading the code and `deltalake`'s documentation already explains most of it; evidence is sought only where the size of each cause would change the fix.
+
+R2's hourly Class B operations on `bikesharing-lakehouse` form a rising sawtooth after the first feed's catch-up, which peaked at about 22,000 GetObject per run on 2026-11-21. Per run, at 4 runs an hour:
+
+| Tooth | Trough, at its start | Peak, before the drop | Drop | Drop at (UTC hour, about) |
+|---|---|---|---|---|
+| 21 → 22 Nov | 4,000 | 7,500 | 2,000 | 03:00 |
+| 22 → 23 Nov | 5,500 | 8,750 | 2,000 | 04:00 |
+| 23 → 24 Nov | 6,750 | 11,250 | 2,500 | 05:00 |
+
+- **Period:** a drop every ~25 h, an hour later each day.
+- **Trend:** the troughs rise by 1,500–2,000 per run each day and never fall back.
 
 #### Lakehouse reads per run
 
@@ -80,9 +91,9 @@ Both buckets are in Western Europe (WEUR) and the pipeline runs on Modal in the 
 <!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
 "Observe only": things to note during the run with no dedicated effort. -->
 
-Main question: what makes the pipeline's run time and its lakehouse reads per run grow, and which fix keeps both bounded as the processed objects accumulate?
+Main question: what makes the pipeline's run time and its lakehouse reads per run grow, and which fix keeps both bounded as the processed objects accumulate, in steady runs and in a new feed's catch-up? A catch-up is answered by arithmetic: the batches it runs within the limit of [ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md), times the cost of one batch (calls 4–6), counted in Q2. **#1**
 
-- **Q1.** Does the run time follow each table's commits since its last Delta checkpoint, written every 100 commits, rather than the hour of the day? Answered over the existing window, from the runs' log objects and the `LastModified` of each table's `_delta_log/`. It decides between the checkpoint cycle and the network to Modal's region ([D2](#d2-modals-region-is-decided-after-the-fix-by-arithmetic)) as the cause of the daily pattern.
+- **Q1.** Does the run time follow each table's commits since its last Delta checkpoint, written every 100 commits, rather than the hour of the day? Answered over the observed window (Exit criteria), from the runs' log objects and the `LastModified` of each table's `_delta_log/`. It decides between the checkpoint cycle and the network to Modal's region ([D2](#d2-modals-region-is-decided-after-the-fix-by-arithmetic)) as the cause of the daily pattern.
 - **Q2.** Do the calls of [Lakehouse reads per run](#lakehouse-reads-per-run) account for the lakehouse's GetObject per run, and for the time and growth of discovery and batch work? Counted per call, on the tables' state in production. It decides whether the fix is chosen on H1 and H2 alone: its Gate, in Exit criteria, sets the share that must be accounted for; below it, the remaining share is a cause still to find.
 - **Observe only:**
   - the daily pattern, up to twice as slow from 16:00 to 23:00 Madrid time, whether it holds per operation or only per run;
@@ -97,6 +108,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 - **Standard:** drill-down analysis with workload characterization (Brendan Gregg, *Systems Performance*). A cause is found when it accounts for most of the measured effect, following the Pareto principle: the dominant causes are sought, not 100%.
 - **Timebox:** 1 working day, over at most 3 run sessions. It ends when Q1 and Q2 are answered, or when Q2's Gate fails.
 - **Variants:** none are compared; every Q answered is enough.
+- **Observed window:** from 2026-11-22 00:00 UTC, the first full day after the first feed's catch-up, to the last run session. The catch-up is a different regime and stays out. **#1**
 
 | Criterion | Threshold | Kind | Why this threshold |
 |---|---|---|---|
@@ -143,7 +155,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
-| `<N>` |  |  |  |  |
+| 1 | [Questions](#13-questions), [Exit criteria](#14-exit-criteria) | Questions reopened: the observed window starts on 2026-11-22 00:00 UTC, after the first feed's catch-up, and the main question also covers a new feed's catch-up, by arithmetic on the cost per batch counted in Q2. Standard: workload characterization, one regime at a time | The catch-up's runs read up to 22,000 GetObject each and would skew Q2's Gate and growth; more feeds are still to come, each with its own catch-up | Method |
 
 ### 2.4 File layout
 
