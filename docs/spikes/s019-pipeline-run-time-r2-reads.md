@@ -94,23 +94,24 @@ Main question: what makes the pipeline's run time and its lakehouse reads per ru
 Derived from the standard that applies to this kind of question, named in the first line: e.g. DAMA data quality dimensions for a data source, a weighted decision matrix for a technology choice.
 Each criterion is measurable and says whether it is a hard cut or a guide. The timebox says what ends the run. State whether one variant meeting the criteria is enough. -->
 
-- **Standard:** `<standard or pattern applied>`
-- **Timebox:** `<window, and what ends it>`
-- `<criterion>` — `<threshold>` — hard cut | guide
+- **Standard:** drill-down analysis with workload characterization (Brendan Gregg, *Systems Performance*). A cause is found when it accounts for most of the measured effect, following the Pareto principle: the dominant causes are sought, not 100%.
+- **Timebox:** 1 working day, over at most 3 run sessions. It ends when Q1 and Q2 are answered, or when Q2's Gate fails.
+- **Variants:** none are compared; every Q answered is enough.
+
+| Criterion | Threshold | Kind | Why this threshold |
+|---|---|---|---|
+| **Q2, reads:** GetObject counted in the calls of [Lakehouse reads per run](#lakehouse-reads-per-run), against R2's GetObject per run over the window | ≥ 80% | **Hard cut (Gate)** | R2's totals match an exact count within 0.02% ([s010 › F14](s010-storage-table-format.md#4-findings)), so the margin is for what the map leaves out: small calls, such as the log's upload, and other readers of the bucket during the window, such as analysis scripts |
+| **Q2, time:** time of the mapped calls, against discovery plus batch work outside dbt's nodes | ≥ 70% | Guide | Time depends on latency and the hour, so it is noisier than a count |
+| **Q2, growth:** the part of the count that grows with `processed_objects`' files, against the measured growth per run | Same sign and order of magnitude | Guide | It confirms that H1 is what grows, not only what weighs |
+| **Q1, checkpoint cycle:** discovery's time in the 4 runs right after each checkpoint, against the 4 right before | A drop of 20% or more at every checkpoint of the window | Guide | The hour of the day causes no sudden drop at a checkpoint; 4 runs span 1 h, too short for the slow growth to interfere |
+
+If Q2's Gate fails, the share not accounted for is a cause still to find: the Decision log records it, with the choice of widening the map within the timebox or opening a new task.
 
 ### 1.5 Out of scope
 
 <!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
 
 - Which readers other than the pipeline account for `bikesharing-bronze`'s GetObject: they do not slow the runs, and the cost model needs them per bucket — T077, in the cost recalibration of [d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close)
-
-### 1.6 Open questions
-
-<!-- Optional. Unresolved questions about what to find out. Questions about how belong to Method. -->
-
-| Question | Notes |
-|---|---|
-| Why does the run time grow and why do the runs read so many objects from R2? | From [d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close), which holds the measure. |
 
 ## 2. Method — how we find out
 
