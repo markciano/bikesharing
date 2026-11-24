@@ -9,6 +9,7 @@ paths: # mirrors the lint scope (globs) in .markdownlint-cli2.yaml; keep both in
 # Documentation rules
 
 - **Documents** record decisions, not discussion, without repetition.
+- **Working documents** (spike reports and designs): each section filled from the template takes the form that reads best for its content: paragraphs for reasoning, lists for parallel items, tables for items compared on the same attributes. Catalogs and other documents keep the format set when they were defined.
 - **Catalogs** (documents of citable entries, such as `docs/data-quality.md`) open, before their entries, for a reader new to the project: what the catalog holds and what for, how to read an entry, and one worked example that follows an entry through the system.
 - **Diagrams (Mermaid)** only where a picture explains more than the text: a flow that branches or has several actors, or a structure with several related parts, such as a data model; the text is authoritative.
 - **Markdown lint** (scope and rules in `.markdownlint-cli2.yaml`; how it runs in `docs/testing-strategy.md`): a hook fixes cosmetic issues and reports the rest after every edit, and the CI job `docs` fails the PR on them; never run the lint by hand, the hook output is the result. Write these right the first time:
