@@ -30,7 +30,19 @@ Current: where work resumes, with only the context the next session needs: the s
 
 ### 1.2 Decided at framing
 
-#### D`<N>`. `<Title of decision N>`
+#### D1. The fix is built outside the spike
+
+The spike finds the causes and chooses the fix for each one; the fix itself is built in the `pipeline` component, through a design or, if it is a single step, through a one-step task. Spike code is throwaway and no component imports from `spikes/` (`.claude/rules/code/spikes.md`), so code that must stay in production is not written here.
+
+- **What would change it:** nothing in the findings; a fix's size only chooses between a design and a one-step task, at the Conclusion.
+- **Rejected:** building the fix in the spike, against the rule above.
+
+#### D2. Modal's region is decided after the fix, by arithmetic
+
+Both buckets are in Western Europe (WEUR) and the pipeline runs on Modal in the US, with no region pinned, the cheapest option ([ADR-0027](../decisions/0027-modal-as-execution-platform.md) leaves the region open). The distance adds no R2 cost, since R2 charges no egress, but each operation pays a transatlantic round trip, and Modal bills the container's waiting time. That latency per operation is roughly constant: what grows is the number of operations, so the fix of the causes comes first. At the Conclusion, the network time left after the fix, from the operations and latencies measured in Q1, is compared with the surcharge of pinning Modal to Europe.
+
+- **What would change it:** the network time left after the fix is a large share of the run, or keeps growing with the feeds → pinning Modal to Europe is proposed as part of the fix.
+- **Rejected:** moving Modal to Europe now. It pays the surcharge before knowing it is needed and hides part of the growth that Q1 must measure.
 
 <!-- In this order, so the reader finds what matters first:
 1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
@@ -46,7 +58,7 @@ Current: where work resumes, with only the context the next session needs: the s
 Main question: `<one sentence>`
 
 - **Q1.** `<question>`
-- **Observe only:** `<item>`
+- **Observe only:** the daily pattern, up to twice as slow from 16:00 to 23:00 Madrid time, whether it holds per operation or only per run.
 
 ### 1.4 Exit criteria
 
@@ -71,7 +83,6 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 | Question | Notes |
 |---|---|
 | Why does the run time grow and why do the runs read so many objects from R2? | From [d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close), which holds the measure. |
-| Is the fix built in this spike or in a design? | Depends on the causes found. |
 
 ## 2. Method — how we find out
 
