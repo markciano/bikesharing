@@ -147,7 +147,15 @@ The phase times in the runs' log objects are joined with the `LastModified` of e
 
 The calls of [Lakehouse reads per run](#lakehouse-reads-per-run) run one at a time through the counting proxy of [s010 › Probe A](s010-storage-table-format.md#a-delta-on-r2), which gave exact requests per operation class against R2. For each call it records GetObject, time, and each table's commits since its last checkpoint. It answers Q2's three criteria, and calls 4–6 give the cost of one batch for the catch-up's arithmetic.
 
-It runs on the owner's machine, against a copy of both tables in a separate bucket: calls 5 and 6 write, and a copy of the objects keeps `_delta_log/` and its place in the checkpoint cycle.
+It runs on the owner's machine, against a copy of both tables in a separate bucket, since calls 5 and 6 write. The copy is whole: `processed_objects` is never compacted, so every version still reads data files from the first day.
+
+The probe runs twice, at the two latest peaks of the sawtooth: the version of `processed_objects` right before its last checkpoint, then the one right before the checkpoint before it, about 100 commits earlier. Each pass is reproduced with Delta's time travel on the copy:
+
+- both tables' logs are cut at that pass's instant, dropping later commits and checkpoints, and `_last_checkpoint` points to the last checkpoint before it;
+- the cut also drops what the earlier pass wrote;
+- data files added after the cut are left orphaned and nothing reads them.
+
+The difference between the passes is one day's growth at the same point of the cycle, compared with the sawtooth's peak-to-peak growth for Q2's growth criterion. The cut runs only on the copy, never on production.
 
 ### 2.3 Decision log
 
