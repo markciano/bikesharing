@@ -93,6 +93,8 @@ One row per alert. The urgency follows [d009 › D11](designs/d009-monitoring.md
 | ALR14 | An event the registry does not hold reached Grafana | — | ticket |
 | ALR15 | A feed's minutes given to capture over the last 7 days exceed the 7-day share of DQM11's target | DQM11 | ticket |
 
+ALR6 and ALR15 are paused: their rules stay defined but Grafana does not evaluate them, since their queries read days of capture's logs every minute. TODO(T078): review their cost and resume them.
+
 ALR12 never goes through Grafana's notifications or IRM, since every other alert is silent when Grafana is. The limits and costs of Cloudflare and Modal are watched by each provider's own usage and budget notifications.
 
 ## Error budget alerts

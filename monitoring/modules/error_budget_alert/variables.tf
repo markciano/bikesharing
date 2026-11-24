@@ -30,6 +30,12 @@ variable "stock_feed" {
   type        = string
 }
 
+variable "paused" {
+  description = "Whether Grafana stops evaluating the rules, which stay defined."
+  type        = bool
+  default     = false
+}
+
 variable "capture_silent_s" {
   description = "Seconds with no capture event after which ALR8 fires; the rules hold only while capture has an event within them, so a broken send never pages for data that R2 holds."
   type        = number

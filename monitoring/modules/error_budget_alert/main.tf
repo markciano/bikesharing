@@ -55,6 +55,7 @@ resource "grafana_rule_group" "this" {
       name      = "ALR6 ${var.system} ${rule.key}"
       condition = "E"
       for       = "0s"
+      is_paused = var.paused
       # No series means the condition does not hold, not a missing measure.
       no_data_state  = "OK"
       exec_err_state = "Error"
