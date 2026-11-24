@@ -2523,7 +2523,7 @@ The first deployment, D8's stages and the checks of [Done when](#14-done-when) t
 
 <!-- What the task leaves undone or imperfect, each with the task that covers it and its `TODO(TNNN)` marker (CLAUDE.md › Pending items): requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
 
-- TODO(T077): find why the run time grows and the runs read so many objects from R2, and fix it — T077
+- Find why the run time grows and the runs read so many objects from R2, and fix it — T077, in [s019](../spikes/s019-pipeline-run-time-r2-reads.md)
   - **Measure:** the 192 scheduled runs of the [Cost recalibration](#cost-recalibration) window, from their log objects; each phase is the time between the events that open and close it.
 
     | Phase | Mean | First 12 h | Last 12 h |
