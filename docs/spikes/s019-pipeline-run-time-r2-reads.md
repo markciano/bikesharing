@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Draft 📝
 - Phase: [x] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
-- Current: Method › Approach: approval pending of two probes proposed: A, the checkpoint cycle from the runs' existing logs (Q1); B, a count per call through the counting proxy of [s010 › Probe A](s010-storage-table-format.md#a-delta-on-r2) (Q2). Parked for Approach: R2's hourly sawtooth may already answer Q1 in count, leaving only time for Probe A.
+- Current: Method › Decisions about how. First: where Probe B runs (local or Modal) and against which tables (production or a copy), since calls 5 and 6 write. Parked for the Conclusion: whether the control table stays in Delta, among the fix's candidates.
 
 ## 1. Questions — what we need to know
 
@@ -131,19 +131,20 @@ If Q2's Gate fails, the share not accounted for is a cause still to find: the De
 
 <!-- The variants, options or probes compared, and what each one tells that the others do not. -->
 
-| Variant | What it is | What it tells |
+R2's hourly sawtooth ([Context](#11-context)) already answers Q1 in count: the reads drop at every checkpoint, an hour later each day. It does not answer Q1 in time, nor which calls make up the reads that never fall back. Two probes cover the rest.
+
+| Probe | What it is | What it tells |
 |---|---|---|
-| | | |
+| [A](#a-checkpoint-cycle-in-time) | Offline analysis of the runs already made, over the observed window | Whether the run time drops at each checkpoint or follows the hour of the day (Q1) |
+| [B](#b-count-per-call) | The 8 calls of the map, one by one, through a counting proxy | GetObject and time per call (Q2), and the cost of one batch for a feed's catch-up |
 
-#### 2.1.1 Shared behaviour
+#### A. Checkpoint cycle in time
 
-<!-- Optional. Rules every variant follows (schedules, formats, key layouts, logs), stated once so the steps can cite them. -->
+The phase times in the runs' log objects are joined with the `LastModified` of each table's `_delta_log/` files, which places every run at its commit count since the last checkpoint. Nothing runs against the pipeline. It answers Q1's criterion: discovery's time in the 4 runs right after each checkpoint, against the 4 right before.
 
--
+#### B. Count per call
 
-#### `<A>`. `<Title of variant, option or probe A>`
-
-<!-- Detailed description -->
+The calls of [Lakehouse reads per run](#lakehouse-reads-per-run) run one at a time through the counting proxy of [s010 › Probe A](s010-storage-table-format.md#a-delta-on-r2), which gave exact requests per operation class against R2. For each call it records GetObject, time, and each table's commits since its last checkpoint. It answers Q2's three criteria, and calls 4–6 give the cost of one batch for the catch-up's arithmetic.
 
 ### 2.3 Decision log
 
