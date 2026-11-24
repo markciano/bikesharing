@@ -28,6 +28,31 @@ Current: where work resumes, with only the context the next session needs: the s
 
 <!-- 2–4 sentences: the decisions this spike takes, which of them depend on evidence and why, and the spikes or designs it builds on. -->
 
+The pipeline's scheduled runs get slower every day and read far more objects from R2 than they process, as measured at d008's close ([d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close)): about 6,600 GetObject per run on `bikesharing-lakehouse`, a bucket of about 2,250 objects. This spike finds the causes and chooses the fix for each one, which is built outside the spike (D1). Reading the code and `deltalake`'s documentation already explains most of it; evidence is sought only where the size of each cause would change the fix.
+
+#### Lakehouse reads per run
+
+The run's calls in `pipeline/src/bikesharing/shell/delta.py`, in order, with one batch per run as in the measured window. Every call opens a fresh `DeltaTable`, which rebuilds the table's state from `_delta_log/`: the last checkpoint and up to 99 JSON commits after it, since `deltalake` 1.6.6 writes a checkpoint every 100 commits by default.
+
+| # | Phase | Call | Table | Data files read |
+|---|---|---|---|---|
+| 1 | Discovery | `ensure_tables` | both | none |
+| 2 | Discovery | `processed_keys` | `processed_objects` | **all**: it needs every key |
+| 3 | Discovery | `latest_processed` | `processed_objects` | **all**: a grouped `max` is not answered from file statistics |
+| 4 | Batch | `capture_history` | `processed_objects` | the last 7 days', skipped by `captured_at`'s min and max |
+| 5 | Batch | `merge_station_stock` | `station_stock` | the batch's local dates, pruned by partition |
+| 6 | Batch | `record_processed` | `processed_objects` | **all**: an insert-only MERGE on `key` prunes no file with the default `streamed_exec=True` |
+| 7 | Gold | `latest_processed` | `processed_objects` | **all**, as in row 3 |
+| 8 | Gold | `latest_captures` | `station_stock` | the latest capture's local date, pruned by partition |
+
+A run opens a table 9 times and reads `processed_objects` in full 4 times (rows 2, 3, 6 and 7). That table gains one small file per run and is never compacted.
+
+#### Hypotheses
+
+- **H1. Unbounded reads of the control table.** The 4 full reads of `processed_objects` grow with every run, with no limit. It is the main candidate for the growth and for the read volume.
+- **H2. Log replay on every open.** The 9 opens each read up to 99 commits, a cost that rises for about 25 h and drops at each checkpoint, with about 96 commits a day per table. It could explain the daily pattern (Q1).
+- **H3. Network distance.** Modal runs in the US and both buckets in Western Europe, so each operation pays a transatlantic round trip (D2).
+
 ### 1.2 Decided at framing
 
 #### D1. The fix is built outside the spike
@@ -55,9 +80,10 @@ Both buckets are in Western Europe (WEUR) and the pipeline runs on Modal in the 
 <!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
 "Observe only": things to note during the run with no dedicated effort. -->
 
-Main question: `<one sentence>`
+Main question: what makes the pipeline's run time and its lakehouse reads per run grow, and which fix keeps both bounded as the processed objects accumulate?
 
 - **Q1.** Does the run time follow each table's commits since its last Delta checkpoint, written every 100 commits, rather than the hour of the day? Answered over the existing window, from the runs' log objects and the `LastModified` of each table's `_delta_log/`. It decides between the checkpoint cycle and the network to Modal's region ([D2](#d2-modals-region-is-decided-after-the-fix-by-arithmetic)) as the cause of the daily pattern.
+- **Q2.** Do the calls of [Lakehouse reads per run](#lakehouse-reads-per-run) account for the lakehouse's GetObject per run, and for the time and growth of discovery and batch work? Counted per call, on the tables' state in production. It decides whether the fix is chosen on H1 and H2 alone: its Gate, in Exit criteria, sets the share that must be accounted for; below it, the remaining share is a cause still to find.
 - **Observe only:**
   - the daily pattern, up to twice as slow from 16:00 to 23:00 Madrid time, whether it holds per operation or only per run;
   - the pipeline's own GetObject on `bikesharing-bronze` per run, against the objects it downloads, about 65.
@@ -222,4 +248,7 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 <!-- Optional. Earlier spikes, benchmarks and documentation used. -->
 
--
+- `deltalake` 1.6.6's source, at the tag `python-v1.6.6` of [delta-io/delta-rs](https://github.com/delta-io/delta-rs/tree/python-v1.6.6):
+  - checkpoints every 100 commits by default: `crates/core/src/table/config.rs` and `crates/core/src/kernel/transaction/mod.rs`;
+  - no target pruning in a streamed MERGE: `crates/core/src/operations/merge/mod.rs` and `filter.rs`, and [delta-rs#3491](https://github.com/delta-io/delta-rs/issues/3491); fixed in 1.7.0 by [delta-rs#4790](https://github.com/delta-io/delta-rs/pull/4790);
+  - a grouped aggregate is not answered from statistics: DataFusion's [`aggregate_statistics.rs`](https://github.com/apache/datafusion/blob/main/datafusion/physical-optimizer/src/aggregate_statistics.rs).
