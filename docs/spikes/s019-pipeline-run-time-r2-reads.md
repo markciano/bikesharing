@@ -57,8 +57,10 @@ Both buckets are in Western Europe (WEUR) and the pipeline runs on Modal in the 
 
 Main question: `<one sentence>`
 
-- **Q1.** `<question>`
-- **Observe only:** the daily pattern, up to twice as slow from 16:00 to 23:00 Madrid time, whether it holds per operation or only per run.
+- **Q1.** Does the run time follow each table's commits since its last Delta checkpoint, written every 100 commits, rather than the hour of the day? Answered over the existing window, from the runs' log objects and the `LastModified` of each table's `_delta_log/`. It decides between the checkpoint cycle and the network to Modal's region ([D2](#d2-modals-region-is-decided-after-the-fix-by-arithmetic)) as the cause of the daily pattern.
+- **Observe only:**
+  - the daily pattern, up to twice as slow from 16:00 to 23:00 Madrid time, whether it holds per operation or only per run;
+  - the pipeline's own GetObject on `bikesharing-bronze` per run, against the objects it downloads, about 65.
 
 ### 1.4 Exit criteria
 
@@ -74,7 +76,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 <!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
 
-- `<item>` — TNNN
+- Which readers other than the pipeline account for `bikesharing-bronze`'s GetObject: they do not slow the runs, and the cost model needs them per bucket — T077, in the cost recalibration of [d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close)
 
 ### 1.6 Open questions
 
