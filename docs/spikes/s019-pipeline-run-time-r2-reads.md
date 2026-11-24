@@ -7,7 +7,7 @@ Sections marked Optional are kept only when they apply.
 # Spike: Pipeline run time and R2 reads
 
 - **Task:** T077
-- **ADRs:** `<ADRs this spike must respect, set at framing>`
+- **ADRs:** [ADR-0019](../decisions/0019-own-lakehouse-on-cloudflare-r2.md), [ADR-0022](../decisions/0022-delta-lake-for-silver-and-gold.md), [ADR-0024](../decisions/0024-duckdb-as-processing-engine.md), [ADR-0027](../decisions/0027-modal-as-execution-platform.md), [ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)
 - **Code:** [`spikes/t077-run-time-and-r2-reads/`](../../spikes/t077-run-time-and-r2-reads/)
 
 ## Status
@@ -18,9 +18,9 @@ Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current: where work resumes, with only the context the next session needs: the step being executed, or the section of the report; — when concluded. -->
 
 - State: Draft 📝
-- Phase: [ ] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
+- Phase: [x] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
-- Current: —
+- Current: Method › Approach, from the start. Candidate for Q2's count: the counting proxy of [s010 › Probe A](s010-storage-table-format.md#a-delta-on-r2) (#37, #39 there), which gave exact requests per operation class against R2.
 
 ## 1. Questions — what we need to know
 
