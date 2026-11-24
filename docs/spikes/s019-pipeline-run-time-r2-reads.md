@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Draft 📝
 - Phase: [x] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
-- Current: Method › Decisions about how. First: where Probe B runs (local or Modal) and against which tables (production or a copy), since calls 5 and 6 write. Parked for the Conclusion: whether the control table stays in Delta, among the fix's candidates.
+- Current: Method › Decisions about how, after #2 and #3: what each probe captures and logs, and how the evidence is checked. Parked for the Conclusion: whether the control table stays in Delta, among the fix's candidates.
 
 ## 1. Questions — what we need to know
 
@@ -73,12 +73,13 @@ The spike finds the causes and chooses the fix for each one; the fix itself is b
 - **What would change it:** nothing in the findings; a fix's size only chooses between a design and a one-step task, at the Conclusion.
 - **Rejected:** building the fix in the spike, against the rule above.
 
-#### D2. Modal's region is decided after the fix, by arithmetic
+#### D2. Modal's region is decided after the fix, by a trial in production
 
-Both buckets are in Western Europe (WEUR) and the pipeline runs on Modal in the US, with no region pinned, the cheapest option ([ADR-0027](../decisions/0027-modal-as-execution-platform.md) leaves the region open). The distance adds no R2 cost, since R2 charges no egress, but each operation pays a transatlantic round trip, and Modal bills the container's waiting time. That latency per operation is roughly constant: what grows is the number of operations, so the fix of the causes comes first. At the Conclusion, the network time left after the fix, from the operations and latencies measured in Q1, is compared with the surcharge of pinning Modal to Europe.
+Both buckets are in Western Europe (WEUR) and the pipeline runs on Modal in the US, with no region pinned, the cheapest option ([ADR-0027](../decisions/0027-modal-as-execution-platform.md) leaves the region open). The distance adds no R2 cost, since R2 charges no egress, but each operation pays a transatlantic round trip, and Modal bills the container's waiting time. That latency per operation is roughly constant: what grows is the number of operations, so the fix of the causes comes first. After the fix, a few production runs with Modal pinned to Europe are compared with the same number of runs in the US, in run time and cost; the Conclusion hands this trial to the fix's task as a production input.
 
-- **What would change it:** the network time left after the fix is a large share of the run, or keeps growing with the feeds → pinning Modal to Europe is proposed as part of the fix.
+- **What would change it:** the trial shows that Europe's shorter runs pay for the surcharge → pinning Modal to Europe is proposed.
 - **Rejected:** moving Modal to Europe now. It pays the surcharge before knowing it is needed and hides part of the growth that Q1 must measure.
+- **Rejected:** deciding by arithmetic from latencies measured in the spike. It needs the spike's code deployed on Modal, while a trial measures the real workload with a reversible configuration change. **#3**
 
 <!-- In this order, so the reader finds what matters first:
 1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
@@ -93,7 +94,7 @@ Both buckets are in Western Europe (WEUR) and the pipeline runs on Modal in the 
 
 Main question: what makes the pipeline's run time and its lakehouse reads per run grow, and which fix keeps both bounded as the processed objects accumulate, in steady runs and in a new feed's catch-up? A catch-up is answered by arithmetic: the batches it runs within the limit of [ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md), times the cost of one batch (calls 4–6), counted in Q2. **#1**
 
-- **Q1.** Does the run time follow each table's commits since its last Delta checkpoint, written every 100 commits, rather than the hour of the day? Answered over the observed window (Exit criteria), from the runs' log objects and the `LastModified` of each table's `_delta_log/`. It decides between the checkpoint cycle and the network to Modal's region ([D2](#d2-modals-region-is-decided-after-the-fix-by-arithmetic)) as the cause of the daily pattern.
+- **Q1.** Does the run time follow each table's commits since its last Delta checkpoint, written every 100 commits, rather than the hour of the day? Answered over the observed window (Exit criteria), from the runs' log objects and the `LastModified` of each table's `_delta_log/`. It decides between the checkpoint cycle and the network to Modal's region ([D2](#d2-modals-region-is-decided-after-the-fix-by-a-trial-in-production)) as the cause of the daily pattern.
 - **Q2.** Do the calls of [Lakehouse reads per run](#lakehouse-reads-per-run) account for the lakehouse's GetObject per run, and for the time and growth of discovery and batch work? Counted per call, on the tables' state in production. It decides whether the fix is chosen on H1 and H2 alone: its Gate, in Exit criteria, sets the share that must be accounted for; below it, the remaining share is a cause still to find.
 - **Observe only:**
   - the daily pattern, up to twice as slow from 16:00 to 23:00 Madrid time, whether it holds per operation or only per run;
@@ -113,7 +114,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 | Criterion | Threshold | Kind | Why this threshold |
 |---|---|---|---|
 | **Q2, reads:** GetObject counted in the calls of [Lakehouse reads per run](#lakehouse-reads-per-run), against R2's GetObject per run over the window | ≥ 80% | **Hard cut (Gate)** | R2's totals match an exact count within 0.02% ([s010 › F14](s010-storage-table-format.md#4-findings)), so the margin is for what the map leaves out: small calls, such as the log's upload, and other readers of the bucket during the window, such as analysis scripts |
-| **Q2, time:** time of the mapped calls, against discovery plus batch work outside dbt's nodes | ≥ 70% | Guide | Time depends on latency and the hour, so it is noisier than a count |
+| **Q2, time:** local time of the calls that hold 80% of the counted GetObject, against the local time of all the mapped calls | ≥ 70% | Guide | Probe B runs locally, where latency is lower than from Modal, so time is compared as a share among calls, not against production's runs **#2** |
 | **Q2, growth:** the part of the count that grows with `processed_objects`' files, against the measured growth per run | Same sign and order of magnitude | Guide | It confirms that H1 is what grows, not only what weighs |
 | **Q1, checkpoint cycle:** discovery's time in the 4 runs right after each checkpoint, against the 4 right before | A drop of 20% or more at every checkpoint of the window | Guide | The hour of the day causes no sudden drop at a checkpoint; 4 runs span 1 h, too short for the slow growth to interfere |
 
@@ -146,6 +147,8 @@ The phase times in the runs' log objects are joined with the `LastModified` of e
 
 The calls of [Lakehouse reads per run](#lakehouse-reads-per-run) run one at a time through the counting proxy of [s010 › Probe A](s010-storage-table-format.md#a-delta-on-r2), which gave exact requests per operation class against R2. For each call it records GetObject, time, and each table's commits since its last checkpoint. It answers Q2's three criteria, and calls 4–6 give the cost of one batch for the catch-up's arithmetic.
 
+It runs on the owner's machine, against a copy of both tables in a separate bucket: calls 5 and 6 write, and a copy of the objects keeps `_delta_log/` and its place in the checkpoint cycle. **#2**
+
 ### 2.3 Decision log
 
 <!-- It logs decisions about the method, before and during the run, including changes of course. Oldest first.
@@ -157,6 +160,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
 | 1 | [Questions](#13-questions), [Exit criteria](#14-exit-criteria) | Questions reopened: the observed window starts on 2026-11-22 00:00 UTC, after the first feed's catch-up, and the main question also covers a new feed's catch-up, by arithmetic on the cost per batch counted in Q2. Standard: workload characterization, one regime at a time | The catch-up's runs read up to 22,000 GetObject each and would skew Q2's Gate and growth; more feeds are still to come, each with its own catch-up | Method |
+| 2 | [Probe B](#b-count-per-call), [Exit criteria](#14-exit-criteria) | Probe B runs locally against a copy of both tables in a separate bucket; Q2's time criterion becomes a share of time among the calls. Standard: test against a copy of production data, never production | Counts are exact wherever the calls run, and no spike code is deployed on Modal; production stays untouched | Method |
+| 3 | [D2](#d2-modals-region-is-decided-after-the-fix-by-a-trial-in-production) | Modal's region is decided by a trial of a few production runs pinned to Europe after the fix, instead of by arithmetic at the Conclusion. Standard: A/B comparison under real load | It measures run time and cost with the real workload, through a reversible configuration change and with no spike development | Method |
 
 ### 2.4 File layout
 
