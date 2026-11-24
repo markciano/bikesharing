@@ -141,7 +141,7 @@ R2's hourly sawtooth ([Context](#11-context)) already answers Q1 in count: the r
 
 #### A. Checkpoint cycle in time
 
-The phase times in the runs' log objects are joined with the `LastModified` of each table's `_delta_log/` files, which places every run at its commit count since the last checkpoint. Nothing runs against the pipeline. It answers Q1's criterion: discovery's time in the 4 runs right after each checkpoint, against the 4 right before.
+The phase times in the runs' log objects are joined with the `LastModified` of each table's `_delta_log/` files, which places every run at its commit count since the last checkpoint. Nothing runs against the pipeline. Discovery's time is the gap between two events of each run's log object under `logs/pipeline/`: `run_started` and `objects_discovered`, which marks the end of discovery. It answers Q1's criterion: discovery's time in the 4 runs right after each checkpoint, against the 4 right before.
 
 #### B. Count per call
 
@@ -156,6 +156,8 @@ The probe runs twice, at the two latest peaks of the sawtooth: the version of `p
 - data files added after the cut are left orphaned and nothing reads them.
 
 The difference between the passes is one day's growth at the same point of the cycle, compared with the sawtooth's peak-to-peak growth for Q2's growth criterion. The cut runs only on the copy, never on production.
+
+Each pass is checked against an independent count. The copy's bucket receives only the probe's requests, so its hourly Class B operations in R2's dashboard must match the proxy's total for that pass. This catches a client that reaches R2 without the proxy. The two passes and the cut run in separate hours, so that each hourly figure holds one of them alone.
 
 ### 2.3 Decision log
 
