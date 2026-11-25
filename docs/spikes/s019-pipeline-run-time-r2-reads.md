@@ -18,9 +18,9 @@ Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current: where work resumes, with only the context the next session needs: the step being executed, or the section of the report; — when concluded. -->
 
 - State: Draft 📝
-- Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
+- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
-- Current: Steps › Prerequisites, from the start: the copy's bucket, an R2 token scoped to it, and a read-only token on production for the copy. Parked for the Conclusion: whether the control table stays in Delta, among the fix's candidates.
+- Current: Steps review, from the start. Parked for the Conclusion: whether the control table stays in Delta, and which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`), among the fix's candidates.
 
 ## 1. Questions — what we need to know
 
@@ -149,6 +149,8 @@ The calls of [Lakehouse reads per run](#lakehouse-reads-per-run) run one at a ti
 
 It runs on the owner's machine, against a copy of both tables in a separate bucket, since calls 5 and 6 write. The copy is whole: `processed_objects` is never compacted, so every version still reads data files from the first day. The probe holds only an R2 token scoped to the copy's bucket, so no misconfiguration can reach production; the owner makes the copy with a read-only token on production.
 
+The batch of calls 4–6 replays the last run present in the copy, since the probe does not reach `bikesharing-bronze`. Call 5 merges again that run's `station_stock` rows, which fall on the same local date and so read the same partition's files. Call 6 records as many objects as that run had, under new keys (`t077-probe/…`), so its MERGE stays insert-only and reads the whole table, as in production. Reading the replayed rows is counted apart, as setup. **#2**
+
 The probe runs twice, at the two latest peaks of the sawtooth: the version of `processed_objects` right before its last checkpoint, then the one right before the checkpoint before it, about 100 commits earlier. Each pass is reproduced with Delta's time travel on the copy:
 
 - both tables' logs are cut at that pass's instant, dropping later commits and checkpoints, and `_last_checkpoint` points to the last checkpoint before it;
@@ -170,6 +172,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
 | 1 | [Questions](#13-questions), [Exit criteria](#14-exit-criteria) | Questions reopened: the observed window starts on 2026-11-22 00:00 UTC, after the first feed's catch-up, and the main question also covers a new feed's catch-up, by arithmetic on the cost per batch counted in Q2. Standard: workload characterization, one regime at a time | The catch-up's runs read up to 22,000 GetObject each and would skew Q2's Gate and growth; more feeds are still to come, each with its own catch-up | Method |
+| 2 | [Probe B](#b-count-per-call) | The batch of calls 4–6 replays the copy's last run: its `station_stock` rows merged again, and its object count recorded under new keys. Standard: replay of a representative workload | The copy's token does not reach `bikesharing-bronze`; the replay reads the same files as the real batch, and only the writes, which are not measured, differ | Steps |
+| 3 | [File layout](#24-file-layout) | Probe A's inputs are downloaded with `rclone` commands, not by a script. Standard: least privilege (NIST SP 800-53 AC-6) | The production token stays in rclone's configuration and reaches no spike code; three one-off commands need no script | Steps |
 
 ### 2.4 File layout
 
@@ -180,9 +184,10 @@ spikes/t077-run-time-and-r2-reads/
 ├── README.md                Question, setup and commands, what each script does, link to the report
 ├── pyproject.toml           Python and dependencies; the pipeline package as a local path dependency, so its deltalake version is the production one
 ├── uv.lock                  Locked dependencies
-├── .gitignore               Ignores data/ and output/
-├── checkpoint-cycle/        Probe A
-│   ├── fetch_inputs.py      Downloads the window's run log objects and lists each table's _delta_log/ with LastModified; read-only
+├── .python-version          Python 3.14.9, the pipeline's pin
+├── .env.example             The copy token's variables, empty; .env holds the values (ignored by Git)
+├── .gitignore               Ignores .env, data/ and output/
+├── checkpoint-cycle/        Probe A; its inputs are downloaded with rclone, as the README shows
 │   └── cycle_times.py       Places each run in its checkpoint cycle and compares discovery's time in the 4 runs before and after each checkpoint
 ├── count-per-call/          Probe B
 │   ├── proxy.py             Counting proxy between deltalake and R2, adapted from s010's Probe A
@@ -191,6 +196,8 @@ spikes/t077-run-time-and-r2-reads/
 ├── data/                    Downloaded inputs (ignored by Git)
 └── output/                  Results per probe and pass (ignored by Git)
 ```
+
+Probe A has no download script: its inputs come from `rclone` commands in the README. **#3**
 
 ## 3. Steps
 <!-- Each step is one reviewable result, touching at most 2–3 files.
@@ -204,29 +211,311 @@ spikes/t077-run-time-and-r2-reads/
 
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
-### Step 1 — `<title>`
+Resource names follow [ADR-0035](../decisions/0035-cloud-resource-naming.md) for a temporary resource; all of them are deleted when T077 closes.
+
+| Item | Value | Verify |
+|---|---|---|
+| Copy bucket | R2 bucket `bikesharing-t077-lakehouse-copy`, same account and location as `bikesharing-lakehouse`, no bucket lock, empty | Listed in the R2 dashboard with 0 objects |
+| Copy token | R2 API token `bikesharing-t077-copy`, Object Read & Write on `bikesharing-t077-lakehouse-copy` only | At creation, the summary shows that permission and that bucket alone |
+| Production read token | R2 API token `bikesharing-t077-prod-read`, Object Read only on `bikesharing-lakehouse` only | At creation, the summary shows that permission and that bucket alone |
+| rclone | 1.75.2, with two remotes (provider Cloudflare): `r2-prod` with the production read token, `r2-copy` with the copy token | `rclone version` and `rclone listremotes` |
+| Python and uv | Python 3.14.9, the pipeline's pin (`pipeline/.python-version`); uv 0.13.5 | `uv --version`; `uv python find 3.14.9` |
+
+Each token is used by one side only: the copy token by Probe B, the production read token by Probe A's downloads and by the copy. Since the two remotes hold different credentials, the copy is not server-side: rclone downloads each object and uploads it to the copy's bucket, with free egress.
+
+All paths below are relative to `spikes/t077-run-time-and-r2-reads/`, and commands run from there unless they say otherwise. Times are UTC; R2's dashboard figures are read for whole UTC hours. Steps that put requests on the copy's bucket (2, 4, 7, 8) each run their parts in separate hours, as the step says, so that each hourly figure holds one part alone ([Probe B](#b-count-per-call)).
+
+| Step | Title | Who | Gate | Files |
+|---|---|---|---|---|
+| 1 | Scaffold the spike folder | Claude | — | `README.md`, `pyproject.toml`, `uv.lock`, `.python-version`, `.gitignore`, `.env.example` |
+| 2 | Copy both tables to the copy's bucket | Owner | The copy matches the listed snapshot | — |
+| 3 | Counting proxy with a smoke mode | Claude | — | `count-per-call/proxy.py`, `README.md` |
+| 4 | Run the proxy's smoke test | Owner | The proxy's count matches the copy's dashboard | — |
+| 5 | Log cut script | Claude | — | `count-per-call/cut_log.py`, `README.md` |
+| 6 | Count-per-call script | Claude | — | `count-per-call/count_calls.py`, `README.md` |
+| 7 | Pass 1: the latest peak | Owner | Q2's Gate | — |
+| 8 | Pass 2: the peak before it | Owner | — | — |
+| 9 | Download Probe A's inputs | Owner | — | — |
+| 10 | Checkpoint cycle script | Claude | — | `checkpoint-cycle/cycle_times.py`, `README.md` |
+| 11 | Run and hand-check the checkpoint cycle | Owner | — | — |
+
+### Step 1 — Scaffold the spike folder
 
 - **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md.
-- **Model:** `<model · effort>` (or —)
-- **Gate:** `<condition>` → `<consequence>`
+- **Who:** Claude
+- **Commit:** `chore: step 1 - scaffold run time and r2 reads spike`
+- **Model:** sonnet · low
+- **Gate:** —
 
 #### Scope
 
-<!-- The result of the step. List the components and the files created or changed (code, tests, docs). A reviewer should know what the diff will contain from this section alone. -->
+The spike folder with its environment and no probe code yet: `README.md`, `pyproject.toml`, `uv.lock`, `.python-version`, `.gitignore`, `.env.example`. Nothing outside `spikes/t077-run-time-and-r2-reads/` changes.
 
 #### Reads
 
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
+- [File layout](#24-file-layout): the files and their purpose.
+- `.claude/rules/code/spikes.md`: the README's shape.
+- `spikes/storage-table-format/pyproject.toml` and `.env.example`: s010's setup for R2 through a proxy, to follow.
 
 #### Do
 
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
+1. Write `.python-version` with `3.14.9`.
+2. Write `pyproject.toml`: Python `==3.14.9`; dependencies `bikesharing` as a path dependency on `../../pipeline`, so `deltalake` resolves to the pipeline's locked version, and `boto3` for `cut_log.py`.
+3. Run `uv lock` from the spike folder to write `uv.lock`.
+4. Write `.env.example` with `R2_ACCOUNT_ID`, `R2_COPY_ACCESS_KEY_ID` and `R2_COPY_SECRET_ACCESS_KEY`, empty.
+5. Write `.gitignore` with `.env`, `data/` and `output/`.
+6. Write `README.md`: the question with a link to this report, the prerequisites of [Prerequisites](#31-prerequisites), and one empty section per check in run order (Probe B, then Probe A), filled by the steps that add them.
 
 #### Check
 
-<!-- command/s or verification with a yes/no result. -->
+`uv sync --locked --directory spikes/t077-run-time-and-r2-reads` succeeds, and `uv run --directory spikes/t077-run-time-and-r2-reads python -c "import deltalake; print(deltalake.__version__)"` prints `1.6.6`.
+
+### Step 2 — Copy both tables to the copy's bucket
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Model:** —
+- **Gate:** `rclone check` reports 0 differences → otherwise repeat Do 3 and 4; never go on to Step 4 with a difference.
+
+#### Scope
+
+The copy of `silver/station_stock/` and `control/processed_objects/` in `bikesharing-t077-lakehouse-copy`, taken from a listed snapshot, so that production's runs during the copy do not change what is copied. The `_delta_log/` listing with production's `LastModified` is saved for `cut_log.py`, since the copied objects get new dates.
+
+#### Do
+
+1. Copy `.env.example` to `.env` and fill in the account ID and the copy token's keys; create `data/copy/`.
+2. Save the snapshot and the logs' dates:
+
+   ```text
+   rclone lsf -R --files-only --include "/silver/station_stock/**" --include "/control/processed_objects/**" r2-prod:bikesharing-lakehouse > data/copy/keys.txt
+   rclone lsf -R --files-only --format "tp" --include "/silver/station_stock/_delta_log/**" --include "/control/processed_objects/_delta_log/**" r2-prod:bikesharing-lakehouse > data/copy/delta-log.txt
+   ```
+
+3. Copy the snapshot: `rclone copy -P --files-from data/copy/keys.txt r2-prod:bikesharing-lakehouse r2-copy:bikesharing-t077-lakehouse-copy`.
+4. Check it: `rclone check --files-from data/copy/keys.txt r2-prod:bikesharing-lakehouse r2-copy:bikesharing-t077-lakehouse-copy`.
+5. Note the UTC hour the copy ended.
+
+#### Check
+
+Report: the number of lines of `keys.txt`, the result of `rclone check`, and the UTC hour of Do 5. Yes when `rclone check` reports 0 differences.
+
+### Step 3 — Counting proxy with a smoke mode
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: step 3 - add counting proxy to run time spike`
+- **Model:** opus · medium
+- **Gate:** —
+
+#### Scope
+
+`count-per-call/proxy.py` and its section in `README.md`. The proxy runs in the calling process, on a background thread, between `deltalake` and the copy's bucket, and records every request with the label of the call in progress. Smoke mode opens each table once, through the proxy. It reads the copy token from `.env` and targets `bikesharing-t077-lakehouse-copy` as a constant, with no argument to change the bucket.
+
+#### Reads
+
+- `spikes/storage-table-format/r2_proxy.py` in full: s010's proxy, which gave exact counts per operation class against R2 ([s010 › Probe A](s010-storage-table-format.md#a-delta-on-r2)); this proxy adapts it.
+- `pipeline/src/bikesharing/shell/delta.py`, lines 50–60 and 176–220: `Lakehouse` and the storage options the pipeline passes to `deltalake`, which the proxy's lakehouse reproduces with its own endpoint.
+
+#### Do
+
+1. Write `proxy.py`, adapted from s010's proxy: start it on a free local port, set a label per call, and record per request the label, method, S3 operation, R2 class (A or B), key, status, bytes and duration, written as JSON lines to a file given by the caller. Expose a `Lakehouse` for the copy's bucket through the proxy.
+2. Implement smoke mode, `python count-per-call/proxy.py --smoke`: open each table once with `DeltaTable`, under the label `smoke`, write `output/count-per-call/smoke-requests.jsonl`, and print GetObject, the other Class B operations and Class A per table and in total.
+3. Update `README.md` with Probe B's section: its question, the smoke command, its output and run time.
+
+#### Check
+
+`uv run --directory spikes/t077-run-time-and-r2-reads python count-per-call/proxy.py --help` prints the usage; the run against R2 is Step 4.
+
+### Step 4 — Run the proxy's smoke test
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Model:** —
+- **Gate:** the proxy's Class B total equals the copy's Class B in the dashboard for that hour → otherwise a client reaches R2 without the proxy: fix `proxy.py` (back to Step 3) before Step 5.
+
+#### Scope
+
+The cheapest test of Probe B's riskiest assumption: that the proxy sees every request `deltalake` makes, before the scripts are built on it.
+
+#### Do
+
+1. In a UTC hour after the one in which the copy ended (Step 2), with nothing else using the copy's bucket, run `uv run python count-per-call/proxy.py --smoke`, once.
+2. Once that hour has ended, read the Class B operations of `bikesharing-t077-lakehouse-copy` for it in R2's dashboard, and GetObject among them if the dashboard splits them.
+
+#### Check
+
+Report the smoke output and the dashboard's figures for the hour. Yes when the proxy's Class B total equals the dashboard's.
+
+### Step 5 — Log cut script
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: step 5 - add log cut to run time spike`
+- **Model:** opus · high
+- **Gate:** —
+
+#### Scope
+
+`count-per-call/cut_log.py` and its section in `README.md`. It rewinds both tables in the copy to the instant of a pass ([Probe B](#b-count-per-call)), with `boto3` straight to R2, not through the proxy. It targets `bikesharing-t077-lakehouse-copy` as a constant, with no argument to change the bucket, and reads production's dates only from `data/copy/delta-log.txt`.
+
+#### Reads
+
+- [Probe B](#b-count-per-call): what the cut keeps and drops.
+- Delta's protocol, sections *Delta Log Entries* and *Last Checkpoint File*, at <https://github.com/delta-io/delta/blob/master/PROTOCOL.md>: the names of commits and checkpoints, and the fields of `_last_checkpoint` that `deltalake` reads.
+
+#### Do
+
+1. Write `cut_log.py --pass 1|2`. From `delta-log.txt`, the pass's version `N` of `processed_objects` is the version right before its latest checkpoint (pass 1) or the checkpoint before that (pass 2). The pass's instant is the `LastModified` of `N`'s commit. For `station_stock`, the pass's version is its latest commit at or before that instant.
+2. For each table: delete every `_delta_log/` object of a version above the pass's version, and rewrite `_last_checkpoint` with the version and size of the latest checkpoint at or before it, its size being the row count of that checkpoint's file. Data files are not touched.
+3. Print per table the pass's version, its commits since the last checkpoint, and the objects deleted. Also print the UTC hour of the production run that read version `N`, which is the hour of the `LastModified` of `N + 1`'s commit, for Q2's Gate.
+4. Update `README.md` with the cut command, its output and run time.
+
+#### Check
+
+`uv run --directory spikes/t077-run-time-and-r2-reads python count-per-call/cut_log.py --help` prints the usage; the cut runs in Step 7.
+
+### Step 6 — Count-per-call script
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: step 6 - add count per call to run time spike`
+- **Model:** opus · medium
+- **Gate:** —
+
+#### Scope
+
+`count-per-call/count_calls.py` and its section in `README.md`. It runs the 8 calls of [Lakehouse reads per run](#lakehouse-reads-per-run) one by one, through the proxy of Step 3, with the pipeline's own functions on the copy's `Lakehouse`. The batch of calls 4–6 replays the copy's last run (#2). Nothing in `pipeline/` changes.
+
+#### Reads
+
+- `pipeline/src/bikesharing/shell/run.py`, lines 549–680: the order of the calls and the arguments the run gives them; `count_calls.py` passes the same.
+- `pipeline/src/bikesharing/shell/delta.py`, lines 238–490: the 8 calls' signatures and what each reads.
+
+#### Do
+
+1. Write `count_calls.py --pass 1|2`. Setup, labelled `setup`: read the copy's last run, meaning its `run_id` in `processed_objects`, its objects and their capture range, and that run's `station_stock` rows with their local dates.
+2. Run the calls in the map's order, each labelled with its number and name, with the run's arguments: `capture_history` with `since` 7 days before the batch's first capture; `merge_station_stock` with the replayed rows, capture range and local dates; `record_processed` with one `ProcessedObject` per object of that run under the key `t077-probe/<n>`; `latest_processed` and `latest_captures` as in `_publish`.
+3. Write `output/count-per-call/pass-<n>-requests.jsonl` and `pass-<n>-calls.csv`, with one row per call and one for setup: GetObject, other Class B, Class A, seconds, the table's version before the call and its commits since the last checkpoint (`version % 100`, since `deltalake` 1.6.6 checkpoints every 100 commits). Print the table with the totals of calls 1–8 and of all rows.
+4. Update `README.md` with the pass command, its outputs and run time.
+
+#### Check
+
+`uv run --directory spikes/t077-run-time-and-r2-reads python count-per-call/count_calls.py --help` prints the usage; the count runs in Step 7.
+
+### Step 7 — Pass 1: the latest peak
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Model:** —
+- **Gate:** Q2's Gate in [Exit criteria](#14-exit-criteria): calls 1–8's GetObject ≥ 80% of production's GetObject per run in the hour `cut_log.py` printed → otherwise the share not accounted for is recorded in the Decision log, with the choice of widening the map within the timebox or opening a new task; Step 8 runs only if the map is widened.
+
+#### Scope
+
+The count per call at the version right before `processed_objects`' latest checkpoint, the worst case in the cycle, checked against production at the same instant and against the copy's own dashboard.
+
+#### Do
+
+1. In one UTC hour, run `uv run python count-per-call/cut_log.py --pass 1`.
+2. In the next UTC hour, run `uv run python count-per-call/count_calls.py --pass 1`, once.
+3. Once that hour has ended, read in R2's dashboard the copy's Class B for it, and production's (`bikesharing-lakehouse`) GetObject for the hour `cut_log.py` printed.
+
+#### Check
+
+Report the two outputs and the three figures. Yes when all three hold:
+
+- each table's version before call 1 is the pass's version `cut_log.py` printed;
+- the copy's Class B for the hour equals the total of all rows of `pass-1-calls.csv`, setup included;
+- calls 1–8's GetObject, divided by production's GetObject in its hour ÷ 4, is ≥ 80%.
+
+### Step 8 — Pass 2: the peak before it
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Model:** —
+- **Gate:** —
+
+#### Scope
+
+The same count one checkpoint earlier, about one day before. The difference between the passes is one day's growth at the same point of the cycle, for Q2's growth criterion. The cut also drops what pass 1 wrote.
+
+#### Do
+
+1. In a UTC hour after the one in which pass 1's count ran, run `uv run python count-per-call/cut_log.py --pass 2`.
+2. In the next UTC hour, run `uv run python count-per-call/count_calls.py --pass 2`, once.
+3. Once that hour has ended, read the same three figures as in Step 7 for pass 2's hours.
+
+#### Check
+
+Report the two outputs and the three figures. Yes when each table's version before call 1 is the pass's version, and the copy's Class B for the hour equals the total of `pass-2-calls.csv`.
+
+### Step 9 — Download Probe A's inputs
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Model:** —
+- **Gate:** —
+
+#### Scope
+
+The observed window's run log objects and each table's `_delta_log/` listing with production's `LastModified`, taken now, so that the window ends at this download. Read-only, with `r2-prod` (#3).
+
+#### Do
+
+1. Download the run logs from 2026-11-22 on: `rclone copy -P --include "/date=2026-11-2[2-9]/**" --include "/date=2026-11-30/**" --include "/date=2026-12-*/**" r2-prod:bikesharing-lakehouse/logs/pipeline data/logs`.
+2. List both logs: `rclone lsf -R --files-only --format "tp" --include "/silver/station_stock/_delta_log/**" --include "/control/processed_objects/_delta_log/**" r2-prod:bikesharing-lakehouse > data/delta-log.txt`.
+
+#### Check
+
+Report the number of `.jsonl` files under `data/logs/` per date folder and the line count of `data/delta-log.txt`. Yes when every date from 2026-11-22 to today has a folder.
+
+### Step 10 — Checkpoint cycle script
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: step 10 - add checkpoint cycle analysis to run time spike`
+- **Model:** sonnet · medium
+- **Gate:** —
+
+#### Scope
+
+`checkpoint-cycle/cycle_times.py`, with the standard library only, and Probe A's section in `README.md`. Offline: it reads `data/logs/` and `data/delta-log.txt` and makes no request.
+
+#### Reads
+
+- [Probe A](#a-checkpoint-cycle-in-time) and Q1's criterion in [Exit criteria](#14-exit-criteria).
+- `pipeline/src/bikesharing/core/events.py`, the builders of `run_started` and `objects_discovered`: the fields and the `ts` format of the events it reads.
+
+#### Do
+
+1. Write `cycle_times.py`: per run, its discovery time as `objects_discovered.ts` − `run_started.ts`. Per table, the times of its checkpoints, from the `LastModified` of `NNN.checkpoint.parquet`. Per run, its commits since the last checkpoint of `processed_objects` at its start.
+2. For each checkpoint of `processed_objects` in the window: the mean discovery time of the 4 runs right before it and the 4 right after, and the drop in percent. Mark each drop ≥ 20%.
+3. Write `output/checkpoint-cycle/runs.csv` (one row per run) and `checkpoints.csv` (one row per checkpoint), and print `checkpoints.csv`. Runs with no `objects_discovered` are listed apart with their count.
+4. Update `README.md` with Probe A's section: its question, Step 9's commands, this script's command, outputs and run time.
+
+#### Check
+
+`uv run --directory spikes/t077-run-time-and-r2-reads python checkpoint-cycle/cycle_times.py` prints one row per checkpoint of the window.
+
+### Step 11 — Run and hand-check the checkpoint cycle
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Model:** —
+- **Gate:** —
+
+#### Scope
+
+Probe A's result for Q1, with the script checked by hand against known arithmetic on one checkpoint and one run.
+
+#### Do
+
+1. Run `uv run python checkpoint-cycle/cycle_times.py`.
+2. Choose one checkpoint from `checkpoints.csv`, find its `LastModified` in `data/delta-log.txt`, and check that the 4 runs before and after it in `runs.csv` are the ones whose `run_started` falls right before and after that time.
+3. For one of those runs, open its `.jsonl` under `data/logs/`, subtract `run_started`'s `ts` from `objects_discovered`'s, and compare with its discovery time in `runs.csv`.
+
+#### Check
+
+Report `checkpoints.csv` and the two hand checks. Yes when the runs of Do 2 are the right ones and Do 3 matches to the millisecond.
 
 ## 4. Findings
 
