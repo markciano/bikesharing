@@ -17,10 +17,10 @@ Phase: the blocks and the review completed.
 Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current: where work resumes, with only the context the next session needs: the step being executed, or the section of the report; — when concluded. -->
 
-- State: Ready 🎬
+- State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
-- Started: — · Finished: —
-- Current: Step 1.
+- Started: 2026-11-25 · Finished: —
+- Current: Step 2.
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -258,7 +258,7 @@ All paths below are relative to `spikes/t077-run-time-and-r2-reads/`, and comman
 
 ### Step 1 — Scaffold the spike folder
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: step 1 - scaffold run time and r2 reads spike`
 - **Model:** sonnet · low
