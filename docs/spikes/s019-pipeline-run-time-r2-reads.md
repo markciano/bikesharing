@@ -179,6 +179,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 3 | [File layout](#24-file-layout) | Probe A's inputs are downloaded with `rclone` commands, not by a script. Standard: least privilege (NIST SP 800-53 AC-6) | The production token stays in rclone's configuration and reaches no spike code; three one-off commands need no script | Steps |
 | 4 | [Probe B](#b-count-per-call) | Each pass's version is the one read by the last run of the last whole UTC hour before the checkpoint's hour, and production is read for that hour. Standard: like-for-like comparison, one regime at a time | In the checkpoint's own hour, runs after the drop read about 2,000 GetObject less, which would lower production's mean per run by up to ~18% and let Q2's Gate pass on a map that does not account for 80% | Steps review |
 | 5 | [Probe B](#b-count-per-call) | Every R2 operation figure comes from the GraphQL Analytics API, through the baseline's `r2_metrics.py` extended with a bucket and an hour; counts match within 0.02%. Standard: reuse of a validated measurement tool ([s010 › Step 5](s010-storage-table-format.md#step-5--run-probe-a-and-verify-the-analysis)) | The dashboard is not exact and documents no breakdown per operation, while Q2's Gate needs GetObject | Steps review |
+| 6 | [File layout](#24-file-layout) | The baseline's four folders stay in the spike folder, unchanged except `r2_metrics.py`; Step 1 updates the README instead of writing it. Standard: provenance of cited evidence | d008 and this report cite their figures; keeping them costs only the README's update | Steps review |
 
 ### 2.4 File layout
 
@@ -192,6 +193,12 @@ spikes/t077-run-time-and-r2-reads/
 ├── .python-version          Python 3.14.9, the pipeline's pin
 ├── .env.example             The copy token's variables, empty; .env holds the values (ignored by Git)
 ├── .gitignore               Ignores .env, data/ and output/
+├── run-time-and-memory/     Baseline, unchanged
+│   └── run_stats.py         Run time and memory against ADR-0027's thresholds
+├── time-per-phase/          Baseline, unchanged
+│   └── run_phases.py        Time per phase from the run's events; Probe A follows how it reads them
+├── phases-by-hour/          Baseline, unchanged
+│   └── run_by_hour.py       Phases per local hour; its output is the daily pattern per run
 ├── r2-operations-and-storage/
 │   └── r2_metrics.py        The baseline's GraphQL query, extended with optional bucket and hour arguments for Probe B's checks
 ├── checkpoint-cycle/        Probe A; its inputs are downloaded with rclone, as the README shows
@@ -205,6 +212,8 @@ spikes/t077-run-time-and-r2-reads/
 ```
 
 Probe A has no download script: its inputs come from `rclone` commands in the README. **#3**
+
+The four baseline folders hold the first measurements, taken at T060.1's close, which [d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close) and this report's Context cite. They keep their scripts, commands and README sections; only `r2_metrics.py` changes (#5). **#6**
 
 ## 3. Steps
 <!-- Each step is one reviewable result, touching at most 2–3 files.
@@ -257,12 +266,13 @@ All paths below are relative to `spikes/t077-run-time-and-r2-reads/`, and comman
 
 #### Scope
 
-The spike folder with its environment and no probe code yet: `README.md`, `pyproject.toml`, `uv.lock`, `.python-version`, `.gitignore`, `.env.example`. Nothing outside `spikes/t077-run-time-and-r2-reads/` changes.
+The spike folder's environment, with no probe code yet: `pyproject.toml`, `uv.lock`, `.python-version`, `.gitignore`, `.env.example`, and the existing `README.md` updated. The baseline's folders do not change, nor anything outside `spikes/t077-run-time-and-r2-reads/`.
 
 #### Reads
 
 - [File layout](#24-file-layout): the files and their purpose.
 - `.claude/rules/code/spikes.md`: the README's shape.
+- `README.md` in full: the baseline's sections, kept as they are.
 - `spikes/storage-table-format/pyproject.toml` and `.env.example`: s010's setup for R2 through a proxy, to follow.
 
 #### Do
@@ -272,7 +282,7 @@ The spike folder with its environment and no probe code yet: `README.md`, `pypro
 3. Run `uv lock` from the spike folder to write `uv.lock`.
 4. Write `.env.example` with `R2_ACCOUNT_ID`, `R2_COPY_ACCESS_KEY_ID` and `R2_COPY_SECRET_ACCESS_KEY`, empty.
 5. Write `.gitignore` with `.env`, `data/` and `output/`.
-6. Write `README.md`: the question with a link to this report, the prerequisites of [Prerequisites](#31-prerequisites), and one empty section per check in run order (Probe B, then Probe A), filled by the steps that add them.
+6. Update `README.md`, keeping the baseline's sections and commands as they are, first and in their order: add a link to this report to the question, add the prerequisites of [Prerequisites](#31-prerequisites) apart from the baseline's, and add after the baseline's sections one empty section per check in run order (Probe B, then Probe A), filled by the steps that add them.
 
 #### Check
 
@@ -496,6 +506,7 @@ Report the number of `.jsonl` files under `data/logs/` per date folder and the l
 #### Reads
 
 - [Probe A](#a-checkpoint-cycle-in-time) and Q1's criterion in [Exit criteria](#14-exit-criteria).
+- `time-per-phase/run_phases.py`: how the baseline reads the run's events and derives discovery's time, which `cycle_times.py` follows on local files.
 - `pipeline/src/bikesharing/core/events.py`, the builders of `run_started` and `objects_discovered`: the fields and the `ts` format of the events it reads.
 
 #### Do
