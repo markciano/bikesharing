@@ -83,7 +83,28 @@ The checks after the baseline (count per call, checkpoint cycle) add these, set 
 
 ## Count per call
 
-TODO(T077): filled by s019's steps 2–8.
+- **Question:** how many GetObject, and how much time, does each call of a run make on the lakehouse, and how do they grow from one day to the next at the same point of the checkpoint cycle ([s019 › Probe B](../../docs/spikes/s019-pipeline-run-time-r2-reads.md#b-count-per-call))?
+- **Inputs:** a copy of `silver/station_stock/` and `control/processed_objects/` in the copy's bucket, taken from a listed snapshot, with production's `_delta_log/` dates saved for the log cut, since copied objects get new dates. With `.env` filled in and `data/copy/` created:
+
+  ```bash
+  rclone lsf -R --files-only --include "/silver/station_stock/**" --include "/control/processed_objects/**" r2-prod:bikesharing-lakehouse > data/copy/keys.txt
+  rclone lsf -R --files-only --format "tp" --time-format RFC3339 --include "/silver/station_stock/_delta_log/**" --include "/control/processed_objects/_delta_log/**" r2-prod:bikesharing-lakehouse > data/copy/delta-log.txt
+  rclone copy -P --files-from data/copy/keys.txt r2-prod:bikesharing-lakehouse r2-copy:bikesharing-t077-lakehouse-copy
+  rclone check --files-from data/copy/keys.txt r2-prod:bikesharing-lakehouse r2-copy:bikesharing-t077-lakehouse-copy
+  ```
+
+- **Scripts:**
+  - `count-per-call/proxy.py` is a counting proxy, adapted from [s010's](../storage-table-format/r2_proxy.py). It runs on a background thread of the calling process, on a free local port. `deltalake` reaches it over plain HTTP with no signature; the proxy signs each request again with the copy token and forwards it to R2, so only the proxy holds the token, and its bucket is a constant. It writes one JSON line per request: the label of the call in progress, method, S3 operation, R2 class, key, status, bytes and duration. Its smoke mode opens each table once under the label `smoke`, writes `output/count-per-call/smoke-requests.jsonl` and prints GetObject, the other Class B operations and Class A per table and in total.
+  - `r2-operations-and-storage/r2_metrics.py` takes one bucket and one window of whole UTC hours, and prints each bucket's GetObject, Class B and Class A totals, classed as the proxy classes them. That makes the independent check: the copy's bucket receives only the probe's requests, so its Class B for the hour must equal the proxy's within 0.02% ([s010 › F14](../../docs/spikes/s010-storage-table-format.md#4-findings)).
+- **Commands:** the smoke, in an hour with nothing else on the copy's bucket; then, once that hour has ended, the copy's figures for it:
+
+  ```bash
+  uv run python count-per-call/proxy.py --smoke
+  uv run python r2-operations-and-storage/r2_metrics.py --bucket bikesharing-t077-lakehouse-copy --start <hour> --end <next hour>
+  ```
+
+- **Output:** TODO(T077): filled by s019's steps 4–8.
+- **Run time:** the smoke and the metrics query take a few seconds each; both print their time at the end.
 
 ## Checkpoint cycle
 
