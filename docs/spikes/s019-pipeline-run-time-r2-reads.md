@@ -17,10 +17,10 @@ Phase: the blocks and the review completed.
 Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current: where work resumes, with only the context the next session needs: the step being executed, or the section of the report; — when concluded. -->
 
-- State: Draft 📝
-- Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review · [ ] Conclusion
+- State: Ready 🎬
+- Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: — · Finished: —
-- Current: Steps review, from the start.
+- Current: Step 1.
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -98,8 +98,8 @@ Main question: what makes the pipeline's run time and its lakehouse reads per ru
 - **Q1.** Does the run time follow each table's commits since its last Delta checkpoint, written every 100 commits, rather than the hour of the day? Answered over the observed window (Exit criteria), from the runs' log objects and the `LastModified` of each table's `_delta_log/`. It decides between the checkpoint cycle and the network to Modal's region ([D2](#d2-modals-region-is-decided-after-the-fix)) as the cause of the daily pattern.
 - **Q2.** Do the calls of [Lakehouse reads per run](#lakehouse-reads-per-run) account for the lakehouse's GetObject per run, and for the time and growth of discovery and batch work? Counted per call, on the tables' state in production. It decides whether the fix is chosen on H1 and H2 alone: its Gate, in Exit criteria, sets the share that must be accounted for; below it, the remaining share is a cause still to find.
 - **Observe only:**
-  - the daily pattern, up to twice as slow from 16:00 to 23:00 Madrid time, whether it holds per operation or only per run;
-  - the pipeline's own GetObject on `bikesharing-bronze` per run, against the objects it downloads, about 65.
+  - the daily pattern, up to twice as slow from 16:00 to 23:00 Madrid time, whether it holds per operation or only per run: per run, the baseline's *Phases by hour* in the spike's README shows it; per operation, no probe measures it, so the Conclusion lists it in Not verified;
+  - the pipeline's own GetObject on `bikesharing-bronze` per run, against the objects it downloads, about 65: bounded from above by the bucket's GetObject in pass 1's production hour ÷ 4, read in Step 7.
 
 ### 1.4 Exit criteria
 
@@ -114,7 +114,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 | Criterion | Threshold | Kind | Why this threshold |
 |---|---|---|---|
-| **Q2, reads:** GetObject counted in the calls of [Lakehouse reads per run](#lakehouse-reads-per-run), against R2's GetObject per run over the window | ≥ 80% | **Hard cut (Gate)** | R2's totals match an exact count within 0.02% ([s010 › F14](s010-storage-table-format.md#4-findings)), so the margin is for what the map leaves out: small calls, such as the log's upload, and other readers of the bucket during the window, such as analysis scripts |
+| **Q2, reads:** GetObject counted in the calls of [Lakehouse reads per run](#lakehouse-reads-per-run), against production's GetObject per run in each pass's hour ([Probe B](#b-count-per-call)) | ≥ 80% | **Hard cut (Gate)** | R2's totals match an exact count within 0.02% ([s010 › F14](s010-storage-table-format.md#4-findings)), so the margin is for what the map leaves out: small calls, such as the log's upload, and other readers of the bucket during the window, such as analysis scripts |
 | **Q2, time:** local time of the calls that hold 80% of the counted GetObject, against the local time of all the mapped calls | ≥ 70% | Guide | Probe B runs locally, where latency is lower than from Modal, so time is compared as a share among calls, not against production's runs |
 | **Q2, growth:** the part of the count that grows with `processed_objects`' files, against the measured growth per run | Same sign and order of magnitude | Guide | It confirms that H1 is what grows, not only what weighs |
 | **Q1, checkpoint cycle:** discovery's time in the 4 runs right after each checkpoint, against the 4 right before | A drop of 20% or more at every checkpoint of the window | Guide | The hour of the day causes no sudden drop at a checkpoint; 4 runs span 1 h, too short for the slow growth to interfere |
@@ -389,7 +389,7 @@ Report the smoke output, whether Do 2 matched the baseline, and Do 3's output. Y
 #### Do
 
 1. Write `cut_log.py --pass 1|2`. From `delta-log.txt`, take `processed_objects`' latest checkpoint (pass 1) or the checkpoint before it (pass 2), and the UTC hour `H` of that checkpoint's commit. Its production hour is `H − 1`, and the pass's version `N` of `processed_objects` is the one read by that hour's last run: the version of the last commit in `H − 1`, minus 1. The pass's instant is the `LastModified` of `N`'s commit. For `station_stock`, the pass's version is its latest commit at or before that instant.
-2. For each table: delete every `_delta_log/` object of a version above the pass's version, and rewrite `_last_checkpoint` with the version and size of the latest checkpoint at or before it, its size being the row count of that checkpoint's file. Data files are not touched.
+2. For each table: list its `_delta_log/` in the copy's bucket, not in `delta-log.txt`, so that what an earlier pass wrote is also found, and delete every object of a version above the pass's version, and rewrite `_last_checkpoint` with the version and size of the latest checkpoint at or before it, its size being the row count of that checkpoint's file. Data files are not touched.
 3. Print per table the pass's version, its commits since the last checkpoint, and the objects deleted. Also print the production hour `H − 1`, for Q2's Gate, and the number of commits of `processed_objects` in it, which is 4 when its 4 runs all read before the checkpoint.
 4. Update `README.md` with the cut command, its output and run time.
 
@@ -430,7 +430,7 @@ Report the smoke output, whether Do 2 matched the baseline, and Do 3's output. Y
 - **Status:** 💤 todo
 - **Who:** Owner
 - **Model:** —
-- **Gate:** Q2's Gate in [Exit criteria](#14-exit-criteria): calls 1–8's GetObject ≥ 80% of production's GetObject per run in the hour `cut_log.py` printed → otherwise the share not accounted for is recorded in the Decision log, with the choice of widening the map within the timebox or opening a new task; Step 8 runs only if the map is widened.
+- **Gate:** Q2's Gate in [Exit criteria](#14-exit-criteria): calls 1–8's GetObject ≥ 80% of production's GetObject per run in the hour `cut_log.py` printed → otherwise the share not accounted for is recorded in the Decision log, with the choice of widening the map within the timebox or opening a new task; Steps 8–11 run only if the map is widened, since otherwise the run ends ([Exit criteria](#14-exit-criteria) › Timebox).
 
 #### Scope
 
@@ -440,11 +440,11 @@ The count per call at the version read by the last run of the last whole UTC hou
 
 1. In one UTC hour, run `uv run python count-per-call/cut_log.py --pass 1`.
 2. In the next UTC hour, run `uv run python count-per-call/count_calls.py --pass 1`, once.
-3. Once that hour has ended, run `r2_metrics.py` twice: `--bucket bikesharing-t077-lakehouse-copy` for the count's hour, and `--bucket bikesharing-lakehouse` for the production hour `cut_log.py` printed.
+3. Once that hour has ended, run `r2_metrics.py` three times: `--bucket bikesharing-t077-lakehouse-copy` for the count's hour, and `--bucket bikesharing-lakehouse` and `--bucket bikesharing-bronze` for the production hour `cut_log.py` printed.
 
 #### Check
 
-Report the two outputs and the three figures. Yes when all three hold:
+Report the two outputs and the three queries' figures. Yes when all three hold:
 
 - each table's version before call 1 is the pass's version `cut_log.py` printed, and it printed 4 commits in the production hour;
 - the copy's Class B for the hour equals the Class B total of all rows of `pass-1-calls.csv`, setup included, within 0.02%;
@@ -465,11 +465,14 @@ The same count one checkpoint earlier, about one day before. The difference betw
 
 1. In a UTC hour after the one in which pass 1's count ran, run `uv run python count-per-call/cut_log.py --pass 2`.
 2. In the next UTC hour, run `uv run python count-per-call/count_calls.py --pass 2`, once.
-3. Once that hour has ended, read the same three figures as in Step 7 for pass 2's hours.
+3. Once that hour has ended, run the copy's and `bikesharing-lakehouse`'s queries of Step 7 for pass 2's hours.
+4. From both passes' `calls.csv` and production queries, work out Q2's two guides in [Exit criteria](#14-exit-criteria):
+   - **time:** per pass, the share of the mapped calls' seconds taken by the calls that hold 80% of their GetObject, adding calls from the largest count down;
+   - **growth:** per call, pass 1's GetObject minus pass 2's, and its total against production's GetObject per run in pass 1's hour minus pass 2's.
 
 #### Check
 
-Report the two outputs and the three figures. Yes when each table's version before call 1 is the pass's version, `cut_log.py` printed 4 commits in the production hour, and the copy's Class B for the hour equals the Class B total of `pass-2-calls.csv`, within 0.02%.
+Report the two outputs, the queries' figures and Do 4's two results. Yes when each table's version before call 1 is the pass's version, `cut_log.py` printed 4 commits in the production hour, and the copy's Class B for the hour equals the Class B total of `pass-2-calls.csv`, within 0.02%.
 
 ### Step 9 — Download Probe A's inputs
 
