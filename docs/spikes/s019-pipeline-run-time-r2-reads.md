@@ -18,9 +18,9 @@ Started / Finished: UTC dates of the first step executed and of the Conclusion.
 Current: where work resumes, with only the context the next session needs: the step being executed, or the section of the report; — when concluded. -->
 
 - State: Draft 📝
-- Phase: [x] Questions · [ ] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
+- Phase: [x] Questions · [x] Method · [ ] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
-- Current: Method › Decisions about how: what each probe captures and logs, and how the evidence is checked. Parked for the Conclusion: whether the control table stays in Delta, among the fix's candidates.
+- Current: Steps › Prerequisites, from the start: the copy's bucket, an R2 token scoped to it, and a read-only token on production for the copy. Parked for the Conclusion: whether the control table stays in Delta, among the fix's candidates.
 
 ## 1. Questions — what we need to know
 
@@ -147,7 +147,7 @@ The phase times in the runs' log objects are joined with the `LastModified` of e
 
 The calls of [Lakehouse reads per run](#lakehouse-reads-per-run) run one at a time through the counting proxy of [s010 › Probe A](s010-storage-table-format.md#a-delta-on-r2), which gave exact requests per operation class against R2. For each call it records GetObject, time, and each table's commits since its last checkpoint. It answers Q2's three criteria, and calls 4–6 give the cost of one batch for the catch-up's arithmetic.
 
-It runs on the owner's machine, against a copy of both tables in a separate bucket, since calls 5 and 6 write. The copy is whole: `processed_objects` is never compacted, so every version still reads data files from the first day.
+It runs on the owner's machine, against a copy of both tables in a separate bucket, since calls 5 and 6 write. The copy is whole: `processed_objects` is never compacted, so every version still reads data files from the first day. The probe holds only an R2 token scoped to the copy's bucket, so no misconfiguration can reach production; the owner makes the copy with a read-only token on production.
 
 The probe runs twice, at the two latest peaks of the sawtooth: the version of `processed_objects` right before its last checkpoint, then the one right before the checkpoint before it, about 100 commits earlier. Each pass is reproduced with Delta's time travel on the copy:
 
@@ -155,7 +155,7 @@ The probe runs twice, at the two latest peaks of the sawtooth: the version of `p
 - the cut also drops what the earlier pass wrote;
 - data files added after the cut are left orphaned and nothing reads them.
 
-The difference between the passes is one day's growth at the same point of the cycle, compared with the sawtooth's peak-to-peak growth for Q2's growth criterion. The cut runs only on the copy, never on production.
+Q2's Gate compares each pass's count with production at the same instant: `bikesharing-lakehouse`'s Class B operations in the hour of that pass's version, divided by its 4 runs. The difference between the passes is one day's growth at the same point of the cycle, compared with the sawtooth's peak-to-peak growth for Q2's growth criterion. The cut runs only on the copy, never on production.
 
 Each pass is checked against an independent count. The copy's bucket receives only the probe's requests, so its hourly Class B operations in R2's dashboard must match the proxy's total for that pass. This catches a client that reaches R2 without the proxy. The two passes and the cut run in separate hours, so that each hourly figure holds one of them alone.
 
@@ -177,8 +177,19 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 ```text
 spikes/t077-run-time-and-r2-reads/
-├── README.md        Question, setup and commands, what each script does, link to the report
-└── <file>           <purpose>
+├── README.md                Question, setup and commands, what each script does, link to the report
+├── pyproject.toml           Python and dependencies; the pipeline package as a local path dependency, so its deltalake version is the production one
+├── uv.lock                  Locked dependencies
+├── .gitignore               Ignores data/ and output/
+├── checkpoint-cycle/        Probe A
+│   ├── fetch_inputs.py      Downloads the window's run log objects and lists each table's _delta_log/ with LastModified; read-only
+│   └── cycle_times.py       Places each run in its checkpoint cycle and compares discovery's time in the 4 runs before and after each checkpoint
+├── count-per-call/          Probe B
+│   ├── proxy.py             Counting proxy between deltalake and R2, adapted from s010's Probe A
+│   ├── cut_log.py           Cuts the copy's logs at a pass's version
+│   └── count_calls.py       Runs the map's calls one by one through the proxy, with GetObject, time and commits since the checkpoint per call
+├── data/                    Downloaded inputs (ignored by Git)
+└── output/                  Results per probe and pass (ignored by Git)
 ```
 
 ## 3. Steps
