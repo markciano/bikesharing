@@ -280,7 +280,7 @@ The spike folder with its environment and no probe code yet: `README.md`, `pypro
 
 #### Scope
 
-The copy of `silver/station_stock/` and `control/processed_objects/` in `bikesharing-t077-lakehouse-copy`, taken from a listed snapshot, so that production's runs during the copy do not change what is copied. The `_delta_log/` listing with production's `LastModified` is saved for `cut_log.py`, since the copied objects get new dates.
+The copy of `silver/station_stock/` and `control/processed_objects/` in `bikesharing-t077-lakehouse-copy`, taken from a listed snapshot, so that production's runs during the copy do not change what is copied. The `_delta_log/` listing with production's `LastModified` is saved for `cut_log.py`, since the copied objects get new dates. Its dates are in RFC 3339 with their offset, since `rclone lsf` prints local time by default.
 
 #### Do
 
@@ -289,7 +289,7 @@ The copy of `silver/station_stock/` and `control/processed_objects/` in `bikesha
 
    ```text
    rclone lsf -R --files-only --include "/silver/station_stock/**" --include "/control/processed_objects/**" r2-prod:bikesharing-lakehouse > data/copy/keys.txt
-   rclone lsf -R --files-only --format "tp" --include "/silver/station_stock/_delta_log/**" --include "/control/processed_objects/_delta_log/**" r2-prod:bikesharing-lakehouse > data/copy/delta-log.txt
+   rclone lsf -R --files-only --format "tp" --time-format RFC3339 --include "/silver/station_stock/_delta_log/**" --include "/control/processed_objects/_delta_log/**" r2-prod:bikesharing-lakehouse > data/copy/delta-log.txt
    ```
 
 3. Copy the snapshot: `rclone copy -P --files-from data/copy/keys.txt r2-prod:bikesharing-lakehouse r2-copy:bikesharing-t077-lakehouse-copy`.
@@ -357,7 +357,7 @@ Report the smoke output and the dashboard's figures for the hour. Yes when the p
 
 #### Scope
 
-`count-per-call/cut_log.py` and its section in `README.md`. It rewinds both tables in the copy to the instant of a pass ([Probe B](#b-count-per-call)), with `boto3` straight to R2, not through the proxy. It targets `bikesharing-t077-lakehouse-copy` as a constant, with no argument to change the bucket, and reads production's dates only from `data/copy/delta-log.txt`.
+`count-per-call/cut_log.py` and its section in `README.md`. It rewinds both tables in the copy to the instant of a pass ([Probe B](#b-count-per-call)), with `boto3` straight to R2, not through the proxy. It targets `bikesharing-t077-lakehouse-copy` as a constant, with no argument to change the bucket, and reads production's dates only from `data/copy/delta-log.txt`, converted to UTC from their RFC 3339 offset.
 
 #### Reads
 
@@ -463,7 +463,7 @@ The observed window's run log objects and each table's `_delta_log/` listing wit
 #### Do
 
 1. Download the run logs from 2026-11-22 on: `rclone copy -P --include "/date=2026-11-2[2-9]/**" --include "/date=2026-11-30/**" --include "/date=2026-12-*/**" r2-prod:bikesharing-lakehouse/logs/pipeline data/logs`.
-2. List both logs: `rclone lsf -R --files-only --format "tp" --include "/silver/station_stock/_delta_log/**" --include "/control/processed_objects/_delta_log/**" r2-prod:bikesharing-lakehouse > data/delta-log.txt`.
+2. List both logs, with dates in RFC 3339 and their offset: `rclone lsf -R --files-only --format "tp" --time-format RFC3339 --include "/silver/station_stock/_delta_log/**" --include "/control/processed_objects/_delta_log/**" r2-prod:bikesharing-lakehouse > data/delta-log.txt`.
 
 #### Check
 
@@ -479,7 +479,7 @@ Report the number of `.jsonl` files under `data/logs/` per date folder and the l
 
 #### Scope
 
-`checkpoint-cycle/cycle_times.py`, with the standard library only, and Probe A's section in `README.md`. Offline: it reads `data/logs/` and `data/delta-log.txt` and makes no request.
+`checkpoint-cycle/cycle_times.py`, with the standard library only, and Probe A's section in `README.md`. Offline: it reads `data/logs/` and `data/delta-log.txt`, whose RFC 3339 dates it converts to UTC from their offset, and makes no request.
 
 #### Reads
 
