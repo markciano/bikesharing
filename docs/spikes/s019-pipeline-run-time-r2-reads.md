@@ -20,7 +20,8 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Draft 📝
 - Phase: [x] Questions · [x] Method · [x] Steps · [ ] Steps review · [ ] Conclusion
 - Started: — · Finished: —
-- Current: Steps review, from the start. Parked for the Conclusion: whether the control table stays in Delta, and which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`), among the fix's candidates.
+- Current: Steps review, from the start.
+- Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
 
