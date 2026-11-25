@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
-- Current: Step 2.
+- Current: Step 3.
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -290,7 +290,7 @@ The spike folder's environment, with no probe code yet: `pyproject.toml`, `uv.lo
 
 ### Step 2 — Copy both tables to the copy's bucket
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Model:** —
 - **Gate:** `rclone check` reports 0 differences → otherwise repeat Do 3 and 4; never go on to Step 4 with a difference.
@@ -548,12 +548,15 @@ Report `checkpoints.csv` and the two hand checks. Yes when the runs of Do 2 are 
 
 <!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
 
-### F1. `<one-line statement>`
+### F1. The copy's bucket holds the listed snapshot of both tables, identical to production
 
-Step N · YYYY-MM-DD · `<source of evidence>`
+Step 2 · 2026-11-25 · `rclone copy` and `rclone check` output, `data/copy/keys.txt`, `data/copy/delta-log.txt`
 
-- `<evidence>`
-- Consequence: `<for variants, steps or questions>`
+- The snapshot lists 3,081 objects in `silver/station_stock/` and `control/processed_objects/`, 1,530 of them under `_delta_log/`; they take 227 MB.
+- `rclone copy` transferred 3,081 of 3,081 objects from 20:17 to about 20:35 UTC, in 17 min 46 s, with no errors.
+- `rclone check` over the same list reported 0 differences at 22:03 UTC.
+- Requests on the copy's bucket so far: one listing in the hour 19:00Z, the copy in 20:00Z and the check in 22:00Z.
+- Consequence: the Gate passes; Probe B reads this copy, and Step 4's smoke test runs in an hour with no other requests on the copy's bucket.
 
 ## 5. Conclusion
 
