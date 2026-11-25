@@ -1,6 +1,6 @@
 # Run time and R2 reads of the pipeline's scheduled runs
 
-Why do the pipeline's scheduled runs get slower every day, and why do they read so many objects from R2? The first measurements, taken in T060.1's close, are the baseline of T077 and are recorded in [d008 › Close](../../docs/designs/d008-pipeline-platform-and-walking-skeleton.md#4-close): the run time, memory and platform's review in Implemented, and the run time's growth in Known gaps.
+Why do the pipeline's scheduled runs get slower every day, and why do they read so many objects from R2? The first measurements, taken in T060.1's close, are the baseline of T077 and are recorded in [d008 › Close](../../docs/designs/d008-pipeline-platform-and-walking-skeleton.md#4-close): the run time, memory and platform's review in Implemented, and the run time's growth in Known gaps. The checks that follow the baseline, and what they are evidence for, are in [s019](../../docs/spikes/s019-pipeline-run-time-r2-reads.md).
 
 ## Prerequisites
 
@@ -11,6 +11,16 @@ Why do the pipeline's scheduled runs get slower every day, and why do they read 
   - `CF_ANALYTICS_API_TOKEN` in the shell's environment: a Cloudflare token with Account Analytics: Read only, loaded without echo or history with `read -s "CF_ANALYTICS_API_TOKEN?Token: " && export CF_ANALYTICS_API_TOKEN`.
 - **Python and dependencies:** the pipeline's locked environment, run with `uv run --directory pipeline` from the repository root, so the commands below take paths relative to `pipeline/`.
 - **Side effects:** every script only reads and prints aggregates; none writes to R2 or to disk, or prints a credential or a log line. The three log scripts make about 200 GetObject requests to `bikesharing-lakehouse` each, and none to `bikesharing-bronze`.
+
+The checks after the baseline (count per call, checkpoint cycle) add these, set in [s019 › Prerequisites](../../docs/spikes/s019-pipeline-run-time-r2-reads.md#31-prerequisites):
+
+- **Copy bucket:** `bikesharing-t077-lakehouse-copy`, in the same account and location as `bikesharing-lakehouse` (Western Europe), with no bucket lock. It holds the copy of the tables that the count per call reads.
+- **R2 tokens:**
+  - `bikesharing-t077-copy`: Object Read & Write on the copy's bucket only. Its values go in `.env` in this folder, as in `.env.example`.
+  - `bikesharing-t077-prod-read`: Object Read only on `bikesharing-lakehouse` only, for the copy and the checkpoint cycle's downloads.
+- **rclone 1.75.2:** two remotes with provider Cloudflare and `no_check_bucket = true`, since each token is scoped to one bucket. `r2-prod` holds the production read token and `r2-copy` the copy token. Since the two remotes hold different credentials, a copy between them is not server-side: rclone downloads each object and uploads it again, with free egress.
+- **Python and dependencies:** Python 3.14.9 and uv 0.13.5. This folder's own locked environment, `uv sync --locked --directory spikes/t077-run-time-and-r2-reads`, takes the pipeline as a path dependency, with `deltalake` held at the pipeline's locked 1.6.6. Commands run from this folder.
+- **Hours:** R2's operation figures are read for whole UTC hours once each hour has ended, so each run that puts requests on the copy's bucket runs alone in its hours.
 
 ## Run time and memory
 
@@ -70,3 +80,11 @@ Why do the pipeline's scheduled runs get slower every day, and why do they read 
 
   The query groups conditional PutObject with PutObject and reports ListObjectsV2 as ListObjects; no DeleteObjects ran in the window.
 - **Run time:** not recorded; the script prints it at the end.
+
+## Count per call
+
+TODO(T077): filled by s019's steps 2–8.
+
+## Checkpoint cycle
+
+TODO(T077): filled by s019's steps 9–11.
