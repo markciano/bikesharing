@@ -152,7 +152,7 @@ It runs on the owner's machine, against a copy of both tables in a separate buck
 
 The batch of calls 4–6 replays the last run present in the copy, since the probe does not reach `bikesharing-bronze`. Call 5 merges again that run's `station_stock` rows, which fall on the same local date and so read the same partition's files. Call 6 records as many objects as that run had, under new keys (`t077-probe/…`), so its MERGE stays insert-only and reads the whole table, as in production. Reading the replayed rows is counted apart, as setup. **#2**
 
-The probe runs twice, at the two latest peaks of the sawtooth: the version of `processed_objects` right before its last checkpoint, then the one right before the checkpoint before it, about 100 commits earlier. Each pass is reproduced with Delta's time travel on the copy:
+The probe runs twice, at the two latest peaks of the sawtooth: before `processed_objects`' last checkpoint, then before the checkpoint before it, about 100 commits earlier. Each pass's version is the one read by the last run of the last whole UTC hour before the hour of the checkpoint's commit, so that the 4 runs of that hour all read before the drop. **#4** Each pass is reproduced with Delta's time travel on the copy:
 
 - both tables' logs are cut at that pass's instant, dropping later commits and checkpoints, and `_last_checkpoint` points to the last checkpoint before it;
 - the cut also drops what the earlier pass wrote;
@@ -175,6 +175,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 1 | [Questions](#13-questions), [Exit criteria](#14-exit-criteria) | Questions reopened: the observed window starts on 2026-11-22 00:00 UTC, after the first feed's catch-up, and the main question also covers a new feed's catch-up, by arithmetic on the cost per batch counted in Q2. Standard: workload characterization, one regime at a time | The catch-up's runs read up to 22,000 GetObject each and would skew Q2's Gate and growth; more feeds are still to come, each with its own catch-up | Method |
 | 2 | [Probe B](#b-count-per-call) | The batch of calls 4–6 replays the copy's last run: its `station_stock` rows merged again, and its object count recorded under new keys. Standard: replay of a representative workload | The copy's token does not reach `bikesharing-bronze`; the replay reads the same files as the real batch, and only the writes, which are not measured, differ | Steps |
 | 3 | [File layout](#24-file-layout) | Probe A's inputs are downloaded with `rclone` commands, not by a script. Standard: least privilege (NIST SP 800-53 AC-6) | The production token stays in rclone's configuration and reaches no spike code; three one-off commands need no script | Steps |
+| 4 | [Probe B](#b-count-per-call) | Each pass's version is the one read by the last run of the last whole UTC hour before the checkpoint's hour, and production is read for that hour. Standard: like-for-like comparison, one regime at a time | In the checkpoint's own hour, runs after the drop read about 2,000 GetObject less, which would lower production's mean per run by up to ~18% and let Q2's Gate pass on a map that does not account for 80% | Steps review |
 
 ### 2.4 File layout
 
@@ -366,9 +367,9 @@ Report the smoke output and the dashboard's figures for the hour. Yes when the p
 
 #### Do
 
-1. Write `cut_log.py --pass 1|2`. From `delta-log.txt`, the pass's version `N` of `processed_objects` is the version right before its latest checkpoint (pass 1) or the checkpoint before that (pass 2). The pass's instant is the `LastModified` of `N`'s commit. For `station_stock`, the pass's version is its latest commit at or before that instant.
+1. Write `cut_log.py --pass 1|2`. From `delta-log.txt`, take `processed_objects`' latest checkpoint (pass 1) or the checkpoint before it (pass 2), and the UTC hour `H` of that checkpoint's commit. Its production hour is `H − 1`, and the pass's version `N` of `processed_objects` is the one read by that hour's last run: the version of the last commit in `H − 1`, minus 1. The pass's instant is the `LastModified` of `N`'s commit. For `station_stock`, the pass's version is its latest commit at or before that instant.
 2. For each table: delete every `_delta_log/` object of a version above the pass's version, and rewrite `_last_checkpoint` with the version and size of the latest checkpoint at or before it, its size being the row count of that checkpoint's file. Data files are not touched.
-3. Print per table the pass's version, its commits since the last checkpoint, and the objects deleted. Also print the UTC hour of the production run that read version `N`, which is the hour of the `LastModified` of `N + 1`'s commit, for Q2's Gate.
+3. Print per table the pass's version, its commits since the last checkpoint, and the objects deleted. Also print the production hour `H − 1`, for Q2's Gate, and the number of commits of `processed_objects` in it, which is 4 when its 4 runs all read before the checkpoint.
 4. Update `README.md` with the cut command, its output and run time.
 
 #### Check
@@ -412,7 +413,7 @@ Report the smoke output and the dashboard's figures for the hour. Yes when the p
 
 #### Scope
 
-The count per call at the version right before `processed_objects`' latest checkpoint, the worst case in the cycle, checked against production at the same instant and against the copy's own dashboard.
+The count per call at the version read by the last run of the last whole UTC hour before `processed_objects`' latest checkpoint, the worst case in the cycle that a whole production hour matches, checked against production in that hour and against the copy's own dashboard.
 
 #### Do
 
@@ -424,7 +425,7 @@ The count per call at the version right before `processed_objects`' latest check
 
 Report the two outputs and the three figures. Yes when all three hold:
 
-- each table's version before call 1 is the pass's version `cut_log.py` printed;
+- each table's version before call 1 is the pass's version `cut_log.py` printed, and it printed 4 commits in the production hour;
 - the copy's Class B for the hour equals the total of all rows of `pass-1-calls.csv`, setup included;
 - calls 1–8's GetObject, divided by production's GetObject in its hour ÷ 4, is ≥ 80%.
 
@@ -447,7 +448,7 @@ The same count one checkpoint earlier, about one day before. The difference betw
 
 #### Check
 
-Report the two outputs and the three figures. Yes when each table's version before call 1 is the pass's version, and the copy's Class B for the hour equals the total of `pass-2-calls.csv`.
+Report the two outputs and the three figures. Yes when each table's version before call 1 is the pass's version, `cut_log.py` printed 4 commits in the production hour, and the copy's Class B for the hour equals the total of `pass-2-calls.csv`.
 
 ### Step 9 — Download Probe A's inputs
 
