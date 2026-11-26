@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Spec › Introduction
+- Current: Spec › Decisions, from OQ3. Parked for the Plan: how the common table access is enforced (module, and a possible rule in `.claude/rules/`); rewriting [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job; the owner leans to partitioning `processed_objects` like bronze's keys (system, feed, date)
 
 ## 1. Spec — what and why
 
