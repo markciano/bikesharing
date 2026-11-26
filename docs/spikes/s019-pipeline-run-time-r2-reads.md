@@ -20,8 +20,10 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
-- Current: Conclusion; every step is done. Probe A's result is F15 and Probe B's F6–F14.
-- Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
+- Current: Conclusion › 5.6 Records, the ADR on the Delta pattern; 5.1–5.5 are written. Then the tear-down (copy bucket `bikesharing-t077-lakehouse-copy`, tokens `bikesharing-t077-copy` and `bikesharing-t077-prod-read`, run by the owner) and the close.
+  - **ADR-0052, Proposed:** the decision in one sentence: every pipeline Delta table is kept and read inside the run by how it is written and read: opened once per run, read with pruning by partition and file statistics, compacted by a threshold of small files sorted by key or once its partition closes, and vacuumed within its history. Its content is the Verdict's fix and P1–P6; the Verdict holds the reasons.
+  - **Options to weigh:** maintenance as a job apart from the run (T072's earlier premise; conflicts with the MERGE and misses a catch-up); compaction at fixed times (no response to a catch-up); the control table out of Delta, as a manifest (loses atomic commits for a few hundred GetObject); one compaction threshold for every partition, the active one included (defeats pruning by capture range).
+  - **Research first, through the `web-researcher`, official documentation only:** Delta's auto compaction small-file threshold (believed 50); `deltalake` 1.7.0's `optimize.compact`, `optimize.z_order` and `vacuum` on an S3-compatible store such as R2, and how a vacuum interacts with time travel; whether its scans prune by Parquet row group, or only by the log's file statistics; that 1.7.0's MERGE prunes its target ([Sources](#6-sources)).
 
 ## 1. Questions — what we need to know
 
