@@ -469,7 +469,7 @@ The same count one checkpoint earlier, about one day before. The difference betw
 
 1. After pass 1's count window has ended, run `uv run python count-per-call/cut_log.py --pass 2`.
 2. At least 3 minutes after the cut ends, run `uv run python count-per-call/count_calls.py --pass 2`, once, noting its start and end.
-3. Once the count's window has ended, run the copy's and `bikesharing-lakehouse`'s queries of Step 7 for pass 2's window and production hour.
+3. Once the count's window has ended, run the copy's and `bikesharing-lakehouse`'s queries of Step 7 for pass 2's window, in whole minutes as [Probe B](#b-count-per-call) defines it, and for its production hour.
 4. From both passes' `calls.csv` and production queries, work out Q2's two guides in [Exit criteria](#14-exit-criteria):
    - **time:** per pass, the share of the mapped calls' seconds taken by the calls that hold 80% of their GetObject, adding calls from the largest count down;
    - **growth:** per call, pass 1's GetObject minus pass 2's, and its total against production's GetObject per run in pass 1's hour minus pass 2's.
