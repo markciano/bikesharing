@@ -125,4 +125,20 @@ The checks after the baseline (count per call, checkpoint cycle) add these, set 
 
 ## Checkpoint cycle
 
-TODO(T077): filled by s019's steps 9–11.
+- **Question:** does discovery's time drop at each checkpoint of `processed_objects`, or does it follow the hour of the day ([s019 › Probe A](../../docs/spikes/s019-pipeline-run-time-r2-reads.md#a-checkpoint-cycle-in-time))?
+- **Inputs:** the run logs since 2026-11-22 and both tables' `_delta_log/` listings with production's `LastModified`, downloaded with the production read token (s019 #3). The observed window ends at the download. The first command creates `data/`, which the second writes into:
+
+  ```bash
+  rclone copy -P --include "/date=2026-11-2[2-9]/**" --include "/date=2026-11-30/**" --include "/date=2026-12-*/**" r2-prod:bikesharing-lakehouse/logs/pipeline data/logs
+  rclone lsf -R --files-only --format "tp" --time-format RFC3339 --include "/silver/station_stock/_delta_log/**" --include "/control/processed_objects/_delta_log/**" r2-prod:bikesharing-lakehouse > data/delta-log.txt
+  ```
+
+- **Script:** `checkpoint-cycle/cycle_times.py` makes no request. It converts the listing's dates to UTC and takes the runs started from 2026-11-22 00:00 UTC. A run's discovery time is `objects_discovered.ts` − `run_started.ts`. For each checkpoint of `processed_objects`, it compares the mean discovery time of the 4 runs started right before the checkpoint's `LastModified` with that of the 4 started from it on, and marks a drop of 20% or more. Only runs with a discovery time enter the means; with fewer than 4 on a side, it gives no drop. It writes `output/checkpoint-cycle/runs.csv`, one row per run, with its discovery time, `processed_objects`' version and latest checkpoint at its start and the commits between them, and `checkpoints.csv`, one row per checkpoint. It prints `checkpoints.csv`, the runs in the window, those with no `objects_discovered`, the log objects with no `run_started` and `station_stock`'s checkpoints.
+- **Command:**
+
+  ```bash
+  uv run python checkpoint-cycle/cycle_times.py
+  ```
+
+- **Output (2026-11-26):** 424 runs, up to 09:15 UTC on 2026-11-26, all with a discovery time. None of the 5 checkpoints shows a drop of 20% or more: discovery's mean rises after four of them, by 35.5% to 65.5%, and drops 15.9% after the one of 2026-11-25.
+- **Run time:** under 1 s. The script prints it at the end.

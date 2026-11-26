@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
-- Current: Step 10, the checkpoint cycle script. Probe A's inputs are downloaded (step 9); Probe B is complete (F6–F14).
+- Current: Step 11, the owner's run and hand check of the checkpoint cycle. Probe B is complete (F6–F14).
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -500,7 +500,7 @@ Report the number of `.jsonl` files under `data/logs/` per date folder and the l
 
 ### Step 10 — Checkpoint cycle script
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: step 10 - add checkpoint cycle analysis to run time spike`
 - **Model:** sonnet · medium
