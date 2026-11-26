@@ -22,7 +22,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - Started: 2026-11-25 · Finished: —
 - Current: Conclusion › 5.6 Records, the ADR on the Delta pattern; 5.1–5.5 are written. Then the tear-down (copy bucket `bikesharing-t077-lakehouse-copy`, tokens `bikesharing-t077-copy` and `bikesharing-t077-prod-read`, run by the owner) and the close.
   - **ADR-0052, Proposed:** the decision in one sentence: every pipeline Delta table is opened once per run, partitioned by the range its readers filter by, read and merged stating that range, compacted without merging files within a range a reader prunes by, and vacuumed within its history. Only the principles go to the ADR; how each table applies them is the Verdict's fix and P1–P6.
-  - **Options to weigh:** maintenance as a job apart from the run (T072's earlier premise; conflicts with the MERGE and misses a catch-up); compaction at fixed times (no response to a catch-up); the control table out of Delta, as a manifest (loses atomic commits for a few hundred GetObject); no partitions and one compacted file (bounds GetObject, not the bytes read); one compaction rule for every partition, the active one included (defeats pruning by capture range where a reader prunes within the day).
+  - **Options to weigh:** keep the current access (12,369 GetObject per run and growing, F6, F14); maintenance as a job apart from the run (T072's earlier premise; conflicts with the MERGE and misses a catch-up); no partitions and one compacted file (bounds GetObject, not the bytes read).
   - The official documentation is checked ([Sources](#6-sources)).
 
 ## 1. Questions — what we need to know
