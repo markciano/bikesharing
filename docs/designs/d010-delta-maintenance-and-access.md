@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › list of concerns. Parked for the Plan: how the common table access is enforced (module, and a possible rule in `.claude/rules/`); rewriting [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job; the owner leans to partitioning `processed_objects` like bronze's keys (system, feed, date); when the daily maintenance runs, and how retention's deletion, vacuum and compaction share it; `delta.checkpointInterval` per table, between 5 and 10, from each table's opens per run
+- Current: Plan › concerns, C1–C5 written (Common table access to Daily maintenance). Left, in order: C6 `delta.checkpointInterval` per table, between 5 and 10, from each table's opens per run (settled); C7 maintenance events (compaction, retention, vacuum) in the event registry (asked; Compaction's last sentence assumes compaction events); C8 migration script in `pipeline/scripts/`, its verification and code version in the commit metadata (settled, D2, D5, R6–R9); C9 rewrite [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job, with `**replaces …**` (settled, ADR-0052); C10 steps for moving Modal's region, written and not run (settled, T080). Parked for File layout: a catalog of the lakehouse's tables (physical model, every layer, storage only), e.g. `docs/lakehouse.md`, linked from architecture.md › 8.
 
 ## 1. Spec — what and why
 
@@ -269,6 +269,17 @@ After each batch, the run compacts the partitions the batch left over their rule
 | `station_stock` | Never compacted: its MERGE and `latest_captures` prune within the day by `captured_at`, which one file spanning the day would defeat | Compacted into one file |
 
 The threshold is a setting per table in `pipeline/src/bikesharing/core/run_settings.json`, `compaction_threshold`, keyed by table name; a table with no entry never compacts its active partitions. `processed_objects`' threshold is 10, the highest that keeps a run within the Done when's 700 GetObject: s019's arithmetic reaches 700 at its worst point, 95 commits since the checkpoint with full active partitions, at 10, and each 10 files more add about 180 ([s019 › Verdict](../spikes/s019-pipeline-run-time-r2-reads.md#53-verdict)). A lower threshold saves under 1 s per run, and the compaction events measure whether another value runs better.
+
+#### Daily maintenance
+
+The daily maintenance runs inside one run a day, after its last batch, following a fixed maintenance window off-peak with idempotent tasks ([ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)):
+
+- **Which run:** the run that starts within the 15 min from `maintenance_local_time` in Europe/Madrid, a setting in `run_settings.json` set to `04:00`, outside the slow hours of [s019 › Not verified](../spikes/s019-pipeline-run-time-r2-reads.md#54-not-verified). The run decides from its own start time, which it receives as a parameter, so no state records whether maintenance ran.
+- **In order:**
+  1. Retention deletes every partition of `station_stock` whose local date is before the first day of the current local month minus 12 months, with partition values read from the log; with none, it writes no commit (D4, R12–R14).
+  2. Vacuum removes, from both tables, the data files their log removed more than 7 days ago, with `dry_run=False` (ADR-0021).
+- **A missed day:** both tasks act on the tables' state, not on the date, so the next day's maintenance does what a failed or skipped one left (D4).
+- **Cost:** 1 run in 96 takes longer, so it stays out of the p95; vacuum lists each table's files once a day, not once per run.
 
 ### 2.2 Decision summary
 
