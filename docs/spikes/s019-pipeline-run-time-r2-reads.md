@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
-- Current: Step 7, the owner's pass 1. Before it, review the 0.02% tolerance of the independent count: s010 › F14's 0.02% is for all requests together, its Class B differed by 0.2%, and s010 › #39 set ±0.5% on the total.
+- Current: Step 7, the owner's pass 1: Do 1 ran in the 07 UTC hour of 2026-11-26, with both tables cut to version 694, 95 commits since the checkpoint, and production hour 2026-11-25T04:00Z; Do 2 next.
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -114,7 +114,7 @@ Each criterion is measurable and says whether it is a hard cut or a guide. The t
 
 | Criterion | Threshold | Kind | Why this threshold |
 |---|---|---|---|
-| **Q2, reads:** GetObject counted in the calls of [Lakehouse reads per run](#lakehouse-reads-per-run), against production's GetObject per run in each pass's hour ([Probe B](#b-count-per-call)) | ≥ 80% | **Hard cut (Gate)** | R2's totals match an exact count within 0.02% ([s010 › F14](s010-storage-table-format.md#4-findings)), so the margin is for what the map leaves out: small calls, such as the log's upload, and other readers of the bucket during the window, such as analysis scripts |
+| **Q2, reads:** GetObject counted in the calls of [Lakehouse reads per run](#lakehouse-reads-per-run), against production's GetObject per run in each pass's hour ([Probe B](#b-count-per-call)) | ≥ 80% | **Hard cut (Gate)** | R2's sampled totals are accepted within ±0.5% of an exact count ([s010 › #39](s010-storage-table-format.md#decision-log)), so the margin is for what the map leaves out: small calls, such as the log's upload, and other readers of the bucket during the window, such as analysis scripts |
 | **Q2, time:** local time of the calls that hold 80% of the counted GetObject, against the local time of all the mapped calls | ≥ 70% | Guide | Probe B runs locally, where latency is lower than from Modal, so time is compared as a share among calls, not against production's runs |
 | **Q2, growth:** the part of the count that grows with `processed_objects`' files, against the measured growth per run | Same sign and order of magnitude | Guide | It confirms that H1 is what grows, not only what weighs |
 | **Q1, checkpoint cycle:** discovery's time in the 4 runs right after each checkpoint, against the 4 right before | A drop of 20% or more at every checkpoint of the window | Guide | The hour of the day causes no sudden drop at a checkpoint; 4 runs span 1 h, too short for the slow growth to interfere |
@@ -160,7 +160,7 @@ The probe runs twice, at the two latest peaks of the sawtooth: before `processed
 
 Q2's Gate compares each pass's count with production in that pass's hour: `bikesharing-lakehouse`'s GetObject in it, divided by its 4 runs. The difference between the passes is one day's growth at the same point of the cycle, compared with the sawtooth's peak-to-peak growth for Q2's growth criterion. The cut runs only on the copy, never on production.
 
-Each pass is checked against an independent count. The copy's bucket receives only the probe's requests, so its hourly Class B operations must match the proxy's total for that pass within 0.02% ([s010 › F14](s010-storage-table-format.md#4-findings)). This catches a client that reaches R2 without the proxy. The two passes and the cut run in separate hours, so that each hourly figure holds one of them alone.
+Each pass is checked against an independent count. The copy's bucket receives only the probe's requests, so its total requests in the pass's hour must match the proxy's total for that pass, failed ones included, within ±0.5% ([s010 › #39](s010-storage-table-format.md#decision-log)). This catches a client that reaches R2 without the proxy. The two passes and the cut run in separate hours, so that each hourly figure holds one of them alone.
 
 Every operation figure, of production and of the copy, comes from Cloudflare's GraphQL Analytics API (`r2OperationsAdaptiveGroups`), through the baseline's `r2_metrics.py` extended with a bucket and an hour. R2's dashboard is not used: its figures are not exact and it documents no breakdown per operation ([cloudflare › R2: metrics](../sources/cloudflare.md#r2-metrics)). **#5**
 
@@ -178,7 +178,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 2 | [Probe B](#b-count-per-call) | The batch of calls 4–6 replays the copy's last run: its `station_stock` rows merged again, and its object count recorded under new keys. Standard: replay of a representative workload | The copy's token does not reach `bikesharing-bronze`; the replay reads the same files as the real batch, and only the writes, which are not measured, differ | Steps |
 | 3 | [File layout](#24-file-layout) | Probe A's inputs are downloaded with `rclone` commands, not by a script. Standard: least privilege (NIST SP 800-53 AC-6) | The production token stays in rclone's configuration and reaches no spike code; three one-off commands need no script | Steps |
 | 4 | [Probe B](#b-count-per-call) | Each pass's version is the one read by the last run of the last whole UTC hour before the checkpoint's hour, and production is read for that hour. Standard: like-for-like comparison, one regime at a time | In the checkpoint's own hour, runs after the drop read about 2,000 GetObject less, which would lower production's mean per run by up to ~18% and let Q2's Gate pass on a map that does not account for 80% | Steps review |
-| 5 | [Probe B](#b-count-per-call) | Every R2 operation figure comes from the GraphQL Analytics API, through the baseline's `r2_metrics.py` extended with a bucket and an hour; counts match within 0.02%. Standard: reuse of a validated measurement tool ([s010 › Step 5](s010-storage-table-format.md#step-5--run-probe-a-and-verify-the-analysis)) | The dashboard is not exact and documents no breakdown per operation, while Q2's Gate needs GetObject | Steps review |
+| 5 | [Probe B](#b-count-per-call) | Every R2 operation figure comes from the GraphQL Analytics API, through the baseline's `r2_metrics.py` extended with a bucket and an hour; total requests match within ±0.5% ([s010 › #39](s010-storage-table-format.md#decision-log)). Standard: reuse of a validated measurement tool ([s010 › Step 5](s010-storage-table-format.md#step-5--run-probe-a-and-verify-the-analysis)) | The dashboard is not exact and documents no breakdown per operation, while Q2's Gate needs GetObject | Steps review |
 | 6 | [File layout](#24-file-layout) | The baseline's four folders stay in the spike folder, unchanged except `r2_metrics.py`; Step 1 updates the README instead of writing it. Standard: provenance of cited evidence | d008 and this report cite their figures; keeping them costs only the README's update | Steps review |
 | 7 | [Step 4](#step-4--run-the-proxys-smoke-test) | The token check matches the baseline on `bikesharing-lakehouse`'s GetObject, PutObject and ListObjects and on both buckets' storage; `bikesharing-bronze`'s operations need not match. Standard: sampled metrics are not validated by exact equality | `bronze`'s operations differ from the baseline for the same window (F2); no check of this spike reads that bucket | Running step 4 |
 | 8 | [Step 6](#step-6--count-per-call-script) | A table's commits since its last checkpoint are `(version + 1) % 100`. Standard: Delta protocol, a checkpoint at version v holds the table's state through commit v | `deltalake` 1.6.6 checkpoints at versions 99, 199, …, so `version % 100` counts one commit less than an open replays, and differs from `cut_log.py`'s count | Running step 6 |
@@ -429,7 +429,7 @@ Report the smoke output, whether Do 2 matched the baseline, and Do 3's output. Y
 
 ### Step 7 — Pass 1: the latest peak
 
-- **Status:** 💤 todo
+- **Status:** 🔄 in progress
 - **Who:** Owner
 - **Model:** —
 - **Gate:** Q2's Gate in [Exit criteria](#14-exit-criteria): calls 1–8's GetObject ≥ 80% of production's GetObject per run in the hour `cut_log.py` printed → otherwise the share not accounted for is recorded in the Decision log, with the choice of widening the map within the timebox or opening a new task; Steps 8–11 run only if the map is widened, since otherwise the run ends ([Exit criteria](#14-exit-criteria) › Timebox).
@@ -449,7 +449,7 @@ The count per call at the version read by the last run of the last whole UTC hou
 Report the two outputs and the three queries' figures. Yes when all three hold:
 
 - each table's version before call 1 is the pass's version `cut_log.py` printed, and it printed 4 commits in the production hour;
-- the copy's Class B for the hour equals the Class B total of all rows of `pass-1-calls.csv`, setup included, within 0.02%;
+- the copy's total requests for the hour equal the lines of `pass-1-requests.jsonl`, one per request, setup and failed ones included, within ±0.5%;
 - calls 1–8's GetObject, divided by production's GetObject in its hour ÷ 4, is ≥ 80%.
 
 ### Step 8 — Pass 2: the peak before it
@@ -474,7 +474,7 @@ The same count one checkpoint earlier, about one day before. The difference betw
 
 #### Check
 
-Report the two outputs, the queries' figures and Do 4's two results. Yes when each table's version before call 1 is the pass's version, `cut_log.py` printed 4 commits in the production hour, and the copy's Class B for the hour equals the Class B total of `pass-2-calls.csv`, within 0.02%.
+Report the two outputs, the queries' figures and Do 4's two results. Yes when each table's version before call 1 is the pass's version, `cut_log.py` printed 4 commits in the production hour, and the copy's total requests for the hour equal the lines of `pass-2-requests.jsonl`, within ±0.5%.
 
 ### Step 9 — Download Probe A's inputs
 
