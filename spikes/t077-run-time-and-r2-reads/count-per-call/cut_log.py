@@ -132,7 +132,7 @@ def checkpoint_rows(s3, key: str) -> int:
     with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp:
         s3.download_fileobj(BUCKET, key, tmp)
         tmp.flush()
-        return duckdb.sql(f"SELECT count(*) FROM read_parquet('{tmp.name}')").fetchone()[0]
+        return duckdb.sql(f"SELECT count(*) FROM read_parquet('{tmp.name}')").fetchall()[0][0]
 
 
 def cut(s3, table: str, version: int) -> dict:
