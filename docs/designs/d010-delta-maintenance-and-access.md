@@ -84,6 +84,16 @@ Options rejected:
 - **Watermark per system:** a feed added to a system that already holds processed objects would never list its history older than the system's watermark.
 - **Daily completeness check:** it would catch causes not seen today, at the cost of reads every day for a case capture does not produce.
 
+#### D4. Silver keeps the current local month and the 12 whole months before it
+
+`station_stock` keeps the current local calendar month and the 12 whole local months before it, following partition-based retention aligned to the calendar, the rolling window of [ADR-0021](../decisions/0021-retention-per-layer.md). Its partitions are local dates ([ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md)), the calendar gold cuts by, so the window removes whole partitions and its edge is the first day gold can ask for. It always holds at least 365 days, so it covers a 12-month gold window whether counted in calendar months or in days. On the first local day of a month, the oldest month leaves the window, and its partitions are deleted within that local day; e.g. on 2026-12-01 the partitions of November 2025 go.
+
+`processed_objects` is control state, not a layer's data, and is kept whole: without its rows, a feed that stopped capturing more than 12 months ago would have nothing processed and list bronze from its start (D3), bringing back into silver what retention removed. Its rows are small, and their reads stay bounded by partition (D1).
+
+Options rejected:
+
+- **365 rolling days:** it holds up to a month less, but a gold window of the last 12 calendar months would lack the first days of its oldest month.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -115,8 +125,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| `OQ5` | Silver's rolling 12-month retention: which tables, how the 12 months are counted, and when the data leaves | D1 | [ADR-0021](../decisions/0021-retention-per-layer.md); s019 did not cover it |
-| `OQ6` | What closes the task 24 h after the deploy: lakehouse reads per run and p95 run time | D1–D3, OQ5 | From [s019 › P7](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs); lands in Done when |
+| `OQ6` | What closes the task 24 h after the deploy: lakehouse reads per run and p95 run time | D1–D4 | From [s019 › P7](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs); lands in Done when |
 
 ## 2. Plan — how
 
