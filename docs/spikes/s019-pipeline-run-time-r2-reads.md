@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
-- Current: Step 5, the log cut script. Before Step 7, review the 0.02% tolerance of the independent count: s010 › F14's 0.02% is for all requests together, its Class B differed by 0.2%, and s010 › #39 set ±0.5% on the total.
+- Current: Step 6, the count-per-call script. Before Step 7, review the 0.02% tolerance of the independent count: s010 › F14's 0.02% is for all requests together, its Class B differed by 0.2%, and s010 › #39 set ±0.5% on the total.
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -372,7 +372,7 @@ Report the smoke output, whether Do 2 matched the baseline, and Do 3's output. Y
 
 ### Step 5 — Log cut script
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: step 5 - add log cut to run time spike`
 - **Model:** opus · high
