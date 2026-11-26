@@ -35,7 +35,7 @@ The pipeline's first slice (T060.1) manages its Delta tables on R2 poorly: a run
 ### 1.2 Decided at framing
 
 <!-- Optional. One heading per decision about what the result does. In this order, so the reader finds what matters first:
-1. The decision and why, in one short paragraph.
+1. The decision and why, in one short paragraph. A decision with several parts (rules, cases, steps) follows it with them as a list, or a numbered list for steps in order, each with its reason.
 2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
 3. The options rejected that a later reader could propose again, each with why it lost: it meets the requirements and the ADRs in force, and lost on a trade-off this project weighed. An option that breaks an ADR or a requirement, only varies a parameter of the chosen one, or merely shapes the choice is left out; with none such, this item is omitted.
 4. The artefact that fixes it, in whatever form the decision needs (e.g. a mapping table, a page map, a weighted matrix). An artefact that does not fit here or must outlive the design goes in its own file: the Plan decides where it lives and its format, File layout lists it, and this decision links to it.
