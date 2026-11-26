@@ -28,7 +28,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 ## 1. Spec
 
 1. **Introduction.** The owner explains the task in their own words. Ask only what is needed to write Context and to list the decisions to take; the decisions themselves come later.
-2. **Playback.** Write Context. If a part can be delivered and closed on its own, or the task looks like more than 10 steps, propose splitting it now. Then set the Kind with the owner and remove what it does not use: a document-only task drops the Steps block and the Phase items after Plan review; a parent keeps Children, whose split and order are decided in this Spec like any other decision.
+2. **Playback.** Write Context. If a part can be delivered and closed on its own, or the task looks like more than 25 steps, propose splitting it now. Then set the Kind with the owner and remove what it does not use: a document-only task drops the Steps block and the Phase items after Plan review; a parent keeps Children, whose split and order are decided in this Spec like any other decision.
 3. **Decisions to take.** List them in Open questions in dependency order: nothing is decided before what it depends on. The owner adjusts the list. A question that comes up later joins the list in its place.
 4. **Decisions.** Take them in that order: with options and a recommendation when there is a reasonable range, open otherwise. A task that changes existing behaviour also decides what must not break. Each one closes as a decision in Decided at framing as soon as the owner approves it, and leaves the table.
 5. **Failure cases.** With the behaviour decided, go through the decisions asking what can go wrong. Each answer is a new decision or extends an existing one.
