@@ -1,7 +1,7 @@
 """Counting proxy of s019 Probe B, between deltalake and the copy's bucket on R2.
 
-A reverse proxy on a free local port, on a background thread of the calling
-process. deltalake reaches it over plain HTTP with no signature; the proxy
+A reverse proxy on a free local port, in a process of its own that the caller
+starts. deltalake reaches it over plain HTTP with no signature; the proxy
 signs each request again with the copy token (SigV4) and forwards it to R2's
 S3 endpoint, so only the proxy holds the token. The bucket is a constant:
 nothing here can reach production.
@@ -21,6 +21,7 @@ Usage:   uv run python count-per-call/proxy.py --smoke
 import argparse
 import http.client
 import json
+import multiprocessing
 import threading
 import time
 from collections import Counter
@@ -129,40 +130,34 @@ class CountingProxy:
 
     Use it as a context manager; `lakehouse` points deltalake at it, and
     `label(name)` tags the requests sent while its block runs.
+
+    The server runs in its own process: `QueryBuilder.execute` holds the GIL while
+    it waits for its reads, so a proxy thread in the caller's process could never
+    answer them.
     """
 
     def __init__(self, log_path: Path, env: dict[str, str] | None = None):
-        # botocore is imported here, not at the top, so that r2_metrics.py can import
-        # r2_class from the pipeline's environment, which has no botocore.
-        from botocore.credentials import Credentials
-
-        env = env or read_env()
-        self.upstream_host = f"{env['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com"
-        self.credentials = Credentials(env["R2_COPY_ACCESS_KEY_ID"], env["R2_COPY_SECRET_ACCESS_KEY"])
+        self.env = env or read_env()
         self.log_path = log_path
-        self.current_label = None
-        self._lock = threading.Lock()
-        self._file = None
-        self._server = None
-        self._thread = None
+        self.port = None
+        self._label = None
+        self._pipe = None
+        self._process = None
 
     def __enter__(self) -> "CountingProxy":
-        self.log_path.parent.mkdir(parents=True, exist_ok=True)
-        self._file = self.log_path.open("w")
-        self._server = ThreadingHTTPServer(("127.0.0.1", 0), _handler(self))
-        self._server.daemon_threads = True
-        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
-        self._thread.start()
+        context = multiprocessing.get_context("spawn")
+        self._pipe, child = context.Pipe()
+        self._process = context.Process(target=_serve, args=(self.log_path, self.env, child), daemon=True)
+        self._process.start()
+        # With the caller's copy of the child's end closed, a child that dies raises here.
+        child.close()
+        self.port = self._pipe.recv()
         return self
 
     def __exit__(self, *exc) -> None:
-        self._server.shutdown()
-        self._server.server_close()
-        self._file.close()
-
-    @property
-    def port(self) -> int:
-        return self._server.server_address[1]
+        self._pipe.send(("stop", None))
+        self._process.join(timeout=30)
+        self._pipe.close()
 
     @property
     def lakehouse(self) -> Lakehouse:
@@ -182,11 +177,32 @@ class CountingProxy:
     @contextmanager
     def label(self, name: str) -> Iterator[None]:
         """Tag every request sent while the block runs with `name`."""
-        previous, self.current_label = self.current_label, name
+        previous = self._label
+        self._set_label(name)
         try:
             yield
         finally:
-            self.current_label = previous
+            self._set_label(previous)
+
+    def _set_label(self, name: str | None) -> None:
+        self._label = name
+        self._pipe.send(("label", name))
+        self._pipe.recv()  # the proxy's acknowledgement: only then may requests follow
+
+
+class _Server:
+    """What the request handler needs, in the proxy's process: signature, label and log."""
+
+    def __init__(self, log_file, env: dict[str, str]):
+        # botocore is imported here, not at the top, so that r2_metrics.py can import
+        # r2_class from the pipeline's environment, which has no botocore.
+        from botocore.credentials import Credentials
+
+        self.upstream_host = f"{env['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com"
+        self.credentials = Credentials(env["R2_COPY_ACCESS_KEY_ID"], env["R2_COPY_SECRET_ACCESS_KEY"])
+        self.current_label = None
+        self._lock = threading.Lock()
+        self._file = log_file
 
     def record(self, line: dict) -> None:
         with self._lock:
@@ -204,7 +220,33 @@ class CountingProxy:
         return dict(request.headers.items())
 
 
-def _handler(proxy: CountingProxy) -> type[BaseHTTPRequestHandler]:
+class _HTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+    request_queue_size = 128  # the default, 5, is short for the engine's bursts of new connections
+
+
+def _serve(log_path: Path, env: dict[str, str], pipe) -> None:
+    """The proxy's process: serve until `stop` arrives, or the caller is gone."""
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w") as log_file:
+        state = _Server(log_file, env)
+        server = _HTTPServer(("127.0.0.1", 0), _handler(state))
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        pipe.send(server.server_address[1])
+        try:
+            while True:
+                message, value = pipe.recv()
+                if message == "stop":
+                    break
+                state.current_label = value
+                pipe.send("ok")
+        except EOFError:
+            pass
+        server.shutdown()
+        server.server_close()
+
+
+def _handler(proxy: _Server) -> type[BaseHTTPRequestHandler]:
     local = threading.local()  # one upstream connection per client connection, kept alive
 
     def upstream() -> http.client.HTTPSConnection:
@@ -250,23 +292,8 @@ def _handler(proxy: CountingProxy) -> type[BaseHTTPRequestHandler]:
                     local.conn = None
                     error = repr(exc)
 
-            if status is None:
-                self.send_response(502)
-                self.send_header("Content-Length", "0")
-                self.end_headers()
-            else:
-                self.send_response(status)
-                for k, v in resp_headers:
-                    if k.lower() not in DROP_RESPONSE:
-                        self.send_header(k, v)
-                # HEAD and 304 carry the object's length with no body; object_store reads it.
-                no_body = self.command == "HEAD" or status in (204, 304)
-                length = dict((k.lower(), v) for k, v in resp_headers).get("content-length", "0")
-                self.send_header("Content-Length", length if no_body else str(len(resp_body)))
-                self.end_headers()
-                if not no_body:
-                    self.wfile.write(resp_body)
-
+            # Recorded before answering: R2 has served the request even if the client is
+            # gone, and a call's lines are in the log by the time it returns.
             parts = urlsplit(self.path)
             query = parse_qs(parts.query, keep_blank_values=True)
             bucket, _, key = unquote(parts.path).lstrip("/").partition("/")
@@ -286,6 +313,23 @@ def _handler(proxy: CountingProxy) -> type[BaseHTTPRequestHandler]:
                 "response_bytes": len(resp_body),
                 "duration_ms": round((time.time() - start) * 1000, 1),
             })
+
+            if status is None:
+                self.send_response(502)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            else:
+                self.send_response(status)
+                for k, v in resp_headers:
+                    if k.lower() not in DROP_RESPONSE:
+                        self.send_header(k, v)
+                # HEAD and 304 carry the object's length with no body; object_store reads it.
+                no_body = self.command == "HEAD" or status in (204, 304)
+                length = dict((k.lower(), v) for k, v in resp_headers).get("content-length", "0")
+                self.send_header("Content-Length", length if no_body else str(len(resp_body)))
+                self.end_headers()
+                if not no_body:
+                    self.wfile.write(resp_body)
 
         do_GET = do_HEAD = do_PUT = do_POST = do_DELETE = _forward
 
