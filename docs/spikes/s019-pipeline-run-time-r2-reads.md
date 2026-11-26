@@ -727,15 +727,34 @@ Step 11 · 2026-11-26 · `cycle_times.py` over the 424 runs from 00:00 UTC on 20
 - Hand check on checkpoint 799: its `LastModified` splits the runs as the script does, the commits since the last checkpoint going from 99 to 0 there, and the 8 runs' discovery times give both means. For the run started at 06:45:09, the gap between the two events in its log object is 55.251 s, as in `runs.csv`.
 - Consequence: Q1's checkpoint cycle guide (a drop of 20% or more at every checkpoint) is not met.
 
+### F16. The lakehouse calls take about 90% of a production run's time
+
+Conclusion · 2026-11-26 · the events of the production run started at 07:15:07.861 UTC, in Grafana Cloud's logs; one run, 28 min after `processed_objects`' checkpoint 799
+
+| Segment | From → to | Time (s) | Holds |
+|---|---|---|---|
+| Discovery | `run_started` → `objects_discovered` | 65.5 | Calls 1–3 and the bronze listing |
+| Batch preparation | `batch_started` → first `node_finished` | 27.1 | Call 4 and the bronze downloads |
+| Transformation | first → ninth `node_finished` | 0.8 | The dbt models on DuckDB |
+| Rules | first → last `rule_checked` | 5.7 | Almost all of it in one rule |
+| Write | last `rule_checked` → `batch_committed` | 28.5 | Calls 5 and 6 |
+| Gold | `batch_committed` → last `node_finished` | 30.6 | Calls 7 and 8, and the gold model |
+| Publish | last `node_finished` → `page_deployed` | 6.5 | Building and deploying the page |
+| Total | `run_started` → `run_finished` | 165.2 | |
+
+- The segments that hold the 8 calls take about 150 s, twice their 73 s from the owner's machine (F6); this split includes the bronze downloads, which were not timed apart.
+- Consequence: no cause of the run time outside the lakehouse calls is as large as they are; the rules' 5.7 s and the publish's 6.5 s are the largest left.
+
 ## 5. Conclusion
 
 <!-- Filled after the last step. Covers only the observed window. -->
 
-Observed window: `<from–to, UTC; what it does not cover>`
+Observed window: 2026-11-22 00:00 to 2026-11-26 09:15 UTC for Probe A; Probe B at the two latest peaks, the versions read at 2026-11-24 03:00 and 2026-11-25 04:00 UTC. It does not cover a feed's catch-up, answered by arithmetic in the Verdict, nor the daily pattern per operation.
 
 ### 5.1 Answers
 
-- **Q1. Title** `<answer>` (FN)
+- **Q1. Checkpoint cycle in time.** No. The GetObject per run drop at each checkpoint ([Context](#11-context)), but discovery's time does not: it rises after four of the window's five checkpoints and drops by 15.9% at the other. Log replay (H2) shapes the reads' sawtooth, not the run time. (F15)
+- **Q2. Count per call.** Yes. The 8 calls account for 100.2% and 100.0% of production's GetObject per run (F7, F10); the four full reads of `processed_objects` and `capture_history` (calls 2, 3, 4, 6, 7) hold about 90% of them and over 80% of the calls' time (F12), and are the only calls that grow, by 101.5% of production's growth (F14). The unbounded reads of the control table (H1) are the cause of the read volume and of its growth. (F6–F14)
 
 ### 5.2 Exit criteria
 
@@ -743,16 +762,45 @@ Observed window: `<from–to, UTC; what it does not cover>`
 
 | Criterion | Kind | Result | Findings |
 |---|---|---|---|
+| **Q2, reads:** GetObject counted in the 8 calls, against production's per run | Hard cut (Gate), ≥ 80% | **Pass:** 100.2% in pass 1, 100.0% in pass 2 | F7, F10 |
+| **Q2, time:** local time of the calls that hold 80% of the GetObject, against all the mapped calls | Guide, ≥ 70% | **Met:** 83.9% and 81.6% | F12 |
+| **Q2, growth:** the count's growth between passes, against production's growth per run | Guide, same sign and order of magnitude | **Met:** +1,568 against +1,545.5 (101.5%) | F13, F14 |
+| **Q1, checkpoint cycle:** discovery's time, 4 runs after each checkpoint against 4 before | Guide, a drop of 20% or more at every checkpoint | **Not met:** no checkpoint reaches it; the time rises at four of the five | F15 |
 
 ### 5.3 Verdict
 
 <!-- The answer to the main question in 2–3 sentences. -->
 
+The lakehouse reads per run grow because the pipeline reads its control table in full, again and again, while that table only accumulates small files. A Delta maintenance and access pattern for every pipeline table bounds them, in steady runs and in a catch-up.
+
+**Causes:** the evidence confirms H1 and only part of H2.
+
+- **H1, confirmed:** `processed_objects` is read in full four times per run, plus `capture_history`; it gains one small file per run and is never compacted. These calls hold about 90% of the GetObject and all of their growth (Q2).
+- **H2, partly:** log replay on each of the run's 9 opens shapes the reads' checkpoint sawtooth, not the run time (Q1).
+- **The run time's daily pattern:** not explained by either ([Not verified](#54-not-verified)).
+
+**Fix:** one Delta maintenance and access pattern for every pipeline table, recorded as an ADR and applied by a design (D1). Each table is treated by how it is written and read:
+
+- every table is opened once per run, and its handle is reused across the run's calls;
+- reads are pruned by partition and by file statistics, with `deltalake` 1.7.0 so that the MERGE prunes its target by the batch's capture range;
+- a table with no date partition that gains a small file per batch, such as `processed_objects`, is compacted after any batch that leaves it with a threshold of small files, sorted by its key, so that file statistics still prune it by key and by capture time;
+- discovery reads only the processed keys from its listing's start, the latest processed capture minus the lookback, and the daily full sweep is removed: an object later than the lookback is recovered by rediscovering its window on demand; the latest processed capture is computed once per run;
+- a table partitioned by date and written by capture range, such as `station_stock`, keeps its active partition uncompacted, so that file statistics prune it, and compacts each partition once it closes;
+- every table is vacuumed, within the retention of [ADR-0021](../decisions/0021-retention-per-layer.md).
+
+**Effect, by arithmetic on F6:**
+
+- **Steady runs:** pass 1's 12,369 GetObject per run drop to about 600, with no growth across days.
+- **Catch-up:** the threshold compaction keeps the cost per batch flat, instead of growing with each batch.
+
+**Left out of the fix:** Modal's region, until D2's rule calls for it ([Production inputs](#55-production-inputs)).
+
 ### 5.4 Not verified
 
 <!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
 
-- `<item>` — `<risk>` — `<mitigation>`
+- **The run time's daily pattern** (up to twice as slow from 16:00 to 23:00 Madrid time, US Eastern business hours) has two candidate causes not told apart: load on Modal's US infrastructure or on the transatlantic network, or `station_stock`'s active partition, largest by evening and read in full by `deltalake` 1.6.6's MERGE. Nor is it known why discovery's time rises after four of the five checkpoints (F15) — a cause outside the lakehouse's reads stays after the fix — with `deltalake` 1.7.0 the partition no longer weighs, so a pattern left after the fix is external, and D2's rule applies to it
+- **Why `capture_history` skips about 23 files fewer in pass 1 than in pass 2** (F13: +368 GetObject against +300 for a full read), although its 7-day window only moves forward: the bound `until` depends on the replayed run, the files may not cost 3 GetObject each, or the reader may prune by Parquet footers instead of the Delta log's statistics — its bound prunes less than designed — the design checks its pruning once `processed_objects` is compacted by key
 
 ### 5.5 Production inputs
 
