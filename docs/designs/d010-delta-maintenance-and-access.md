@@ -71,6 +71,14 @@ Options rejected:
 
 A table whose partitioning changes, such as `processed_objects`, is rewritten with all its current rows in the new layout, following Delta's way of changing a table's partitioning (an overwrite with the new partition columns). The owner runs it once, with the schedule paused, so that no run overlaps it ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)). Every row keeps its run ID and code version, the lineage of [ADR-0043](../decisions/0043-lineage-at-four-levels.md). When the schedule resumes, catch-up processes what bronze received during the pause. A table that keeps its partitioning, such as `station_stock`, is not rewritten.
 
+The migration verifies its result before it reports success, following source-to-target reconciliation: the rewritten table and the version before it hold the same number of rows, the same set of keys, and the same run ID and code version on each row. If they differ, the migration reports which check failed, and the owner restores the version before it with Delta's time travel, fixes the cause and runs the migration again; the schedule resumes only after a migration that passes.
+
+The owner runs the change in this order, so that the deployed code never meets a table in the other layout: pause the schedule, run the migration and its verification, then deploy the new code, which resumes the schedule.
+
+Options rejected:
+
+- **A layout check in the new code:** the run would fail before writing if `processed_objects` lacked the new partitioning, but it adds code to every run for a one-off change that the order above already covers.
+
 #### D3. Discovery keeps a watermark per system and feed
 
 Each feed lists bronze from its own latest processed capture minus the lookback, following a watermark with allowed lateness kept per stream, and the daily full sweep is removed. A feed with nothing processed lists bronze from its start and enters by catch-up in bounded batches ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)), so a new slice's feed starts with no change to the others. The lookback is the allowed lateness, fixed at 5 min: capture writes each object in the pass its key names, so an object arrives late only by what a pass lasts, a few minutes at most with capture's 60 s fetch timeout, when passes started every minute overlap. A pause of the pipeline, such as a Modal outage, needs no recovery: the watermarks do not move while no run happens, and the next run catches up from them. Nothing writes an older key to bronze: capture is its only writer and never overwrites, and the bucket lock prevents deletions that a restore would refill, so no on-demand rediscovery of a window is built.
