@@ -111,7 +111,12 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
-- `<extra condition>`
+Checked on production after the deploy, over a window of at least 3 h that starts with the first scheduled run with no catch-up (one batch), and includes a checkpoint of each table and the run of the daily maintenance ([s019 › P7](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)):
+
+- GetObject per run on `bikesharing-lakehouse` (`r2_metrics.py`) averages about 400 and stays at or below 700;
+- p95 run time (`run_stats.py`) is at most 2 min, the estimate [ADR-0027](../decisions/0027-modal-as-execution-platform.md) rests on.
+
+If either fails, `capture_history`'s pruning is checked first.
 
 ### 1.5 Out of scope
 
@@ -125,7 +130,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| `OQ6` | What closes the task 24 h after the deploy: lakehouse reads per run and p95 run time | D1–D4 | From [s019 › P7](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs); lands in Done when |
 
 ## 2. Plan — how
 
