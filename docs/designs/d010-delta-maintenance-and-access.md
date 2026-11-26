@@ -71,6 +71,19 @@ Options rejected:
 
 A table whose partitioning changes, such as `processed_objects`, is rewritten with all its current rows in the new layout, following Delta's way of changing a table's partitioning (an overwrite with the new partition columns). The owner runs it once, with the schedule paused, so that no run overlaps it ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)). Every row keeps its run ID and code version, the lineage of [ADR-0043](../decisions/0043-lineage-at-four-levels.md). When the schedule resumes, catch-up processes what bronze received during the pause. A table that keeps its partitioning, such as `station_stock`, is not rewritten.
 
+#### D3. Discovery keeps a watermark per system and feed
+
+Each feed lists bronze from its own latest processed capture minus the lookback, following a watermark with allowed lateness kept per stream, and the daily full sweep is removed. A feed with nothing processed lists bronze from its start and enters by catch-up in bounded batches ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)), so a new slice's feed starts with no change to the others. The lookback is the allowed lateness, fixed at 5 min: capture writes each object in the pass its key names, so an object arrives late only by what a pass lasts, a few minutes at most with capture's 60 s fetch timeout, when passes started every minute overlap. A pause of the pipeline, such as a Modal outage, needs no recovery: the watermarks do not move while no run happens, and the next run catches up from them. Nothing writes an older key to bronze: capture is its only writer and never overwrites, and the bucket lock prevents deletions that a restore would refill, so no on-demand rediscovery of a window is built.
+
+- **What would change it:**
+  - a source that delivers its data later than a capture pass → a completeness check that compares bronze with `processed_objects` per closed day;
+  - an operation that writes older keys to bronze, such as a recapture or an import → a task that adds on-demand rediscovery of a window.
+
+Options rejected:
+
+- **Watermark per system:** a feed added to a system that already holds processed objects would never list its history older than the system's watermark.
+- **Daily completeness check:** it would catch causes not seen today, at the cost of reads every day for a case capture does not produce.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
@@ -102,10 +115,8 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| `OQ3` | Without the daily full sweep, what happens to a bronze object that arrives later than the lookback, and how the owner learns of it | D1 | [s019 › P4](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs) |
-| `OQ4` | How the owner rediscovers a bronze window on demand: what they give, what the run does, what it reports | OQ3 | [s019 › P5](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs) |
 | `OQ5` | Silver's rolling 12-month retention: which tables, how the 12 months are counted, and when the data leaves | D1 | [ADR-0021](../decisions/0021-retention-per-layer.md); s019 did not cover it |
-| `OQ6` | What closes the task 24 h after the deploy: lakehouse reads per run and p95 run time | D1, D2, OQ3–OQ5 | From [s019 › P7](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs); lands in Done when |
+| `OQ6` | What closes the task 24 h after the deploy: lakehouse reads per run and p95 run time | D1–D3, OQ5 | From [s019 › P7](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs); lands in Done when |
 
 ## 2. Plan — how
 
@@ -128,7 +139,7 @@ The how this plan builds, from [s019 › Production inputs](../spikes/s019-pipel
 | P2 | Partition `processed_objects` by system and date, bound its MERGE, compact by threshold |
 | P3 | Prune `station_stock` by capture range, compact closed partitions |
 | P4 | Bound discovery's reads, take the latest capture from the log, set the lookback from lateness |
-| P5 | Rediscover a window through the one-off run |
+| P5 | Rediscover a window through the one-off run; not built (D3) |
 | P6 | Vacuum and set a checkpoint interval per table |
 
 ### 2.2 Decision summary
