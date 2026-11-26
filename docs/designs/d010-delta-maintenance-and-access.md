@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Spec › Decisions, from OQ3. Parked for the Plan: how the common table access is enforced (module, and a possible rule in `.claude/rules/`); rewriting [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job; the owner leans to partitioning `processed_objects` like bronze's keys (system, feed, date)
+- Current: Spec › Approval: Requirements R1–R17 and the Done when are reviewed and fixed; remove Open questions, run the approval checks and ask for the Spec approval. Parked for the Plan: how the common table access is enforced (module, and a possible rule in `.claude/rules/`); rewriting [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job; the owner leans to partitioning `processed_objects` like bronze's keys (system, feed, date); when the daily maintenance runs, and how retention's deletion, vacuum and compaction share it; `delta.checkpointInterval` per table, between 5 and 10, from each table's opens per run
 
 ## 1. Spec — what and why
 
@@ -135,9 +135,9 @@ The task adds two writes to the production lakehouse: the one-off migration of D
 
 | # | Threat (STRIDE) | Impact | Control | Requirement |
 |---|---|---|---|---|
-| `TH1` | Tampering, Elevation of privilege: the migration writes to the production lakehouse from outside the scheduled function | Rows rewritten by unreviewed code, or a long-lived write credential outside Modal | Run from the merged `main`, with a token that writes only to `bikesharing-lakehouse`, expires after one day and is revoked after the migration | |
-| `TH2` | Tampering: a wrong window computation deletes partitions inside the window | Silver history lost until restored or rebuilt | Deletion limited to months before the window's start; time travel and rebuild from bronze | |
-| `TH3` | Repudiation: the rewritten table does not show which code rewrote it | A faulty migration cannot be traced to its code | The migration's commit records its code version in the Delta log | |
+| `TH1` | Tampering, Elevation of privilege: the migration writes to the production lakehouse from outside the scheduled function | Rows rewritten by unreviewed code, or a long-lived write credential outside Modal | Run from the merged `main`, with a token that writes only to `bikesharing-lakehouse`, expires after one day and is revoked after the migration | [Done when](#14-done-when) |
+| `TH2` | Tampering: a wrong window computation deletes partitions inside the window | Silver history lost until restored or rebuilt | Deletion limited to months before the window's start; time travel and rebuild from bronze | R13; 7 days of history by [ADR-0021](../decisions/0021-retention-per-layer.md) |
+| `TH3` | Repudiation: the rewritten table does not show which code rewrote it | A faulty migration cannot be traced to its code | The migration's commit records its code version in the Delta log | R9 |
 
 Options rejected:
 
@@ -154,15 +154,33 @@ One behaviour per requirement, verifiable, with a measurable threshold where one
 - Optional: Where <feature is included>, the <system> shall <response>.
 Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
 
-- **R1** `<EARS statement>` (D`<N>`)
+- **R1** For the same bronze, the pipeline shall produce the same rows of `station_stock` and a published file with the same content as before this task. (D1)
+- **R2** The pipeline shall keep the names and fields of its existing events and heartbeat, adding events or fields only. (D1)
+- **R3** The pipeline shall keep one `processed_objects` table for every system and feed, with one row per processed bronze object. (D1)
+- **R4** When a run reads `processed_objects` for a feed, the pipeline shall read only the data files that hold that feed's rows. (D1)
+- **R5** The pipeline shall read and write `processed_objects` only through its common table access. (D1)
+- **R6** When the migration has rewritten a table, the migration shall verify that the rewritten table and the version before it hold the same number of rows, the same set of bronze object keys, and the same run ID and code version on each row. (D2)
+- **R7** If a check of the migration's verification fails, then the migration shall report which check failed. (D2)
+- **R8** The migration shall rewrite only the tables whose partitioning changes. (D2)
+- **R9** The migration shall record its code version in the metadata of its Delta commit. (D5, TH3)
+- **R10** While a system and feed has processed objects, the pipeline shall list that system and feed's bronze from its latest processed capture minus 15 min. (D3)
+- **R11** While a system and feed has no processed object, the pipeline shall list that system and feed's bronze from its start. (D3)
+- **R12** When the daily maintenance runs, the pipeline shall delete every partition of `station_stock` whose local month is before the current local month minus 12 months. (D4, TH2)
+- **R13** The pipeline shall not delete any partition of `station_stock` whose local month is the current one or one of the 12 before it. (D4, TH2)
+- **R14** While no partition of `station_stock` is outside the retention window, the daily maintenance shall write no commit for retention. (D4)
+- **R15** The pipeline's scheduled runs shall not delete rows of `processed_objects`. (D4)
+- **R16** When a batch is processed again, the pipeline shall add no rows to `station_stock` or `processed_objects`. (D1)
+- **R17** While a system and feed has processed objects, the pipeline shall not list that system and feed's whole bronze prefix. (D3)
 
 ### 1.4 Done when
 
 <!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
 
+The owner ran the change in D2's order, and the migration from the merged `main` with a token that writes only to `bikesharing-lakehouse` and expires after one day, revoked once the migration passed (D2, D5, TH1).
+
 Checked on production after the deploy, over a window of at least 3 h that starts with the first scheduled run with no catch-up (one batch), and includes a checkpoint of each table and the run of the daily maintenance ([s019 › P7](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)):
 
-- GetObject per run on `bikesharing-lakehouse` (`r2_metrics.py`) averages about 400 and stays at or below 700;
+- GetObject per run on `bikesharing-lakehouse` (`r2_metrics.py`) stays at or below 700, with about 400 on average expected;
 - p95 run time (`run_stats.py`) is at most 2 min, the estimate [ADR-0027](../decisions/0027-modal-as-execution-platform.md) rests on.
 
 If either fails, `capture_history`'s pruning is checked first.
