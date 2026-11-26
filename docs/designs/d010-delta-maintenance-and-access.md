@@ -247,7 +247,14 @@ Each of a run's calls states the range it needs, as partition values and as a `c
 | 7 | Gold | `latest_processed` | `processed_objects` | As call 2, on the handle refreshed after call 6 | R4 |
 | 8 | Gold | `latest_captures` | `station_stock` | The latest capture's `local_date` partition and its `captured_at` | R1 |
 
-A feed with no processed object has no partition, so call 2 returns nothing for it and call 3 lists bronze from its start (R11). `deltalake` moves to 1.7.0 for call 5's pruning, raising the manifest's minimum to `>=1.7.0` so that no relock goes back to a version without it ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)); R1 and R16's tests check that the upgrade keeps the outputs.
+A feed with no processed object has no partition, so call 2 returns nothing for it and call 3 lists bronze from its start (R11).
+
+#### deltalake 1.7.0
+
+- **Upgrade:** `deltalake` moves from 1.6.6 to 1.7.0 for call 5's pruning, raising the manifest's minimum to `>=1.7.0` so that no relock goes back to a version without it ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)); R1 and R16's tests check that the upgrade keeps the outputs.
+- **Impact:** the [1.7.0 release notes](https://github.com/delta-io/delta-rs/releases/tag/python-v1.7.0) and its `table.py` change no API or default the pipeline uses. They add the MERGE's pruning by the source's statistics and correct the pruning statistics of timestamps, which `captured_at`'s ranges rely on.
+- **Explicit values:** `vacuum` simulates by default and keeps the table's retention, so the pipeline passes `dry_run=False` and a retention of 7 days ([ADR-0021](../decisions/0021-retention-per-layer.md)).
+- **File statistics:** call 2 reads `get_add_actions(flatten=True)`, one row per data file with its `partition.<col>`, `min.<col>` and `max.<col>` columns, checked against the installed version before it is built. If the columns are missing, call 2 reads its feed's latest `utc_date` partition instead ([s019 › P4](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)).
 
 #### Compaction
 
