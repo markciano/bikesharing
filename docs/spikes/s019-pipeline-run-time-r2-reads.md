@@ -125,7 +125,7 @@ If Q2's Gate fails, the share not accounted for is a cause still to find: the De
 
 <!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
 
-- Which readers other than the pipeline account for `bikesharing-bronze`'s GetObject: they do not slow the runs, and the cost model needs them per bucket — T077, in the cost recalibration of [d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close)
+- Which readers other than the pipeline account for `bikesharing-bronze`'s GetObject: they do not slow the runs, and the cost model needs them per bucket — no task: the cost recalibration of [d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close) is postponed
 
 ## 2. Method — how we find out
 
@@ -800,7 +800,7 @@ The lakehouse reads per run grow because the pipeline reads its control table in
 <!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
 
 - **The run time's daily pattern** (up to twice as slow from 16:00 to 23:00 Madrid time, US Eastern business hours) has two candidate causes not told apart: load on Modal's US infrastructure or on the transatlantic network, or `station_stock`'s active partition, largest by evening and read in full by `deltalake` 1.6.6's MERGE. Nor is it known why discovery's time rises after four of the five checkpoints (F15) — a cause outside the lakehouse's reads stays after the fix — with `deltalake` 1.7.0 the partition no longer weighs, so a pattern left after the fix is external, and D2's rule applies to it
-- **Why `capture_history` skips about 23 files fewer in pass 1 than in pass 2** (F13: +368 GetObject against +300 for a full read), although its 7-day window only moves forward: the bound `until` depends on the replayed run, the files may not cost 3 GetObject each, or the reader may prune by Parquet footers instead of the Delta log's statistics — its bound prunes less than designed — the design checks its pruning once `processed_objects` is compacted by key
+- **Why `capture_history` skips about 23 files fewer in pass 1 than in pass 2** (F13: +368 GetObject against +300 for a full read), although its 7-day window only moves forward: the bound `until` depends on the replayed run, the files may not cost 3 GetObject each, or the reader may prune by Parquet footers instead of the Delta log's statistics — its bound prunes less than designed — if P7's reads are not met after the fix, its pruning is checked first
 
 ### 5.5 Production inputs
 
@@ -808,7 +808,15 @@ The lakehouse reads per run grow because the pipeline reads its control table in
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | | `<e.g. D1, #2, F3>` | |
+| P1 | Every pipeline table follows the Delta maintenance and access pattern: opened once per run and its handle reused across the run's calls, which is safe since runs never overlap; reads pruned by partition and by file statistics; `deltalake` 1.7.0, whose MERGE prunes its target | Verdict, F6–F14 | TODO(T072): apply the Delta pattern to every pipeline table |
+| P2 | `processed_objects` is compacted inside the run, after any batch that leaves it with a threshold of small files (about 50, which at 96 runs a day is once or twice a day, and keeps a catch-up's cost per batch flat), sorted by its key, so that each file holds one system's contiguous range of keys and capture times | Verdict, F13 | TODO(T072): compact `processed_objects` by threshold, sorted by key |
+| P3 | `station_stock`'s active partition is not compacted, since one file spanning the day would defeat pruning by capture range; the MERGE prunes it by the batch's capture range, and `latest_captures` by the latest capture; each partition is compacted once it closes | Verdict | TODO(T072): prune `station_stock` by capture range, compact closed partitions |
+| P4 | Discovery reads only the processed keys from its listing's start, the latest processed capture minus the lookback, and computes the latest processed capture once per run; the daily full sweep is removed, following a watermark with allowed lateness, the lookback; a system with nothing processed keeps the full listing | Verdict | TODO(T072): bound discovery's reads and remove the daily full sweep |
+| P5 | A window of bronze is rediscovered on demand through the one-off run, given its start and end: listed, compared with the processed keys of that window, and processed through the same batch path as a scheduled run | Verdict | TODO(T072): rediscover a window through the one-off run |
+| P6 | Every table is vacuumed within the table history of [s010 › D6](s010-storage-table-format.md), and has a checkpoint interval set per table | Verdict | TODO(T072): vacuum and set a checkpoint interval per table |
+| P7 | Done when, 24 h after the deploy: GetObject per run on `bikesharing-lakehouse` (`r2_metrics.py`) is near 600, and p95 run time (`run_stats.py`) is at most 2 min, the estimate [ADR-0027](../decisions/0027-modal-as-execution-platform.md) rests on; if not, `capture_history`'s pruning is checked first | Verdict, F16 | TODO(T072): check reads and run time 24 h after the deploy |
+| P8 | Modal's region follows D2's rule, applied to the lakehouse requests left per run after the fix | D2 | TODO(T072): apply D2's rule to Modal's region after the fix |
+| P9 | A regression indicator: per-run metrics (run and phase durations, objects processed) sent over OTLP, and R2's operations per bucket and hour from Cloudflare's GraphQL Analytics API, fetched 2–3 times a day; alerts on their trend instead of a log query | Verdict | TODO(T078.2): metrics and alerts for the pipeline's run time and R2 operations |
 
 ### 5.6 Records
 
@@ -816,7 +824,9 @@ The lakehouse reads per run grow because the pipeline reads its control table in
 
 | Output | From | Destination | Commit |
 |---|---|---|---|
-| `<ADR, requirement, source card or task>` | `<e.g. D1, F3>` | `<document and section>` | `<Done, or Pending>` |
+| ADR on the Delta maintenance and access pattern for the pipeline's tables: the control table stays in Delta, each table treated by how it is written and read, compaction inside the run, pruning by file statistics. Before it is written, Delta's auto compaction threshold, `deltalake`'s compaction, Z-order and VACUUM on R2, and pruning by row group are checked in the official documentation | Verdict | `docs/decisions/` | Pending |
+| T072 rewritten as the fix's task, blocked by T077 | Verdict | Issue #86 | Done |
+| T077's Done when reduced to what this spike delivers | Verdict | Issue #101 | Done |
 
 ## 6. Sources
 
