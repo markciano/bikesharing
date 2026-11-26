@@ -21,9 +21,9 @@ Current: where work resumes, with only the context the next session needs: the s
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
 - Current: Conclusion › 5.6 Records, the ADR on the Delta pattern; 5.1–5.5 are written. Then the tear-down (copy bucket `bikesharing-t077-lakehouse-copy`, tokens `bikesharing-t077-copy` and `bikesharing-t077-prod-read`, run by the owner) and the close.
-  - **ADR-0052, Proposed:** the decision in one sentence: every pipeline Delta table is kept and read inside the run by how it is written and read: opened once per run, read with pruning by partition and file statistics, compacted by a threshold of small files sorted by key or once its partition closes, and vacuumed within its history. Its content is the Verdict's fix and P1–P6; the Verdict holds the reasons.
-  - **Options to weigh:** maintenance as a job apart from the run (T072's earlier premise; conflicts with the MERGE and misses a catch-up); compaction at fixed times (no response to a catch-up); the control table out of Delta, as a manifest (loses atomic commits for a few hundred GetObject); one compaction threshold for every partition, the active one included (defeats pruning by capture range).
-  - **Research first, through the `web-researcher`, official documentation only:** Delta's auto compaction small-file threshold (believed 50); `deltalake` 1.7.0's `optimize.compact`, `optimize.z_order` and `vacuum` on an S3-compatible store such as R2, and how a vacuum interacts with time travel; whether its scans prune by Parquet row group, or only by the log's file statistics; that 1.7.0's MERGE prunes its target ([Sources](#6-sources)).
+  - **ADR-0052, Proposed:** the decision in one sentence: every pipeline Delta table is opened once per run, partitioned by the range its readers filter by, read and merged stating that range, compacted without merging files within a range a reader prunes by, and vacuumed within its history. Only the principles go to the ADR; how each table applies them is the Verdict's fix and P1–P6.
+  - **Options to weigh:** maintenance as a job apart from the run (T072's earlier premise; conflicts with the MERGE and misses a catch-up); compaction at fixed times (no response to a catch-up); the control table out of Delta, as a manifest (loses atomic commits for a few hundred GetObject); no partitions and one compacted file (bounds GetObject, not the bytes read); one compaction rule for every partition, the active one included (defeats pruning by capture range where a reader prunes within the day).
+  - The official documentation is checked ([Sources](#6-sources)).
 
 ## 1. Questions — what we need to know
 
@@ -784,16 +784,21 @@ The lakehouse reads per run grow because the pipeline reads its control table in
 **Fix:** one Delta maintenance and access pattern for every pipeline table, recorded as an ADR and applied by a design (D1). Each table is treated by how it is written and read:
 
 - every table is opened once per run, and its handle is reused across the run's calls;
-- reads are pruned by partition and by file statistics, with `deltalake` 1.7.0 so that the MERGE prunes its target by the batch's capture range;
-- a table with no date partition that gains a small file per batch, such as `processed_objects`, is compacted after any batch that leaves it with a threshold of small files, sorted by its key, so that file statistics still prune it by key and by capture time;
-- discovery reads only the processed keys from its listing's start, the latest processed capture minus the lookback, and the daily full sweep is removed: an object later than the lookback is recovered by rediscovering its window on demand; the latest processed capture is computed once per run;
-- a table partitioned by date and written by capture range, such as `station_stock`, keeps its active partition uncompacted, so that file statistics prune it, and compacts each partition once it closes;
+- every table is partitioned by the range its readers filter by, and every read and MERGE states that range, so that it is pruned by partition and by file statistics:
+  - `processed_objects` by system and capture date; its MERGE's predicate adds the batch's capture range, since a batch's keys span both systems and prune no file by key alone;
+  - `station_stock` by local date, with `deltalake` 1.7.0, whose MERGE prunes its target by the batch's capture range;
+- a compaction never merges files within the range a reader prunes by:
+  - `processed_objects`' active partitions are compacted after any batch that leaves them with a threshold of small files, since its readers read them whole;
+  - `station_stock`'s active partition is not compacted, since its MERGE and `latest_captures` prune within the day;
+  - every closed partition is compacted once;
+- discovery reads only the processed keys from its listing's start, the latest processed capture minus the lookback, and the daily full sweep is removed: an object later than the lookback is recovered by rediscovering its window on demand;
+- each system's latest processed capture is taken from the log's file statistics, with no data read, so that it stays bounded when a system stops capturing;
 - every table is vacuumed, within the retention of [ADR-0021](../decisions/0021-retention-per-layer.md).
 
-**Effect, by arithmetic on F6:**
+**Effect, by arithmetic on F3, F6 and F13** (about 2 GetObject per commit replayed and 3 per data file):
 
-- **Steady runs:** pass 1's 12,369 GetObject per run drop to about 600, with no growth across days.
-- **Catch-up:** the threshold compaction keeps the cost per batch flat, instead of growing with each batch.
+- **Steady runs:** pass 1's 12,369 GetObject per run drop to about 400 on average and 700 at most, at 95 commits since the checkpoint and a threshold of 10 small files; none of the terms grows with the processed objects, and `processed_objects`' reads cover 7 days instead of its whole history.
+- **Catch-up:** each batch reads only its own partitions and the 7 days before them, so its cost stays flat instead of growing with each batch.
 
 **Left out of the fix:** Modal's region, until D2's rule calls for it ([Production inputs](#55-production-inputs)).
 
@@ -810,15 +815,16 @@ The lakehouse reads per run grow because the pipeline reads its control table in
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
-| P1 | Every pipeline table follows the Delta maintenance and access pattern: opened once per run and its handle reused across the run's calls, which is safe since runs never overlap; reads pruned by partition and by file statistics; `deltalake` 1.7.0, whose MERGE prunes its target | Verdict, F6–F14 | TODO(T072): apply the Delta pattern to every pipeline table |
-| P2 | `processed_objects` is compacted inside the run, after any batch that leaves it with a threshold of small files (about 50, which at 96 runs a day is once or twice a day, and keeps a catch-up's cost per batch flat), sorted by its key, so that each file holds one system's contiguous range of keys and capture times | Verdict, F13 | TODO(T072): compact `processed_objects` by threshold, sorted by key |
+| P1 | Every pipeline table follows the Delta maintenance and access pattern: opened once per run and its handle reused across the run's calls, which is safe since runs never overlap, and refreshed after a MERGE if `deltalake` does not refresh it; a missing table is created without opening the existing ones again; every read and MERGE states the range it needs, pruned by partition and by file statistics; `deltalake` 1.7.0, whose MERGE prunes its target | Verdict, F6–F14 | TODO(T072): apply the Delta pattern to every pipeline table |
+| P2 | `processed_objects` is partitioned by system and capture date, UTC as in the bronze key or local as in [ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md), as the design sets. Its MERGE's predicate adds the batch's capture range, which keeps the result, since `captured_at` derives from the key. Its active partitions are compacted with `optimize.compact`, which keeps insertion order, after any batch that leaves them with a threshold of small files (10 in the Verdict's arithmetic, set by the design); every closed partition is compacted once. Sorting by key adds nothing: within a partition, key order is capture order | Verdict, F13 | TODO(T072): partition `processed_objects` by system and date, bound its MERGE, compact by threshold |
 | P3 | `station_stock`'s active partition is not compacted, since one file spanning the day would defeat pruning by capture range; the MERGE prunes it by the batch's capture range, and `latest_captures` by the latest capture; each partition is compacted once it closes | Verdict | TODO(T072): prune `station_stock` by capture range, compact closed partitions |
-| P4 | Discovery reads only the processed keys from its listing's start, the latest processed capture minus the lookback, and computes the latest processed capture once per run; the daily full sweep is removed, following a watermark with allowed lateness, the lookback; a system with nothing processed keeps the full listing | Verdict | TODO(T072): bound discovery's reads and remove the daily full sweep |
+| P4 | Discovery reads only the processed keys from its listing's start, the latest processed capture minus the lookback; the daily full sweep is removed, following a watermark with allowed lateness, the lookback; a system with nothing processed keeps the full listing. Each system's latest processed capture is taken from the log's file statistics, with no data read, so that it stays bounded when a system stops capturing; if `deltalake` 1.7.0 does not expose them, from that system's latest partition. The lookback, a constant of 1 h with no recorded reason ([d008 › `bikesharing.core.settings`](../designs/d008-pipeline-platform-and-walking-skeleton.md#bikesharingcoresettings)), becomes the only net for late objects: it is set from bronze's measured lateness, each object's `LastModified` minus the capture instant in its key, plus a margin | Verdict | TODO(T072): bound discovery's reads, take the latest capture from the log, set the lookback from lateness |
 | P5 | A window of bronze is rediscovered on demand through the one-off run, given its start and end: listed, compared with the processed keys of that window, and processed through the same batch path as a scheduled run | Verdict | TODO(T072): rediscover a window through the one-off run |
 | P6 | Every table is vacuumed within the table history of [s010 › D6](s010-storage-table-format.md), and has a checkpoint interval set per table | Verdict | TODO(T072): vacuum and set a checkpoint interval per table |
-| P7 | Done when, 24 h after the deploy: GetObject per run on `bikesharing-lakehouse` (`r2_metrics.py`) is near 600, and p95 run time (`run_stats.py`) is at most 2 min, the estimate [ADR-0027](../decisions/0027-modal-as-execution-platform.md) rests on; if not, `capture_history`'s pruning is checked first | Verdict, F16 | TODO(T072): check reads and run time 24 h after the deploy |
+| P7 | Done when, 24 h after the deploy: GetObject per run on `bikesharing-lakehouse` (`r2_metrics.py`) is about 400 on average and at most 700, and p95 run time (`run_stats.py`) is at most 2 min, the estimate [ADR-0027](../decisions/0027-modal-as-execution-platform.md) rests on; if not, `capture_history`'s pruning is checked first | Verdict, F16 | TODO(T072): check reads and run time 24 h after the deploy |
 | P8 | Modal's region follows D2's rule, applied to the lakehouse requests left per run after the fix | D2 | TODO(T072): apply D2's rule to Modal's region after the fix |
 | P9 | A regression indicator: per-run metrics (run and phase durations, objects processed) sent over OTLP, and R2's operations per bucket and hour from Cloudflare's GraphQL Analytics API, fetched 2–3 times a day; alerts on their trend instead of a log query | Verdict | TODO(T078.2): metrics and alerts for the pipeline's run time and R2 operations |
+| P10 | A failed checkpoint after a commit raises from the write although the commit has landed ([delta-rs#4986](https://github.com/delta-io/delta-rs/issues/4986)), so the run takes a written batch as failed | Verification of 5.6 Records | Discarded: every Delta write of the pipeline is an insert-only MERGE by key, so the next run's retry of the batch inserts nothing, and the only effect is a run reported as failed |
 
 ### 5.6 Records
 
@@ -826,7 +832,7 @@ The lakehouse reads per run grow because the pipeline reads its control table in
 
 | Output | From | Destination | Commit |
 |---|---|---|---|
-| ADR on the Delta maintenance and access pattern for the pipeline's tables: the control table stays in Delta, each table treated by how it is written and read, compaction inside the run, pruning by file statistics. Before it is written, Delta's auto compaction threshold, `deltalake`'s compaction, Z-order and VACUUM on R2, and pruning by row group are checked in the official documentation | Verdict | `docs/decisions/` | Pending |
+| ADR on the Delta maintenance and access pattern for the pipeline's tables: the control table stays in Delta; every table is opened once per run, partitioned by the range its readers filter by, read and merged stating that range, compacted inside the run without merging files within a range a reader prunes by, and vacuumed within its history | Verdict | `docs/decisions/` | Pending |
 | T072 rewritten as the fix's task, blocked by T077 | Verdict | Issue #86 | Done |
 | T077's Done when reduced to what this spike delivers | Verdict | Issue #101 | Done |
 
@@ -838,3 +844,10 @@ The lakehouse reads per run grow because the pipeline reads its control table in
   - checkpoints every 100 commits by default: `crates/core/src/table/config.rs` and `crates/core/src/kernel/transaction/mod.rs`;
   - no target pruning in a streamed MERGE: `crates/core/src/operations/merge/mod.rs` and `filter.rs`, and [delta-rs#3491](https://github.com/delta-io/delta-rs/issues/3491); fixed in 1.7.0 by [delta-rs#4790](https://github.com/delta-io/delta-rs/pull/4790);
   - a grouped aggregate is not answered from statistics: DataFusion's [`aggregate_statistics.rs`](https://github.com/apache/datafusion/blob/main/datafusion/physical-optimizer/src/aggregate_statistics.rs).
+- `deltalake` 1.7.0's source and release, at the tag [`python-v1.7.0`](https://github.com/delta-io/delta-rs/releases/tag/python-v1.7.0), checked for the ADR of [Records](#56-records):
+  - streamed MERGE prunes target files with the source's statistics (#4790, #4796): the release notes;
+  - `optimize.compact` keeps the files' order and does not sort; only `optimize.z_order` reorders, also on an unpartitioned table; the default target size is 100 MiB: `python/deltalake/table.py` and `crates/core/src/operations/optimize.rs`;
+  - `vacuum` keeps 7 days by default (`delta.deletedFileRetentionDuration`), and `delta.checkpointInterval` is honoured per table, 100 by default: `crates/core/src/table/config.rs`;
+  - scans prune whole files by partition values and the log's file statistics, not confirmed by Parquet row group: `crates/core/src/delta_datafusion/table_provider.rs`;
+  - no auto compaction, only an explicit `optimize`; the threshold of 50 small files found for Spark's auto compaction is in no Delta or Databricks page, so the threshold is set by the design;
+  - a failed checkpoint after a commit raises from the write: [delta-rs#4986](https://github.com/delta-io/delta-rs/issues/4986).
