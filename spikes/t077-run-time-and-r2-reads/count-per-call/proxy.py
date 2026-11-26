@@ -54,10 +54,11 @@ CLASS_B = {
 }
 FREE = {"DeleteObject", "DeleteBucket", "AbortMultipartUpload"}
 
-# Hop-by-hop and signing headers: never forwarded as received. The signing ones are
-# rebuilt by the proxy's own signature.
+# Hop-by-hop, signing and length headers: never forwarded as received. The signing ones are
+# rebuilt by the proxy's own signature, and the length from the body: forwarding the client's
+# too would send two, which Cloudflare answers with 400.
 DROP_REQUEST = {
-    "host", "connection", "keep-alive", "proxy-connection", "transfer-encoding", "te",
+    "content-length", "host", "connection", "keep-alive", "proxy-connection", "transfer-encoding", "te",
     "upgrade", "authorization", "x-amz-date", "x-amz-content-sha256", "x-amz-security-token",
 }
 DROP_RESPONSE = {"connection", "keep-alive", "transfer-encoding", "content-length"}
