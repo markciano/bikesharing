@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
-- Current: Step 8, the owner's pass 2. The copy is cut at pass 1's version 694 and holds pass 1's writes, which pass 2's cut drops.
+- Current: Step 9, the owner's download of Probe A's inputs. Probe B is complete (F6–F14).
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -456,7 +456,7 @@ Report the two outputs and the three queries' figures. Yes when all three hold:
 
 ### Step 8 — Pass 2: the peak before it
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Model:** —
 - **Gate:** —
@@ -650,6 +650,65 @@ Step 7 · 2026-11-26 · the copy's bucket from 08:44 to 08:48 UTC, queried twice
 Step 7 · 2026-11-26 · `r2_metrics.py` on `bikesharing-bronze` from 04:00 to 05:00 UTC on 2026-11-25
 
 - 243 GetObject in the hour, from the pipeline and any other reader: at most 60.75 per run of the pipeline.
+
+### F10. Pass 2 counts 10,801 GetObject in the 8 calls
+
+Step 8 · 2026-11-26 · `count_calls.py --pass 2` from the owner's machine, both tables at version 594, 95 commits since the checkpoint, replaying a run of 30 objects and 11,715 `station_stock` rows
+
+| Row | Call | GetObject | Time (s) |
+|---|---|---|---|
+| setup | Replayed run's read, counted apart | 2,218 | 14.83 |
+| 1 | `ensure_tables` | 808 | 8.67 |
+| 2 | `processed_keys` | 2,010 | 12.64 |
+| 3 | `latest_processed` | 2,010 | 11.06 |
+| 4 | `capture_history` | 1,533 | 8.78 |
+| 5 | `merge_station_stock` | 205 | 1.85 |
+| 6 | `record_processed` | 2,012 | 12.51 |
+| 7 | `latest_processed` | 2,015 | 11.16 |
+| 8 | `latest_captures` | 208 | 2.15 |
+| 1–8 | Total | 10,801 | 68.82 |
+
+- No request failed. `cut_log.py` set both tables at version 594, with 4 commits of `processed_objects` in the production hour.
+- Production's hour, from 03:00 to 04:00 UTC on 2026-11-24, has 43,187 GetObject on `bikesharing-lakehouse`, 10,797 per run: the 8 calls make 100.0%.
+
+### F11. R2 counts 0.25% more requests than the proxy in pass 2's window
+
+Step 8 · 2026-11-26 · the copy's bucket from 09:09 to 09:13 UTC; the count ran from 09:10:06 to 09:11:32
+
+- The proxy logged 13,039 requests, none failed. R2 gave 13,071: +0.25%.
+- By operation, R2 gave 13,048 GetObject against the proxy's 13,019, and 23 Class A against 20.
+- In pass 1's window the difference had the other sign (F8). The cause of either is not verified.
+- Consequence: the difference is within the 0.5% of the independent count (#10).
+
+### F12. The calls that hold 80% of the GetObject take over 80% of the mapped calls' time
+
+Step 8 · 2026-11-26 · F6 and F10, adding calls from the largest GetObject count down
+
+| Pass | Calls that hold 80% | Their GetObject | Their time (s) | Time of calls 1–8 (s) | Share of time |
+|---|---|---|---|---|---|
+| 1 | 7, 6, 2, 3, 4 | 11,148 (90.1%) | 61.16 | 72.93 | 83.9% |
+| 2 | 7, 6, 2, 3, 4 | 9,580 (88.7%) | 56.15 | 68.82 | 81.6% |
+
+- Calls 2, 3, 6 and 7 alone stay under 80% of the GetObject in both passes (74.8% and 74.5%), so call 4 is included.
+- Consequence: Q2's time guide (≥ 70%) is met in both passes.
+
+### F13. From pass 2 to pass 1, only the calls 2, 3, 4, 6 and 7 grow
+
+Step 8 · 2026-11-26 · F6 minus F10
+
+| Call | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | Total |
+|---|---|---|---|---|---|---|---|---|---|
+| GetObject, pass 1 − pass 2 | 0 | 300 | 300 | 368 | 0 | 300 | 300 | 0 | 1,568 |
+
+- Calls 5 and 8, which open `station_stock` alone, and call 1 make the same GetObject in both passes.
+
+### F14. The count's growth matches production's growth per run
+
+Step 8 · 2026-11-26 · F7, F10 and F13
+
+- Production's GetObject per run goes from 10,796.75 (03:00 UTC on 2026-11-24) to 12,342.25 (04:00 UTC on 2026-11-25), 25 h later: +1,545.5.
+- Calls 1–8 grow by 1,568 between the two passes: 101.5% of production's growth.
+- Consequence: Q2's growth guide (same sign and order of magnitude) is met.
 - The run replayed in F6 recorded 26 objects. How many objects each of the hour's runs downloads was not read.
 
 ## 5. Conclusion
