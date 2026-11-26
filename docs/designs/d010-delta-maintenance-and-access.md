@@ -47,7 +47,29 @@ A security decision lists its threats in this table, with IDs `TH1`, `TH2`… pe
 | `TH1` | | | | |
 -->
 
-#### D`<N>`. `<Title of decision N>`
+#### D1. Same outputs, and one control table for every feed
+
+The task changes how the tables are read and maintained, not what they hold, following a behaviour-preserving refactoring: what the pipeline produces stays fixed, and later slices build on the control table's contract.
+
+- **Unchanged:**
+  - for the same bronze, the rows of `station_stock` and the published file are identical;
+  - each batch stays idempotent, with an insert-only MERGE;
+  - catch-up stays in bounded batches ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md));
+  - the run's events and its heartbeat keep their names and fields; events or fields may be added, none removed or renamed.
+- **May change:** the tables' physical layout (partitions, files, checkpoints), `processed_objects`' layout, how discovery lists bronze, and each run's reads and run time.
+- **Contract for later slices:**
+  - `processed_objects` is one table for every system and feed, with one row per processed bronze object;
+  - its layout lets each feed read only its own rows, so a new feed registers its objects with no change to it;
+  - a slice may add columns, such as T060.5's statuses, but not change its partitioning;
+  - slices reach it through the pipeline's common table access, not by reading it on their own.
+
+Options rejected:
+
+- **One control table per feed:** each feed's state stays apart, but a run opens one table per feed and replays each log, so its reads grow with every feed added, and each table needs its own maintenance.
+
+#### D2. Existing data moves to the new layout in a one-off migration
+
+A table whose partitioning changes, such as `processed_objects`, is rewritten with all its current rows in the new layout, following Delta's way of changing a table's partitioning (an overwrite with the new partition columns). The owner runs it once, with the schedule paused, so that no run overlaps it ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)). Every row keeps its run ID and code version, the lineage of [ADR-0043](../decisions/0043-lineage-at-four-levels.md). When the schedule resumes, catch-up processes what bronze received during the pause. A table that keeps its partitioning, such as `station_stock`, is not rewritten.
 
 ### 1.3 Requirements
 
@@ -80,7 +102,10 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 | OQ | Question | Depends on | Notes |
 |---|---|---|---|
-| `OQ1` | What closes the task 24 h after the deploy: lakehouse reads per run and p95 run time | — | From [s019 › P7](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs); lands in Done when |
+| `OQ3` | Without the daily full sweep, what happens to a bronze object that arrives later than the lookback, and how the owner learns of it | D1 | [s019 › P4](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs) |
+| `OQ4` | How the owner rediscovers a bronze window on demand: what they give, what the run does, what it reports | OQ3 | [s019 › P5](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs) |
+| `OQ5` | Silver's rolling 12-month retention: which tables, how the 12 months are counted, and when the data leaves | D1 | [ADR-0021](../decisions/0021-retention-per-layer.md); s019 did not cover it |
+| `OQ6` | What closes the task 24 h after the deploy: lakehouse reads per run and p95 run time | D1, D2, OQ3–OQ5 | From [s019 › P7](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs); lands in Done when |
 
 ## 2. Plan — how
 
