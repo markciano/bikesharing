@@ -41,7 +41,7 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
 
 1. Propose the list of concerns to decide, in dependency order, marking each concern or sub-decision as asked or settled following `.claude/rules/docs/decision-log.md`; the owner adjusts it. A session that ends before the last concern keeps, in Current, the concerns left and their marks.
 2. Take each concern in that order:
-   - **Settled:** an earlier decision or an ADR in force fixes it, or the applicable standard leaves one sound option. An alternative that deviates from an ADR in force is not an option: it is raised only if the owner asks to revisit that ADR. An earlier decision that conflicts with an ADR is corrected to follow it, in the same way. Explain in 2–3 lines what it fixes and what settles it, naming the decision or the standard, and write it to its section without asking; the owner approves it on the edit's diff.
+   - **Settled:** an earlier decision or an ADR in force fixes it, or the applicable standard leaves one sound option. An alternative that deviates from an ADR in force is not an option: it is raised only if the owner asks to revisit that ADR. An earlier decision that conflicts with an ADR is corrected to follow it, in the same way. Explain in 2–3 lines, in the conversation's language, what it fixes and what settles it, naming the decision or the standard, and write it to its section once the owner has read the explanation; the owner approves it on the edit's diff.
    - **Asked:**
      - what is being decided and why it matters, in 2–3 lines;
      - the options, each with its practical consequence;
