@@ -20,7 +20,7 @@ The checks after the baseline (count per call, checkpoint cycle) add these, set 
   - `bikesharing-t077-prod-read`: Object Read only on `bikesharing-lakehouse` only, for the copy and the checkpoint cycle's downloads.
 - **rclone 1.75.2:** two remotes with provider Cloudflare and `no_check_bucket = true`, since each token is scoped to one bucket. `r2-prod` holds the production read token and `r2-copy` the copy token. Since the two remotes hold different credentials, a copy between them is not server-side: rclone downloads each object and uploads it again, with free egress.
 - **Python and dependencies:** Python 3.14.9 and uv 0.13.5. This folder's own locked environment, `uv sync --locked --directory spikes/t077-run-time-and-r2-reads`, takes the pipeline as a path dependency, with `deltalake` held at the pipeline's locked 1.6.6. Commands run from this folder.
-- **Hours:** R2's operation figures are read for whole UTC hours once each hour has ended, so each run that puts requests on the copy's bucket runs alone in its hours.
+- **Windows:** R2's operation figures are read for windows of whole UTC minutes once they have ended, so nothing else touches the copy's bucket within a count's window.
 
 ## Run time and memory
 
@@ -95,7 +95,7 @@ The checks after the baseline (count per call, checkpoint cycle) add these, set 
 
 - **Scripts:**
   - `count-per-call/proxy.py` is a counting proxy, adapted from [s010's](../storage-table-format/r2_proxy.py). It runs in a process of its own that the caller starts, on a free local port: `QueryBuilder.execute` holds Python's global interpreter lock while it waits for its reads, so a proxy thread in the caller's process could never answer them. `deltalake` reaches it over plain HTTP with no signature; the proxy signs each request again with the copy token and forwards it to R2, so only the proxy holds the token, and its bucket is a constant. It writes one JSON line per request: the label of the call in progress, method, S3 operation, R2 class, key, status, bytes and duration. Its smoke mode opens each table once under the label `smoke`, writes `output/count-per-call/smoke-requests.jsonl` and prints GetObject, the other Class B operations and Class A per table and in total.
-  - `r2-operations-and-storage/r2_metrics.py` takes one bucket and one window of whole UTC hours, and prints each bucket's GetObject, Class B and Class A totals, classed as the proxy classes them. That makes the independent check: the copy's bucket receives only the probe's requests, so its total requests for the hour must equal the proxy's, failed ones included, within ±0.5% ([s010 › #39](../../docs/spikes/s010-storage-table-format.md#decision-log)).
+  - `r2-operations-and-storage/r2_metrics.py` takes one bucket and one window of whole UTC minutes, and prints each bucket's GetObject, Class B and Class A totals, classed as the proxy classes them. That makes the independent check: the copy's bucket receives only the probe's requests, so its total requests for a count's window must equal the proxy's, failed ones included, within ±0.5% ([s010 › #39](../../docs/spikes/s010-storage-table-format.md#decision-log)).
   - `count-per-call/cut_log.py` rewinds both tables in the copy to a pass's instant. From production's log dates in `data/copy/delta-log.txt`, converted to UTC, it takes `processed_objects`' latest checkpoint (pass 1) or the one before it (pass 2). The pass's production hour is the whole UTC hour before the hour of that checkpoint's commit, and the pass's version of `processed_objects` is the one read by that hour's last run. `station_stock`'s version is its latest commit at or before that version's commit. For each table, the script lists `_delta_log/` in the copy's bucket, so that what an earlier pass wrote is also found. It rewrites `_last_checkpoint` with the version and row count of the latest checkpoint at or before the pass's version, then deletes every later log object, newest first. Data files are not touched. It reaches R2 with boto3, not through the proxy, and its bucket is a constant. It prints the production hour and the commits of `processed_objects` in it, then per table the pass's version, its commits since the last checkpoint and the objects deleted.
   - `count-per-call/count_calls.py` runs the 8 calls of [s019 › Lakehouse reads per run](../../docs/spikes/s019-pipeline-run-time-r2-reads.md#lakehouse-reads-per-run) one by one through the proxy, each labelled with its number. They are the pipeline's own functions on the copy, with the arguments the run gives them. The batch of calls 4–6 replays the copy's last run (s019 #2). A setup, labelled `setup` and counted apart, reads that run, the latest `run_id`: its objects, their capture range and its `station_stock` rows. Call 5 merges those rows again; call 6 records as many objects under new keys, `t077-probe/<n>`. Each table's version before a call starts at the one setup read and moves with each commit the proxy sees a call write. Its commits since the last checkpoint are `(version + 1) % 100` (s019 #8). The script stops if the copy holds `t077-probe/` rows from an earlier count. It writes `output/count-per-call/pass-<n>-requests.jsonl` and `pass-<n>-calls.csv`, with one row per call and one for setup: GetObject, other Class B, Class A, failed requests, seconds, and the versions and commits since the checkpoint of the tables the call opens. It prints them with the totals of calls 1–8 and of all rows.
 - **Commands:** the smoke, in an hour with nothing else on the copy's bucket; then, once that hour has ended, the copy's figures for it:
@@ -105,13 +105,13 @@ The checks after the baseline (count per call, checkpoint cycle) add these, set 
   uv run python r2-operations-and-storage/r2_metrics.py --bucket bikesharing-t077-lakehouse-copy --start <hour> --end <next hour>
   ```
 
-  The log cut, in an hour of its own, before each pass; pass 1 runs before pass 2, since a cut only goes back:
+  The log cut, before each pass; pass 1 runs before pass 2, since a cut only goes back:
 
   ```bash
   uv run python count-per-call/cut_log.py --pass 1
   ```
 
-  The count, once per pass, in the hour after the cut, with nothing else on the copy's bucket; then the copy's figures for that hour, as after the smoke:
+  The count, once per pass, at least 3 min after the cut ends; then the copy's figures for its window, from the minute before the one it starts in to two minutes after the one it ends in (exclusive), with nothing else on the copy's bucket within it:
 
   ```bash
   uv run python count-per-call/count_calls.py --pass 1
