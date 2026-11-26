@@ -8,7 +8,7 @@ Kind: a build task builds code or configuration and has every block. A document-
 # Design: Delta maintenance and access in the pipeline
 
 - **Task:** T072
-- **Kind:** `<build | document-only | parent>`
+- **Kind:** build
 - **ADRs:** [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)
 - **New ADRs from this doc:** `<ADRs created during this design, or "none">`
 
@@ -29,6 +29,8 @@ Current: where work resumes (the step being implemented, or the block and sectio
 ### 1.1 Context
 
 <!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
+
+The pipeline's first slice (T060.1) manages its Delta tables on R2 poorly: a run opens its tables several times and reads them with no bounds, so its lakehouse reads and its run time grow every day; a run counted 12,369 GetObject, most of them in full reads of the control table `processed_objects` ([s019 › Verdict](../spikes/s019-pipeline-run-time-r2-reads.md#53-verdict)). [ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md) sets how every pipeline table is accessed and maintained, and this task applies it to the slice's tables before the next slices build on them, together with silver's rolling 12-month retention ([ADR-0021](../decisions/0021-retention-per-layer.md)). The result is the scheduled pipeline itself, and the owner who operates it: its reads and run time per run should stop growing with the data held.
 
 ### 1.2 Decided at framing
 
@@ -72,15 +74,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 - Moving Modal's region ([s019 › P8](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)): its steps are written in this design and not run in it — T080
 
-### 1.6 Children
-
-<!-- Parent only. The child map, in build order: each child's scope (e.g. the business process it builds), the questions or requirements it closes, the children it depends on, and the condition that closes it. Each child has its own working document, which cites the parent's decisions instead of repeating them. Every open question and requirement of the parent is closed by the parent or by one child. The parent's Done when: its Open questions closed and its children created. -->
-
-| Child | Scope | Closes | Depends on | Done when |
-|---|---|---|---|---|
-| `TNNN.1` | | | — | |
-
-### 1.7 Open questions
+### 1.6 Open questions
 
 <!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
 
