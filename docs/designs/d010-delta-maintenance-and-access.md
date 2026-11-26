@@ -125,6 +125,24 @@ Options rejected:
 
 - **365 rolling days:** it holds up to a month less, but a gold window of the last 12 calendar months would lack the first days of its oldest month.
 
+#### D5. Security of the migration and of retention
+
+The task adds two writes to the production lakehouse: the one-off migration of D2, and the deletion of partitions of D4. The storage baseline of [ADR-0023](../decisions/0023-storage-security-baseline.md) applies as it stands and is not repeated. Its threats, from one STRIDE pass over D1–D4, are below.
+
+- **The migration's credential:** the owner runs the migration locally, from the merged `main`, with an R2 token of its own, following least privilege with a short-lived credential, ADR-0023's token per component. The token can write only to `bikesharing-lakehouse`, expires after one day, and the owner revokes it once the migration passes. The scheduled function stays the only holder of the pipeline's write token ([d008 › Environments and configuration](d008-pipeline-platform-and-walking-skeleton.md#environments-and-configuration)).
+- **Retention's reach:** a deletion only affects partitions of months before the window's start. A wrong deletion is undone with Delta's 7 days of history or rebuilt from bronze ([ADR-0021](../decisions/0021-retention-per-layer.md)).
+- **The migration's trace:** its commit records its own code version in the Delta log, since the rows keep the lineage of the runs that wrote them (D2).
+
+| # | Threat (STRIDE) | Impact | Control | Requirement |
+|---|---|---|---|---|
+| `TH1` | Tampering, Elevation of privilege: the migration writes to the production lakehouse from outside the scheduled function | Rows rewritten by unreviewed code, or a long-lived write credential outside Modal | Run from the merged `main`, with a token that writes only to `bikesharing-lakehouse`, expires after one day and is revoked after the migration | |
+| `TH2` | Tampering: a wrong window computation deletes partitions inside the window | Silver history lost until restored or rebuilt | Deletion limited to months before the window's start; time travel and rebuild from bronze | |
+| `TH3` | Repudiation: the rewritten table does not show which code rewrote it | A faulty migration cannot be traced to its code | The migration's commit records its code version in the Delta log | |
+
+Options rejected:
+
+- **A Modal function for the migration:** the token would never reach the owner's machine, but it adds an app with production credentials for a single use.
+
 ### 1.3 Requirements
 
 <!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
