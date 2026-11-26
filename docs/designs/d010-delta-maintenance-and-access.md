@@ -249,6 +249,20 @@ Each of a run's calls states the range it needs, as partition values and as a `c
 
 A feed with no processed object has no partition, so call 2 returns nothing for it and call 3 lists bronze from its start (R11). `deltalake` moves to 1.7.0 for call 5's pruning, raising the manifest's minimum to `>=1.7.0` so that no relock goes back to a version without it ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)); R1 and R16's tests check that the upgrade keeps the outputs.
 
+#### Compaction
+
+After each batch, the run compacts the partitions the batch left over their rule, with `optimize.compact` restricted to those partitions, which keeps insertion order ([ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md), [s019 › P2, P3](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)). A catch-up compacts as it writes, and nothing runs alongside a MERGE.
+
+- **Closed partition:** one whose date is before the date of the batch's latest capture minus the 15 min lookback, since no later batch writes to it (D3). For `station_stock`, the local date of that instant.
+- **Compacted once, on state:** every closed partition with more than one data file is compacted, found from the log with no data read, so a run that fails before compacting is caught up by the next one.
+
+| Table | Active partitions | Closed partitions |
+|---|---|---|
+| `processed_objects` | Compacted when a batch leaves one at or over its threshold of data files, since every reader reads a partition whole | Compacted into one file |
+| `station_stock` | Never compacted: its MERGE and `latest_captures` prune within the day by `captured_at`, which one file spanning the day would defeat | Compacted into one file |
+
+The threshold is a setting per table in `pipeline/src/bikesharing/core/run_settings.json`, `compaction_threshold`, keyed by table name; a table with no entry never compacts its active partitions. `processed_objects`' threshold is 10, the highest that keeps a run within the Done when's 700 GetObject: s019's arithmetic reaches 700 at its worst point, 95 commits since the checkpoint with full active partitions, at 10, and each 10 files more add about 180 ([s019 › Verdict](../spikes/s019-pipeline-run-time-r2-reads.md#53-verdict)). A lower threshold saves under 1 s per run, and the compaction events measure whether another value runs better.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
