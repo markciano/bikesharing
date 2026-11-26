@@ -214,6 +214,41 @@ The how this plan builds, from [s019 › Production inputs](../spikes/s019-pipel
 | P5 | Rediscover a window through the one-off run; not built (D3) |
 | P6 | Vacuum and set a checkpoint interval per table |
 
+#### Common table access
+
+`bikesharing/shell/delta.py` is the pipeline's common table access, the one place every run reaches its Delta tables through ([ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)):
+
+- it opens each table once per run, and refreshes it after its own writes;
+- every read and MERGE it offers takes the table's range, so no caller can read a table whole;
+- it reads values the log's file statistics hold, such as a feed's latest capture, from the log.
+
+An import-linter contract in `pipeline/pyproject.toml` makes it the only module of the package that imports `deltalake`, following module boundaries enforced by tooling, as ADR-0046's rules are. A slice that reads `processed_objects` on its own fails CI, instead of bringing back full reads that only R2's request counts would show (R5). `.claude/rules/code/python.md` › Structure states the same rule.
+
+#### `processed_objects` layout
+
+`processed_objects` is partitioned by `system`, `feed` and `utc_date`, in that order, following partitioning by the range its readers filter by ([ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)):
+
+- **`system` and `feed`:** each feed reads only its own rows, and a new feed adds its own partitions (D1, R4).
+- **`utc_date`:** a new column, the UTC date of `captured_at`, the date in the bronze key, which the pipeline writes with each row. Every reader filters by UTC instants (discovery's watermark minus the lookback, `capture_history`'s 7 days, a batch's capture range), so each range maps to whole partitions with no time-zone conversion. ADR-0041's local calendar keys apply to fact rows, not to control state.
+- **Size:** one partition per system, feed and day, compacted into one file once closed, adds about 365 files a year per system and feed to the log.
+
+#### Bounded calls
+
+Each of a run's calls states the range it needs, as partition values and as a `captured_at` range, so the engine prunes by partition and then by the log's file statistics ([ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)). The calls are those of [s019 › Lakehouse reads per run](../spikes/s019-pipeline-run-time-r2-reads.md#lakehouse-reads-per-run):
+
+| # | Phase | Call | Table | Range it states | Requirement |
+|---|---|---|---|---|---|
+| 1 | Discovery | `ensure_tables` | both | Opens each table once for the run; creates a missing one without opening the others again | R5 |
+| 2 | Discovery | `latest_processed` | `processed_objects` | None read: per system and feed, the maximum of `captured_at`'s statistics over the files of its latest `utc_date` partition, from the log | R10, R11 |
+| 3 | Discovery | `processed_keys` | `processed_objects` | Per system and feed, from its latest capture minus 15 min: its `utc_date` partitions from that instant's date, and `captured_at` at or after it | R4, R10 |
+| 4 | Batch | `capture_history` | `processed_objects` | The batch's system and feed, `utc_date` and `captured_at` within the 7 days before the batch | R4 |
+| 5 | Batch | `merge_station_stock` | `station_stock` | The batch's `local_date` partitions and its `captured_at` range, which `deltalake` 1.7.0's MERGE prunes its target by | R1, R16 |
+| 6 | Batch | `record_processed` | `processed_objects` | The MERGE's predicate adds the batch's systems, feeds, `utc_date` partitions and `captured_at` range to the match on `key`; the result is the same, since `captured_at` derives from the key | R4, R16 |
+| 7 | Gold | `latest_processed` | `processed_objects` | As call 2, on the handle refreshed after call 6 | R4 |
+| 8 | Gold | `latest_captures` | `station_stock` | The latest capture's `local_date` partition and its `captured_at` | R1 |
+
+A feed with no processed object has no partition, so call 2 returns nothing for it and call 3 lists bronze from its start (R11). `deltalake` moves to 1.7.0 for call 5's pruning, raising the manifest's minimum to `>=1.7.0` so that no relock goes back to a version without it ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)); R1 and R16's tests check that the upgrade keeps the outputs.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
