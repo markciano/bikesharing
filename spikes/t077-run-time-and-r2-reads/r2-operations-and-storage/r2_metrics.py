@@ -9,8 +9,8 @@ bikesharing-lakehouse, over [2026-11-21T03:00Z, 2026-11-23T03:00Z):
   storage     r2StorageAdaptiveGroups: objectCount and payloadSize at the first
               and last sample of the window
 
-s019 Probe B adds optional --bucket, --start and --end (whole UTC hours, as
-YYYY-MM-DDTHH:00:00Z), and each bucket's GetObject, Class B and Class A
+s019 Probe B adds optional --bucket, --start and --end (whole UTC minutes, as
+YYYY-MM-DDTHH:MM:00Z), and each bucket's GetObject, Class B and Class A
 totals, classed as count-per-call/proxy.py classes them. With no arguments
 it prints the baseline's figures.
 
@@ -34,7 +34,7 @@ ACCOUNT_ID = "b88ece5b9aad94b83f1710afa6d24070"
 BUCKETS = ["bikesharing-bronze", "bikesharing-lakehouse"]
 START, END = "2026-11-21T03:00:00Z", "2026-11-23T03:00:00Z"
 URL = "https://api.cloudflare.com/client/v4/graphql"
-HOUR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:00:00Z$")
+MINUTE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00Z$")
 
 QUERY = """
 query($acc: String!, $b: String!, $s: Time!, $e: Time!) {
@@ -52,16 +52,16 @@ query($acc: String!, $b: String!, $s: Time!, $e: Time!) {
 """
 
 
-def hour(value: str) -> str:
-    if not HOUR.match(value):
-        raise argparse.ArgumentTypeError(f"expected YYYY-MM-DDTHH:00:00Z, got {value!r}")
+def minute(value: str) -> str:
+    if not MINUTE.match(value):
+        raise argparse.ArgumentTypeError(f"expected YYYY-MM-DDTHH:MM:00Z, got {value!r}")
     return value
 
 
 parser = argparse.ArgumentParser(description="R2 operations and storage per bucket, from Cloudflare's GraphQL Analytics API.")
 parser.add_argument("--bucket", help=f"one bucket (default: {', '.join(BUCKETS)})")
-parser.add_argument("--start", type=hour, default=START, help=f"window start, inclusive (default: {START})")
-parser.add_argument("--end", type=hour, default=END, help=f"window end, exclusive (default: {END})")
+parser.add_argument("--start", type=minute, default=START, help=f"window start, inclusive (default: {START})")
+parser.add_argument("--end", type=minute, default=END, help=f"window end, exclusive (default: {END})")
 args = parser.parse_args()
 buckets = [args.bucket] if args.bucket else BUCKETS
 if args.start >= args.end:

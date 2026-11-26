@@ -160,9 +160,9 @@ The probe runs twice, at the two latest peaks of the sawtooth: before `processed
 
 Q2's Gate compares each pass's count with production in that pass's hour: `bikesharing-lakehouse`'s GetObject in it, divided by its 4 runs. The difference between the passes is one day's growth at the same point of the cycle, compared with the sawtooth's peak-to-peak growth for Q2's growth criterion. The cut runs only on the copy, never on production.
 
-Each pass is checked against an independent count. The copy's bucket receives only the probe's requests, so its total requests in the pass's hour must match the proxy's total for that pass, failed ones included, within ±0.5% ([s010 › #39](s010-storage-table-format.md#decision-log)). This catches a client that reaches R2 without the proxy. The two passes and the cut run in separate hours, so that each hourly figure holds one of them alone.
+Each pass is checked against an independent count. The copy's bucket receives only the probe's requests, so its total requests in the count's window must match the proxy's total for that pass, failed ones included, within ±0.5% ([s010 › #39](s010-storage-table-format.md#decision-log)). This catches a client that reaches R2 without the proxy. The count's window is in whole UTC minutes: it starts at the minute before the one the count starts in, and ends, exclusive, two minutes after the one it ends in. Nothing else touches the copy's bucket within it, so that its figure holds that count alone (F5). **#9**
 
-Every operation figure, of production and of the copy, comes from Cloudflare's GraphQL Analytics API (`r2OperationsAdaptiveGroups`), through the baseline's `r2_metrics.py` extended with a bucket and an hour. R2's dashboard is not used: its figures are not exact and it documents no breakdown per operation ([cloudflare › R2: metrics](../sources/cloudflare.md#r2-metrics)). **#5**
+Every operation figure, of production and of the copy, comes from Cloudflare's GraphQL Analytics API (`r2OperationsAdaptiveGroups`), through the baseline's `r2_metrics.py` extended with a bucket and a window. R2's dashboard is not used: its figures are not exact and it documents no breakdown per operation ([cloudflare › R2: metrics](../sources/cloudflare.md#r2-metrics)). **#5**
 
 ### 2.3 Decision log
 
@@ -178,10 +178,11 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 2 | [Probe B](#b-count-per-call) | The batch of calls 4–6 replays the copy's last run: its `station_stock` rows merged again, and its object count recorded under new keys. Standard: replay of a representative workload | The copy's token does not reach `bikesharing-bronze`; the replay reads the same files as the real batch, and only the writes, which are not measured, differ | Steps |
 | 3 | [File layout](#24-file-layout) | Probe A's inputs are downloaded with `rclone` commands, not by a script. Standard: least privilege (NIST SP 800-53 AC-6) | The production token stays in rclone's configuration and reaches no spike code; three one-off commands need no script | Steps |
 | 4 | [Probe B](#b-count-per-call) | Each pass's version is the one read by the last run of the last whole UTC hour before the checkpoint's hour, and production is read for that hour. Standard: like-for-like comparison, one regime at a time | In the checkpoint's own hour, runs after the drop read about 2,000 GetObject less, which would lower production's mean per run by up to ~18% and let Q2's Gate pass on a map that does not account for 80% | Steps review |
-| 5 | [Probe B](#b-count-per-call) | Every R2 operation figure comes from the GraphQL Analytics API, through the baseline's `r2_metrics.py` extended with a bucket and an hour; total requests match within ±0.5% ([s010 › #39](s010-storage-table-format.md#decision-log)). Standard: reuse of a validated measurement tool ([s010 › Step 5](s010-storage-table-format.md#step-5--run-probe-a-and-verify-the-analysis)) | The dashboard is not exact and documents no breakdown per operation, while Q2's Gate needs GetObject | Steps review |
+| 5 | [Probe B](#b-count-per-call) | Every R2 operation figure comes from the GraphQL Analytics API, through the baseline's `r2_metrics.py` extended with a bucket and an hour; total requests match within ±0.5% ([s010 › #39](s010-storage-table-format.md#decision-log)). Standard: reuse of a validated measurement tool ([s010 › Step 5](s010-storage-table-format.md#step-5--run-probe-a-and-verify-the-analysis)) **→ #9** | The dashboard is not exact and documents no breakdown per operation, while Q2's Gate needs GetObject | Steps review |
 | 6 | [File layout](#24-file-layout) | The baseline's four folders stay in the spike folder, unchanged except `r2_metrics.py`; Step 1 updates the README instead of writing it. Standard: provenance of cited evidence | d008 and this report cite their figures; keeping them costs only the README's update | Steps review |
 | 7 | [Step 4](#step-4--run-the-proxys-smoke-test) | The token check matches the baseline on `bikesharing-lakehouse`'s GetObject, PutObject and ListObjects and on both buckets' storage; `bikesharing-bronze`'s operations need not match. Standard: sampled metrics are not validated by exact equality | `bronze`'s operations differ from the baseline for the same window (F2); no check of this spike reads that bucket | Running step 4 |
 | 8 | [Step 6](#step-6--count-per-call-script) | A table's commits since its last checkpoint are `(version + 1) % 100`. Standard: Delta protocol, a checkpoint at version v holds the table's state through commit v | `deltalake` 1.6.6 checkpoints at versions 99, 199, …, so `version % 100` counts one commit less than an open replays, and differs from `cut_log.py`'s count | Running step 6 |
+| 9 | [Probe B](#b-count-per-call), [Step 7](#step-7--pass-1-the-latest-peak) | The copy's figures are read for a window of whole UTC minutes around each count, instead of the count alone in its UTC hour. Standard: a measurement window isolated from other activity; **refines #5** | The query filters by the minute (F5), and waiting for a clean hour only delays the run | Running step 7 |
 
 ### 2.4 File layout
 
@@ -202,7 +203,7 @@ spikes/t077-run-time-and-r2-reads/
 ├── phases-by-hour/          Baseline, unchanged
 │   └── run_by_hour.py       Phases per local hour; its output is the daily pattern per run
 ├── r2-operations-and-storage/
-│   └── r2_metrics.py        The baseline's GraphQL query, extended with optional bucket and hour arguments for Probe B's checks
+│   └── r2_metrics.py        The baseline's GraphQL query, extended with optional bucket and window arguments for Probe B's checks
 ├── checkpoint-cycle/        Probe A; its inputs are downloaded with rclone, as the README shows
 │   └── cycle_times.py       Places each run in its checkpoint cycle and compares discovery's time in the 4 runs before and after each checkpoint
 ├── count-per-call/          Probe B
@@ -242,7 +243,7 @@ Resource names follow [ADR-0035](../decisions/0035-cloud-resource-naming.md) for
 
 Each token is used by one side only: the copy token by Probe B, the production read token by Probe A's downloads and by the copy. Since the two remotes hold different credentials, the copy is not server-side: rclone downloads each object and uploads it to the copy's bucket, with free egress.
 
-All paths below are relative to `spikes/t077-run-time-and-r2-reads/`, and commands run from there unless they say otherwise. Times are UTC; R2's operation figures are read with `r2_metrics.py` for whole UTC hours, given as `YYYY-MM-DDTHH:00:00Z`, once the hour has ended (#5). Steps that put requests on the copy's bucket (2, 4, 7, 8) each run their parts in separate hours, as the step says, so that each hourly figure holds one part alone ([Probe B](#b-count-per-call)).
+All paths below are relative to `spikes/t077-run-time-and-r2-reads/`, and commands run from there unless they say otherwise. Times are UTC; R2's operation figures are read with `r2_metrics.py` for a window of whole UTC minutes, given as `YYYY-MM-DDTHH:MM:00Z`, once it has ended (#5, #9): production's for whole hours, and the copy's for each count's window ([Probe B](#b-count-per-call)).
 
 | Step | Title | Who | Gate | Files |
 |---|---|---|---|---|
@@ -440,16 +441,16 @@ The count per call at the version read by the last run of the last whole UTC hou
 
 #### Do
 
-1. In one UTC hour, run `uv run python count-per-call/cut_log.py --pass 1`.
-2. In the next UTC hour, run `uv run python count-per-call/count_calls.py --pass 1`, once.
-3. Once that hour has ended, run `r2_metrics.py` three times: `--bucket bikesharing-t077-lakehouse-copy` for the count's hour, and `--bucket bikesharing-lakehouse` and `--bucket bikesharing-bronze` for the production hour `cut_log.py` printed.
+1. Run `uv run python count-per-call/cut_log.py --pass 1`.
+2. At least 3 minutes after the cut ends, run `uv run python count-per-call/count_calls.py --pass 1`, once, noting its start and end.
+3. Once the count's window has ended, run `r2_metrics.py` three times: `--bucket bikesharing-t077-lakehouse-copy` for that window, and `--bucket bikesharing-lakehouse` and `--bucket bikesharing-bronze` for the production hour `cut_log.py` printed.
 
 #### Check
 
 Report the two outputs and the three queries' figures. Yes when all three hold:
 
 - each table's version before call 1 is the pass's version `cut_log.py` printed, and it printed 4 commits in the production hour;
-- the copy's total requests for the hour equal the lines of `pass-1-requests.jsonl`, one per request, setup and failed ones included, within ±0.5%;
+- the copy's total requests for the count's window equal the lines of `pass-1-requests.jsonl`, one per request, setup and failed ones included, within ±0.5%;
 - calls 1–8's GetObject, divided by production's GetObject in its hour ÷ 4, is ≥ 80%.
 
 ### Step 8 — Pass 2: the peak before it
@@ -465,16 +466,16 @@ The same count one checkpoint earlier, about one day before. The difference betw
 
 #### Do
 
-1. In a UTC hour after the one in which pass 1's count ran, run `uv run python count-per-call/cut_log.py --pass 2`.
-2. In the next UTC hour, run `uv run python count-per-call/count_calls.py --pass 2`, once.
-3. Once that hour has ended, run the copy's and `bikesharing-lakehouse`'s queries of Step 7 for pass 2's hours.
+1. After pass 1's count window has ended, run `uv run python count-per-call/cut_log.py --pass 2`.
+2. At least 3 minutes after the cut ends, run `uv run python count-per-call/count_calls.py --pass 2`, once, noting its start and end.
+3. Once the count's window has ended, run the copy's and `bikesharing-lakehouse`'s queries of Step 7 for pass 2's window and production hour.
 4. From both passes' `calls.csv` and production queries, work out Q2's two guides in [Exit criteria](#14-exit-criteria):
    - **time:** per pass, the share of the mapped calls' seconds taken by the calls that hold 80% of their GetObject, adding calls from the largest count down;
    - **growth:** per call, pass 1's GetObject minus pass 2's, and its total against production's GetObject per run in pass 1's hour minus pass 2's.
 
 #### Check
 
-Report the two outputs, the queries' figures and Do 4's two results. Yes when each table's version before call 1 is the pass's version, `cut_log.py` printed 4 commits in the production hour, and the copy's total requests for the hour equal the lines of `pass-2-requests.jsonl`, within ±0.5%.
+Report the two outputs, the queries' figures and Do 4's two results. Yes when each table's version before call 1 is the pass's version, `cut_log.py` printed 4 commits in the production hour, and the copy's total requests for the count's window equal the lines of `pass-2-requests.jsonl`, within ±0.5%.
 
 ### Step 9 — Download Probe A's inputs
 
@@ -597,6 +598,14 @@ Step 6 · 2026-11-26 · `count_calls.py`'s setup and 8 calls on a local lakehous
 - Call 5's replay merged the last run's 4 rows again: 0 inserted, 0 updated, and `station_stock` stayed at its version.
 - Call 6 recorded the 2 objects under `t077-probe/` keys and moved `processed_objects` one version up.
 - Consequence: in Probe B, call 5 writes no commit, while production's merge does. Call 8 opens `station_stock` with one commit fewer to replay than production, at the same version as call 5. `count_calls.py` moves a version only on a commit the proxy sees written.
+
+### F5. The operations query filters the copy's requests to the minute
+
+Step 7 · 2026-11-26 · `r2_metrics.py` on the copy's bucket, three windows around pass 1's first count, which started at 08:05:00 UTC and stopped in setup
+
+- Total requests: 0 from 08:00 to 08:05, 448 from 08:05 to 08:10 and 0 from 08:10 to 08:30.
+- The proxy had logged 406 of them. The missing 42 fit the requests whose client had gone before the proxy answered, which it did not record then; it records them now.
+- Consequence: a window of whole minutes isolates a count (#9).
 
 ## 5. Conclusion
 
