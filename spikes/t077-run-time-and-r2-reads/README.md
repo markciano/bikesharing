@@ -117,8 +117,11 @@ The checks after the baseline (count per call, checkpoint cycle) add these, set 
   uv run python count-per-call/count_calls.py --pass 1
   ```
 
-- **Output:** TODO(T077): filled by s019's steps 4–8.
-- **Run time:** the smoke and the metrics query take a few seconds each; both, the log cut and the count print their time at the end.
+- **Output (2026-11-26):** the figures are in [s019 › Findings](../../docs/spikes/s019-pipeline-run-time-r2-reads.md#4-findings).
+  - **Smoke:** the proxy and R2 both count 254 requests (F3).
+  - **Count:** calls 1–8 make 12,369 GetObject in pass 1 and 10,801 in pass 2, 100.2% and 100.0% of production's per run in each pass's hour (F6, F7, F10). Calls 2, 3, 4, 6 and 7 hold over 80% of them in both passes (F12), and only they grow from pass 2 to pass 1: 1,568 GetObject, against production's 1,545.5 per run (F13, F14).
+  - **Independent check:** in the count's window, R2 gives 1.4% fewer requests than the proxy in pass 1 and 0.25% more in pass 2 (F8, F11).
+- **Run time:** the metrics query takes about 1 s or less; the smoke's two table opens, about 4 s; pass 2's log cut, 24 s; each count, about 1.5 min. The scripts print their time at the end.
 
 ## Checkpoint cycle
 
