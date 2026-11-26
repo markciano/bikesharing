@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
-- Current: Step 4, the owner's smoke test of the proxy.
+- Current: Step 5, the log cut script. Before Step 7, review the 0.02% tolerance of the independent count: s010 › F14's 0.02% is for all requests together, its Class B differed by 0.2%, and s010 › #39 set ±0.5% on the total.
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -180,6 +180,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 4 | [Probe B](#b-count-per-call) | Each pass's version is the one read by the last run of the last whole UTC hour before the checkpoint's hour, and production is read for that hour. Standard: like-for-like comparison, one regime at a time | In the checkpoint's own hour, runs after the drop read about 2,000 GetObject less, which would lower production's mean per run by up to ~18% and let Q2's Gate pass on a map that does not account for 80% | Steps review |
 | 5 | [Probe B](#b-count-per-call) | Every R2 operation figure comes from the GraphQL Analytics API, through the baseline's `r2_metrics.py` extended with a bucket and an hour; counts match within 0.02%. Standard: reuse of a validated measurement tool ([s010 › Step 5](s010-storage-table-format.md#step-5--run-probe-a-and-verify-the-analysis)) | The dashboard is not exact and documents no breakdown per operation, while Q2's Gate needs GetObject | Steps review |
 | 6 | [File layout](#24-file-layout) | The baseline's four folders stay in the spike folder, unchanged except `r2_metrics.py`; Step 1 updates the README instead of writing it. Standard: provenance of cited evidence | d008 and this report cite their figures; keeping them costs only the README's update | Steps review |
+| 7 | [Step 4](#step-4--run-the-proxys-smoke-test) | The token check matches the baseline on `bikesharing-lakehouse`'s GetObject, PutObject and ListObjects and on both buckets' storage; `bikesharing-bronze`'s operations need not match. Standard: sampled metrics are not validated by exact equality | `bronze`'s operations differ from the baseline for the same window (F2); no check of this spike reads that bucket | Running step 4 |
 
 ### 2.4 File layout
 
@@ -350,7 +351,7 @@ Report: the number of lines of `keys.txt`, the result of `rclone check`, and the
 
 ### Step 4 — Run the proxy's smoke test
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Model:** —
 - **Gate:** the proxy's Class B total equals the copy's Class B from `r2_metrics.py` for that hour, within 0.02% → otherwise a client reaches R2 without the proxy: fix `proxy.py` (back to Step 3) before Step 5.
@@ -367,7 +368,7 @@ The cheapest test of Probe B's riskiest assumption: that the proxy sees every re
 
 #### Check
 
-Report the smoke output, whether Do 2 matched the baseline, and Do 3's output. Yes when Do 2 matches and the proxy's Class B total equals Do 3's within 0.02%.
+Report the smoke output, whether Do 2 matched the baseline, and Do 3's output. Yes when Do 2 matches the baseline on `bikesharing-lakehouse`'s GetObject, PutObject and ListObjects and on both buckets' storage, and the proxy's Class B total equals Do 3's within 0.02%. **#7**
 
 ### Step 5 — Log cut script
 
@@ -557,6 +558,36 @@ Step 2 · 2026-11-25 · `rclone copy` and `rclone check` output, `data/copy/keys
 - `rclone check` over the same list reported 0 differences at 22:03 UTC.
 - Requests on the copy's bucket so far: one listing in the hour 19:00Z, the copy in 20:00Z and the check in 22:00Z.
 - Consequence: the Gate passes; Probe B reads this copy, and Step 4's smoke test runs in an hour with no other requests on the copy's bucket.
+
+### F2. A later query of the baseline window returns other operation counts for `bikesharing-bronze`
+
+Step 4 · 2026-11-26 · `r2_metrics.py` with no arguments, compared with the [README's output](../../spikes/t077-run-time-and-r2-reads/README.md#r2-operations-and-storage) of 2026-11-23
+
+| `bikesharing-bronze` | 2026-11-23 | 2026-11-26 | Difference |
+|---|---|---|---|
+| GetObject | 161,760 | 163,526 | +1.1% |
+| PutObject | 12,420 | 11,754 | −5.4% |
+| ListObjects | 1,040 | 1,026 | −1.3% |
+| Sum of the three | 175,220 | 176,306 | +0.6% |
+
+- The 2026-11-26 figures include 4 GetObject and 1 PutObject with status `internalError`.
+- `bikesharing-lakehouse`'s GetObject (1,263,034), PutObject (993) and ListObjects (3,783) and both buckets' storage figures are identical in both queries.
+- Since the baseline, `r2_metrics.py` has gained its arguments and totals; the GraphQL query's text is unchanged, and with no arguments it takes the same buckets and window.
+- Not confirmed: the cause. R2's operation metrics are sampled ([s010 › F14](s010-storage-table-format.md#4-findings)), which did not study how a window's counts change between queries.
+- Consequence: the token check passes on the figures that match (#7).
+
+### F3. The proxy sees every request that opening both tables makes on R2
+
+Step 4 · 2026-11-26 · `proxy.py --smoke`, started at 06:50:55 UTC, and `r2_metrics.py` on `bikesharing-t077-lakehouse-copy` from 06:00 to 07:00 UTC
+
+| Source | GetObject | Other Class B | Class B | Class A | Total |
+|---|---|---|---|---|---|
+| Proxy | 252 | 0 | 252 | 2 | 254 |
+| R2 metrics | 252 | 0 | 252 | 2 (ListObjects) | 254 |
+
+- `silver/station_stock/` and `control/processed_objects/` opened at version 756, with 126 GetObject and 1 Class A request each and no failed request, in 4.3 s.
+- The metrics report 3,081 objects in the bucket, as many as the snapshot lists (F1), with a payload of 0.221 GB; F1 gives 227 MB, and the difference was not examined.
+- Consequence: the Gate passes with no difference in any count; the scripts of Probe B can be built on the proxy.
 
 ## 5. Conclusion
 
