@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
-- Current: Step 6, the count-per-call script. Before Step 7, review the 0.02% tolerance of the independent count: s010 › F14's 0.02% is for all requests together, its Class B differed by 0.2%, and s010 › #39 set ±0.5% on the total.
+- Current: Step 7, the owner's pass 1. Before it, review the 0.02% tolerance of the independent count: s010 › F14's 0.02% is for all requests together, its Class B differed by 0.2%, and s010 › #39 set ±0.5% on the total.
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -181,6 +181,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 5 | [Probe B](#b-count-per-call) | Every R2 operation figure comes from the GraphQL Analytics API, through the baseline's `r2_metrics.py` extended with a bucket and an hour; counts match within 0.02%. Standard: reuse of a validated measurement tool ([s010 › Step 5](s010-storage-table-format.md#step-5--run-probe-a-and-verify-the-analysis)) | The dashboard is not exact and documents no breakdown per operation, while Q2's Gate needs GetObject | Steps review |
 | 6 | [File layout](#24-file-layout) | The baseline's four folders stay in the spike folder, unchanged except `r2_metrics.py`; Step 1 updates the README instead of writing it. Standard: provenance of cited evidence | d008 and this report cite their figures; keeping them costs only the README's update | Steps review |
 | 7 | [Step 4](#step-4--run-the-proxys-smoke-test) | The token check matches the baseline on `bikesharing-lakehouse`'s GetObject, PutObject and ListObjects and on both buckets' storage; `bikesharing-bronze`'s operations need not match. Standard: sampled metrics are not validated by exact equality | `bronze`'s operations differ from the baseline for the same window (F2); no check of this spike reads that bucket | Running step 4 |
+| 8 | [Step 6](#step-6--count-per-call-script) | A table's commits since its last checkpoint are `(version + 1) % 100`. Standard: Delta protocol, a checkpoint at version v holds the table's state through commit v | `deltalake` 1.6.6 checkpoints at versions 99, 199, …, so `version % 100` counts one commit less than an open replays, and differs from `cut_log.py`'s count | Running step 6 |
 
 ### 2.4 File layout
 
@@ -400,7 +401,7 @@ Report the smoke output, whether Do 2 matched the baseline, and Do 3's output. Y
 
 ### Step 6 — Count-per-call script
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: step 6 - add count per call to run time spike`
 - **Model:** opus · medium
@@ -419,7 +420,7 @@ Report the smoke output, whether Do 2 matched the baseline, and Do 3's output. Y
 
 1. Write `count_calls.py --pass 1|2`. Setup, labelled `setup`: read the copy's last run, meaning its `run_id` in `processed_objects`, its objects and their capture range, and that run's `station_stock` rows with their local dates.
 2. Run the calls in the map's order, each labelled with its number and name, with the run's arguments: `capture_history` with `since` 7 days before the batch's first capture; `merge_station_stock` with the replayed rows, capture range and local dates; `record_processed` with one `ProcessedObject` per object of that run under the key `t077-probe/<n>`; `latest_processed` and `latest_captures` as in `_publish`.
-3. Write `output/count-per-call/pass-<n>-requests.jsonl` and `pass-<n>-calls.csv`, with one row per call and one for setup: GetObject, other Class B, Class A, seconds, the table's version before the call and its commits since the last checkpoint (`version % 100`, since `deltalake` 1.6.6 checkpoints every 100 commits). Print the table with the totals of calls 1–8 and of all rows.
+3. Write `output/count-per-call/pass-<n>-requests.jsonl` and `pass-<n>-calls.csv`, with one row per call and one for setup: GetObject, other Class B, Class A, seconds, the table's version before the call and its commits since the last checkpoint (`(version + 1) % 100`, since `deltalake` 1.6.6 checkpoints at versions 99, 199, …). Print the table with the totals of calls 1–8 and of all rows. **#8**
 4. Update `README.md` with the pass command, its outputs and run time.
 
 #### Check
@@ -588,6 +589,14 @@ Step 4 · 2026-11-26 · `proxy.py --smoke`, started at 06:50:55 UTC, and `r2_met
 - `silver/station_stock/` and `control/processed_objects/` opened at version 756, with 126 GetObject and 1 Class A request each and no failed request, in 4.3 s.
 - The metrics report 3,081 objects in the bucket, as many as the snapshot lists (F1), with a payload of 0.221 GB; F1 gives 227 MB, and the difference was not examined.
 - Consequence: the Gate passes with no difference in any count; the scripts of Probe B can be built on the proxy.
+
+### F4. A MERGE that inserts no row writes no commit
+
+Step 6 · 2026-11-26 · `count_calls.py`'s setup and 8 calls on a local lakehouse with two runs, `deltalake` 1.6.6, no proxy
+
+- Call 5's replay merged the last run's 4 rows again: 0 inserted, 0 updated, and `station_stock` stayed at its version.
+- Call 6 recorded the 2 objects under `t077-probe/` keys and moved `processed_objects` one version up.
+- Consequence: in Probe B, call 5 writes no commit, while production's merge does. Call 8 opens `station_stock` with one commit fewer to replay than production, at the same version as call 5. `count_calls.py` moves a version only on a commit the proxy sees written.
 
 ## 5. Conclusion
 
