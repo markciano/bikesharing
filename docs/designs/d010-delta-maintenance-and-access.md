@@ -19,8 +19,8 @@ Phase: the blocks and reviews completed. A document-only task shows only Spec ·
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
 - State: Draft 📝
-- Phase: [ ] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Spec › Approval: Requirements R1–R17 and the Done when are reviewed and fixed; remove Open questions, run the approval checks and ask for the Spec approval. Parked for the Plan: how the common table access is enforced (module, and a possible rule in `.claude/rules/`); rewriting [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job; the owner leans to partitioning `processed_objects` like bronze's keys (system, feed, date); when the daily maintenance runs, and how retention's deletion, vacuum and compaction share it; `delta.checkpointInterval` per table, between 5 and 10, from each table's opens per run
+- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Current: Plan › list of concerns. Parked for the Plan: how the common table access is enforced (module, and a possible rule in `.claude/rules/`); rewriting [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job; the owner leans to partitioning `processed_objects` like bronze's keys (system, feed, date); when the daily maintenance runs, and how retention's deletion, vacuum and compaction share it; `delta.checkpointInterval` per table, between 5 and 10, from each table's opens per run
 
 ## 1. Spec — what and why
 
@@ -163,14 +163,13 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R7** If a check of the migration's verification fails, then the migration shall report which check failed. (D2)
 - **R8** The migration shall rewrite only the tables whose partitioning changes. (D2)
 - **R9** The migration shall record its code version in the metadata of its Delta commit. (D5, TH3)
-- **R10** While a system and feed has processed objects, the pipeline shall list that system and feed's bronze from its latest processed capture minus 15 min. (D3)
-- **R11** While a system and feed has no processed object, the pipeline shall list that system and feed's bronze from its start. (D3)
+- **R10** When a run lists bronze for a system and feed with processed objects, the pipeline shall list it from the capture instant in the key of that system and feed's latest processed object minus 15 min, and from no earlier key. (D3)
+- **R11** When a run lists bronze for a system and feed with no processed object, the pipeline shall list it from its start. (D3)
 - **R12** When the daily maintenance runs, the pipeline shall delete every partition of `station_stock` whose local month is before the current local month minus 12 months. (D4, TH2)
 - **R13** The pipeline shall not delete any partition of `station_stock` whose local month is the current one or one of the 12 before it. (D4, TH2)
 - **R14** While no partition of `station_stock` is outside the retention window, the daily maintenance shall write no commit for retention. (D4)
-- **R15** The pipeline's scheduled runs shall not delete rows of `processed_objects`. (D4)
+- **R15** When the daily maintenance applies retention, the pipeline shall delete no rows of `processed_objects`. (D4)
 - **R16** When a batch is processed again, the pipeline shall add no rows to `station_stock` or `processed_objects`. (D1)
-- **R17** While a system and feed has processed objects, the pipeline shall not list that system and feed's whole bronze prefix. (D3)
 
 ### 1.4 Done when
 
@@ -190,13 +189,6 @@ If either fails, `capture_history`'s pruning is checked first.
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
 - Moving Modal's region ([s019 › P8](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)): its steps are written in this design and not run in it — T080
-
-### 1.6 Open questions
-
-<!-- Optional. The decisions still to take about the what, in dependency order. Each one closes as a decision in Decided at framing and leaves the table, so it is empty at Spec approval. Questions about the how are Plan decisions. -->
-
-| OQ | Question | Depends on | Notes |
-|---|---|---|---|
 
 ## 2. Plan — how
 
