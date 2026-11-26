@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
-- Current: Step 9, the owner's download of Probe A's inputs. Probe B is complete (F6–F14).
+- Current: Step 10, the checkpoint cycle script. Probe A's inputs are downloaded (step 9); Probe B is complete (F6–F14).
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -480,7 +480,7 @@ Report the two outputs, the queries' figures and Do 4's two results. Yes when ea
 
 ### Step 9 — Download Probe A's inputs
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Model:** —
 - **Gate:** —
