@@ -69,11 +69,25 @@ Options rejected:
 
 #### D2. Existing data moves to the new layout in a one-off migration
 
-A table whose partitioning changes, such as `processed_objects`, is rewritten with all its current rows in the new layout, following Delta's way of changing a table's partitioning (an overwrite with the new partition columns). The owner runs it once, with the schedule paused, so that no run overlaps it ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)). Every row keeps its run ID and code version, the lineage of [ADR-0043](../decisions/0043-lineage-at-four-levels.md). When the schedule resumes, catch-up processes what bronze received during the pause. A table that keeps its partitioning, such as `station_stock`, is not rewritten.
+A table whose partitioning changes, such as `processed_objects`, is rewritten with all its current rows in the new layout, following Delta's way of changing a table's partitioning (an overwrite with the new partition columns). Every row keeps its run ID and code version, the lineage of [ADR-0043](../decisions/0043-lineage-at-four-levels.md). A table that keeps its partitioning, such as `station_stock`, is not rewritten.
 
-The migration verifies its result before it reports success, following source-to-target reconciliation: the rewritten table and the version before it hold the same number of rows, the same set of bronze object keys in their rows, and the same run ID and code version on each row; their data files differ by design. If they differ, the migration reports which check failed, and the owner restores the version before it with Delta's time travel, fixes the cause and runs the migration again; the schedule resumes only after a migration that passes.
+The owner runs the change once, in this order, so that no run overlaps the migration ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)) and the deployed code never meets a table in the other layout:
 
-The owner runs the change in this order, so that the deployed code never meets a table in the other layout: pause the schedule, run the migration and its verification, then deploy the new code, which resumes the schedule.
+1. Pause the schedule.
+2. Run the migration and its verification.
+3. Deploy the new code, which resumes the schedule; catch-up then processes what bronze received during the pause.
+
+The verification follows source-to-target reconciliation: the rewritten table and the version before it hold
+
+- the same number of rows;
+- the same set of bronze object keys in their rows;
+- the same run ID and code version on each row.
+
+Their data files differ by design. If a check fails, the migration reports which one, and the schedule stays paused while the owner:
+
+1. Restores the version before the migration with Delta's time travel.
+2. Fixes the cause.
+3. Runs the migration again.
 
 Options rejected:
 
@@ -81,7 +95,12 @@ Options rejected:
 
 #### D3. Discovery keeps a watermark per system and feed
 
-Each feed lists bronze from its own latest processed capture minus the lookback, following a watermark with allowed lateness kept per stream, and the daily full sweep is removed. A feed with nothing processed lists bronze from its start and enters by catch-up in bounded batches ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)), so a new slice's feed starts with no change to the others. The lookback is the allowed lateness, fixed at 15 min, the maximum wall time of a Cloudflare cron invocation ([Workers › Limits](https://developers.cloudflare.com/workers/platform/limits/)): capture writes each object within the pass its key names, so no object arrives later than that, whether passes overlap or not. The keys it lists again fall in the same list page, so it adds no requests. A pause of the pipeline, such as a Modal outage, needs no recovery: the watermarks do not move while no run happens, and the next run catches up from them. Nothing writes an older key to bronze: capture is its only writer and never overwrites, and the bucket lock prevents deletions that a restore would refill, so no on-demand rediscovery of a window is built.
+Each feed lists bronze from its own latest processed capture minus the lookback, following a watermark with allowed lateness kept per stream, and the daily full sweep is removed.
+
+- **New feed:** a feed with nothing processed lists bronze from its start and enters by catch-up in bounded batches ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)), so a new slice's feed starts with no change to the others.
+- **Lookback:** 15 min, the maximum wall time of a Cloudflare cron invocation ([Workers › Limits](https://developers.cloudflare.com/workers/platform/limits/)). Capture writes each object within the pass its key names, so no object arrives later than that, whether passes overlap or not. The keys it lists again fall in the same list page, so it adds no requests.
+- **Pipeline pause,** such as a Modal outage: no recovery is needed. The watermarks do not move while no run happens, and the next run catches up from them.
+- **Older keys:** nothing writes them to bronze. Capture is its only writer and never overwrites, and the bucket lock prevents deletions that a restore would refill, so no on-demand rediscovery of a window is built.
 
 - **What would change it:**
   - a source that delivers its data later than a capture pass → a completeness check that compares bronze with `processed_objects` per closed day;
@@ -94,9 +113,13 @@ Options rejected:
 
 #### D4. Silver keeps the current local month and the 12 whole months before it
 
-`station_stock` keeps the current local calendar month and the 12 whole local months before it, following partition-based retention aligned to the calendar, the rolling window of [ADR-0021](../decisions/0021-retention-per-layer.md). Its partitions are local dates ([ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md)), the calendar gold cuts by, so the window removes whole partitions and its edge is the first day gold can ask for. It always holds at least 365 days, so it covers a 12-month gold window whether counted in calendar months or in days. On the first local day of a month, the oldest month leaves the window; e.g. on 2026-12-01 November 2025 leaves. Retention works on state, not on the date, following idempotent reconciliation to a desired state: each daily maintenance deletes every partition outside the window, so a day it fails is caught up by the next one that runs, and on a day with nothing outside the window it deletes nothing and writes no commit.
+`station_stock` keeps the current local calendar month and the 12 whole local months before it, following partition-based retention aligned to the calendar, the rolling window of [ADR-0021](../decisions/0021-retention-per-layer.md).
 
-`processed_objects` is control state, not a layer's data, and is kept whole: without its rows, a feed that stopped capturing more than 12 months ago would have nothing processed and list bronze from its start (D3), bringing back into silver what retention removed. Its rows are small, and their reads stay bounded by partition (D1).
+- **Calendar:** its partitions are local dates ([ADR-0041](../decisions/0041-utc-timestamps-local-calendar-keys.md)), the calendar gold cuts by, so the window removes whole partitions and its edge is the first day gold can ask for.
+- **Coverage:** it always holds at least 365 days, so it covers a 12-month gold window whether counted in calendar months or in days.
+- **When a month leaves:** on the first local day of each month, the oldest month leaves the window; e.g. on 2026-12-01 November 2025 leaves.
+- **On state, not on the date,** following idempotent reconciliation to a desired state: each daily maintenance deletes every partition outside the window, so a day it fails is caught up by the next one that runs, and a day with nothing outside the window deletes nothing and writes no commit.
+- **`processed_objects` is kept whole:** it is control state, not a layer's data. Without its rows, a feed that stopped capturing more than 12 months ago would have nothing processed and list bronze from its start (D3), bringing back into silver what retention removed. Its rows are small, and their reads stay bounded by partition (D1).
 
 Options rejected:
 
