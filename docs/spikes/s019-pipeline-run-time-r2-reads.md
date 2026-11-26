@@ -1,35 +1,19 @@
-<!--
-Spike doc template. A spike is a time-boxed investigation of one task: it reaches the decisions a task needs, by analysis where possible and with evidence only where an unknown would change the choice. Its output is knowledge (decisions, answers, a verdict, inputs for designs and ADRs); its code is throwaway and lives in spikes/<name>/.
-Blocks: Questions (what we need to know), Method (how we find out), Steps, Findings (filled during execution), Conclusion (filled after the last step).
-Sections marked Optional are kept only when they apply.
--->
-
 # Spike: Pipeline run time and R2 reads
 
 - **Task:** T077
-- **ADRs:** [ADR-0019](../decisions/0019-own-lakehouse-on-cloudflare-r2.md), [ADR-0022](../decisions/0022-delta-lake-for-silver-and-gold.md), [ADR-0024](../decisions/0024-duckdb-as-processing-engine.md), [ADR-0027](../decisions/0027-modal-as-execution-platform.md), [ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)
+- **ADRs:** [ADR-0019](../decisions/0019-own-lakehouse-on-cloudflare-r2.md), [ADR-0022](../decisions/0022-delta-lake-for-silver-and-gold.md), [ADR-0024](../decisions/0024-duckdb-as-processing-engine.md), [ADR-0027](../decisions/0027-modal-as-execution-platform.md), [ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md), [ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)
 - **Code:** [`spikes/t077-run-time-and-r2-reads/`](../../spikes/t077-run-time-and-r2-reads/)
 
 ## Status
 
-<!-- State: Draft 📝 · Ready 🎬 · Running 🔄 · Concluded ✅.
-Phase: the blocks and the review completed.
-Started / Finished: UTC dates of the first step executed and of the Conclusion.
-Current: where work resumes, with only the context the next session needs: the step being executed, or the section of the report; — when concluded. -->
-
-- State: Running 🔄
-- Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
-- Started: 2026-11-25 · Finished: —
-- Current: Conclusion › 5.6 Records, the ADR on the Delta pattern; 5.1–5.5 are written. Then the tear-down (copy bucket `bikesharing-t077-lakehouse-copy`, tokens `bikesharing-t077-copy` and `bikesharing-t077-prod-read`, run by the owner) and the close.
-  - **ADR-0052, Proposed:** the decision in one sentence: every pipeline Delta table is opened once per run, partitioned by the range its readers filter by, read and merged stating that range, compacted without merging files within a range a reader prunes by, and vacuumed within its history. Only the principles go to the ADR; how each table applies them is the Verdict's fix and P1–P6.
-  - **Options to weigh:** keep the current access (12,369 GetObject per run and growing, F6, F14); maintenance as a job apart from the run (T072's earlier premise; conflicts with the MERGE and misses a catch-up); no partitions and one compacted file (bounds GetObject, not the bytes read).
-  - The official documentation is checked ([Sources](#6-sources)).
+- State: Concluded ✅
+- Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [x] Conclusion
+- Started: 2026-11-25 · Finished: 2026-11-26
+- Current: —
 
 ## 1. Questions — what we need to know
 
 ### 1.1 Context
-
-<!-- 2–4 sentences: the decisions this spike takes, which of them depend on evidence and why, and the spikes or designs it builds on. -->
 
 The pipeline's scheduled runs get slower every day and read far more objects from R2 than they process, as measured at d008's close ([d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close)): about 6,600 GetObject per run on `bikesharing-lakehouse`, a bucket of about 2,250 objects. This spike finds the causes and chooses the fix for each one, which is built outside the spike (D1). Reading the code and `deltalake`'s documentation already explains most of it; evidence is sought only where the size of each cause would change the fix.
 
@@ -84,16 +68,7 @@ Both buckets are in Western Europe (WEUR) and the pipeline runs on Modal in the 
 - **Rejected:** moving Modal to Europe now. It pays the surcharge before knowing it is needed and hides part of the growth that Q1 must measure.
 - **Rejected:** measuring latencies in the spike. It needs the spike's code deployed on Modal, while the estimate settles the likely case and a trial measures the real workload with a reversible configuration change.
 
-<!-- In this order, so the reader finds what matters first:
-1. The decision and why, in one short paragraph. If it depends on a Q, name it and what happens if its Gate fails.
-2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
-3. The options rejected and how robust the result is.
-4. The evaluation behind it: the table or weighted matrix (needs, cuts, anchors and scores) if one was used. A security decision lists its threats in a table: `| # | Threat (STRIDE) | Impact | Control | Requirement |`, with IDs `TH1`, `TH2`… per document. -->
-
 ### 1.3 Questions
-
-<!-- The main question, answered by the Verdict. Then Q1..Qn, each answerable with evidence.
-"Observe only": things to note during the run with no dedicated effort. -->
 
 Main question: what makes the pipeline's run time and its lakehouse reads per run grow, and which fix keeps both bounded as the processed objects accumulate, in steady runs and in a new feed's catch-up? A catch-up is answered by arithmetic: the batches it runs within the limit of [ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md), times the cost of one batch (calls 4–6), counted in Q2. **#1**
 
@@ -104,10 +79,6 @@ Main question: what makes the pipeline's run time and its lakehouse reads per ru
   - the pipeline's own GetObject on `bikesharing-bronze` per run, against the objects it downloads, about 65: bounded from above by the bucket's GetObject in pass 1's production hour ÷ 4, read in Step 7.
 
 ### 1.4 Exit criteria
-
-<!-- Fixed before the first run; a later change is recorded in the Decision log.
-Derived from the standard that applies to this kind of question, named in the first line: e.g. DAMA data quality dimensions for a data source, a weighted decision matrix for a technology choice.
-Each criterion is measurable and says whether it is a hard cut or a guide. The timebox says what ends the run. State whether one variant meeting the criteria is enough. -->
 
 - **Standard:** drill-down analysis with workload characterization (Brendan Gregg, *Systems Performance*). A cause is found when it accounts for most of the measured effect, following the Pareto principle: the dominant causes are sought, not 100%.
 - **Timebox:** 1 working day, over at most 3 run sessions. It ends when Q1 and Q2 are answered, or when Q2's Gate fails.
@@ -125,15 +96,11 @@ If Q2's Gate fails, the share not accounted for is a cause still to find: the De
 
 ### 1.5 Out of scope
 
-<!-- Optional. What someone could expect this spike to answer and it will not, each item pointing to the task that covers it. -->
-
 - Which readers other than the pipeline account for `bikesharing-bronze`'s GetObject: they do not slow the runs, and the cost model needs them per bucket — no task: the cost recalibration of [d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close) is postponed
 
 ## 2. Method — how we find out
 
 ### 2.1 Approach
-
-<!-- The variants, options or probes compared, and what each one tells that the others do not. -->
 
 R2's hourly sawtooth ([Context](#11-context)) already answers Q1 in count: the reads drop at every checkpoint, an hour later each day. It does not answer Q1 in time, nor which calls make up the reads that never fall back. Two probes cover the rest.
 
@@ -168,12 +135,6 @@ Every operation figure, of production and of the copy, comes from Cloudflare's G
 
 ### 2.3 Decision log
 
-<!-- It logs decisions about the method, before and during the run, including changes of course. Oldest first.
-Entries follow .claude/rules/docs/decision-log.md (log only, change links).
-- Column Applies to: anchor link(s) to the section where the decision is applied, named in one or two words (e.g. Q1, Probe A, File layout).
-- Column Decided at: the Status phase where it was decided (Method, Steps), `<phase> review` when decided while reviewing that phase, or `Running step N` when decided during the run.
--->
-
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
 | 1 | [Questions](#13-questions), [Exit criteria](#14-exit-criteria) | Questions reopened: the observed window starts on 2026-11-22 00:00 UTC, after the first feed's catch-up, and the main question also covers a new feed's catch-up, by arithmetic on the cost per batch counted in Q2. Standard: workload characterization, one regime at a time | The catch-up's runs read up to 22,000 GetObject each and would skew Q2's Gate and growth; more feeds are still to come, each with its own catch-up | Method |
@@ -188,8 +149,6 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 10 | [Probe B](#b-count-per-call), [Step 7](#step-7--pass-1-the-latest-peak) | The independent count fails only when R2's total exceeds the proxy's by more than 0.5%. Standard: one-sided tolerance, on the side of the fault the check looks for; **refines #5** | Set after seeing pass 1, which ±0.5% fails at −1.40% (F8): a client bypassing the proxy only raises R2's total | Running step 7 |
 
 ### 2.4 File layout
-
-<!-- Every file and folder the spike creates, as a tree with its purpose in one line. Captured data and outputs are marked as ignored by Git. The README is always included. -->
 
 ```text
 spikes/t077-run-time-and-r2-reads/
@@ -222,16 +181,8 @@ Probe A has no download script: its inputs come from `rclone` commands in the RE
 The four baseline folders hold the first measurements, taken at T060.1's close, which [d008 › Known gaps at close](../designs/d008-pipeline-platform-and-walking-skeleton.md#42-known-gaps-at-close) and this report's Context cite. They keep their scripts, commands and README sections; only `r2_metrics.py` changes (#5). **#6**
 
 ## 3. Steps
-<!-- Each step is one reviewable result, touching at most 2–3 files.
-- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- Commit: only in a step that changes committed files: the proposed message, following the Git conventions in CLAUDE.md.
-- Model: the model and effort the step's session runs with (e.g. sonnet · medium), or — when Who is Owner.
-- Gate: optional. <condition> → <consequence if it fails: variants or steps dropped or re-decided>. -->
 
 ### 3.1 Prerequisites
-
-<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
 Resource names follow [ADR-0035](../decisions/0035-cloud-resource-naming.md) for a temporary resource; all of them are deleted when T077 closes.
 
@@ -552,8 +503,6 @@ Report `checkpoints.csv` and the two hand checks. Yes when the runs of Do 2 are 
 
 ## 4. Findings
 
-<!-- Filled during the run, in the step that produces the evidence. One fact per finding: what was observed, the evidence (figures, tables) and its consequence for the spike. Numbering is never reused. An earlier finding is not rewritten to fit a later result; the later one says which finding it corrects. -->
-
 ### F1. The copy's bucket holds the listed snapshot of both tables, identical to production
 
 Step 2 · 2026-11-25 · `rclone copy` and `rclone check` output, `data/copy/keys.txt`, `data/copy/delta-log.txt`
@@ -749,8 +698,6 @@ Conclusion · 2026-11-26 · the events of the production run started at 07:15:07
 
 ## 5. Conclusion
 
-<!-- Filled after the last step. Covers only the observed window. -->
-
 Observed window: 2026-11-22 00:00 to 2026-11-26 09:15 UTC for Probe A; Probe B at the two latest peaks, the versions read at 2026-11-24 03:00 and 2026-11-25 04:00 UTC. It does not cover a feed's catch-up, answered by arithmetic in the Verdict, nor the daily pattern per operation.
 
 ### 5.1 Answers
@@ -760,8 +707,6 @@ Observed window: 2026-11-22 00:00 to 2026-11-26 09:15 UTC for Probe A; Probe B a
 
 ### 5.2 Exit criteria
 
-<!-- One result per criterion and variant. -->
-
 | Criterion | Kind | Result | Findings |
 |---|---|---|---|
 | **Q2, reads:** GetObject counted in the 8 calls, against production's per run | Hard cut (Gate), ≥ 80% | **Pass:** 100.2% in pass 1, 100.0% in pass 2 | F7, F10 |
@@ -770,8 +715,6 @@ Observed window: 2026-11-22 00:00 to 2026-11-26 09:15 UTC for Probe A; Probe B a
 | **Q1, checkpoint cycle:** discovery's time, 4 runs after each checkpoint against 4 before | Guide, a drop of 20% or more at every checkpoint | **Not met:** no checkpoint reaches it; the time rises at four of the five | F15 |
 
 ### 5.3 Verdict
-
-<!-- The answer to the main question in 2–3 sentences. -->
 
 The lakehouse reads per run grow because the pipeline reads its control table in full, again and again, while that table only accumulates small files. A Delta maintenance and access pattern for every pipeline table bounds them, in steady runs and in a catch-up.
 
@@ -804,14 +747,10 @@ The lakehouse reads per run grow because the pipeline reads its control table in
 
 ### 5.4 Not verified
 
-<!-- What the evidence does not cover, each with its risk and mitigation. "None" is valid. -->
-
 - **The run time's daily pattern** (up to twice as slow from 16:00 to 23:00 Madrid time, US Eastern business hours) has two candidate causes not told apart: load on Modal's US infrastructure or on the transatlantic network, or `station_stock`'s active partition, largest by evening and read in full by `deltalake` 1.6.6's MERGE. Nor is it known why discovery's time rises after four of the five checkpoints (F15) — a cause outside the lakehouse's reads stays after the fix — with `deltalake` 1.7.0 the partition no longer weighs, so a pattern left after the fix is external, and D2's rule applies to it
 - **Why `capture_history` skips about 23 files fewer in pass 1 than in pass 2** (F13: +368 GetObject against +300 for a full read), although its 7-day window only moves forward: the bound `until` depends on the replayed run, the files may not cost 3 GetObject each, or the reader may prune by Parquet footers instead of the Delta log's statistics — its bound prunes less than designed — if P7's reads are not met after the fix, its pruning is checked first
 
 ### 5.5 Production inputs
-
-<!-- Optional. What a later task must take into account when it builds, from any part of the spike: done when that task runs. Each one has a Destination: the `TODO(TNNN)` marker (CLAUDE.md › Pending items), or discarded with a reason. -->
 
 | P | Input | Origin | Destination |
 |---|---|---|---|
@@ -828,17 +767,13 @@ The lakehouse reads per run grow because the pipeline reads its control table in
 
 ### 5.6 Records
 
-<!-- Documents this spike updates before it closes: ADRs from Decided at framing (each in its own commit), architecture, requirements, source cards and new tasks agreed with the owner. A decision that updates no document has no row. Commit: "Done", or "Pending" until delivered; the spike closes when every row is Done. Production inputs are not repeated here. -->
-
 | Output | From | Destination | Commit |
 |---|---|---|---|
-| ADR on the Delta maintenance and access pattern for the pipeline's tables: the control table stays in Delta; every table is opened once per run, partitioned by the range its readers filter by, read and merged stating that range, compacted inside the run without merging files within a range a reader prunes by, and vacuumed within its history | Verdict | `docs/decisions/` | Pending |
+| ADR on the Delta maintenance and access pattern for the pipeline's tables: the control table stays in Delta; every table is opened once per run, partitioned by the range its readers filter by, read and merged stating that range, compacted inside the run without merging files within a range a reader prunes by, and vacuumed within its history | Verdict | [ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md) | Done |
 | T072 rewritten as the fix's task, blocked by T077 | Verdict | Issue #86 | Done |
 | T077's Done when reduced to what this spike delivers | Verdict | Issue #101 | Done |
 
 ## 6. Sources
-
-<!-- Optional. Earlier spikes, benchmarks and documentation used. -->
 
 - `deltalake` 1.6.6's source, at the tag `python-v1.6.6` of [delta-io/delta-rs](https://github.com/delta-io/delta-rs/tree/python-v1.6.6):
   - checkpoints every 100 commits by default: `crates/core/src/table/config.rs` and `crates/core/src/kernel/transaction/mod.rs`;
