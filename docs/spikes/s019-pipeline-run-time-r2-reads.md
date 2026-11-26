@@ -20,7 +20,7 @@ Current: where work resumes, with only the context the next session needs: the s
 - State: Running 🔄
 - Phase: [x] Questions · [x] Method · [x] Steps · [x] Steps review · [ ] Conclusion
 - Started: 2026-11-25 · Finished: —
-- Current: Step 11, the owner's run and hand check of the checkpoint cycle. Probe B is complete (F6–F14).
+- Current: Conclusion; every step is done. Probe A's result is F15 and Probe B's F6–F14.
 - Parked for the Conclusion: whether the control table stays in Delta; which full reads of `processed_objects` can be bounded to a recent window (late or out-of-order objects, a feed's catch-up, discovery's `full_sweep`); and what Delta maintenance (compaction, checkpoint interval) fixes versus a code change; all among the fix's candidates.
 
 ## 1. Questions — what we need to know
@@ -529,7 +529,7 @@ Report the number of `.jsonl` files under `data/logs/` per date folder and the l
 
 ### Step 11 — Run and hand-check the checkpoint cycle
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Model:** —
 - **Gate:** —
@@ -710,6 +710,22 @@ Step 8 · 2026-11-26 · F7, F10 and F13
 - Calls 1–8 grow by 1,568 between the two passes: 101.5% of production's growth.
 - Consequence: Q2's growth guide (same sign and order of magnitude) is met.
 - The run replayed in F6 recorded 26 objects. How many objects each of the hour's runs downloads was not read.
+
+### F15. Discovery's time drops by 20% or more at none of the window's 5 checkpoints
+
+Step 11 · 2026-11-26 · `cycle_times.py` over the 424 runs from 00:00 UTC on 2026-11-22 to 09:15 UTC on 2026-11-26, all with a discovery time
+
+| Checkpoint of `processed_objects` | Written (UTC) | Mean of the 4 runs before (s) | Mean of the 4 runs after (s) | Change in discovery's time |
+|---|---|---|---|---|
+| 399 | 2026-11-22 03:17:08 | 24.372 | 35.093 | +44.0% |
+| 499 | 2026-11-23 04:16:02 | 21.501 | 35.587 | +65.5% |
+| 599 | 2026-11-24 04:45:54 | 33.565 | 51.637 | +53.8% |
+| 699 | 2026-11-25 05:48:40 | 49.055 | 41.243 | −15.9% |
+| 799 | 2026-11-26 06:47:04 | 53.836 | 72.965 | +35.5% |
+
+- The change is the mean after against the mean before; `checkpoints.csv` gives it as a drop, with the opposite sign. Discovery's time rises at four checkpoints and drops at one.
+- Hand check on checkpoint 799: its `LastModified` splits the runs as the script does, the commits since the last checkpoint going from 99 to 0 there, and the 8 runs' discovery times give both means. For the run started at 06:45:09, the gap between the two events in its log object is 55.251 s, as in `runs.csv`.
+- Consequence: Q1's checkpoint cycle guide (a drop of 20% or more at every checkpoint) is not met.
 
 ## 5. Conclusion
 
