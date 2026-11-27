@@ -838,6 +838,267 @@ bash pipeline/scripts/check-pipeline.sh
 
 Yes if it exits 0.
 
+### Step 5 — A run opens each table once
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `refactor: d010.s5 open each Delta table once per run`
+- **R:** R1
+- **Model:** `opus · medium`
+- **Review:** `no`
+
+#### Scope
+
+- `pipeline/src/bikesharing/shell/delta.py`:
+  - `Tables`, the run's handle on each table;
+  - `ensure_tables` returns `Tables`, opening each table once after creating any missing one;
+  - every call of a run takes `tables` in place of `lakehouse`, with its other parameters unchanged until Steps 6 and 8;
+  - a handle is refreshed after the module's own writes and before a retried MERGE.
+- `pipeline/src/bikesharing/shell/run.py`: calls `ensure_tables` once and passes its `Tables` to every other call.
+- `pipeline/tests/integration/test_delta.py`, `pipeline/tests/integration/test_run.py`: their calls take `Tables`; the existing tests of a run's `station_stock` rows and published file pass unchanged (R1).
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [Common table access](#common-table-access) | d010 › Plan | One open per table per run, and the refresh after its own writes |
+| [`bikesharing.shell.delta`](#bikesharingshelldelta) › `Tables`, `ensure_tables` | d010 › Components | The new type and the signatures that change |
+| [Breaking changes](#26-breaking-changes), second row | d010 › Plan | The dependants that change with the signatures |
+| `_table`, `_query` and `merge_station_stock`'s retry | `delta.py` | The open per call that `Tables` replaces, and where a retried MERGE refreshes |
+
+#### Do
+
+1. Implement `Tables` and the new `ensure_tables` in `delta.py`.
+2. Change every call of a run in `delta.py` to take `tables`, reading through its handles.
+3. Update `run.py` to call `ensure_tables` once and pass `Tables`.
+4. Update `test_delta.py` and `test_run.py` to the new signatures.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0 with no test removed.
+
+### Step 6 — `processed_objects` by system, feed and UTC date
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d010.s6 partition processed_objects by system, feed and UTC date`
+- **R:** R3, R16
+- **Model:** `opus · medium`
+- **Review:** `no`
+
+#### Scope
+
+- `pipeline/src/bikesharing/shell/delta.py`:
+  - `PROCESSED_OBJECTS_SCHEMA` gains `utc_date` after `captured_at`; `TABLE_SCHEMAS`, `PARTITION_COLUMNS` and `DATE_PARTITION`;
+  - `ensure_tables` creates each missing table of `TABLE_PATHS` with its schema, its partition columns and three properties from `settings.py`: `delta.checkpointInterval`, `delta.enableExpiredLogCleanup` set to `false`, and `delta.deletedFileRetentionDuration`;
+  - `record_processed` writes each row's `utc_date` from `captured_at`, and its MERGE predicate adds the batch's systems, feeds, `utc_date` partitions and `captured_at` range (call 6).
+- `pipeline/tests/integration/test_delta.py`:
+  - the table properties of a new table, once per key of `TABLE_PATHS` (`pytest.mark.parametrize`);
+  - R3: objects of two systems are recorded in the one `processed_objects`, one row each;
+  - R16: a batch recorded twice adds no rows to `station_stock` or `processed_objects`.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [`processed_objects` layout](#processed_objects-layout) | d010 › Plan | The partition columns and `utc_date` |
+| [Bounded calls](#bounded-calls), rows 1 and 6 | d010 › Plan | What `ensure_tables` and `record_processed` state |
+| [Checkpoint interval](#checkpoint-interval) › Where it lives; [Vacuum and tombstone retention](#vacuum-and-tombstone-retention), table; [Daily maintenance](#daily-maintenance), In order item 3 | d010 › Plan | The three properties and where their values come from |
+| [`bikesharing.shell.delta`](#bikesharingshelldelta) › constants, `ensure_tables`, `record_processed` | d010 › Components | The contract |
+
+#### Do
+
+1. Write the tests in `test_delta.py`, failing.
+2. Implement the schema, the three mappings and `ensure_tables`' creation in `delta.py`.
+3. Implement `record_processed`'s `utc_date` and its bounded MERGE.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0.
+
+### Step 7 — Discovery from each feed's latest capture
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d010.s7 list bronze from each feed's latest capture`
+- **R:** R10, R11
+- **Model:** `sonnet · medium`
+- **Review:** `no`
+
+#### Scope
+
+- `pipeline/src/bikesharing/core/discovery.py`: `ListingPlan` gains `feed`; `plan_listing` takes the feed and drops `now` and `timezone`, so there is no daily full sweep, and `full_sweep` is true only for a feed with nothing processed.
+- `pipeline/src/bikesharing/core/settings.py`: `LISTING_LOOKBACK` becomes 15 min.
+- `pipeline/src/bikesharing/shell/run.py`: passes each feed to `plan_listing`, with `latest_processed`'s value for its system until Step 8.
+- `pipeline/tests/unit/core/test_discovery.py`:
+  - R10: `plan_listing` starts after the key of the latest capture minus 15 min;
+  - R11: `plan_listing` lists the whole prefix when nothing is processed;
+  - the tests of the daily full sweep are removed with it.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [D3](#d3-discovery-keeps-a-watermark-per-system-and-feed) | d010 › Spec | The watermark per system and feed, and the lookback |
+| [`bikesharing.core.discovery`](#bikesharingcorediscovery) | d010 › Components | The new `ListingPlan` and `plan_listing` |
+| The paragraph after the table in [Bounded calls](#bounded-calls) | d010 › Plan | A feed with no processed object lists from its start |
+
+#### Do
+
+1. Update the tests in `test_discovery.py`, failing.
+2. Implement the new `plan_listing` in `discovery.py`.
+3. Set `LISTING_LOOKBACK` to 15 min in `settings.py`.
+4. Update the call in `run.py`.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0.
+
+### Step 8 — Bounded reads of `processed_objects`
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d010.s8 bound the reads of processed_objects per system and feed`
+- **R:** R1, R4, R10, R11
+- **Model:** `opus · high`
+- **Review:** `no`
+
+#### Scope
+
+- `pipeline/src/bikesharing/shell/delta.py`:
+  - `latest_processed` returns each system and feed's latest `captured_at` from the log's file statistics of its latest `utc_date` partition, leaving out a feed with no row (calls 2 and 7), or by the fallback of Step 1's check;
+  - `processed_keys` takes each feed's instant and reads only its partitions from that instant's date (call 3);
+  - `capture_history` takes the batch's feeds and reads their partitions within `[since, until)`, returning the columns it returned before, without `utc_date` (call 4).
+- `pipeline/src/bikesharing/shell/run.py`: each feed's instant is its latest capture minus `LISTING_LOOKBACK`; `latest_captures` takes, per system, the instant of `(system, FEED)`.
+- `pipeline/tests/integration/test_delta.py`:
+  - R4: with a data file of another system's partition removed from disk, `processed_keys` and `capture_history` still return the feed's rows;
+  - R10: `processed_keys` returns no key captured before the feed's instant;
+  - R11: `latest_processed` leaves out a feed with no row;
+  - R1: `capture_history` returns the columns it returned before.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [Bounded calls](#bounded-calls), rows 2, 3, 4, 7 and 8 | d010 › Plan | The range each call states |
+| [deltalake 1.7.0](#deltalake-170) › File statistics | d010 › Plan | The add actions' columns, and the fallback if Step 1's check failed |
+| [`bikesharing.shell.delta`](#bikesharingshelldelta) › `latest_processed`, `processed_keys`, `capture_history` | d010 › Components | The signatures and what each returns |
+| [`bikesharing.shell.run`](#bikesharingshellrun) › Gold | d010 › Components | How gold takes each system's instant |
+
+#### Do
+
+1. Write the tests in `test_delta.py`, failing.
+2. Implement `latest_processed`, `processed_keys` and `capture_history` in `delta.py`.
+3. Update their calls in `run.py`.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0.
+
+### Step 9 — Maintenance tasks on a table
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d010.s9 add compaction, retention, vacuum and log cleanup to the table access`
+- **R:** R12, R14
+- **Model:** `opus · medium`
+- **Review:** `no`
+
+#### Scope
+
+- `pipeline/src/bikesharing/shell/delta.py`: `table_partitions`, `compact`, `delete_partitions`, `vacuum` and `cleanup_log`.
+- `pipeline/tests/integration/test_delta.py`:
+  - `table_partitions` returns each partition with its data files, with every data file removed from disk;
+  - `compact` compacts only the partitions given and returns their metrics;
+  - R12: `delete_partitions` removes the partitions given and returns the rows deleted;
+  - R14: `compact` and `delete_partitions` given no partition leave the table's version unchanged;
+  - `vacuum` deletes a file removed more than its retention ago and keeps a newer one, returning the count.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [`bikesharing.shell.delta`](#bikesharingshelldelta) › Maintenance | d010 › Components | The five functions |
+| [Compaction](#compaction) | d010 › Plan | `optimize.compact` restricted to the partitions given |
+| [Vacuum and tombstone retention](#vacuum-and-tombstone-retention); [deltalake 1.7.0](#deltalake-170) › Explicit values | d010 › Plan | Vacuum's explicit arguments |
+| [Maintenance events](#maintenance-events), column Values from `deltalake` | d010 › Plan | Where each metric comes from |
+
+#### Do
+
+1. Write the tests in `test_delta.py`, failing.
+2. Implement the five functions in `delta.py`.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0.
+
+### Step 10 — Compaction and daily maintenance in a run
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d010.s10 compact after each batch and run the daily maintenance`
+- **R:** R2, R15
+- **Model:** `opus · high`
+- **Review:** `code`
+
+#### Scope
+
+- `pipeline/src/bikesharing/shell/run.py`:
+  - `RunConfig.maintenance_window`: `RUN_SETTINGS.cadence` in `scheduled_config`, `None` in `one_off_config`;
+  - after each committed batch, per table, `compact` with `partitions_to_compact` over `table_partitions`, writing `table_compacted`;
+  - after the batch loop and before publishing, in the maintenance run only: retention, vacuum and log cleanup, in that order, writing their events;
+  - each task runs per table in its own `try`, and a failure writes `maintenance_failed` and goes on, with the run's outcome unchanged.
+- `pipeline/tests/integration/test_run.py`, with the run's start passed as a fixed UTC time:
+  - a batch that leaves partitions over their rule compacts them;
+  - the daily maintenance runs in the maintenance run and in no other, nor in a one-off run;
+  - R15: the daily maintenance leaves every row of `processed_objects`;
+  - a failing task writes `maintenance_failed`, and the run's outcome does not change;
+  - R2: the events the run writes are registered.
+- `docs/architecture.md` › 6.2 Pipeline run: compaction after each batch and the daily maintenance after the last batch of the maintenance run.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [`bikesharing.shell.run`](#bikesharingshellrun) | d010 › Components | `RunConfig`'s new field, and where each task runs |
+| [Daily maintenance](#daily-maintenance) | d010 › Plan | Which run, the order of the tasks, a missed day |
+| [Maintenance events](#maintenance-events) › A failed task | d010 › Plan | Graceful degradation of a failed task |
+| 6.2 Pipeline run | `docs/architecture.md` | The run's flow the update extends |
+
+#### Do
+
+1. Write the tests in `test_run.py`, failing.
+2. Implement `maintenance_window`, the compaction after each batch and the daily maintenance in `run.py`.
+3. Update `docs/architecture.md` › 6.2.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0.
+
 ## 4. Close
 
 <!-- The record of what the task delivered, for whoever opens this design later. -->
