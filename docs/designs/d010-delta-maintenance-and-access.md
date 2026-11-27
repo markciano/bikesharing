@@ -1182,6 +1182,239 @@ bash pipeline/scripts/check-pipeline.sh
 
 Yes if it exits 0, and the lint hook reports nothing on the two documents.
 
+### Step 13 — One-off migration script
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d010.s13 add the one-off migration of the Delta tables`
+- **R:** R6, R7, R8, R9
+- **Model:** `opus · high`
+- **Review:** `code and security`
+
+#### Scope
+
+- `pipeline/scripts/migrate_delta_tables.py` (new), calling `deltalake` directly and taking from `bikesharing.shell.delta` and `settings.py` only each table's path, schema, partition columns and properties:
+  - `main()`: Migration step 1 (clean working tree, untracked files included; HEAD is `origin/main`; HEAD's full SHA as code version); reads `MIGRATION_R2_ACCESS_KEY_ID` and `MIGRATION_R2_SECRET_ACCESS_KEY` from the environment; builds the storage options of `bikesharing-lakehouse` from `CLOUDFLARE_ACCOUNT_ID`, as `r2_lakehouse` does; exits non-zero naming each failed check;
+  - `migrate`: Migration steps 2–5, on a lakehouse URI, its storage options and the code version;
+  - `rewrite`, `verify` and `set_properties`: steps 3, 4 and 5; `verify` returns the names of the checks that failed;
+  - every commit carries the code version in `custom_metadata`, through `CommitProperties`.
+- `pipeline/scripts/check-pipeline.sh`: mypy also checks `scripts/migrate_delta_tables.py` (#4).
+- `pipeline/tests/integration/test_migrate_delta_tables.py` (new), loading the script by path with `importlib`, on a local lakehouse whose `processed_objects` the test writes in the current layout:
+  - R6: a correct rewrite passes the three checks;
+  - R7: a rewritten table with one row, one key, or one run ID and code version altered fails `verify` naming that check, one case per check; restoring the version before it brings back its partition columns and rows;
+  - R8: `station_stock` keeps the same data files, and its only new commit sets the table properties;
+  - R9: each commit the migration writes carries the code version in its custom metadata;
+  - a second run on a migrated table skips the rewrite and sets the properties.
+  - `main`'s code checks are not tested: the Done when checks TH1 in Step 15.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [Migration](#migration) | d010 › Plan | The script's steps, its scope of the package, and its removal |
+| [D2](#d2-existing-data-moves-to-the-new-layout-in-a-one-off-migration), [D5](#d5-security-of-the-migration-and-of-retention) | d010 › Spec | The verification's checks, the recovery, and the token's limits |
+| [`bikesharing.shell.delta`](#bikesharingshelldelta) › constants | d010 › Components | The schema, partition columns and properties the rewrite takes |
+| [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes) | d008 › Plan | The current layout of `processed_objects`, which the test writes |
+| Its working-tree and `origin/main` checks | `pipeline/scripts/deploy.sh` | The checks `main` repeats |
+| `r2_lakehouse` | `delta.py` | The storage options of R2 |
+| The mypy line | `pipeline/scripts/check-pipeline.sh` | Where the script joins |
+
+#### Do
+
+1. Write the tests in `test_migrate_delta_tables.py`, failing.
+2. Implement `migrate_delta_tables.py` until they pass.
+3. Add the script to the mypy line of `check-pipeline.sh`.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0.
+
+### Step 14 — Merge the implementation
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **R:** —
+- **Model:** —
+- **Review:** `no`
+
+#### Scope
+
+The PR of Steps 1–13, `T072: Delta maintenance and access in the pipeline` with `Refs #86`, merged into `main`. Merging deploys nothing: the scheduled function keeps the deployed code until Step 16.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| Branches, PRs and CI | `CLAUDE.md` › Git | Push, PR, checks, rebase merge and clean-up |
+
+#### Do
+
+1. Push the branch and mark its PR ready for review.
+2. Wait for every required check to pass.
+3. Rebase merge the PR.
+4. Delete the local branch with `git branch -D`.
+
+#### Check
+
+```bash
+gh pr view --json state,mergedAt
+```
+
+Yes if `state` is `MERGED`.
+
+### Step 15 — Pause the schedule and run the migration
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **R:** R6, R7, R8, R9
+- **Model:** `sonnet · medium`
+- **Review:** `no`
+
+#### Scope
+
+Steps 1 and 2 of D2's order, in production:
+
+- the app `bikesharing-pipeline` stopped in Modal, so no run overlaps the migration;
+- an R2 token, `bikesharing-t072-migration`: Object Read & Write on `bikesharing-lakehouse` only, with a TTL of one day (D5, TH1);
+- `processed_objects` rewritten and verified, and the properties set on both tables, by the script from the merged `main`.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [D2](#d2-existing-data-moves-to-the-new-layout-in-a-one-off-migration) | d010 › Spec | The order, and the recovery if a check fails |
+| [D5](#d5-security-of-the-migration-and-of-retention) | d010 › Spec | The token's limits |
+| [Migration](#migration) | d010 › Plan | What the script does and in which order |
+
+#### Do
+
+1. Wait until no run is in progress in Modal's dashboard, then run `uv run --directory pipeline --group platform modal app stop bikesharing-pipeline`.
+2. Create the token in Cloudflare's dashboard › R2 › Manage API tokens, with the limits above.
+3. Load its S3 access key pair into the shell without echo or history: `read -s "MIGRATION_R2_ACCESS_KEY_ID?Access key ID: " && export MIGRATION_R2_ACCESS_KEY_ID`, and the same for `MIGRATION_R2_SECRET_ACCESS_KEY`.
+4. Switch to `main`, up to date with `origin/main`, with a clean working tree.
+5. Run `uv run --directory pipeline python scripts/migrate_delta_tables.py`.
+6. If it exits non-zero, keep the schedule stopped and follow D2's recovery: restore the version before the migration with time travel, fix the cause, and run the migration again.
+
+#### Check
+
+- Yes if the script exits 0 after reporting that its three checks passed.
+- Yes if Modal's dashboard shows `bikesharing-pipeline` stopped until Step 16.
+
+### Step 16 — Deploy the new code and revoke the token
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **R:** —
+- **Model:** —
+- **Review:** `no`
+
+#### Scope
+
+Step 3 of D2's order: the merged `main` deployed, which resumes the schedule; catch-up then processes what bronze received during the pause. The migration's token revoked (D5, TH1).
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| The script's header | `pipeline/scripts/deploy.sh` | Its checks, the deploy and the smoke test |
+
+#### Do
+
+1. Run `bash pipeline/scripts/deploy.sh` from `main`.
+2. Revoke `bikesharing-t072-migration` in Cloudflare's dashboard.
+3. Run `unset MIGRATION_R2_ACCESS_KEY_ID MIGRATION_R2_SECRET_ACCESS_KEY`.
+
+#### Check
+
+- Yes if `deploy.sh` exits 0, its smoke test included.
+- Yes if `bikesharing-t072-migration` is no longer listed in R2 › Manage API tokens.
+
+### Step 17 — Check the Done when in production
+
+- **Status:** 💤 todo
+- **Who:** Owner
+- **Commit:** —
+- **R:** —
+- **Model:** `sonnet · medium`
+- **Review:** `no`
+
+#### Scope
+
+The Done when's measures, over a window of at least 3 h that starts with the first scheduled run after Step 16 with one batch, and includes the run at `MAINTENANCE_LOCAL_TIME` (04:00 Europe/Madrid). Step 16 is therefore run so that this window can start by 01:00 local time. The results are recorded in d010 › Close.
+
+- **A checkpoint of each table:** by Analysis. A window with at least `CHECKPOINT_INTERVAL` (8) commits of a table includes a checkpoint of it, and every batch commits to both tables.
+- **The tools:** `run_stats.py` and `r2_metrics.py` from `spikes/t077-run-time-and-r2-reads/`, with their credentials as its README sets. Their window is set in local edits that are discarded after the check.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [Done when](#14-done-when) | d010 › Spec | The window and its thresholds |
+| Prerequisites, Run time and memory, R2 operations and storage | `spikes/t077-run-time-and-r2-reads/README.md` | Each tool's credentials, window and command |
+
+#### Do
+
+1. Find the window's first run: the first scheduled run after Step 16 whose log has one `batch_committed`.
+2. Set `START`, `END` and `DAYS` in `run_stats.py` to the window, and run it as its README sets.
+3. Run `r2_metrics.py` with `--bucket bikesharing-lakehouse --start <window start> --end <window end>`, and divide its GetObject total by the window's runs.
+4. Count the window's `batch_committed` events.
+5. Read the maintenance run's log for `retention_applied`, `table_vacuumed`, `log_cleaned` and `maintenance_failed`.
+6. If a threshold fails, check `capture_history`'s pruning first.
+7. Discard the local edits of the spike's scripts.
+
+#### Check
+
+Yes if every item holds:
+
+- GetObject per run on `bikesharing-lakehouse` is at most 700;
+- p95 run time is at most 2 min;
+- the window has at least 8 `batch_committed` events;
+- the maintenance run's log has its events for each table, and no `maintenance_failed`.
+
+### Step 18 — Remove the one-off migration
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: d010.s18 remove the one-off migration`
+- **R:** —
+- **Model:** `sonnet · low`
+- **Review:** `no`
+
+#### Scope
+
+On the task's branch recreated from `main`, in the PR that records the Done when, with `Closes #86`:
+
+- `pipeline/scripts/migrate_delta_tables.py`: removed;
+- `pipeline/tests/integration/test_migrate_delta_tables.py`: removed;
+- `pipeline/scripts/check-pipeline.sh`: the script leaves the mypy line (#4).
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [Migration](#migration), last paragraph | d010 › Plan | What is removed and why |
+
+#### Do
+
+1. Remove the script and its test.
+2. Remove the script from the mypy line of `check-pipeline.sh`.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+grep -rn "migrate_delta_tables" pipeline
+```
+
+Yes if the checks exit 0 and the search finds nothing.
+
 ## 4. Close
 
 <!-- The record of what the task delivered, for whoever opens this design later. -->
