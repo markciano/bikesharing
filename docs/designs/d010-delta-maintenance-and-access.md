@@ -652,13 +652,18 @@ class RunConfig:
 
 | File | Why it breaks | Strategy |
 |---|---|---|
-| | | |
+| `control/processed_objects` in `bikesharing-lakehouse` | Its partition columns change and it gains `utc_date`, so the deployed code and the new one cannot read each other's layout | D2's order: the schedule is paused, the migration rewrites the table, and the new code's deployment resumes the schedule ([Migration](#migration)) |
+| `pipeline/src/bikesharing/shell/delta.py`, `pipeline/src/bikesharing/core/settings.py` | The path constants are removed, and the run's calls take `Tables` in place of `Lakehouse` ([Components](#25-components)) | Every dependant changes in this task: `run.py`, `test_delta.py`, `test_run.py` and `test_discovery.py`, all in [File layout](#24-file-layout) |
 
 ### 2.8 What does not change
 
 <!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
 
--
+- `pipeline/dbt/`: its models, sources and contracts. dbt's Parquet inputs keep their columns (R1).
+- `pipeline/modal_app.py`: its region and its schedule ([Modal's region](#modals-region), T080).
+- `station_stock`'s schema and partitioning, which the migration does not rewrite (D2, R8).
+- The existing events of `contracts/log-events.registry.json`, which only gains the five new ones (R2).
+- `capture/` and `bikesharing-bronze`, which discovery only reads.
 
 ## 3. Steps
 
