@@ -1375,7 +1375,7 @@ The Done when's measures, over a window of at least 3 h that starts with the fir
 2. Set `START`, `END` and `DAYS` in `run_stats.py` to the window, and run it as its README sets.
 3. Run `r2_metrics.py` with `--bucket bikesharing-lakehouse --start <window start> --end <window end>`, and divide its GetObject total by the window's runs.
 4. Count the window's `batch_committed` events.
-5. Read the maintenance run's log for `retention_applied`, `table_vacuumed`, `log_cleaned` and `maintenance_failed`.
+5. Read the maintenance run's log for `retention_applied`, `table_vacuumed`, `log_cleaned` and `maintenance_failed`. Record with the results that run's total run time and its margin to the timeout (`timeout_s` in `run_settings.json`), with no threshold, since the p95 leaves this run out. **DI2**
 6. If a threshold fails, check `capture_history`'s pruning first.
 7. Discard the local edits of the spike's scripts.
 
@@ -1451,3 +1451,4 @@ Yes if the checks exit 0 and the search finds nothing.
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
 | DI1 | [deltalake 1.7.0](#deltalake-170), [Step 1](#step-1--upgrade-deltalake-to-170) | `deltalake` 1.7.0 is kept, and the two retry tests provoke the conflict with one key both writers insert, following tests of observable behaviour | 1.7.0 no longer conflicts on every concurrent insert within the batch's capture range; no case tried duplicated a key | Step 1 |
+| DI2 | [Step 17](#step-17--check-the-done-when-in-production) | Step 17 also records the maintenance run's total run time and its margin to the timeout, with no threshold, following measuring the headroom to a limit | The p95 leaves that run out, and no data yet sets a threshold | Step 1 |
