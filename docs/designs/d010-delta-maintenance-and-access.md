@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 3.
+- Current: Step 4.
 
 ## 1. Spec — what and why
 
@@ -770,7 +770,7 @@ Yes if the checks exit 0 and the search finds nothing.
 
 ### Step 3 — Pure maintenance decisions
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d010.s3 add the pure decisions of Delta maintenance`
 - **R:** R12, R13
