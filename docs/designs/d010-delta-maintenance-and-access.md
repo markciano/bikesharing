@@ -18,9 +18,9 @@ Kind: a build task builds code or configuration and has every block. A document-
 Phase: the blocks and reviews completed. A document-only task shows only Spec · Plan · Plan review.
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
-- State: Ready for implementation 🎬
+- State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 1.
+- Current: Step 2.
 
 ## 1. Spec — what and why
 
@@ -254,6 +254,7 @@ A feed with no processed object has no partition, so call 2 returns nothing for 
 
 - **Upgrade:** `deltalake` moves from 1.6.6 to 1.7.0 for call 5's pruning, raising the manifest's minimum to `>=1.7.0` so that no relock goes back to a version without it ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)); R1 and R16's tests check that the upgrade keeps the outputs.
 - **Impact:** the [1.7.0 release notes](https://github.com/delta-io/delta-rs/releases/tag/python-v1.7.0) and its `table.py` change no API or default the pipeline uses. They add the MERGE's pruning by the source's statistics and correct the pruning statistics of timestamps, which `captured_at`'s ranges rely on.
+- **Commit conflicts:** the pruning also narrows what a MERGE declares as read, which is what a concurrent commit is checked against: besides the predicate's literal bounds, a range from the source's minimum to its maximum for each join column equal to a source column ([delta-rs #4790](https://github.com/delta-io/delta-rs/pull/4790)). A commit whose rows fall outside those ranges no longer conflicts. Two writers that insert a same key still do, since each range holds every key of its source; delta-rs does not state this as a guarantee, so `merge_station_stock`'s retry tests check it with one shared key among others. **DI1**
 - **Explicit values:** `vacuum` simulates by default and keeps the table's retention, so the pipeline passes `dry_run=False`, a retention of 7 days ([ADR-0021](../decisions/0021-retention-per-layer.md)) and `enforce_retention_duration=False` ([Vacuum and tombstone retention](#vacuum-and-tombstone-retention)).
 - **File statistics:** call 2 reads `get_add_actions(flatten=True)`, one row per data file with its `partition.<col>`, `min.<col>` and `max.<col>` columns, checked against the installed version before it is built. If the columns are missing, call 2 reads its feed's latest `utc_date` partition instead ([s019 › P4](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)).
 
@@ -689,7 +690,7 @@ None.
 
 ### Step 1 — Upgrade `deltalake` to 1.7.0
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `build: d010.s1 upgrade deltalake to 1.7.0`
 - **R:** R1
@@ -700,7 +701,8 @@ None.
 
 - `pipeline/pyproject.toml`: `deltalake>=1.7.0`.
 - `pipeline/uv.lock`: `deltalake` 1.7.0.
-- Tests: the existing suite passes unchanged, the first half of the Test plan's R1 row.
+- `pipeline/tests/integration/test_delta.py`: in `merge_station_stock`'s two retry tests, both writers insert several stations and share one key ([deltalake 1.7.0](#deltalake-170) › Commit conflicts).
+- Tests: the rest of the existing suite passes unchanged, the first half of the Test plan's R1 row. **DI1**
 - A throwaway script in the session's scratchpad, not committed, prints the columns of `get_add_actions(flatten=True)` on the installed version.
 
 #### Reads
@@ -1448,4 +1450,4 @@ Yes if the checks exit 0 and the search finds nothing.
 
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
-| | | | | |
+| DI1 | [deltalake 1.7.0](#deltalake-170), [Step 1](#step-1--upgrade-deltalake-to-170) | `deltalake` 1.7.0 is kept, and the two retry tests provoke the conflict with one key both writers insert, following tests of observable behaviour | 1.7.0 no longer conflicts on every concurrent insert within the batch's capture range; no case tried duplicated a key | Step 1 |
