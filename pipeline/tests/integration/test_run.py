@@ -28,11 +28,7 @@ from obstore.store import LocalStore
 
 from bikesharing.core.discovery import parse_bronze_key, parse_exclusion_list
 from bikesharing.core.settings import TABLE_PATHS
-from bikesharing.shell.delta import (
-    ensure_tables,
-    local_lakehouse,
-    processed_keys,
-)
+from bikesharing.shell.delta import local_lakehouse
 from bikesharing.shell.heartbeat import PingFailure, Signal
 from bikesharing.shell.otlp_exporter import OtlpTarget, send_logs
 from bikesharing.shell.run import (
@@ -163,7 +159,12 @@ def _processed_stations(delta_path: Path) -> int:
 
 
 def _processed(delta_path: Path) -> set[str]:
-    return set(processed_keys(ensure_tables(local_lakehouse(delta_path))))
+    """Return every key of ``processed_objects``, read with no bound."""
+    table = DeltaTable(str(delta_path.resolve() / TABLE_PATHS["processed_objects"]))
+    keys = Table.from_arrow(
+        QueryBuilder().register("t", table).execute("select key from t")
+    )["key"]
+    return {keys[i].as_py() for i in range(len(keys))}
 
 
 def _rewrite(object_file: Path, change: Callable[[list[dict[str, Any]]], None]) -> None:

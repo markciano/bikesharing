@@ -33,10 +33,10 @@ from bikesharing.core.settings import (
     CHECKPOINT_INTERVAL,
     LAKEHOUSE_BUCKET,
     LOCAL_TIMEZONE,
-    SYSTEMS,
     TABLE_PATHS,
     TOMBSTONE_RETENTION,
     System,
+    SystemFeed,
     TableName,
 )
 from bikesharing.core.verdict import MergeMetrics
@@ -371,25 +371,55 @@ def ensure_tables(lakehouse: Lakehouse) -> Tables:
     )
 
 
-def processed_keys(tables: Tables) -> frozenset[str]:
-    """Return the key of every bronze object a run has processed.
+def _feed(feed: SystemFeed) -> str:
+    """Return the condition on a system and feed's partition columns."""
+    system, name = feed
+    return f"system = {_string(system)} and feed = {_string(name)}"
+
+
+def processed_keys(
+    tables: Tables, since: Mapping[SystemFeed, datetime]
+) -> frozenset[str]:
+    """Return the keys of each system and feed's objects captured at or after its instant.
+
+    Each condition states the feed's partitions from the instant's UTC date and
+    the capture range, so that the read prunes every other system, feed and
+    date (d010, Bounded calls).
 
     Parameters
     ----------
     tables : Tables
         The run's tables.
+    since : Mapping[SystemFeed, datetime]
+        Per system and feed, the first capture instant included; a system and
+        feed left out is not read.
 
     Returns
     -------
     frozenset[str]
-        The keys in ``processed_objects``.
+        The keys in ``processed_objects`` within those ranges.
     """
-    table = Table.from_arrow(_query(tables, "processed_objects", "select key from t"))
+    if not since:
+        return frozenset()
+    conditions = " or ".join(
+        f"({_feed(feed)} "
+        f"and utc_date >= {_date(_utc_date(instant))} "
+        f"and captured_at >= {_timestamp(instant)})"
+        for feed, instant in sorted(since.items())
+    )
+    table = Table.from_arrow(
+        _query(tables, "processed_objects", f"select key from t where {conditions}")
+    )
     return frozenset(_values(table["key"]))
 
 
-def latest_processed(tables: Tables) -> dict[System, datetime | None]:
-    """Return each system's latest processed capture instant.
+def latest_processed(tables: Tables) -> dict[SystemFeed, datetime]:
+    """Return each system and feed's latest processed capture instant, reading no data file.
+
+    It is the maximum of ``captured_at``'s statistics over the files of the
+    feed's latest ``utc_date`` partition, from the log the run's handle holds
+    (d010, Bounded calls). The statistics keep milliseconds, which is exact
+    here: a capture instant derives from its bronze key, in whole seconds.
 
     Parameters
     ----------
@@ -398,35 +428,50 @@ def latest_processed(tables: Tables) -> dict[System, datetime | None]:
 
     Returns
     -------
-    dict[System, datetime | None]
-        Per system, the latest ``captured_at`` in ``processed_objects``, in UTC,
-        or ``None`` for a system with no processed object.
+    dict[SystemFeed, datetime]
+        Per system and feed with processed objects, its latest ``captured_at``,
+        in UTC; one with none is left out.
     """
-    table = Table.from_arrow(
-        _query(
-            tables,
-            "processed_objects",
-            "select system, max(captured_at) as captured_at from t group by system",
-        )
+    actions = Table.from_arrow(
+        tables._handles["processed_objects"].get_add_actions(flatten=True)
     )
-    latest: dict[System, datetime | None] = dict.fromkeys(SYSTEMS)
-    for system, captured_at in zip(
-        _values(table["system"]), _values(table["captured_at"]), strict=True
+    if actions.num_rows == 0:
+        return {}
+    latest: dict[SystemFeed, tuple[date, datetime]] = {}
+    for system, feed, utc_date, captured_at in zip(
+        _values(actions["partition.system"]),
+        _values(actions["partition.feed"]),
+        _values(actions["partition.utc_date"]),
+        _values(actions["max.captured_at"]),
+        strict=True,
     ):
-        latest[system] = captured_at.astimezone(UTC)
-    return latest
+        candidate = (utc_date, captured_at)
+        latest[(system, feed)] = max(latest.get((system, feed), candidate), candidate)
+    return {
+        feed: captured_at.astimezone(UTC) for feed, (_, captured_at) in latest.items()
+    }
 
 
-def capture_history(tables: Tables, *, since: datetime, until: datetime) -> ArrowStream:
-    """Return the processed objects captured in ``[since, until)``.
+def capture_history(
+    tables: Tables,
+    *,
+    feeds: Collection[SystemFeed],
+    since: datetime,
+    until: datetime,
+) -> ArrowStream:
+    """Return the objects of ``feeds`` captured in ``[since, until)``.
 
     They are the history ``capture_volume`` compares a batch's captures with
-    (d008 #14, Transformation in dbt).
+    (d008 #14, Transformation in dbt). The read states the feeds' partitions
+    and the range's UTC dates, so that it prunes every other system, feed and
+    date (d010, Bounded calls).
 
     Parameters
     ----------
     tables : Tables
         The run's tables.
+    feeds : Collection[SystemFeed]
+        The systems and feeds read; none reads no row.
     since : datetime
         The first capture instant included.
     until : datetime
@@ -437,11 +482,15 @@ def capture_history(tables: Tables, *, since: datetime, until: datetime) -> Arro
     ArrowStream
         The rows of ``processed_objects``, in every column but ``utc_date``.
     """
+    partitions = " or ".join(f"({_feed(feed)})" for feed in sorted(set(feeds)))
     return _query(
         tables,
         "processed_objects",
         f"select {', '.join(_CAPTURE_HISTORY_COLUMNS)} from t "
-        f"where captured_at >= {_timestamp(since)} "
+        f"where ({partitions or 'false'}) "
+        f"and utc_date >= {_date(_utc_date(since))} "
+        f"and utc_date <= {_date(_utc_date(until))} "
+        f"and captured_at >= {_timestamp(since)} "
         f"and captured_at < {_timestamp(until)}",
     )
 

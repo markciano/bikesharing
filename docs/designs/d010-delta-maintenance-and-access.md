@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 8.
+- Current: Step 9.
 
 ## 1. Spec — what and why
 
@@ -985,7 +985,7 @@ Yes if it exits 0.
 
 ### Step 8 — Bounded reads of `processed_objects`
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d010.s8 bound the reads of processed_objects per system and feed`
 - **R:** R1, R4, R10, R11

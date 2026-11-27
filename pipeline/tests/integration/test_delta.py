@@ -16,6 +16,7 @@ from bikesharing.core.settings import (
     TABLE_PATHS,
     TOMBSTONE_RETENTION,
     System,
+    SystemFeed,
     TableName,
 )
 from bikesharing.core.verdict import MergeMetrics
@@ -37,6 +38,8 @@ from bikesharing.shell.delta import (
 from bikesharing.shell.duckdb_session import ArrowStream, connect, write_parquet
 
 T0 = datetime(2026, 11, 19, 10, 0, tzinfo=UTC)
+AMBICI: SystemFeed = ("ambici", "station_status")
+BICING: SystemFeed = ("bicing", "station_status")
 
 # The station stock's columns in the order and types of its dbt contract
 # (d008, dbt model contracts), as DuckDB hands them to the shell.
@@ -143,18 +146,33 @@ def stock_keys(tables: Tables) -> list[tuple[str, str, datetime]]:
     )
 
 
-def processed(key: str, system: System, captured_at: datetime) -> ProcessedObject:
-    """A processed bronze object of ``system``'s ``station_status``."""
+def processed(
+    key: str, system: System, captured_at: datetime, feed: str = "station_status"
+) -> ProcessedObject:
+    """A processed bronze object of ``system``'s ``feed``."""
     return ProcessedObject(
         key=key,
         system=system,
-        feed="station_status",
+        feed=feed,
         captured_at=captured_at,
         station_count=2,
         status="processed",
         run_id="run-1",
         code_version="abc123",
     )
+
+
+def remove_data_files(tables: Tables, partition: str = "") -> None:
+    """Delete from disk the data files of ``processed_objects`` under ``partition``.
+
+    A read that opens one of them then fails, so a read that succeeds pruned
+    them all.
+    """
+    root = Path(tables.lakehouse.uri) / TABLE_PATHS["processed_objects"] / partition
+    files = list(root.rglob("*.parquet"))
+    assert files, f"no data file under {root}"
+    for path in files:
+        path.unlink()
 
 
 class Interfering:
@@ -256,7 +274,7 @@ def test_ensure_tables_keeps_the_rows_of_existing_tables(
 
     reopened = ensure_tables(tables.lakehouse)
 
-    assert processed_keys(reopened) == frozenset({"k1"})
+    assert processed_keys(reopened, {AMBICI: T0}) == frozenset({"k1"})
 
 
 # Verifies DQR2
@@ -353,8 +371,10 @@ def test_record_processed_adds_no_row_for_a_key_already_recorded(
         [processed("k1", "ambici", T0), processed("k2", "bicing", T0)],
     )
 
-    assert processed_keys(tables) == frozenset({"k1", "k2"})
-    reader = capture_history(tables, since=T0, until=T0 + timedelta(seconds=1))
+    assert processed_keys(tables, {AMBICI: T0, BICING: T0}) == frozenset({"k1", "k2"})
+    reader = capture_history(
+        tables, feeds=[AMBICI, BICING], since=T0, until=T0 + timedelta(seconds=1)
+    )
     assert duckdb.from_arrow(reader).count("*").fetchall() == [(2,)]
 
 
@@ -411,31 +431,96 @@ def test_a_batch_recorded_twice_adds_no_rows_to_either_table(
 
 
 def test_processed_keys_is_empty_on_new_tables(tables: Tables) -> None:
-    assert processed_keys(tables) == frozenset()
+    assert processed_keys(tables, {AMBICI: T0}) == frozenset()
 
 
-def test_latest_processed_returns_each_system_latest_capture(
+# Verifies d010 R10
+def test_processed_keys_returns_no_key_captured_before_the_feed_instant(
     tables: Tables,
 ) -> None:
-    t1 = T0 + timedelta(minutes=10)
     record_processed(
         tables,
         [
-            processed("k1", "ambici", T0),
-            processed("k2", "ambici", t1),
-            processed("k3", "bicing", T0),
+            processed("day_before", "ambici", T0 - timedelta(days=1)),
+            processed("just_before", "ambici", T0 - timedelta(microseconds=1)),
+            processed("at", "ambici", T0),
+            processed("after", "ambici", T0 + timedelta(minutes=10)),
         ],
     )
 
-    assert latest_processed(tables) == {"ambici": t1, "bicing": T0}
+    assert processed_keys(tables, {AMBICI: T0}) == frozenset({"at", "after"})
 
 
-def test_latest_processed_returns_none_for_a_system_with_no_object(
+# Verifies d010 R4
+def test_processed_keys_reads_only_the_partitions_of_its_feeds(
+    tables: Tables,
+) -> None:
+    record_processed(
+        tables,
+        [processed("k1", "ambici", T0), processed("k2", "bicing", T0)],
+    )
+    remove_data_files(tables, "system=bicing")
+
+    assert processed_keys(tables, {AMBICI: T0}) == frozenset({"k1"})
+
+
+def test_latest_processed_returns_each_system_and_feed_latest_capture(
+    tables: Tables,
+) -> None:
+    t1 = T0 + timedelta(minutes=10)
+    earlier = T0 - timedelta(days=1)
+    record_processed(
+        tables,
+        [
+            processed("k1", "ambici", earlier),
+            processed("k2", "ambici", T0),
+            processed("k3", "ambici", t1),
+            processed("k4", "bicing", T0),
+            processed("k5", "ambici", earlier, feed="station_information"),
+        ],
+    )
+
+    assert latest_processed(tables) == {
+        AMBICI: t1,
+        BICING: T0,
+        ("ambici", "station_information"): earlier,
+    }
+
+
+# Verifies d010 R11
+def test_latest_processed_leaves_out_a_feed_with_no_object(
     tables: Tables,
 ) -> None:
     record_processed(tables, [processed("k1", "bicing", T0)])
 
-    assert latest_processed(tables) == {"ambici": None, "bicing": T0}
+    assert latest_processed(tables) == {BICING: T0}
+
+
+def test_latest_processed_reads_no_data_file(tables: Tables) -> None:
+    record_processed(
+        tables,
+        [processed("k1", "ambici", T0), processed("k2", "bicing", T0)],
+    )
+    remove_data_files(tables)
+
+    assert latest_processed(tables) == {AMBICI: T0, BICING: T0}
+
+
+# Verifies d010 R4
+def test_capture_history_reads_only_the_partitions_of_its_feeds(
+    tables: Tables,
+) -> None:
+    record_processed(
+        tables,
+        [processed("k1", "ambici", T0), processed("k2", "bicing", T0)],
+    )
+    remove_data_files(tables, "system=bicing")
+
+    reader = capture_history(
+        tables, feeds=[AMBICI], since=T0, until=T0 + timedelta(seconds=1)
+    )
+
+    assert duckdb.from_arrow(reader).project("key").fetchall() == [("k1",)]
 
 
 # Verifies d010 R1
@@ -460,7 +545,11 @@ def test_capture_history_writes_the_objects_captured_in_its_range_as_parquet(
     )
     path = work / "capture_history.parquet"
 
-    write_parquet(scratch, capture_history(tables, since=since, until=until), path)
+    write_parquet(
+        scratch,
+        capture_history(tables, feeds=[AMBICI, BICING], since=since, until=until),
+        path,
+    )
 
     rows = scratch.sql(
         f"select key, station_count from read_parquet('{path}') order by key"
