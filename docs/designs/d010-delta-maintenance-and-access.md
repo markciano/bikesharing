@@ -20,8 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › concerns, written up to Migration. Left, in order:
-  - C9 rewrite [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job, with `**replaces …**` (settled, ADR-0052).
+- Current: Plan › concerns, written up to Migration, and d008's changed sections marked. Left:
   - C10 steps for moving Modal's region, written and not run (settled, T080).
 - Parked for File layout: a catalog of the lakehouse's tables, e.g. `docs/lakehouse.md`, linked from architecture.md › 8, holding how each table applies ADR-0052 and how its values are computed; a rule in `.claude/rules/` for new tables; a test that every table has its settings; the table paths kept only in `settings.py`, imported by `delta.py` and `tests/integration/test_run.py`.
 - Owner: explain each concern until it is understood before asking for the decision.
@@ -99,7 +98,7 @@ Options rejected:
 
 #### D3. Discovery keeps a watermark per system and feed
 
-Each feed lists bronze from its own latest processed capture minus the lookback, following a watermark with allowed lateness kept per stream, and the daily full sweep is removed.
+Each feed lists bronze from its own latest processed capture minus the lookback, following a watermark with allowed lateness kept per stream, and the daily full sweep is removed. **replaces [d008 › #7](d008-pipeline-platform-and-walking-skeleton.md#bronze-reading)**
 
 - **New feed:** a feed with nothing processed lists bronze from its start and enters by catch-up in bounded batches ([ADR-0045](../decisions/0045-catch-up-in-bounded-batches.md)), so a new slice's feed starts with no change to the others.
 - **Lookback:** 15 min, the maximum wall time of a Cloudflare cron invocation ([Workers › Limits](https://developers.cloudflare.com/workers/platform/limits/)). Capture writes each object within the pass its key names, so no object arrives later than that, whether passes overlap or not. The keys it lists again fall in the same list page, so it adds no requests.
@@ -236,6 +235,8 @@ An import-linter contract in `pipeline/pyproject.toml` makes it the only module 
 - **`utc_date`:** a new column, the UTC date of `captured_at`, the date in the bronze key, which the pipeline writes with each row. Every reader filters by UTC instants (discovery's watermark minus the lookback, `capture_history`'s 7 days, a batch's capture range), so each range maps to whole partitions with no time-zone conversion. ADR-0041's local calendar keys apply to fact rows, not to control state.
 - **Size:** one partition per system, feed and day, compacted into one file once closed, adds about 365 files a year per system and feed to the log.
 
+**extends [d008 › #4](d008-pipeline-platform-and-walking-skeleton.md#delta-writes)**
+
 #### Bounded calls
 
 Each of a run's calls states the range it needs, as partition values and as a `captured_at` range, so the engine prunes by partition and then by the log's file statistics ([ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)). The calls are those of [s019 › Lakehouse reads per run](../spikes/s019-pipeline-run-time-r2-reads.md#lakehouse-reads-per-run):
@@ -274,6 +275,8 @@ After each batch, the run compacts the partitions the batch left over their rule
 
 The threshold is a constant per table in `pipeline/src/bikesharing/core/settings.py`, `COMPACTION_THRESHOLD`, keyed by table name; a table with no entry never compacts its active partitions. `processed_objects`' threshold is 10, the highest that keeps a run within the Done when's 700 GetObject: s019's arithmetic reaches 700 at its worst point, 95 commits since the checkpoint with full active partitions, at 10, and each 10 files more add about 180 ([s019 › Verdict](../spikes/s019-pipeline-run-time-r2-reads.md#53-verdict)). A lower threshold saves under 1 s per run, and the compaction events measure whether another value runs better.
 
+**replaces [d008 › #6](d008-pipeline-platform-and-walking-skeleton.md#delta-writes)**
+
 #### Daily maintenance
 
 The daily maintenance runs inside one run a day, after its last batch, following a fixed maintenance window off-peak with idempotent tasks ([ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)):
@@ -285,6 +288,8 @@ The daily maintenance runs inside one run a day, after its last batch, following
   3. Log cleanup removes, from both tables, the log files older than the log's 30-day retention, with `cleanup_metadata()`. Both tables set `delta.enableExpiredLogCleanup` to `false`, the way [Checkpoint interval](#checkpoint-interval) sets its property, so no commit lists `_delta_log/` to clean it.
 - **A missed day:** the three tasks act on the tables' state, not on the date, so the next day's maintenance does what a failed or skipped one left (D4).
 - **Cost:** 1 run in 96 takes longer, so it stays out of the p95; no task lists a table's data files.
+
+**replaces [d008 › #6](d008-pipeline-platform-and-walking-skeleton.md#delta-writes)**
 
 #### Vacuum and tombstone retention
 
