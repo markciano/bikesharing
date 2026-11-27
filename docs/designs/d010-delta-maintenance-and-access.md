@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 4.
+- Current: Step 5.
 
 ## 1. Spec — what and why
 
@@ -811,7 +811,7 @@ Yes if it exits 0.
 
 ### Step 4 — Maintenance events
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d010.s4 add the maintenance events`
 - **R:** R2
