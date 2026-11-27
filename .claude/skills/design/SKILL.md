@@ -74,10 +74,11 @@ Applies to `review-plan` and `review-steps`, together with their review file.
 
 Report a finding only if you can quote the passage and name its consequence. Grade it with the Severity in the review file.
 
-Present them in two separate sections, writing "None" when empty:
+Present them in three separate sections, writing "None" when empty:
 
 1. **Blocking and important.** Per finding: severity, quote, consequence, suggested fix.
 2. **Minor.** Per finding: quote, short reason.
+3. **To verify.** A suspected finding whose consequence depends on a fact not yet verified. Per item: quote, the fact to verify, and the consequence if it does not hold. Each is verified before the review closes, and becomes a finding or is dropped.
 
 ### Fixes
 
