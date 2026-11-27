@@ -168,6 +168,13 @@ def commits_since(uri: str, version: int) -> list[dict[str, Any]]:
     return sorted(history, key=lambda c: c["version"])
 
 
+def rewrite(uri: str) -> int:
+    """Rewrite the table at ``uri`` from its latest version, and return that version."""
+    before = DeltaTable(uri).version()
+    migration.rewrite(uri, {}, CODE_VERSION, before=before)
+    return before
+
+
 def append_duplicate_row(uri: str) -> None:
     """Append a copy of one row."""
     reader = (
@@ -193,14 +200,13 @@ def alter_run_id(uri: str) -> None:
 
 # Verifies d010 R6
 def test_verify_passes_on_a_correct_rewrite(processed_uri: str) -> None:
-    before = DeltaTable(processed_uri).version()
-    migration.rewrite(processed_uri, {}, CODE_VERSION)
+    before = rewrite(processed_uri)
 
     assert migration.verify(processed_uri, {}, before=before) == []
 
 
 def test_rewrite_writes_the_table_ensure_tables_creates(processed_uri: str) -> None:
-    migration.rewrite(processed_uri, {}, CODE_VERSION)
+    rewrite(processed_uri)
 
     table = DeltaTable(processed_uri)
     assert table.schema().to_json() == PROCESSED_OBJECTS_SCHEMA.to_json()
@@ -210,7 +216,7 @@ def test_rewrite_writes_the_table_ensure_tables_creates(processed_uri: str) -> N
 
 
 def test_rewrite_sets_each_rows_utc_date_from_captured_at(processed_uri: str) -> None:
-    migration.rewrite(processed_uri, {}, CODE_VERSION)
+    rewrite(processed_uri)
 
     reader = (
         QueryBuilder()
@@ -223,6 +229,18 @@ def test_rewrite_sets_each_rows_utc_date_from_captured_at(processed_uri: str) ->
         PROCESSED_ROWS[2][0]: "2026-11-19",
         PROCESSED_ROWS[3][0]: "2026-11-20",
     }
+
+
+def test_rewrite_refuses_a_table_written_after_its_version(
+    processed_uri: str,
+) -> None:
+    before = DeltaTable(processed_uri).version()
+    append_duplicate_row(processed_uri)
+
+    with pytest.raises(migration.TableChangedError):
+        migration.rewrite(processed_uri, {}, CODE_VERSION, before=before)
+
+    assert DeltaTable(processed_uri).metadata().partition_columns == []
 
 
 # Verifies d010 R7
@@ -238,8 +256,7 @@ def test_rewrite_sets_each_rows_utc_date_from_captured_at(processed_uri: str) ->
 def test_verify_names_the_check_an_altered_rewrite_fails(
     processed_uri: str, alter: Callable[[str], None], failed: list[str]
 ) -> None:
-    before = DeltaTable(processed_uri).version()
-    migration.rewrite(processed_uri, {}, CODE_VERSION)
+    before = rewrite(processed_uri)
     alter(processed_uri)
 
     assert migration.verify(processed_uri, {}, before=before) == failed
@@ -251,12 +268,12 @@ def test_migrate_restores_the_table_when_the_rewrite_fails_a_check(
 ) -> None:
     original = rows(processed_uri)
     before = DeltaTable(processed_uri).version()
-    rewrite = migration.rewrite
+    original_rewrite = migration.rewrite
 
     def dropping_rewrite(
-        uri: str, storage_options: Mapping[str, str], code_version: str
+        uri: str, storage_options: Mapping[str, str], code_version: str, *, before: int
     ) -> None:
-        rewrite(uri, storage_options, code_version)
+        original_rewrite(uri, storage_options, code_version, before=before)
         DeltaTable(uri).delete(f"key = '{PROCESSED_ROWS[0][0]}'")
 
     monkeypatch.setattr(migration, "rewrite", dropping_rewrite)
