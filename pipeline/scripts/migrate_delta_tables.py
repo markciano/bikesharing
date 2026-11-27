@@ -76,6 +76,10 @@ class RestoreError(Exception):
     """The restore after a failed verification did not bring the table back."""
 
 
+class TableChangedError(Exception):
+    """``processed_objects`` has a commit after the version the rewrite starts from."""
+
+
 def _table_uri(lakehouse_uri: str, table: TableName) -> str:
     """Return the URI of ``table`` under the lakehouse's root."""
     return f"{lakehouse_uri.rstrip('/')}/{TABLE_PATHS[table]}"
@@ -97,9 +101,13 @@ def _row_count(table: DeltaTable) -> object:
 
 
 def rewrite(
-    table_uri: str, storage_options: Mapping[str, str], code_version: str
+    table_uri: str,
+    storage_options: Mapping[str, str],
+    code_version: str,
+    *,
+    before: int,
 ) -> None:
-    """Overwrite ``processed_objects`` in its new layout, with every current row.
+    """Overwrite ``processed_objects`` in its new layout, with every row of ``before``.
 
     The overwrite with the new partition columns and ``schema_mode="overwrite"``
     is Delta's way of changing a table's partitioning. The columns follow
@@ -113,8 +121,26 @@ def rewrite(
         The options ``deltalake`` passes to its object store.
     code_version : str
         The migration's code version, recorded in its commit.
+    before : int
+        The version the verification compares the rewrite with, which must be
+        the table's latest.
+
+    Raises
+    ------
+    TableChangedError
+        If the table has a commit after ``before``.
     """
     options = dict(storage_options)
+    latest = DeltaTable(table_uri, storage_options=options).version()
+    # deltalake does not detect a commit that lands while an overwrite writes: the
+    # overwrite removes only the files of the version it loaded. Only a paused
+    # schedule keeps runs out (d010 D2, Existing data moves to the new layout in a
+    # one-off migration); this refuses a table a run has already written to.
+    if latest != before:
+        raise TableChangedError(
+            f"processed_objects is at version {latest}, not {before}: "
+            "something wrote to it, so the schedule may not be paused"
+        )
     columns = ", ".join(
         "cast(captured_at as date) as utc_date"
         if field.name == "utc_date"
@@ -123,7 +149,7 @@ def rewrite(
     )
     current = (
         QueryBuilder()
-        .register("t", DeltaTable(table_uri, storage_options=options))
+        .register("t", DeltaTable(table_uri, version=before, storage_options=options))
         .execute(f"select {columns} from t")
     )
     write_deltalake(
@@ -265,6 +291,8 @@ def migrate(
     ------
     RestoreError
         If a failed rewrite could not be restored.
+    TableChangedError
+        If something wrote to ``processed_objects`` after the migration read it.
     """
     processed_uri = _table_uri(lakehouse_uri, "processed_objects")
     layout = list(PARTITION_COLUMNS["processed_objects"])
@@ -274,7 +302,7 @@ def migrate(
     else:
         before = table.version()
         print(f"rewriting processed_objects from version {before}", flush=True)
-        rewrite(processed_uri, storage_options, code_version)
+        rewrite(processed_uri, storage_options, code_version, before=before)
         failed = verify(processed_uri, storage_options, before=before)
         if failed:
             _restore(processed_uri, storage_options, code_version, before=before)
@@ -357,7 +385,7 @@ def main() -> int:
     print(f"migrating s3://{LAKEHOUSE_BUCKET} with code version {code_version}")
     try:
         failed = migrate(f"s3://{LAKEHOUSE_BUCKET}", storage_options, code_version)
-    except RestoreError as error:
+    except (RestoreError, TableChangedError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     if failed:
