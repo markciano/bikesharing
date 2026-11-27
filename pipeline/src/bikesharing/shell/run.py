@@ -511,11 +511,7 @@ def _discover(
     found: dict[System, SystemDiscovery] = {}
     for system in SYSTEMS:
         plan = plan_listing(
-            system,
-            latest[system],
-            now=state.now(),
-            lookback=config.lookback,
-            timezone=settings.LOCAL_TIMEZONE,
+            system, settings.FEED, latest[system], lookback=config.lookback
         )
         listed = list_keys(config.bronze, plan)
         objects = pending_objects(listed, processed, excluded)

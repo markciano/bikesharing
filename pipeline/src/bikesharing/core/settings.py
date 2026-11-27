@@ -58,7 +58,7 @@ MAINTENANCE_LOCAL_TIME: Final = time(4, 0)
 # in chronological stages). None, the last stage, processes every object.
 END_INSTANT: Final[datetime | None] = None
 MAX_OBJECTS_PER_BATCH: Final = 360
-LISTING_LOOKBACK: Final = timedelta(hours=1)
+LISTING_LOOKBACK: Final = timedelta(minutes=15)
 DUCKDB_MEMORY_FRACTION: Final = 0.6
 
 
