@@ -601,7 +601,7 @@ def cleanup_log(tables: Tables, table: TableName) -> None: ...
 - `record_processed`: writes each row's `utc_date` from `captured_at`, and bounds its MERGE as call 6 sets (R16).
 - `table_partitions`: each partition with its data files, from the log's add actions, reading no data file.
 - `compact`, `delete_partitions`: act on those partitions only, and write no commit when given none (R14).
-- `vacuum`: deletes the files removed more than `retention` ago, with `dry_run=False` and `enforce_retention_duration=False`, and returns how many it deleted.
+- `vacuum`: deletes the files removed more than `retention` ago, passed in whole hours as `retention_hours`, with `dry_run=False` and `enforce_retention_duration=False`, and returns how many it deleted.
 - `cleanup_log`: deletes the log files older than the log's retention, with `cleanup_metadata()`.
 
 #### `bikesharing.core.events`
@@ -1039,7 +1039,7 @@ Yes if it exits 0.
   - `compact` compacts only the partitions given and returns their metrics;
   - R12: `delete_partitions` removes the partitions given and returns the rows deleted;
   - R14: `compact` and `delete_partitions` given no partition leave the table's version unchanged;
-  - `vacuum` deletes a file removed more than its retention ago and keeps a newer one, returning the count.
+  - `vacuum` with a retention of 0 deletes a file the table removed and returns 1; with a retention of 1 h it deletes nothing and returns 0, since `retention_hours` takes whole hours and no test waits one.
 
 #### Reads
 
