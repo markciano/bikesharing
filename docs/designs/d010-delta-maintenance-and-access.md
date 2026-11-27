@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 6.
+- Current: Step 7.
 
 ## 1. Spec — what and why
 
@@ -894,7 +894,7 @@ Yes if the checks exit 0 with no test removed, and the search finds only `TABLE_
 
 ### Step 6 — `processed_objects` by system, feed and UTC date
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d010.s6 partition processed_objects by system, feed and UTC date`
 - **R:** R1, R3, R16

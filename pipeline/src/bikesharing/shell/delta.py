@@ -20,7 +20,7 @@ dates and system names), never feed values.
 
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, tzinfo
 from pathlib import Path
 from typing import Any, Final, Literal
 
@@ -30,10 +30,12 @@ from deltalake.exceptions import CommitFailedError
 from deltalake.schema import PrimitiveType
 
 from bikesharing.core.settings import (
+    CHECKPOINT_INTERVAL,
     LAKEHOUSE_BUCKET,
     LOCAL_TIMEZONE,
     SYSTEMS,
     TABLE_PATHS,
+    TOMBSTONE_RETENTION,
     System,
     TableName,
 )
@@ -41,6 +43,7 @@ from bikesharing.core.verdict import MergeMetrics
 from bikesharing.shell.duckdb_session import ArrowStream
 
 _EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
+_EPOCH_ORDINAL: Final = _EPOCH.date().toordinal()
 _MICROSECOND: Final = timedelta(microseconds=1)
 
 
@@ -162,11 +165,64 @@ PROCESSED_OBJECTS_SCHEMA: Final = Schema(
         _field("system", "string"),
         _field("feed", "string"),
         _field("captured_at", "timestamp"),
+        _field("utc_date", "date"),
         _field("station_count", "integer"),
         _field("status", "string"),
         _field("run_id", "string"),
         _field("code_version", "string"),
     ]
+)
+
+TABLE_SCHEMAS: Final[Mapping[TableName, Schema]] = {
+    "station_stock": STATION_STOCK_SCHEMA,
+    "processed_objects": PROCESSED_OBJECTS_SCHEMA,
+}
+
+# Each table is partitioned by the range its readers filter by (d010,
+# processed_objects layout).
+PARTITION_COLUMNS: Final[Mapping[TableName, tuple[str, ...]]] = {
+    "station_stock": ("local_date",),
+    "processed_objects": ("system", "feed", "utc_date"),
+}
+
+# Each table's date partition, and the time zone its dates are in.
+DATE_PARTITION: Final[Mapping[TableName, tuple[str, tzinfo]]] = {
+    "station_stock": ("local_date", LOCAL_TIMEZONE),
+    "processed_objects": ("utc_date", UTC),
+}
+
+# The columns capture_history returns, those dbt's capture_volume reads: a
+# column processed_objects gains, such as utc_date, stays out of dbt's input
+# (d010, Common table access).
+_CAPTURE_HISTORY_COLUMNS: Final = (
+    "key",
+    "system",
+    "feed",
+    "captured_at",
+    "station_count",
+    "status",
+    "run_id",
+    "code_version",
+)
+
+# The columns latest_captures returns, those of station_stock's dbt contract.
+_LATEST_CAPTURES_COLUMNS: Final = (
+    "system",
+    "station_id",
+    "captured_at",
+    "local_date",
+    "local_minute",
+    "num_vehicles_available",
+    "num_docks_available",
+    "num_vehicles_disabled",
+    "num_docks_disabled",
+    "is_installed",
+    "is_renting",
+    "is_returning",
+    "last_reported",
+    "last_updated",
+    "run_id",
+    "code_version",
 )
 
 
@@ -196,9 +252,38 @@ def _date(value: date) -> str:
     return f"DATE {_string(value.isoformat())}"
 
 
+def _utc_date(value: datetime) -> date:
+    """Return an aware datetime's UTC date, ``processed_objects``' partition."""
+    if value.tzinfo is None:
+        raise ValueError(f"expected a datetime with a time zone, got {value!r}")
+    return value.astimezone(UTC).date()
+
+
 def _query(tables: Tables, table: TableName, sql: str) -> ArrowStream:
     """Run ``sql`` over the run's handle on ``table``, registered as ``t``."""
     return QueryBuilder().register("t", tables._handles[table]).execute(sql)
+
+
+def _interval(value: timedelta) -> str:
+    """Return a whole number of days as a Delta table property's interval."""
+    if value % timedelta(days=1):
+        raise ValueError(f"expected a whole number of days, got {value!r}")
+    return f"interval {value.days} days"
+
+
+def _table_properties(table: TableName) -> dict[str, str | None]:
+    """Return the table properties ``ensure_tables`` creates ``table`` with.
+
+    The daily maintenance cleans the log itself, so no commit lists the log to
+    clean it; and tombstones outlive vacuum's retention, so the daily vacuum
+    finds each removed file on several days (d010, Daily maintenance; d010,
+    Vacuum and tombstone retention).
+    """
+    return {
+        "delta.checkpointInterval": str(CHECKPOINT_INTERVAL[table]),
+        "delta.enableExpiredLogCleanup": "false",
+        "delta.deletedFileRetentionDuration": _interval(TOMBSTONE_RETENTION),
+    }
 
 
 def r2_lakehouse(
@@ -252,9 +337,10 @@ def local_lakehouse(path: Path) -> Lakehouse:
 
 
 def ensure_tables(lakehouse: Lakehouse) -> Tables:
-    """Create each missing table with its explicit schema, then open each once.
+    """Create each missing table, then open each once.
 
-    Existing tables are kept as they are.
+    A missing table is created with its explicit schema, its partition columns
+    and its maintenance properties; existing tables are kept as they are.
 
     Parameters
     ----------
@@ -267,19 +353,15 @@ def ensure_tables(lakehouse: Lakehouse) -> Tables:
         The run's handle on each table, at its latest version.
     """
     options = dict(lakehouse.storage_options)
-    DeltaTable.create(
-        lakehouse.table_uri(TABLE_PATHS["station_stock"]),
-        STATION_STOCK_SCHEMA,
-        mode="ignore",
-        partition_by=["local_date"],
-        storage_options=options,
-    )
-    DeltaTable.create(
-        lakehouse.table_uri(TABLE_PATHS["processed_objects"]),
-        PROCESSED_OBJECTS_SCHEMA,
-        mode="ignore",
-        storage_options=options,
-    )
+    for name, path in TABLE_PATHS.items():
+        DeltaTable.create(
+            lakehouse.table_uri(path),
+            TABLE_SCHEMAS[name],
+            mode="ignore",
+            partition_by=list(PARTITION_COLUMNS[name]),
+            configuration=_table_properties(name),
+            storage_options=options,
+        )
     return Tables(
         lakehouse=lakehouse,
         _handles={
@@ -353,12 +435,13 @@ def capture_history(tables: Tables, *, since: datetime, until: datetime) -> Arro
     Returns
     -------
     ArrowStream
-        The rows of ``processed_objects``, in its columns.
+        The rows of ``processed_objects``, in every column but ``utc_date``.
     """
     return _query(
         tables,
         "processed_objects",
-        f"select * from t where captured_at >= {_timestamp(since)} "
+        f"select {', '.join(_CAPTURE_HISTORY_COLUMNS)} from t "
+        f"where captured_at >= {_timestamp(since)} "
         f"and captured_at < {_timestamp(until)}",
     )
 
@@ -448,7 +531,10 @@ def record_processed(tables: Tables, objects: Sequence[ProcessedObject]) -> None
     """Record the batch's objects in ``processed_objects``, each key once.
 
     The insert-only MERGE on ``key`` makes a second writer of the same batch
-    add no row (d008 #4, Delta writes).
+    add no row (d008 #4, Delta writes). Its predicate also states the batch's
+    systems, feeds, UTC dates and capture range, so that it reads only the
+    partitions and files the batch writes; the match is the same, since the
+    capture instant derives from the key (d010, Bounded calls).
 
     Parameters
     ----------
@@ -468,14 +554,37 @@ def record_processed(tables: Tables, objects: Sequence[ProcessedObject]) -> None
             # instants' microseconds since the epoch instead.
             micros = [(obj.captured_at - _EPOCH) // _MICROSECOND for obj in objects]
             arrays.append(Array(micros, type=DataType.int64()).cast(field))
+        elif name == "utc_date":
+            days = [
+                _utc_date(obj.captured_at).toordinal() - _EPOCH_ORDINAL
+                for obj in objects
+            ]
+            arrays.append(Array(days, type=DataType.int32()).cast(field))
         else:
             arrays.append(Array([getattr(obj, name) for obj in objects], type=field))
     source = Table.from_arrays(arrays, schema=schema)
+    systems = ", ".join(
+        _string(system) for system in sorted({o.system for o in objects})
+    )
+    feeds = ", ".join(_string(feed) for feed in sorted({o.feed for o in objects}))
+    dates = ", ".join(
+        _date(utc_date)
+        for utc_date in sorted({_utc_date(o.captured_at) for o in objects})
+    )
+    captures = [obj.captured_at for obj in objects]
+    predicate = (
+        "target.key = source.key "
+        f"and target.system in ({systems}) "
+        f"and target.feed in ({feeds}) "
+        f"and target.utc_date in ({dates}) "
+        f"and target.captured_at >= {_timestamp(min(captures))} "
+        f"and target.captured_at <= {_timestamp(max(captures))}"
+    )
     handle = tables._handles["processed_objects"]
     (
         handle.merge(
             source=source,
-            predicate="target.key = source.key",
+            predicate=predicate,
             source_alias="source",
             target_alias="target",
         )
@@ -510,4 +619,8 @@ def latest_captures(tables: Tables, latest: Mapping[System, datetime]) -> ArrowS
         for system, captured_at in sorted(latest.items())
     ]
     where = " or ".join(conditions) if conditions else "false"
-    return _query(tables, "station_stock", f"select * from t where {where}")
+    return _query(
+        tables,
+        "station_stock",
+        f"select {', '.join(_LATEST_CAPTURES_COLUMNS)} from t where {where}",
+    )
