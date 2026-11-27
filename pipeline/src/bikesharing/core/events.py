@@ -33,6 +33,8 @@ type FieldValue = (
     | Sequence[FieldValue]
     | Mapping[str, FieldValue]
 )
+# The maintenance tasks ``maintenance_failed`` names (d010, Maintenance events).
+type MaintenanceTask = Literal["compaction", "retention", "vacuum", "log_cleanup"]
 
 REDACTED = "***"
 _LOG_PREFIX = "logs/pipeline"
@@ -530,7 +532,7 @@ def maintenance_failed(
     ts: datetime,
     *,
     table: str,
-    task: Literal["compaction", "retention", "vacuum", "log_cleanup"],
+    task: MaintenanceTask,
     error_type: str,
     error: str,
 ) -> Event:
