@@ -6,12 +6,18 @@ A change to any of them is a reviewed change deployed as a new code version
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from typing import Final, Literal
 from zoneinfo import ZoneInfo
 
 type System = Literal["ambici", "bicing"]
 """A bike sharing system the pipeline reads."""
+
+type TableName = Literal["station_stock", "processed_objects"]
+"""A Delta table of the lakehouse."""
+
+type SystemFeed = tuple[System, str]
+"""A system and one of its feeds, the key of each discovery watermark."""
 
 COMPONENT: Final = "pipeline"
 UNRELEASED_VERSION: Final = "unreleased"
@@ -24,9 +30,29 @@ LOCAL_TIMEZONE: Final = ZoneInfo("Europe/Madrid")
 CLOUDFLARE_ACCOUNT_ID: Final[str] = "b88ece5b9aad94b83f1710afa6d24070"
 BRONZE_BUCKET: Final = "bikesharing-bronze"
 LAKEHOUSE_BUCKET: Final = "bikesharing-lakehouse"
-STATION_STOCK_PATH: Final = "silver/station_stock"
-PROCESSED_OBJECTS_PATH: Final = "control/processed_objects"
 LOG_PREFIX: Final = "logs/pipeline"
+
+# Each table's settings. TABLE_PATHS' keys are the pipeline's tables.
+TABLE_PATHS: Final[Mapping[TableName, str]] = {
+    "station_stock": "silver/station_stock",
+    "processed_objects": "control/processed_objects",
+}
+# Commits between two checkpoints, the number that minimizes R2 requests per run.
+CHECKPOINT_INTERVAL: Final[Mapping[TableName, int]] = {
+    "station_stock": 8,
+    "processed_objects": 8,
+}
+# A table left out never compacts its active partitions.
+COMPACTION_THRESHOLD: Final[Mapping[TableName, int]] = {"processed_objects": 10}
+# A table left out keeps all its rows.
+RETENTION_MONTHS: Final[Mapping[TableName, int]] = {"station_stock": 12}
+# Tombstones outlive vacuum's wait, so that the daily vacuum has several days to
+# delete each removed file before a checkpoint drops its tombstone.
+TOMBSTONE_RETENTION: Final = timedelta(days=10)
+# The table history kept (ADR-0021, Retention per layer).
+VACUUM_RETENTION: Final = timedelta(days=7)
+# The local time of day of the daily maintenance.
+MAINTENANCE_LOCAL_TIME: Final = time(4, 0)
 
 # The first load drained in stages, each ending at an instant (d008 D8, First load
 # in chronological stages). None, the last stage, processes every object.

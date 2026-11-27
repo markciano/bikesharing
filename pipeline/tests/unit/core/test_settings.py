@@ -7,7 +7,13 @@ from pathlib import Path
 import pytest
 
 import bikesharing.core
-from bikesharing.core.settings import RunSettings, parse_run_settings, schedule_cron
+from bikesharing.core.settings import (
+    TOMBSTONE_RETENTION,
+    VACUUM_RETENTION,
+    RunSettings,
+    parse_run_settings,
+    schedule_cron,
+)
 
 VALID = {
     "cadence_min": 15,
@@ -93,3 +99,10 @@ def test_schedule_cron_gives_the_cadence_in_minutes() -> None:
     settings = parse_run_settings(VALID)
 
     assert schedule_cron(settings) == "*/15 * * * *"
+
+
+def test_vacuum_retention_is_7_days_and_below_the_tombstone_retention() -> None:
+    # Vacuum runs with deltalake's own retention check turned off, and a file
+    # whose tombstone is dropped before vacuum deletes it stays in R2 for good.
+    assert VACUUM_RETENTION == timedelta(days=7)
+    assert VACUUM_RETENTION < TOMBSTONE_RETENTION

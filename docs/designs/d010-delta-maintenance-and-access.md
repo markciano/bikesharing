@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 2.
+- Current: Step 3.
 
 ## 1. Spec — what and why
 
@@ -731,7 +731,7 @@ grep -n -A1 'name = "deltalake"' pipeline/uv.lock
 
 ### Step 2 — Table settings in one place
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `refactor: d010.s2 keep each table's settings in settings.py`
 - **R:** —

@@ -28,13 +28,11 @@ from bikesharing.core.settings import (
     LAKEHOUSE_BUCKET,
     LOCAL_TIMEZONE,
     SYSTEMS,
+    TABLE_PATHS,
     System,
 )
 from bikesharing.core.verdict import MergeMetrics
 from bikesharing.shell.duckdb_session import ArrowStream
-
-STATION_STOCK_PATH: Final = "silver/station_stock"
-PROCESSED_OBJECTS_PATH: Final = "control/processed_objects"
 
 _EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
 _MICROSECOND: Final = timedelta(microseconds=1)
@@ -245,14 +243,14 @@ def ensure_tables(lakehouse: Lakehouse) -> None:
     """
     options = dict(lakehouse.storage_options)
     DeltaTable.create(
-        lakehouse.table_uri(STATION_STOCK_PATH),
+        lakehouse.table_uri(TABLE_PATHS["station_stock"]),
         STATION_STOCK_SCHEMA,
         mode="ignore",
         partition_by=["local_date"],
         storage_options=options,
     )
     DeltaTable.create(
-        lakehouse.table_uri(PROCESSED_OBJECTS_PATH),
+        lakehouse.table_uri(TABLE_PATHS["processed_objects"]),
         PROCESSED_OBJECTS_SCHEMA,
         mode="ignore",
         storage_options=options,
@@ -273,7 +271,7 @@ def processed_keys(lakehouse: Lakehouse) -> frozenset[str]:
         The keys in ``processed_objects``.
     """
     table = Table.from_arrow(
-        _query(lakehouse, PROCESSED_OBJECTS_PATH, "select key from t")
+        _query(lakehouse, TABLE_PATHS["processed_objects"], "select key from t")
     )
     return frozenset(_values(table["key"]))
 
@@ -295,7 +293,7 @@ def latest_processed(lakehouse: Lakehouse) -> dict[System, datetime | None]:
     table = Table.from_arrow(
         _query(
             lakehouse,
-            PROCESSED_OBJECTS_PATH,
+            TABLE_PATHS["processed_objects"],
             "select system, max(captured_at) as captured_at from t group by system",
         )
     )
@@ -331,7 +329,7 @@ def capture_history(
     """
     return _query(
         lakehouse,
-        PROCESSED_OBJECTS_PATH,
+        TABLE_PATHS["processed_objects"],
         f"select * from t where captured_at >= {_timestamp(since)} "
         f"and captured_at < {_timestamp(until)}",
     )
@@ -394,7 +392,7 @@ def merge_station_stock(
     for attempt in range(1, attempts + 1):
         try:
             metrics = (
-                _table(lakehouse, STATION_STOCK_PATH)
+                _table(lakehouse, TABLE_PATHS["station_stock"])
                 .merge(
                     source=rows,
                     predicate=predicate,
@@ -444,7 +442,7 @@ def record_processed(lakehouse: Lakehouse, objects: Sequence[ProcessedObject]) -
             arrays.append(Array([getattr(obj, name) for obj in objects], type=field))
     source = Table.from_arrays(arrays, schema=schema)
     (
-        _table(lakehouse, PROCESSED_OBJECTS_PATH)
+        _table(lakehouse, TABLE_PATHS["processed_objects"])
         .merge(
             source=source,
             predicate="target.key = source.key",
@@ -483,4 +481,6 @@ def latest_captures(
         for system, captured_at in sorted(latest.items())
     ]
     where = " or ".join(conditions) if conditions else "false"
-    return _query(lakehouse, STATION_STOCK_PATH, f"select * from t where {where}")
+    return _query(
+        lakehouse, TABLE_PATHS["station_stock"], f"select * from t where {where}"
+    )
