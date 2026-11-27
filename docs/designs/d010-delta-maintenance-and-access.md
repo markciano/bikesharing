@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 9.
+- Current: Step 10.
 
 ## 1. Spec — what and why
 
@@ -1030,7 +1030,7 @@ Yes if it exits 0.
 
 ### Step 9 — Maintenance tasks on a table
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d010.s9 add compaction, retention, vacuum and log cleanup to the table access`
 - **R:** R12, R14

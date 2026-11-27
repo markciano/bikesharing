@@ -1,11 +1,17 @@
-"""The lakehouse's Delta tables: their creation, the processing state and each batch's commits.
+"""The lakehouse's Delta tables: their creation, the processing state, each batch's commits and their maintenance.
 
 Each batch commits twice: its station stock first, with an insert-only MERGE on
 the natural key, and its objects in ``processed_objects`` second, with an
 insert-only MERGE on the key, so that a run that stops between the two leaves
 the batch pending and processing it again adds no row (d008 #4, Delta writes).
-No row is ever updated or deleted (d005 D4, Business processes and the grain of
-the stock).
+No row is ever updated (d005 D4, Business processes and the grain of the
+stock); rows leave only with the whole partition that retention deletes (d010
+D4, Silver keeps the current local month and the 12 whole months before it).
+
+The maintenance tasks act on the partitions they are given, found from the
+log's add actions with no data file read, and write no commit when given none;
+vacuum and log cleanup find what to delete from the log, listing no data file
+(d010, Compaction; d010, Daily maintenance).
 
 A run opens each table once, with ``ensure_tables``, and every other call reads
 and writes through those handles: each of the module's writes refreshes its
@@ -18,6 +24,7 @@ The SQL the module builds takes only the run's own typed values (instants,
 dates and system names), never feed values.
 """
 
+from collections import Counter
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta, tzinfo
@@ -29,6 +36,11 @@ from deltalake import DeltaTable, Field, QueryBuilder, Schema
 from deltalake.exceptions import CommitFailedError
 from deltalake.schema import PrimitiveType
 
+from bikesharing.core.delta_maintenance import (
+    CompactionMetrics,
+    Partition,
+    RetentionMetrics,
+)
 from bikesharing.core.settings import (
     CHECKPOINT_INTERVAL,
     LAKEHOUSE_BUCKET,
@@ -673,3 +685,188 @@ def latest_captures(tables: Tables, latest: Mapping[System, datetime]) -> ArrowS
         "station_stock",
         f"select {', '.join(_LATEST_CAPTURES_COLUMNS)} from t where {where}",
     )
+
+
+def _partition_value(value: object) -> str:
+    """Return a partition value as the log writes it: a date in ISO format."""
+    return value.isoformat() if isinstance(value, date) else str(value)
+
+
+def table_partitions(tables: Tables, table: TableName) -> list[Partition]:
+    """Return each partition of ``table`` with its number of data files, reading no data file.
+
+    The partitions come from the add actions of the log the run's handle holds.
+
+    Parameters
+    ----------
+    tables : Tables
+        The run's tables.
+    table : TableName
+        The table whose partitions are listed.
+
+    Returns
+    -------
+    list[Partition]
+        Each partition with at least one data file, sorted by its values.
+    """
+    actions = Table.from_arrow(tables._handles[table].get_add_actions(flatten=True))
+    if actions.num_rows == 0:
+        return []
+    columns = PARTITION_COLUMNS[table]
+    files = Counter(
+        tuple(
+            (column, _partition_value(value))
+            for column, value in zip(columns, row, strict=True)
+        )
+        for row in zip(
+            *(_values(actions[f"partition.{column}"]) for column in columns),
+            strict=True,
+        )
+    )
+    date_column, _ = DATE_PARTITION[table]
+    return [
+        Partition(
+            values=values,
+            day=date.fromisoformat(dict(values)[date_column]),
+            files=count,
+        )
+        for values, count in sorted(files.items())
+    ]
+
+
+def compact(
+    tables: Tables, table: TableName, partitions: Collection[Partition]
+) -> CompactionMetrics:
+    """Compact each partition given into as few data files as its size allows.
+
+    ``optimize.compact`` takes the filter of one partition, so each partition
+    is compacted in a commit of its own: one per system and feed whose active
+    partition reached its threshold, which the checkpoint interval counts as
+    commits per run (d010, Compaction; d010, Checkpoint interval).
+
+    Parameters
+    ----------
+    tables : Tables
+        The run's tables.
+    table : TableName
+        The table compacted.
+    partitions : Collection[Partition]
+        The partitions compacted; none writes no commit.
+
+    Returns
+    -------
+    CompactionMetrics
+        The partitions compacted and the data files removed and added, over all
+        of them.
+    """
+    handle = tables._handles[table]
+    compacted = removed = added = 0
+    for partition in partitions:
+        metrics = handle.optimize.compact(
+            partition_filters=[
+                (column, "=", value) for column, value in partition.values
+            ]
+        )
+        handle.update_incremental()
+        compacted += metrics["partitionsOptimized"]
+        removed += metrics["numFilesRemoved"]
+        added += metrics["numFilesAdded"]
+    return CompactionMetrics(
+        partitions=compacted, files_removed=removed, files_added=added
+    )
+
+
+def _partition_condition(table: TableName, partition: Partition) -> str:
+    """Return the SQL condition that selects ``partition`` of ``table``."""
+    date_column, _ = DATE_PARTITION[table]
+    return " and ".join(
+        f"{column} = {_date(partition.day) if column == date_column else _string(value)}"
+        for column, value in partition.values
+    )
+
+
+def delete_partitions(
+    tables: Tables, table: TableName, partitions: Collection[Partition]
+) -> RetentionMetrics:
+    """Delete every row of each partition given, in one commit.
+
+    The predicate states partition columns only, so the delete removes whole
+    data files and rewrites none.
+
+    Parameters
+    ----------
+    tables : Tables
+        The run's tables.
+    table : TableName
+        The table the partitions are deleted from.
+    partitions : Collection[Partition]
+        The partitions deleted; none writes no commit.
+
+    Returns
+    -------
+    RetentionMetrics
+        The partitions deleted and their rows.
+    """
+    if not partitions:
+        return RetentionMetrics(partitions_deleted=0, rows_deleted=0)
+    predicate = " or ".join(
+        f"({_partition_condition(table, partition)})" for partition in partitions
+    )
+    handle = tables._handles[table]
+    metrics = handle.delete(predicate)
+    handle.update_incremental()
+    return RetentionMetrics(
+        partitions_deleted=len(set(partitions)),
+        rows_deleted=metrics["num_deleted_rows"],
+    )
+
+
+def vacuum(tables: Tables, table: TableName, *, retention: timedelta) -> int:
+    """Delete the data files ``table`` removed more than ``retention`` ago.
+
+    The files come from the log's tombstones. The retention is passed
+    explicitly, and ``deltalake``'s check that it is at least the tombstone
+    retention is turned off, since tombstones outlive it by design (d010,
+    Vacuum and tombstone retention).
+
+    Parameters
+    ----------
+    tables : Tables
+        The run's tables.
+    table : TableName
+        The table vacuumed.
+    retention : timedelta
+        How long a removed file is kept, in whole hours.
+
+    Returns
+    -------
+    int
+        The number of data files deleted.
+
+    Raises
+    ------
+    ValueError
+        If ``retention`` is not a whole number of hours.
+    """
+    hours, remainder = divmod(retention, timedelta(hours=1))
+    if remainder:
+        raise ValueError(f"expected a whole number of hours, got {retention!r}")
+    handle = tables._handles[table]
+    deleted = handle.vacuum(
+        retention_hours=hours, dry_run=False, enforce_retention_duration=False
+    )
+    handle.update_incremental()
+    return len(deleted)
+
+
+def cleanup_log(tables: Tables, table: TableName) -> None:
+    """Delete the log files of ``table`` older than the log's retention.
+
+    Parameters
+    ----------
+    tables : Tables
+        The run's tables.
+    table : TableName
+        The table whose log is cleaned.
+    """
+    tables._handles[table].cleanup_metadata()
