@@ -4,7 +4,6 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -24,8 +23,7 @@ VECTORS: dict[str, Any] = json.loads(CONTRACT.read_text())
 RAW_VALID = [case for case in VECTORS["valid"] if case["kind"] == "raw"]
 RAW_INVALID = [case for case in VECTORS["invalid"] if case["key"].startswith("raw/")]
 
-MADRID = ZoneInfo("Europe/Madrid")
-LOOKBACK = timedelta(hours=1)
+LOOKBACK = timedelta(minutes=15)
 
 
 def _instant(text: str) -> datetime:
@@ -89,80 +87,47 @@ def test_parse_bronze_key_raises_on_key_outside_systems_raw_objects(key: str) ->
         parse_bronze_key(key)
 
 
-# Listing plan (d008 #7, Discovery of pending objects).
+# Listing plan (d010 D3, Discovery keeps a watermark per system and feed).
 
 
-def test_plan_listing_sweeps_whole_prefix_when_nothing_is_processed() -> None:
-    plan = plan_listing(
-        "ambici",
-        None,
-        now=datetime(2026, 10, 18, 12, 0, tzinfo=UTC),
-        lookback=LOOKBACK,
-        timezone=MADRID,
-    )
-
-    assert plan == ListingPlan(
-        system="ambici",
-        prefix="raw/ambici/station_status/",
-        start_after=None,
-        full_sweep=True,
-    )
-
-
-def test_plan_listing_lists_after_latest_minus_lookback_on_same_local_date() -> None:
+# Verifies d010 R10
+def test_plan_listing_starts_after_latest_capture_minus_lookback() -> None:
     plan = plan_listing(
         "bicing",
+        "station_status",
         datetime(2026, 10, 18, 11, 30, 5, tzinfo=UTC),
-        now=datetime(2026, 10, 18, 11, 40, tzinfo=UTC),
         lookback=LOOKBACK,
-        timezone=MADRID,
     )
 
     assert plan == ListingPlan(
         system="bicing",
+        feed="station_status",
         prefix="raw/bicing/station_status/",
-        start_after=_key("20261018T103005Z"),
+        start_after=_key("20261018T111505Z"),
         full_sweep=False,
     )
 
 
-def test_plan_listing_sweeps_whole_prefix_on_first_run_after_local_midnight() -> None:
-    # 21:59Z and 22:01Z fall on either side of midnight in Madrid (UTC+2),
-    # though both are on the same UTC date.
-    plan = plan_listing(
-        "bicing",
-        datetime(2026, 10, 18, 21, 59, tzinfo=UTC),
-        now=datetime(2026, 10, 18, 22, 1, tzinfo=UTC),
-        lookback=LOOKBACK,
-        timezone=MADRID,
+# Verifies d010 R11
+def test_plan_listing_lists_whole_prefix_when_nothing_is_processed() -> None:
+    plan = plan_listing("ambici", "station_information", None, lookback=LOOKBACK)
+
+    assert plan == ListingPlan(
+        system="ambici",
+        feed="station_information",
+        prefix="raw/ambici/station_information/",
+        start_after=None,
+        full_sweep=True,
     )
-
-    assert plan.full_sweep is True
-    assert plan.start_after is None
-
-
-def test_plan_listing_lists_incrementally_after_utc_midnight_within_local_day() -> None:
-    # 23:30Z and 00:10Z are on different UTC dates but the same day in Madrid.
-    plan = plan_listing(
-        "bicing",
-        datetime(2026, 10, 18, 23, 30, tzinfo=UTC),
-        now=datetime(2026, 10, 19, 0, 10, tzinfo=UTC),
-        lookback=LOOKBACK,
-        timezone=MADRID,
-    )
-
-    assert plan.full_sweep is False
-    assert plan.start_after == _key("20261018T223000Z")
 
 
 def test_plan_listing_raises_on_naive_instant() -> None:
     with pytest.raises(ValueError):
         plan_listing(
             "bicing",
+            "station_status",
             datetime(2026, 10, 18, 11, 30),
-            now=datetime(2026, 10, 18, 11, 40, tzinfo=UTC),
             lookback=LOOKBACK,
-            timezone=MADRID,
         )
 
 

@@ -1,10 +1,10 @@
-"""Parses bronze keys, plans each system's listing and selects the pending objects.
+"""Parses bronze keys, plans each feed's listing and selects the pending objects.
 
-A run lists from shortly before the latest processed capture, and sweeps the
-whole prefix on its first run of a local day, so that an object written late
-is still found (d008 #7, Discovery of pending objects). Unreadable objects are
-left out only through a reviewed exclusion list (d008 #8, Unreadable objects).
-Keys follow ``contracts/bronze-keys.json``.
+A run lists each system and feed from shortly before its own latest processed
+capture, so that an object written late is still found, and a feed with nothing
+processed from its start (d010 D3, Discovery keeps a watermark per system and
+feed). Unreadable objects are left out only through a reviewed exclusion list
+(d008 #8, Unreadable objects). Keys follow ``contracts/bronze-keys.json``.
 """
 
 import re
@@ -13,9 +13,8 @@ from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Final, cast
-from zoneinfo import ZoneInfo
 
-from bikesharing.core.settings import FEED, SYSTEMS, System
+from bikesharing.core.settings import SYSTEMS, System
 
 _RUN_ID_FORMAT: Final = "%Y%m%dT%H%M%SZ"
 _RAW_KEY: Final = re.compile(
@@ -52,21 +51,25 @@ class BronzeObject:
 
 @dataclass(frozen=True, slots=True)
 class ListingPlan:
-    """How a run lists one system's ``station_status`` prefix.
+    """How a run lists one system and feed's prefix.
 
     Attributes
     ----------
     system : System
         The system listed.
+    feed : str
+        The GBFS feed listed.
     prefix : str
-        The prefix listed, ``raw/<system>/station_status/``.
+        The prefix listed, ``raw/<system>/<feed>/``.
     start_after : str | None
         The key the listing starts after; None lists the whole prefix.
     full_sweep : bool
-        Whether the whole prefix is listed.
+        Whether the whole prefix is listed, which only a feed with nothing
+        processed does.
     """
 
     system: System
+    feed: str
     prefix: str
     start_after: str | None
     full_sweep: bool
@@ -141,52 +144,47 @@ def bronze_key(system: System, feed: str, captured_at: datetime) -> str:
 
 def plan_listing(
     system: System,
+    feed: str,
     latest_processed: datetime | None,
     *,
-    now: datetime,
     lookback: timedelta,
-    timezone: ZoneInfo,
 ) -> ListingPlan:
-    """Return how a run lists one system's prefix.
+    """Return how a run lists one system and feed's prefix.
 
     Parameters
     ----------
     system : System
         The system to list.
+    feed : str
+        The GBFS feed to list.
     latest_processed : datetime | None
-        The capture instant of the latest processed object, or None if none is.
-    now : datetime
-        The run's current instant, timezone-aware.
+        The capture instant of the feed's latest processed object, or None if
+        none is.
     lookback : timedelta
         How far before the latest processed capture the listing starts.
-    timezone : ZoneInfo
-        The local timezone whose midnight starts a full sweep.
 
     Returns
     -------
     ListingPlan
-        A full sweep when nothing is processed or the local date of ``now`` is
-        later than that of the latest processed capture; otherwise a listing
-        after the key of the latest processed capture minus ``lookback``.
+        The whole prefix when nothing is processed; otherwise a listing after
+        the key of the latest processed capture minus ``lookback``.
 
     Raises
     ------
     ValueError
-        If ``now`` or ``latest_processed`` is naive.
+        If ``latest_processed`` is naive.
     """
-    prefix = f"raw/{system}/{FEED}/"
-    now_local = _as_utc(now).astimezone(timezone)
-    if latest_processed is None or (
-        now_local.date() > _as_utc(latest_processed).astimezone(timezone).date()
-    ):
-        return ListingPlan(
-            system=system, prefix=prefix, start_after=None, full_sweep=True
-        )
+    start_after = (
+        None
+        if latest_processed is None
+        else bronze_key(system, feed, latest_processed - lookback)
+    )
     return ListingPlan(
         system=system,
-        prefix=prefix,
-        start_after=bronze_key(system, FEED, latest_processed - lookback),
-        full_sweep=False,
+        feed=feed,
+        prefix=f"raw/{system}/{feed}/",
+        start_after=start_after,
+        full_sweep=start_after is None,
     )
 
 

@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 7.
+- Current: Step 8.
 
 ## 1. Spec — what and why
 
@@ -431,6 +431,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
             ├── test_delta.py              (modified)  Table paths from settings; bounded calls; table properties per key of TABLE_PATHS; maintenance tasks
             ├── test_lakehouse_catalog.py  (new)       The catalog's table headings are TABLE_PATHS' keys
             ├── test_migrate_delta_tables.py (new)     The migration's checks, rewrite and verification; removed with the script
+            ├── test_r2.py                 (modified)  ListingPlan with its feed
             └── test_run.py                (modified)  Compaction, daily maintenance and maintenance_failed within a run
 ```
 
@@ -941,7 +942,7 @@ Yes if it exits 0.
 
 ### Step 7 — Discovery from each feed's latest capture
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d010.s7 list bronze from each feed's latest capture`
 - **R:** R10, R11
@@ -957,6 +958,7 @@ Yes if it exits 0.
   - R10: `plan_listing` starts after the key of the latest capture minus 15 min;
   - R11: `plan_listing` lists the whole prefix when nothing is processed;
   - the tests of the daily full sweep are removed with it.
+- `pipeline/tests/integration/test_r2.py`: its `ListingPlan` gains `feed`.
 
 #### Reads
 

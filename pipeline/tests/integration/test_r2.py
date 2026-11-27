@@ -32,6 +32,7 @@ BICING_KEYS = [
 def _plan(prefix: str, start_after: str | None) -> ListingPlan:
     return ListingPlan(
         system="bicing",
+        feed="station_status",
         prefix=prefix,
         start_after=start_after,
         full_sweep=start_after is None,
