@@ -19,9 +19,8 @@ Phase: the blocks and reviews completed. A document-only task shows only Spec ·
 Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
 
 - State: Draft 📝
-- Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › Components; File layout is written. Left in the Plan: Components, Test plan, Breaking changes and What does not change (whether each applies), then `python.md` written as a rule document.
-- Owner: explain each concern until it is understood before asking for the decision.
+- Phase: [x] Spec · [x] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
+- Current: Plan review.
 
 ## 1. Spec — what and why
 
@@ -386,11 +385,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 1 | [Modal's region](#modals-region) | Modal's region is tried in production right after this task's Done when, with no estimate first, following one variable changed at a time **refines [s019 › D2](../spikes/s019-pipeline-run-time-r2-reads.md#d2-modals-region-is-decided-after-the-fix)** | The trial is one reversible line, and the estimate would not save it; a trial alongside the fix would mix both in the Done when | — | Plan |
 | 2 | [Modal's region](#modals-region) | Modal stays in Europe only if a run costs no more there, its median time × 1.15 at most the US median, following a decision by unit cost **refines [s019 › D2](../spikes/s019-pipeline-run-time-r2-reads.md#d2-modals-region-is-decided-after-the-fix)** | With the p95 within 2 min, a shorter run changes nothing the page shows | — | Plan |
 
-### 2.3 Architecture
-
-<!-- Optional. One diagram and 2–3 sentences. -->
-
-### 2.4 File layout
+### 2.3 File layout
 
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
@@ -431,7 +426,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
             └── test_run.py                (modified)  Compaction, daily maintenance and maintenance_failed within a run
 ```
 
-### 2.5 Components
+### 2.4 Components
 
 <!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
@@ -623,7 +618,7 @@ class RunConfig:
 - **Daily maintenance:** after the batch loop ends, whether by the last batch, the time budget or a batch that did not commit, and before publishing: when `maintenance_window` is set and `is_maintenance_run` holds for the run's start, retention, vacuum and log cleanup, in that order ([Daily maintenance](#daily-maintenance)). A one-off run never runs it; the next scheduled one at `MAINTENANCE_LOCAL_TIME` does.
 - **A failed task:** each task runs per table inside its own `try`, and an exception writes `maintenance_failed` and goes on; the run's outcome does not change ([Maintenance events](#maintenance-events)).
 
-### 2.6 Test plan
+### 2.5 Test plan
 
 <!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
 
@@ -646,16 +641,16 @@ class RunConfig:
 | R15 | Test | A run's daily maintenance leaves every row of `processed_objects` | integration |
 | R16 | Test | A batch recorded twice adds no rows to `station_stock` or `processed_objects` | integration |
 
-### 2.7 Breaking changes
+### 2.6 Breaking changes
 
 <!-- Optional. Shared models or interfaces this design changes, and how their dependants are handled. -->
 
 | File | Why it breaks | Strategy |
 |---|---|---|
 | `control/processed_objects` in `bikesharing-lakehouse` | Its partition columns change and it gains `utc_date`, so the deployed code and the new one cannot read each other's layout | D2's order: the schedule is paused, the migration rewrites the table, and the new code's deployment resumes the schedule ([Migration](#migration)) |
-| `pipeline/src/bikesharing/shell/delta.py`, `pipeline/src/bikesharing/core/settings.py` | The path constants are removed, and the run's calls take `Tables` in place of `Lakehouse` ([Components](#25-components)) | Every dependant changes in this task: `run.py`, `test_delta.py`, `test_run.py` and `test_discovery.py`, all in [File layout](#24-file-layout) |
+| `pipeline/src/bikesharing/shell/delta.py`, `pipeline/src/bikesharing/core/settings.py` | The path constants are removed, and the run's calls take `Tables` in place of `Lakehouse` ([Components](#24-components)) | Every dependant changes in this task: `run.py`, `test_delta.py`, `test_run.py` and `test_discovery.py`, all in [File layout](#23-file-layout) |
 
-### 2.8 What does not change
+### 2.7 What does not change
 
 <!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
 
