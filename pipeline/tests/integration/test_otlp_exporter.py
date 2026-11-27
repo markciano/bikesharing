@@ -5,6 +5,7 @@ production code with ``urllib`` and no network beyond the loopback, with a small
 timeout (d009, Pipeline's OTLP payload and exporter).
 """
 
+import contextlib
 import json
 import socket
 import threading
@@ -74,10 +75,13 @@ def stub() -> Iterator[_Stub]:
             )
             time.sleep(state.response_delay_s)
             status = state.statuses.pop(0) if state.statuses else 200
-            self.send_response(status)
-            self.send_header("Content-Length", "2")
-            self.end_headers()
-            self.wfile.write(b"{}")
+            # A client that timed out has already closed the connection, as the
+            # stalled-answer test intends, so the failed write is expected.
+            with contextlib.suppress(BrokenPipeError):
+                self.send_response(status)
+                self.send_header("Content-Length", "2")
+                self.end_headers()
+                self.wfile.write(b"{}")
 
         def log_message(self, format: str, *args: object) -> None:
             """Keep the test output free of the server's access log."""
