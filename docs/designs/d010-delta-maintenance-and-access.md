@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 11.
+- Current: Step 12.
 
 ## 1. Spec — what and why
 
@@ -1118,7 +1118,7 @@ Yes if it exits 0.
 
 ### Step 11 — Only the table access imports `deltalake`
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: d010.s11 allow only the table access to import deltalake`
 - **R:** R5

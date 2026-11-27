@@ -86,6 +86,15 @@ type = "layers"
 containers = ["bikesharing"]
 layers = ["shell", "core"]
 
+# One module reaches the Delta tables, so that every table is opened once per run
+# and every read of it is bounded (ADR-0052, Delta maintenance and access pattern).
+[[tool.importlinter.contracts]]
+name = "Only the table access imports deltalake"
+type = "forbidden"
+source_modules = ["bikesharing"]
+forbidden_modules = ["deltalake"]
+ignore_imports = ["bikesharing.shell.delta -> deltalake"]
+
 [tool.sqlfluff.core]
 dialect = "duckdb"
 templater = "dbt"
