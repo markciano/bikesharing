@@ -10,7 +10,7 @@ Kind: a build task builds code or configuration and has every block. A document-
 - **Task:** T072
 - **Kind:** build
 - **ADRs:** [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)
-- **New ADRs from this doc:** `<ADRs created during this design, or "none">`
+- **New ADRs from this doc:** none
 
 ## Status
 
@@ -394,8 +394,40 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 <!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
 ```text
-<path>/
-└── <file>      (new)        <purpose>
+.
+├── .claude/rules/code/
+│   └── python.md                          (modified)  Structure: only bikesharing.shell.delta imports deltalake; a new Delta table follows docs/lakehouse.md › Adding a table
+├── .github/workflows/
+│   └── ci.yml                             (modified)  docs/lakehouse.md joins the pipeline path filter
+├── contracts/
+│   └── log-events.registry.json           (modified)  The five maintenance events, needs_action false, no alert
+├── docs/
+│   ├── architecture.md                    (modified)  § 6.2: compaction after each batch and the daily maintenance; § 8: a bullet on Delta tables linking to the catalog
+│   └── lakehouse.md                       (new)       Catalog of the lakehouse's tables: how each applies ADR-0052, how its values are computed, Adding a table
+└── pipeline/
+    ├── pyproject.toml                     (modified)  deltalake >=1.7.0; import-linter contract: only bikesharing.shell.delta imports deltalake
+    ├── uv.lock                            (modified)  deltalake 1.7.0
+    ├── scripts/
+    │   └── migrate_delta_tables.py        (new)       One-off migration of D2: checks, rewrite of processed_objects, verification, table properties
+    ├── src/bikesharing/core/
+    │   ├── discovery.py                   (modified)  plan_listing lists from the latest capture minus the lookback, with no daily full sweep
+    │   ├── events.py                      (modified)  Builders of the five maintenance events
+    │   ├── delta_maintenance.py           (new)       Pure decisions: closed partitions, partitions to compact, retention cutoff, whether a run is the maintenance run
+    │   └── settings.py                    (modified)  TABLE_PATHS replaces the two path constants; COMPACTION_THRESHOLD, CHECKPOINT_INTERVAL, TOMBSTONE_RETENTION, VACUUM_RETENTION, MAINTENANCE_LOCAL_TIME; LISTING_LOOKBACK to 15 min
+    ├── src/bikesharing/shell/
+    │   ├── delta.py                       (modified)  Table paths from settings; utc_date partitioning; bounded calls; table properties on creation; compaction, retention, vacuum and log cleanup
+    │   └── run.py                         (modified)  Compaction after each batch; daily maintenance after the last batch of the maintenance run; maintenance_failed without changing the outcome
+    └── tests/
+        ├── unit/core/
+        │   ├── test_discovery.py          (modified)  Listing from the latest capture minus the lookback
+        │   ├── test_events.py             (modified)  The five maintenance events
+        │   ├── test_delta_maintenance.py  (new)       The decisions of delta_maintenance.py
+        │   └── test_settings.py           (modified)  VACUUM_RETENTION is 7 days and below TOMBSTONE_RETENTION
+        └── integration/
+            ├── test_delta.py              (modified)  Table paths from settings; bounded calls; table properties per key of TABLE_PATHS; maintenance tasks
+            ├── test_lakehouse_catalog.py  (new)       The catalog's table headings are TABLE_PATHS' keys
+            ├── test_migrate_delta_tables.py (new)     The migration's checks, rewrite and verification
+            └── test_run.py                (modified)  Compaction, daily maintenance and maintenance_failed within a run
 ```
 
 ### 2.5 Components
