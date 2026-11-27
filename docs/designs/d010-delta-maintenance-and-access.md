@@ -679,30 +679,164 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 
 <!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
-### Step 1 — `<Title>`
+None.
+
+### Step 1 — Upgrade `deltalake` to 1.7.0
 
 - **Status:** 💤 todo
-- **Who:** Owner
-- **Commit:** following the Git conventions in CLAUDE.md, with the design and step ID first in the description: `<type>: dNNN.sN <description>`.
-- **R:** R1, R3 (or —)
-- **Model:** `<model · effort>` (or —)
-- **Review:** `<code | security | code and security | no>`
+- **Who:** Claude
+- **Commit:** `build: d010.s1 upgrade deltalake to 1.7.0`
+- **R:** R1
+- **Model:** `sonnet · low`
+- **Review:** `no`
 
 #### Scope
 
-<!-- The result of the step. List the components, the files created or changed (code, tests, docs), and the tests from the Test plan that cover it. A reviewer should know what the diff will contain from this section alone. -->
+- `pipeline/pyproject.toml`: `deltalake>=1.7.0`.
+- `pipeline/uv.lock`: `deltalake` 1.7.0.
+- Tests: the existing suite passes unchanged, the first half of the Test plan's R1 row.
+- A throwaway script in the session's scratchpad, not committed, prints the columns of `get_add_actions(flatten=True)` on the installed version.
 
 #### Reads
 
-<!-- List of reads containing what to read (be specific with paragraph or line), what contains the read, and why it is interesting here.  -->
+| What | Where | Why |
+|---|---|---|
+| [deltalake 1.7.0](#deltalake-170) | d010 › Plan | The upgrade, its minimum, and the add actions' columns that call 2 relies on |
+| Lines 42–51 | `.claude/rules/code/dependencies.md` | How a range and the lockfile change, and that only locked versions run |
 
 #### Do
 
-<!-- Numbered actions in execution order, one verb each (write, implement, update, run). Every file named here must appear in Scope; add nothing Scope does not list. -->
+1. Run `uv add --directory pipeline "deltalake>=1.7.0"`.
+2. Run `uv lock --directory pipeline --upgrade-package deltalake==1.7.0`, so the lockfile holds 1.7.0 even if a later 1.7.x exists.
+3. Write the throwaway script: it creates a local table partitioned by `system`, `feed` and `utc_date` with a `captured_at` timestamp column, writes two rows, and prints the columns of `get_add_actions(flatten=True)`.
+4. Run it with `uv run --directory pipeline python <scratchpad>/add_actions_columns.py`.
 
 #### Check
 
-<!-- command/s or verification with a yes/no result. -->
+```bash
+bash pipeline/scripts/check-pipeline.sh
+grep -n -A1 'name = "deltalake"' pipeline/uv.lock
+```
+
+- Yes if the checks exit 0 and the lockfile shows `version = "1.7.0"`.
+- Yes if the script prints `partition.utc_date`, `min.captured_at` and `max.captured_at`. If not, Step 8 builds call 2 with the fallback of [deltalake 1.7.0](#deltalake-170) › File statistics.
+
+### Step 2 — Table settings in one place
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `refactor: d010.s2 keep each table's settings in settings.py`
+- **R:** —
+- **Model:** `sonnet · medium`
+- **Review:** `no`
+
+#### Scope
+
+- `pipeline/src/bikesharing/core/settings.py`: adds `TableName`, `SystemFeed`, `TABLE_PATHS`, `CHECKPOINT_INTERVAL`, `COMPACTION_THRESHOLD`, `RETENTION_MONTHS`, `TOMBSTONE_RETENTION`, `VACUUM_RETENTION` and `MAINTENANCE_LOCAL_TIME`; removes `STATION_STOCK_PATH` and `PROCESSED_OBJECTS_PATH`. `LISTING_LOOKBACK` changes in Step 7.
+- `pipeline/src/bikesharing/shell/delta.py`: its two path constants removed; every path from `TABLE_PATHS`.
+- `pipeline/tests/integration/test_run.py`: reads paths from `TABLE_PATHS` in place of the two constants.
+- `pipeline/tests/unit/core/test_settings.py`: `VACUUM_RETENTION` is 7 days and below `TOMBSTONE_RETENTION`.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [`bikesharing.core.settings`](#bikesharingcoresettings) | d010 › Components | The constants, their types and values |
+| [Table settings and catalog](#table-settings-and-catalog) › `settings.py` | d010 › Plan | No other module or test writes a table's path |
+| [Vacuum and tombstone retention](#vacuum-and-tombstone-retention) › Safety check | d010 › Plan | Why the unit test pins the two retentions |
+
+#### Do
+
+1. Write the test of the two retentions in `test_settings.py`, failing.
+2. Add the constants to `settings.py` and remove the two path constants.
+3. Update `delta.py` and `test_run.py` to take every path from `TABLE_PATHS`.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+grep -rn -E "STATION_STOCK_PATH|PROCESSED_OBJECTS_PATH" pipeline
+```
+
+Yes if the checks exit 0 and the search finds nothing.
+
+### Step 3 — Pure maintenance decisions
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d010.s3 add the pure decisions of Delta maintenance`
+- **R:** R12, R13
+- **Model:** `sonnet · medium`
+- **Review:** `no`
+
+#### Scope
+
+- `pipeline/src/bikesharing/core/delta_maintenance.py` (new): `Partition`, `CompactionMetrics`, `RetentionMetrics`, `first_open_day`, `partitions_to_compact`, `retention_start`, `partitions_to_delete` and `is_maintenance_run`.
+- `pipeline/tests/unit/core/test_delta_maintenance.py` (new):
+  - R12: `retention_start` and `partitions_to_delete` on month and year edges;
+  - R13: `partitions_to_delete` keeps the window's first day and every later one;
+  - `partitions_to_compact`: a closed partition with one file and with more, an open one below and at the threshold, and a threshold of `None`;
+  - `first_open_day`: a latest capture within the lookback after midnight, in UTC and in Europe/Madrid;
+  - `is_maintenance_run`: a start at the window's start, just before its end, and at its end.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [`bikesharing.core.delta_maintenance`](#bikesharingcoredelta_maintenance) | d010 › Components | The contract and what each function decides |
+| [Compaction](#compaction) › Closed partition, Compacted once | d010 › Plan | Which partitions compact |
+| [Daily maintenance](#daily-maintenance) › Which run, In order item 1 | d010 › Plan | The maintenance run and the retention cutoff |
+| [D4](#d4-silver-keeps-the-current-local-month-and-the-12-whole-months-before-it) | d010 › Spec | The retention window the edge cases follow |
+
+#### Do
+
+1. Write the tests in `test_delta_maintenance.py`, failing.
+2. Implement `delta_maintenance.py` until they pass.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0.
+
+### Step 4 — Maintenance events
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `feat: d010.s4 add the maintenance events`
+- **R:** R2
+- **Model:** `sonnet · low`
+- **Review:** `no`
+
+#### Scope
+
+- `pipeline/src/bikesharing/core/events.py`: the builders `table_compacted`, `retention_applied`, `table_vacuumed`, `log_cleaned` and `maintenance_failed`.
+- `contracts/log-events.registry.json`: the five events, with `needs_action: false` and no alert; no existing entry changes.
+- `pipeline/tests/unit/core/test_events.py`: one test per builder; the existing tests of the run's events and the registry's test pass unchanged (R2).
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [Maintenance events](#maintenance-events) | d010 › Plan | Each event's level, fields and integer counts |
+| [`bikesharing.core.events`](#bikesharingcoreevents) | d010 › Components | The builders' form, and the metrics they take |
+| The `batch_committed` builder and its registry entry | `events.py`, `contracts/log-events.registry.json` | The form the new builders and entries follow |
+
+#### Do
+
+1. Write the builders' tests in `test_events.py`, failing.
+2. Implement the five builders in `events.py`.
+3. Add the five entries to `contracts/log-events.registry.json`.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0.
 
 ## 4. Close
 
