@@ -9,7 +9,7 @@ Phase shows Steps checked and Steps review unchecked. Otherwise stop and tell th
 ## Read
 
 - The design doc `docs/designs/dNNN-*.md`: Status, Spec, Plan and Steps.
-- Nothing else unless a finding needs confirming; announce it in one line, within the reading budget in CLAUDE.md.
+- Nothing else unless a finding needs confirming or a fact needs verifying for check 6; announce it in one line, within the reading budget in CLAUDE.md.
 
 ## Checklist
 
@@ -18,6 +18,7 @@ Phase shows Steps checked and Steps review unchecked. Otherwise stop and tell th
 3. **Order.** No step, its Check included, uses something created in a later step.
 4. **Shape.** Each step touches at most 2–3 files, all in File layout, and contradicts no decision in Decision summary. A code step includes its tests. The last step verifies the deliverable end to end. Commit follows the Git conventions in CLAUDE.md. Pending items follow the conventions in CLAUDE.md.
 5. **Review points.** Every step sets Review; each review closes a reviewable unit, and the last code step has at least `code`.
+6. **External facts.** Every fact the Steps rely on and do not decide, such as how a library call behaves or a figure measured elsewhere, cites its source, or is verified before the review closes.
 
 ## Severity
 
