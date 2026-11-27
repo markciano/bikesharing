@@ -414,10 +414,10 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
     │   ├── discovery.py                   (modified)  plan_listing lists from the latest capture minus the lookback, with no daily full sweep
     │   ├── events.py                      (modified)  Builders of the five maintenance events
     │   ├── delta_maintenance.py           (new)       Pure decisions: closed partitions, partitions to compact, retention cutoff, whether a run is the maintenance run
-    │   └── settings.py                    (modified)  TABLE_PATHS replaces the two path constants; COMPACTION_THRESHOLD, CHECKPOINT_INTERVAL, TOMBSTONE_RETENTION, VACUUM_RETENTION, MAINTENANCE_LOCAL_TIME; LISTING_LOOKBACK to 15 min
+    │   └── settings.py                    (modified)  TableName, SystemFeed; TABLE_PATHS replaces the two path constants; COMPACTION_THRESHOLD, CHECKPOINT_INTERVAL, RETENTION_MONTHS, TOMBSTONE_RETENTION, VACUUM_RETENTION, MAINTENANCE_LOCAL_TIME; LISTING_LOOKBACK to 15 min
     ├── src/bikesharing/shell/
     │   ├── delta.py                       (modified)  Table paths from settings; utc_date partitioning; bounded calls; table properties on creation; compaction, retention, vacuum and log cleanup
-    │   └── run.py                         (modified)  Compaction after each batch; daily maintenance after the last batch of the maintenance run; maintenance_failed without changing the outcome
+    │   └── run.py                         (modified)  RunConfig.maintenance_window; compaction after each batch; daily maintenance after the last batch of the maintenance run; maintenance_failed without changing the outcome
     └── tests/
         ├── unit/core/
         │   ├── test_discovery.py          (modified)  Listing from the latest capture minus the lookback
@@ -435,14 +435,193 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 <!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
-#### `<ComponentName>`
+The contracts of what this task adds, and of what changes its signature; a function whose signature does not change is not listed. Each line under a signature says what it decides; the behaviour behind it is in [Approach](#21-approach).
 
-- **Responsibility:** `<one sentence>`
-- **Location:** `path/to/file`
+#### `bikesharing.core.settings`
+
+- **Responsibility:** holds each table's settings, the one source `docs/lakehouse.md` explains ([Table settings and catalog](#table-settings-and-catalog)).
+- **Location:** `pipeline/src/bikesharing/core/settings.py`
+- **Contract:** all new except `LISTING_LOOKBACK`, whose value changes. `STATION_STOCK_PATH` and `PROCESSED_OBJECTS_PATH` are removed, here and in `delta.py`.
+
+```python
+type TableName = Literal["station_stock", "processed_objects"]
+type SystemFeed = tuple[System, str]  # a system and one of its feeds: the key of each watermark (D3)
+
+TABLE_PATHS: Final[Mapping[TableName, str]] = {
+    "station_stock": "silver/station_stock",
+    "processed_objects": "control/processed_objects",
+}
+CHECKPOINT_INTERVAL: Final[Mapping[TableName, int]] = {"station_stock": 8, "processed_objects": 8}
+COMPACTION_THRESHOLD: Final[Mapping[TableName, int]] = {"processed_objects": 10}
+RETENTION_MONTHS: Final[Mapping[TableName, int]] = {"station_stock": 12}
+TOMBSTONE_RETENTION: Final = timedelta(days=10)
+VACUUM_RETENTION: Final = timedelta(days=7)
+MAINTENANCE_LOCAL_TIME: Final = time(4, 0)
+LISTING_LOOKBACK: Final = timedelta(minutes=15)  # was timedelta(hours=1)
+```
+
+- A table with no `COMPACTION_THRESHOLD` never compacts its active partitions ([Compaction](#compaction)).
+- A table with no `RETENTION_MONTHS` keeps all its rows, as `processed_objects` does (D4, R15).
+
+#### `bikesharing.core.delta_maintenance`
+
+- **Responsibility:** the pure decisions of compaction, retention and the daily maintenance, over values read from the log.
+- **Location:** `pipeline/src/bikesharing/core/delta_maintenance.py` (new)
 - **Contract:**
 
 ```python
+@dataclass(frozen=True, slots=True)
+class Partition:
+    values: tuple[tuple[str, str], ...]  # (column, value) pairs in the table's partition order, as the log writes them
+    day: date                            # its date column: utc_date or local_date
+    files: int                           # its data files
+
+
+@dataclass(frozen=True, slots=True)
+class CompactionMetrics:
+    partitions: int
+    files_removed: int
+    files_added: int
+
+
+@dataclass(frozen=True, slots=True)
+class RetentionMetrics:
+    partitions_deleted: int
+    rows_deleted: int
+
+
+def first_open_day(latest_capture: datetime, *, lookback: timedelta, timezone: tzinfo) -> date: ...
+def partitions_to_compact(
+    partitions: Iterable[Partition], *, first_open_day: date, threshold: int | None
+) -> list[Partition]: ...
+def retention_start(today: date, *, months: int) -> date: ...
+def partitions_to_delete(partitions: Iterable[Partition], *, start: date) -> list[Partition]: ...
+def is_maintenance_run(
+    started_at: datetime, *, local_time: time, window: timedelta, timezone: tzinfo
+) -> bool: ...
 ```
+
+- `first_open_day`: the date, in `timezone`, of `latest_capture` minus `lookback`; a partition of an earlier day is closed, since no later batch writes to it.
+- `partitions_to_compact`: every closed partition with more than one file, and every open one with at least `threshold` files; with `threshold` `None`, no open one.
+- `retention_start`: the first day of `today`'s month minus `months`; e.g. 2025-12-01 for 2026-12-01 and 12, so November 2025 leaves (D4).
+- `partitions_to_delete`: every partition whose day is before `start`; none while all are inside the window (R12–R14).
+- `is_maintenance_run`: whether `started_at`, in `timezone`, falls within `[local_time, local_time + window)` of its day.
+
+#### `bikesharing.core.discovery`
+
+- **Responsibility:** unchanged: how a run lists bronze and which listed objects are pending.
+- **Location:** `pipeline/src/bikesharing/core/discovery.py`
+- **Contract:** what changes.
+
+```python
+@dataclass(frozen=True, slots=True)
+class ListingPlan:
+    system: System
+    feed: str                 # new
+    prefix: str               # raw/<system>/<feed>/
+    start_after: str | None
+    full_sweep: bool          # now true only for a feed with nothing processed
+
+
+def plan_listing(
+    system: System,
+    feed: str,                          # new
+    latest_processed: datetime | None,
+    *,
+    lookback: timedelta,                # now and timezone removed: no daily full sweep
+) -> ListingPlan: ...
+```
+
+- `plan_listing`: lists after the key of `latest_processed` minus `lookback`, or the whole prefix when it is `None` (R10, R11).
+- `full_sweep` keeps its name and its field in `objects_discovered` (R2).
+
+#### `bikesharing.shell.delta`
+
+- **Responsibility:** unchanged: the pipeline's common table access ([Common table access](#common-table-access)).
+- **Location:** `pipeline/src/bikesharing/shell/delta.py`
+- **Contract:** what is new, and the signatures that change.
+
+```python
+PROCESSED_OBJECTS_SCHEMA: Final = Schema([...])  # gains _field("utc_date", "date") after captured_at
+TABLE_SCHEMAS: Final[Mapping[TableName, Schema]] = {
+    "station_stock": STATION_STOCK_SCHEMA,
+    "processed_objects": PROCESSED_OBJECTS_SCHEMA,
+}
+PARTITION_COLUMNS: Final[Mapping[TableName, tuple[str, ...]]] = {
+    "station_stock": ("local_date",),
+    "processed_objects": ("system", "feed", "utc_date"),
+}
+DATE_PARTITION: Final[Mapping[TableName, tuple[str, tzinfo]]] = {
+    "station_stock": ("local_date", LOCAL_TIMEZONE),
+    "processed_objects": ("utc_date", UTC),
+}
+
+
+@dataclass(frozen=True, slots=True)
+class Tables:
+    lakehouse: Lakehouse
+    _handles: Mapping[TableName, DeltaTable]
+
+
+# Calls of a run: lakehouse becomes tables in every one
+def ensure_tables(lakehouse: Lakehouse) -> Tables: ...  # was -> None
+def latest_processed(tables: Tables) -> dict[SystemFeed, datetime]: ...  # was dict[System, datetime | None]
+def processed_keys(tables: Tables, since: Mapping[SystemFeed, datetime]) -> frozenset[str]: ...
+def capture_history(
+    tables: Tables, *, feeds: Collection[SystemFeed], since: datetime, until: datetime
+) -> ArrowStream: ...
+def merge_station_stock(
+    tables: Tables, rows: ArrowStream, *, first_capture: datetime, last_capture: datetime,
+    local_dates: Collection[date], attempts: int = 3,
+) -> MergeMetrics: ...
+def record_processed(tables: Tables, objects: Sequence[ProcessedObject]) -> None: ...
+def latest_captures(tables: Tables, latest: Mapping[System, datetime]) -> ArrowStream: ...
+
+# Maintenance, new
+def table_partitions(tables: Tables, table: TableName) -> list[Partition]: ...
+def compact(tables: Tables, table: TableName, partitions: Collection[Partition]) -> CompactionMetrics: ...
+def delete_partitions(
+    tables: Tables, table: TableName, partitions: Collection[Partition]
+) -> RetentionMetrics: ...
+def vacuum(tables: Tables, table: TableName, *, retention: timedelta) -> int: ...
+def cleanup_log(tables: Tables, table: TableName) -> None: ...
+```
+
+- `Tables`: the run's handle on each table, opened once; only this module reads `_handles`, and it refreshes a handle after its own writes and before a retried MERGE.
+- `ensure_tables`: creates each missing table of `TABLE_PATHS` with its schema, partition columns and the three table properties, then opens each once (call 1).
+- `latest_processed`: per system and feed with processed objects, its latest `captured_at`, from the log's file statistics; one with none is left out (calls 2 and 7, R11).
+- `processed_keys`: the keys of each system and feed captured at or after its instant, its latest capture minus the lookback; one left out reads nothing (call 3, R4).
+- `capture_history`: the rows of those feeds within `[since, until)`, in the columns it returned before, without `utc_date`, so dbt's input stays the same (call 4, R1).
+- `merge_station_stock`, `latest_captures`: unchanged but for `tables` (calls 5 and 8).
+- `record_processed`: writes each row's `utc_date` from `captured_at`, and bounds its MERGE as call 6 sets (R16).
+- `table_partitions`: each partition with its data files, from the log's add actions, reading no data file.
+- `compact`, `delete_partitions`: act on those partitions only, and write no commit when given none (R14).
+- `vacuum`: deletes the files removed more than `retention` ago, with `dry_run=False` and `enforce_retention_duration=False`, and returns how many it deleted.
+- `cleanup_log`: deletes the log files older than the log's retention, with `cleanup_metadata()`.
+
+#### `bikesharing.core.events`
+
+- **Responsibility:** unchanged: the builders of the run's events.
+- **Location:** `pipeline/src/bikesharing/core/events.py`
+- **Contract:** five new builders, `table_compacted`, `retention_applied`, `table_vacuumed`, `log_cleaned` and `maintenance_failed`, in the form of the existing ones: the instant first, then the fields of [Maintenance events](#maintenance-events) as keyword-only arguments. `table_compacted` and `retention_applied` take a `CompactionMetrics` or a `RetentionMetrics` in place of its counts.
+
+#### `bikesharing.shell.run`
+
+- **Responsibility:** unchanged: runs the pipeline end to end.
+- **Location:** `pipeline/src/bikesharing/shell/run.py`
+- **Contract:** `run(config)` keeps its signature; `RunConfig` gains one field.
+
+```python
+@dataclass(frozen=True, slots=True)
+class RunConfig:
+    ...
+    maintenance_window: timedelta | None  # new: RUN_SETTINGS.cadence in scheduled_config, None in one_off_config
+```
+
+- **Tables:** the run calls `ensure_tables` once and passes its `Tables` to every other call.
+- **Compaction:** after each committed batch, per table: `compact` with `partitions_to_compact` over `table_partitions`, from the batch's latest capture and `DATE_PARTITION`'s time zone.
+- **Daily maintenance:** after the batch loop ends, whether by the last batch, the time budget or a batch that did not commit, and before publishing: when `maintenance_window` is set and `is_maintenance_run` holds for the run's start, retention, vacuum and log cleanup, in that order ([Daily maintenance](#daily-maintenance)). A one-off run never runs it; the next scheduled one at `MAINTENANCE_LOCAL_TIME` does.
+- **A failed task:** each task runs per table inside its own `try`, and an exception writes `maintenance_failed` and goes on; the run's outcome does not change ([Maintenance events](#maintenance-events)).
 
 ### 2.6 Test plan
 
