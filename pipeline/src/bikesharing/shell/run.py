@@ -505,13 +505,20 @@ def _discover(
 ) -> list[BronzeObject]:
     """List each system and return the pending objects, logging what was found."""
     config = state.config
-    processed = processed_keys(tables)
     latest = latest_processed(tables)
+    # Each feed's keys are read from its latest capture minus the lookback, the
+    # instant its listing starts after (d010 D3, Discovery keeps a watermark per
+    # system and feed).
+    feeds = [(system, settings.FEED) for system in SYSTEMS]
+    processed = processed_keys(
+        tables,
+        {feed: latest[feed] - config.lookback for feed in feeds if feed in latest},
+    )
     pending: list[BronzeObject] = []
     found: dict[System, SystemDiscovery] = {}
-    for system in SYSTEMS:
+    for system, feed in feeds:
         plan = plan_listing(
-            system, settings.FEED, latest[system], lookback=config.lookback
+            system, feed, latest.get((system, feed)), lookback=config.lookback
         )
         listed = list_keys(config.bronze, plan)
         objects = pending_objects(listed, processed, excluded)
@@ -554,6 +561,7 @@ def _commit_batch(state: _Run, tables: Tables, batch: Batch, folder: Path) -> bo
         bronze_files.setdefault(bronze_object.system, []).append(str(path))
     history = capture_history(
         tables,
+        feeds={(obj.system, obj.feed) for obj in batch.objects},
         since=batch.first_capture - _VOLUME_WINDOW,
         until=batch.first_capture,
     )
@@ -659,10 +667,12 @@ def _commit_batch(state: _Run, tables: Tables, batch: Batch, folder: Path) -> bo
 def _publish(state: _Run, tables: Tables) -> None:
     """Build the file from the lakehouse, validate it and deploy it."""
     config = state.config
+    # station_stock is built from one feed, so each system's latest capture is
+    # that feed's (d010, Bounded calls).
     latest = {
         system: captured_at
-        for system, captured_at in latest_processed(tables).items()
-        if captured_at is not None
+        for (system, feed), captured_at in latest_processed(tables).items()
+        if feed == settings.FEED
     }
     if not latest:
         return
