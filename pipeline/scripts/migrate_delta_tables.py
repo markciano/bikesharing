@@ -11,8 +11,8 @@ in the environment (d010 D5, Security of the migration and of retention)::
 
 It calls ``deltalake`` directly, a self-contained data migration that adds
 nothing to the package's table access for a single use, and takes from the
-package only each table's path, schema, partition columns and properties
-(d010, Migration). It runs in this order:
+package only each table's path, schema, partition columns and properties, and
+the runs' lakehouse on R2 (d010, Migration). It runs in this order:
 
 1. Checks the code: a clean working tree, untracked files included, and HEAD at
    ``origin/main``, whose full SHA is the code version of every commit it writes.
@@ -36,7 +36,6 @@ from deltalake import CommitProperties, DeltaTable, QueryBuilder, write_deltalak
 
 from bikesharing.core.settings import (
     CLOUDFLARE_ACCOUNT_ID,
-    LAKEHOUSE_BUCKET,
     TABLE_PATHS,
     TableName,
 )
@@ -47,6 +46,7 @@ from bikesharing.shell.delta import (
     PARTITION_COLUMNS,
     PROCESSED_OBJECTS_SCHEMA,
     _table_properties,
+    r2_lakehouse,
 )
 
 ACCESS_KEY_ID_VARIABLE: Final = "MIGRATION_R2_ACCESS_KEY_ID"
@@ -375,16 +375,15 @@ def main() -> int:
             print(f"error: refusing to migrate: {failure}", file=sys.stderr)
         return 1
     code_version = _git("rev-parse", "HEAD")
-    storage_options = {
-        "AWS_ENDPOINT_URL": f"https://{CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com",
-        "AWS_REGION": "auto",
-        "AWS_ACCESS_KEY_ID": credentials[ACCESS_KEY_ID_VARIABLE],
-        "AWS_SECRET_ACCESS_KEY": credentials[SECRET_ACCESS_KEY_VARIABLE],
-        "aws_conditional_put": "etag",
-    }
-    print(f"migrating s3://{LAKEHOUSE_BUCKET} with code version {code_version}")
+    # The runs' own lakehouse, so the migration writes with their storage options.
+    lakehouse = r2_lakehouse(
+        account_id=CLOUDFLARE_ACCOUNT_ID,
+        access_key_id=credentials[ACCESS_KEY_ID_VARIABLE],
+        secret_access_key=credentials[SECRET_ACCESS_KEY_VARIABLE],
+    )
+    print(f"migrating {lakehouse.uri} with code version {code_version}")
     try:
-        failed = migrate(f"s3://{LAKEHOUSE_BUCKET}", storage_options, code_version)
+        failed = migrate(lakehouse.uri, lakehouse.storage_options, code_version)
     except (RestoreError, TableChangedError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
