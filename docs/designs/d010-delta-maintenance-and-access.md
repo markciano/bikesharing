@@ -370,6 +370,8 @@ T080 runs these steps once this task's Done when has passed, so that the fix and
 
 Every commit it writes carries its code version in `custom_metadata`, through `CommitProperties` (R9).
 
+The script and its test are removed in the PR that records the Done when, once the migration has passed, following dead code removal: they run once, depend on `bikesharing.shell.delta`'s schema, and Git keeps them.
+
 ### 2.2 Decision summary
 
 <!-- It logs decisions about the plan, including changes. Oldest first.
@@ -407,7 +409,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
     ├── pyproject.toml                     (modified)  deltalake >=1.7.0; import-linter contract: only bikesharing.shell.delta imports deltalake
     ├── uv.lock                            (modified)  deltalake 1.7.0
     ├── scripts/
-    │   └── migrate_delta_tables.py        (new)       One-off migration of D2: checks, rewrite of processed_objects, verification, table properties
+    │   └── migrate_delta_tables.py        (new)       One-off migration of D2: checks, rewrite of processed_objects, verification, table properties; removed in the PR that records the Done when
     ├── src/bikesharing/core/
     │   ├── discovery.py                   (modified)  plan_listing lists from the latest capture minus the lookback, with no daily full sweep
     │   ├── events.py                      (modified)  Builders of the five maintenance events
@@ -425,7 +427,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
         └── integration/
             ├── test_delta.py              (modified)  Table paths from settings; bounded calls; table properties per key of TABLE_PATHS; maintenance tasks
             ├── test_lakehouse_catalog.py  (new)       The catalog's table headings are TABLE_PATHS' keys
-            ├── test_migrate_delta_tables.py (new)     The migration's checks, rewrite and verification
+            ├── test_migrate_delta_tables.py (new)     The migration's checks, rewrite and verification; removed with the script
             └── test_run.py                (modified)  Compaction, daily maintenance and maintenance_failed within a run
 ```
 
