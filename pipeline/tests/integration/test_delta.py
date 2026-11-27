@@ -289,30 +289,32 @@ def test_merge_station_stock_spans_the_local_dates_of_its_batch(
 def test_merge_station_stock_retries_a_conflict_on_a_fresh_handle(
     lakehouse: Lakehouse, con: duckdb.DuckDBPyConnection
 ) -> None:
-    # The other writer's row falls in the batch's capture range, which the
-    # MERGE reads, so its commit conflicts.
-    rows = stock(con, "b1", [("ambici", "1", T0)])
-    other = stock(con, "b2", [("ambici", "2", T0)])
+    # A conflict is only certain when both writers insert a same key, the case
+    # that could duplicate a row; one shared key among others must be enough.
+    rows = stock(con, "b1", [("ambici", station, T0) for station in ("1", "2", "3")])
+    other = stock(con, "b2", [("ambici", station, T0) for station in ("3", "4")])
     stream = Interfering(lakehouse, rows, other, [T0])
 
     metrics = merge(lakehouse, stream, [T0])
 
     assert stream.exports == 2
-    assert metrics.rows_inserted == 1
-    assert stock_keys(lakehouse) == [("ambici", "1", T0), ("ambici", "2", T0)]
+    assert metrics.rows_inserted == 2
+    assert stock_keys(lakehouse) == [
+        ("ambici", station, T0) for station in ("1", "2", "3", "4")
+    ]
 
 
 def test_merge_station_stock_raises_a_conflict_after_its_attempts(
     lakehouse: Lakehouse, con: duckdb.DuckDBPyConnection
 ) -> None:
-    rows = stock(con, "b1", [("ambici", "1", T0)])
-    other = stock(con, "b2", [("ambici", "2", T0)])
+    rows = stock(con, "b1", [("ambici", station, T0) for station in ("1", "2", "3")])
+    other = stock(con, "b2", [("ambici", station, T0) for station in ("3", "4")])
     stream = Interfering(lakehouse, rows, other, [T0])
 
     with pytest.raises(CommitFailedError):
         merge(lakehouse, stream, [T0], attempts=1)
 
-    assert stock_keys(lakehouse) == [("ambici", "2", T0)]
+    assert stock_keys(lakehouse) == [("ambici", "3", T0), ("ambici", "4", T0)]
 
 
 def test_record_processed_adds_no_row_for_a_key_already_recorded(
