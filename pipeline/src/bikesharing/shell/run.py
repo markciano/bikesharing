@@ -52,6 +52,7 @@ from bikesharing.shell.dbt_runner import DbtPaths, dbt_build
 from bikesharing.shell.delta import (
     Lakehouse,
     ProcessedObject,
+    Tables,
     capture_history,
     ensure_tables,
     latest_captures,
@@ -478,7 +479,8 @@ def _execute(state: _Run, started_at: datetime) -> None:
             excluded_objects=len(excluded),
         )
     )
-    pending = _discover(state, excluded)
+    tables = ensure_tables(config.lakehouse)
+    pending = _discover(state, tables, excluded)
     if config.end_instant is not None and stage_drained(pending, config.end_instant):
         state.emit(events.stage_drained(state.now(), end_instant=config.end_instant))
     state.inputs.empty.touch()
@@ -490,20 +492,21 @@ def _execute(state: _Run, started_at: datetime) -> None:
             run_started=started_at, now=state.now(), budget=config.time_budget
         ):
             break
-        if not _process_batch(state, batch):
+        if not _process_batch(state, tables, batch):
             # A batch that does not commit halts the run, with no publishing,
             # so the next run retries it (d008 D9, A failed batch halts the
             # pipeline until T060.5).
             return
-    _publish(state)
+    _publish(state, tables)
 
 
-def _discover(state: _Run, excluded: frozenset[str]) -> list[BronzeObject]:
+def _discover(
+    state: _Run, tables: Tables, excluded: frozenset[str]
+) -> list[BronzeObject]:
     """List each system and return the pending objects, logging what was found."""
     config = state.config
-    ensure_tables(config.lakehouse)
-    processed = processed_keys(config.lakehouse)
-    latest = latest_processed(config.lakehouse)
+    processed = processed_keys(tables)
+    latest = latest_processed(tables)
     pending: list[BronzeObject] = []
     found: dict[System, SystemDiscovery] = {}
     for system in SYSTEMS:
@@ -524,12 +527,12 @@ def _discover(state: _Run, excluded: frozenset[str]) -> list[BronzeObject]:
     return pending
 
 
-def _process_batch(state: _Run, batch: Batch) -> bool:
+def _process_batch(state: _Run, tables: Tables, batch: Batch) -> bool:
     """Process one batch in its own subfolder; return whether it committed."""
     folder = state.paths.allowed_directory / f"batch-{batch.number}"
     state.emit(events.batch_started(state.now(), batch=batch))
     try:
-        return _commit_batch(state, batch, folder)
+        return _commit_batch(state, tables, batch, folder)
     # Any exception inside a batch fails it, logged with its type and message.
     except Exception as error:  # noqa: BLE001
         state.fail(
@@ -546,7 +549,7 @@ def _process_batch(state: _Run, batch: Batch) -> bool:
         shutil.rmtree(folder, ignore_errors=True)
 
 
-def _commit_batch(state: _Run, batch: Batch, folder: Path) -> bool:
+def _commit_batch(state: _Run, tables: Tables, batch: Batch, folder: Path) -> bool:
     """Build, judge and commit one batch; return whether it committed."""
     config = state.config
     files = download_batch(config.bronze, batch, folder)
@@ -554,7 +557,7 @@ def _commit_batch(state: _Run, batch: Batch, folder: Path) -> bool:
     for bronze_object, path in zip(batch.objects, files, strict=True):
         bronze_files.setdefault(bronze_object.system, []).append(str(path))
     history = capture_history(
-        config.lakehouse,
+        tables,
         since=batch.first_capture - _VOLUME_WINDOW,
         until=batch.first_capture,
     )
@@ -594,7 +597,7 @@ def _commit_batch(state: _Run, batch: Batch, folder: Path) -> bool:
                 )
             )
         metrics = merge_station_stock(
-            config.lakehouse,
+            tables,
             duckdb_session.station_stock(con),
             first_capture=batch.first_capture,
             last_capture=batch.last_capture,
@@ -627,7 +630,7 @@ def _commit_batch(state: _Run, batch: Batch, folder: Path) -> bool:
         return False
 
     record_processed(
-        config.lakehouse,
+        tables,
         [
             ProcessedObject(
                 key=bronze_object.key,
@@ -657,12 +660,12 @@ def _commit_batch(state: _Run, batch: Batch, folder: Path) -> bool:
     return True
 
 
-def _publish(state: _Run) -> None:
+def _publish(state: _Run, tables: Tables) -> None:
     """Build the file from the lakehouse, validate it and deploy it."""
     config = state.config
     latest = {
         system: captured_at
-        for system, captured_at in latest_processed(config.lakehouse).items()
+        for system, captured_at in latest_processed(tables).items()
         if captured_at is not None
     }
     if not latest:
@@ -670,7 +673,7 @@ def _publish(state: _Run) -> None:
     with _connection(state.paths) as con:
         duckdb_session.write_parquet(
             con,
-            latest_captures(config.lakehouse, latest),
+            latest_captures(tables, latest),
             state.inputs.latest_captures,
         )
     verdict = judge_batch(_build(state, "gold", {}))

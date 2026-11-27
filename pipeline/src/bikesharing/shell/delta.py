@@ -7,6 +7,11 @@ the batch pending and processing it again adds no row (d008 #4, Delta writes).
 No row is ever updated or deleted (d005 D4, Business processes and the grain of
 the stock).
 
+A run opens each table once, with ``ensure_tables``, and every other call reads
+and writes through those handles: each of the module's writes refreshes its
+handle, and so does a MERGE before its retry, so that opening a table replays
+its log once per run (d010, Common table access).
+
 The tables are read through ``deltalake``'s query engine, which returns Arrow
 streams that DuckDB writes as dbt's Parquet inputs (d008 #9, Bronze reading).
 The SQL the module builds takes only the run's own typed values (instants,
@@ -30,6 +35,7 @@ from bikesharing.core.settings import (
     SYSTEMS,
     TABLE_PATHS,
     System,
+    TableName,
 )
 from bikesharing.core.verdict import MergeMetrics
 from bikesharing.shell.duckdb_session import ArrowStream
@@ -59,7 +65,7 @@ class Lakehouse:
         Parameters
         ----------
         path : str
-            The table's path, e.g. ``"silver/station_stock"``.
+            The table's path under the root, one of ``TABLE_PATHS``' values.
 
         Returns
         -------
@@ -67,6 +73,25 @@ class Lakehouse:
             The table's URI.
         """
         return f"{self.uri.rstrip('/')}/{path}"
+
+
+@dataclass(frozen=True, slots=True)
+class Tables:
+    """A run's handle on each table, opened once by ``ensure_tables``.
+
+    Only this module reads the handles: it refreshes one after its own writes
+    and before a retried MERGE.
+
+    Attributes
+    ----------
+    lakehouse : Lakehouse
+        The lakehouse that holds the tables.
+    _handles : Mapping[TableName, DeltaTable]
+        Each table's handle, by table name.
+    """
+
+    lakehouse: Lakehouse
+    _handles: Mapping[TableName, DeltaTable]
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,16 +196,9 @@ def _date(value: date) -> str:
     return f"DATE {_string(value.isoformat())}"
 
 
-def _table(lakehouse: Lakehouse, path: str) -> DeltaTable:
-    """Open a fresh handle on the table at ``path``, at its latest version."""
-    return DeltaTable(
-        lakehouse.table_uri(path), storage_options=dict(lakehouse.storage_options)
-    )
-
-
-def _query(lakehouse: Lakehouse, path: str, sql: str) -> ArrowStream:
-    """Run ``sql`` over the table at ``path``, registered as ``t``."""
-    return QueryBuilder().register("t", _table(lakehouse, path)).execute(sql)
+def _query(tables: Tables, table: TableName, sql: str) -> ArrowStream:
+    """Run ``sql`` over the run's handle on ``table``, registered as ``t``."""
+    return QueryBuilder().register("t", tables._handles[table]).execute(sql)
 
 
 def r2_lakehouse(
@@ -233,13 +251,20 @@ def local_lakehouse(path: Path) -> Lakehouse:
     return Lakehouse(uri=str(path.resolve()), storage_options={})
 
 
-def ensure_tables(lakehouse: Lakehouse) -> None:
-    """Create each missing table with its explicit schema; keep existing ones.
+def ensure_tables(lakehouse: Lakehouse) -> Tables:
+    """Create each missing table with its explicit schema, then open each once.
+
+    Existing tables are kept as they are.
 
     Parameters
     ----------
     lakehouse : Lakehouse
         The lakehouse that holds the tables.
+
+    Returns
+    -------
+    Tables
+        The run's handle on each table, at its latest version.
     """
     options = dict(lakehouse.storage_options)
     DeltaTable.create(
@@ -255,34 +280,39 @@ def ensure_tables(lakehouse: Lakehouse) -> None:
         mode="ignore",
         storage_options=options,
     )
+    return Tables(
+        lakehouse=lakehouse,
+        _handles={
+            name: DeltaTable(lakehouse.table_uri(path), storage_options=options)
+            for name, path in TABLE_PATHS.items()
+        },
+    )
 
 
-def processed_keys(lakehouse: Lakehouse) -> frozenset[str]:
+def processed_keys(tables: Tables) -> frozenset[str]:
     """Return the key of every bronze object a run has processed.
 
     Parameters
     ----------
-    lakehouse : Lakehouse
-        The lakehouse, with its tables created.
+    tables : Tables
+        The run's tables.
 
     Returns
     -------
     frozenset[str]
         The keys in ``processed_objects``.
     """
-    table = Table.from_arrow(
-        _query(lakehouse, TABLE_PATHS["processed_objects"], "select key from t")
-    )
+    table = Table.from_arrow(_query(tables, "processed_objects", "select key from t"))
     return frozenset(_values(table["key"]))
 
 
-def latest_processed(lakehouse: Lakehouse) -> dict[System, datetime | None]:
+def latest_processed(tables: Tables) -> dict[System, datetime | None]:
     """Return each system's latest processed capture instant.
 
     Parameters
     ----------
-    lakehouse : Lakehouse
-        The lakehouse, with its tables created.
+    tables : Tables
+        The run's tables.
 
     Returns
     -------
@@ -292,8 +322,8 @@ def latest_processed(lakehouse: Lakehouse) -> dict[System, datetime | None]:
     """
     table = Table.from_arrow(
         _query(
-            lakehouse,
-            TABLE_PATHS["processed_objects"],
+            tables,
+            "processed_objects",
             "select system, max(captured_at) as captured_at from t group by system",
         )
     )
@@ -305,9 +335,7 @@ def latest_processed(lakehouse: Lakehouse) -> dict[System, datetime | None]:
     return latest
 
 
-def capture_history(
-    lakehouse: Lakehouse, *, since: datetime, until: datetime
-) -> ArrowStream:
+def capture_history(tables: Tables, *, since: datetime, until: datetime) -> ArrowStream:
     """Return the processed objects captured in ``[since, until)``.
 
     They are the history ``capture_volume`` compares a batch's captures with
@@ -315,8 +343,8 @@ def capture_history(
 
     Parameters
     ----------
-    lakehouse : Lakehouse
-        The lakehouse, with its tables created.
+    tables : Tables
+        The run's tables.
     since : datetime
         The first capture instant included.
     until : datetime
@@ -328,15 +356,15 @@ def capture_history(
         The rows of ``processed_objects``, in its columns.
     """
     return _query(
-        lakehouse,
-        TABLE_PATHS["processed_objects"],
+        tables,
+        "processed_objects",
         f"select * from t where captured_at >= {_timestamp(since)} "
         f"and captured_at < {_timestamp(until)}",
     )
 
 
 def merge_station_stock(
-    lakehouse: Lakehouse,
+    tables: Tables,
     rows: ArrowStream,
     *,
     first_capture: datetime,
@@ -348,13 +376,13 @@ def merge_station_stock(
 
     The MERGE matches on the natural key, bounded by the batch's capture range
     and local dates, so that it reads only the partitions the batch writes. A
-    commit that conflicts with another writer's is retried on a fresh table
-    handle, which reads that writer's rows (d008, Delta writes).
+    commit that conflicts with another writer's is retried on the run's handle
+    refreshed, which reads that writer's rows (d008, Delta writes).
 
     Parameters
     ----------
-    lakehouse : Lakehouse
-        The lakehouse, with its tables created.
+    tables : Tables
+        The run's tables.
     rows : ArrowStream
         The batch's ``station_stock``, in its contract's columns. It is exported
         once per attempt, so it must export afresh each time, as a DuckDB
@@ -389,11 +417,11 @@ def merge_station_stock(
         f"and target.captured_at <= {_timestamp(last_capture)} "
         f"and target.local_date in ({dates})"
     )
+    handle = tables._handles["station_stock"]
     for attempt in range(1, attempts + 1):
         try:
             metrics = (
-                _table(lakehouse, TABLE_PATHS["station_stock"])
-                .merge(
+                handle.merge(
                     source=rows,
                     predicate=predicate,
                     source_alias="source",
@@ -405,7 +433,9 @@ def merge_station_stock(
         except CommitFailedError:
             if attempt == attempts:
                 raise
+            handle.update_incremental()
             continue
+        handle.update_incremental()
         return MergeMetrics(
             rows_inserted=metrics["num_target_rows_inserted"],
             rows_updated=metrics["num_target_rows_updated"],
@@ -414,7 +444,7 @@ def merge_station_stock(
     raise ValueError(f"attempts must be at least 1, got {attempts}")
 
 
-def record_processed(lakehouse: Lakehouse, objects: Sequence[ProcessedObject]) -> None:
+def record_processed(tables: Tables, objects: Sequence[ProcessedObject]) -> None:
     """Record the batch's objects in ``processed_objects``, each key once.
 
     The insert-only MERGE on ``key`` makes a second writer of the same batch
@@ -422,8 +452,8 @@ def record_processed(lakehouse: Lakehouse, objects: Sequence[ProcessedObject]) -
 
     Parameters
     ----------
-    lakehouse : Lakehouse
-        The lakehouse, with its tables created.
+    tables : Tables
+        The run's tables.
     objects : Sequence[ProcessedObject]
         The batch's objects.
     """
@@ -441,9 +471,9 @@ def record_processed(lakehouse: Lakehouse, objects: Sequence[ProcessedObject]) -
         else:
             arrays.append(Array([getattr(obj, name) for obj in objects], type=field))
     source = Table.from_arrays(arrays, schema=schema)
+    handle = tables._handles["processed_objects"]
     (
-        _table(lakehouse, TABLE_PATHS["processed_objects"])
-        .merge(
+        handle.merge(
             source=source,
             predicate="target.key = source.key",
             source_alias="source",
@@ -452,11 +482,10 @@ def record_processed(lakehouse: Lakehouse, objects: Sequence[ProcessedObject]) -
         .when_not_matched_insert_all()
         .execute()
     )
+    handle.update_incremental()
 
 
-def latest_captures(
-    lakehouse: Lakehouse, latest: Mapping[System, datetime]
-) -> ArrowStream:
+def latest_captures(tables: Tables, latest: Mapping[System, datetime]) -> ArrowStream:
     """Return the ``station_stock`` rows of each system's latest capture.
 
     The read is pruned by each capture's local date, its partition (d008,
@@ -464,8 +493,8 @@ def latest_captures(
 
     Parameters
     ----------
-    lakehouse : Lakehouse
-        The lakehouse, with its tables created.
+    tables : Tables
+        The run's tables.
     latest : Mapping[System, datetime]
         Per system, its latest capture instant; a system left out has no row.
 
@@ -481,6 +510,4 @@ def latest_captures(
         for system, captured_at in sorted(latest.items())
     ]
     where = " or ".join(conditions) if conditions else "false"
-    return _query(
-        lakehouse, TABLE_PATHS["station_stock"], f"select * from t where {where}"
-    )
+    return _query(tables, "station_stock", f"select * from t where {where}")
