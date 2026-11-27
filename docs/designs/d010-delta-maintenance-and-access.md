@@ -20,8 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › concerns, written up to Migration, and d008's changed sections marked. Left:
-  - C10 steps for moving Modal's region, written and not run (settled, T080).
+- Current: Plan › File layout; every concern is written.
 - Parked for File layout: a catalog of the lakehouse's tables, e.g. `docs/lakehouse.md`, linked from architecture.md › 8, holding how each table applies ADR-0052 and how its values are computed; a rule in `.claude/rules/` for new tables; a test that every table has its settings; the table paths kept only in `settings.py`, imported by `delta.py` and `tests/integration/test_run.py`.
 - Owner: explain each concern until it is understood before asking for the decision.
 
@@ -191,7 +190,7 @@ If either fails, `capture_history`'s pruning is checked first.
 
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
-- Moving Modal's region ([s019 › P8](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)): its steps are written in this design and not run in it — T080
+- Moving Modal's region ([s019 › P8](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)): its steps are written in [Modal's region](#modals-region) and not run in this task — T080
 
 ## 2. Plan — how
 
@@ -342,6 +341,14 @@ Every count is an integer. The events measure each task on its own: the compacti
 - **A failed task:** the run writes `maintenance_failed` and goes on with the next table, task or batch, and `run_finished`'s outcome does not change, following graceful degradation of non-critical work. The batch's data is already committed, and each task acts on the table's state, so the next run or day does what the failed one left ([Compaction](#compaction), [Daily maintenance](#daily-maintenance)).
 - **Not actionable:** one failure is fixed by waiting, as `docs/observability.md` › Actionable events sets. Failures on consecutive days are not: from the third day without a vacuum, removed files stay in R2 ([Vacuum and tombstone retention](#vacuum-and-tombstone-retention)). TODO(T078): alert on `maintenance_failed` over consecutive days.
 
+#### Modal's region
+
+T080 runs these steps once this task's Done when has passed, so that the fix and the region are each measured on their own, following one variable changed at a time. They are written here and not run in this task:
+
+1. **Pin the region.** A PR sets `region="eu"` on the scheduled function in `pipeline/modal_app.py`, and is merged and deployed with `deploy.sh`. `eu` is Modal's broad region for the European Economic Area, which avoids the transatlantic round trip to R2's WEUR buckets, with a surcharge of 1.15× on every resource, against 1.75× for a narrow region such as `eu-west` ([Modal › Region selection](https://modal.com/docs/guide/region-selection)).
+2. **Measure.** `run_stats.py` gives the run times of 12 consecutive scheduled runs with no catch-up (one batch) in the US, before the PR, and of the first 12 such runs in Europe, after it: a window of 3 h each, as in the Done when.
+3. **Decide.** Modal stays in Europe if the median run time in Europe × 1.15 is at most the median run time in the US. Modal bills a container by the second, so a run's cost follows its time times the surcharge. Otherwise a PR removes `region` and is deployed, since an older commit is never redeployed. **#1, #2**
+
 #### Migration
 
 `pipeline/scripts/migrate_delta_tables.py` is the one-off migration of D2, which the owner runs locally with D5's token in the environment. It runs in this order:
@@ -365,7 +372,8 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
-| | | | | | |
+| 1 | [Modal's region](#modals-region) | Modal's region is tried in production right after this task's Done when, with no estimate first, following one variable changed at a time **refines [s019 › D2](../spikes/s019-pipeline-run-time-r2-reads.md#d2-modals-region-is-decided-after-the-fix)** | The trial is one reversible line, and the estimate would not save it; a trial alongside the fix would mix both in the Done when | — | Plan |
+| 2 | [Modal's region](#modals-region) | Modal stays in Europe only if a run costs no more there, its median time × 1.15 at most the US median, following a decision by unit cost **refines [s019 › D2](../spikes/s019-pipeline-run-time-r2-reads.md#d2-modals-region-is-decided-after-the-fix)** | With the p95 within 2 min, a shorter run changes nothing the page shows | — | Plan |
 
 ### 2.3 Architecture
 
