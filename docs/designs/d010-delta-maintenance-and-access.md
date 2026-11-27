@@ -631,7 +631,7 @@ class RunConfig:
 | R5 | Inspection | import-linter's contract that only `bikesharing.shell.delta` imports `deltalake`, run by `check-pipeline.sh` in CI | — |
 | R6 | Test | On a correct rewrite, the migration's verification passes its three checks | integration |
 | R7 | Test | On a rewrite with one row, key, or run ID and code version altered, the migration exits non-zero and names that check, one case per check | integration |
-| R8 | Test | After the migration, `station_stock`'s version is the one before it | integration |
+| R8 | Test | After the migration, `station_stock` holds the same data files as before it, and its only new commit sets the table properties | integration |
 | R9 | Test | Each commit the migration writes carries its code version in its custom metadata | integration |
 | R10 | Test | `plan_listing` starts after the key of the latest capture minus 15 min; `processed_keys` returns no key captured before that instant | unit, integration |
 | R11 | Test | `plan_listing` lists the whole prefix when nothing is processed; `latest_processed` leaves out a feed with no row | unit, integration |
