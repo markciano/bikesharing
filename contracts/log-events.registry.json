@@ -128,6 +128,15 @@
       "description": "A ping to the heartbeat check failed after its attempts."
     },
     {
+      "event": "log_cleaned",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["table", "duration_s"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "A table's expired log files were removed."
+    },
+    {
       "event": "log_upload_failed",
       "component": "pipeline",
       "levels": ["warn"],
@@ -135,6 +144,15 @@
       "needs_action": false,
       "alerts": [],
       "description": "The run's log object could not be written to R2."
+    },
+    {
+      "event": "maintenance_failed",
+      "component": "pipeline",
+      "levels": ["warn"],
+      "fields": ["table", "task", "error_type", "error"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "A maintenance task failed on one table, and the run went on."
     },
     {
       "event": "node_finished",
@@ -182,6 +200,15 @@
       "description": "The page was deployed with the new published file."
     },
     {
+      "event": "retention_applied",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["table", "partitions_deleted", "rows_deleted", "duration_s"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "Retention ran on a table, deleting the partitions outside its window, if any."
+    },
+    {
       "event": "rule_checked",
       "component": "pipeline",
       "levels": ["info", "warn", "error"],
@@ -225,6 +252,24 @@
       "needs_action": true,
       "alerts": [],
       "description": "No object is left in bronze before the stage's end instant."
+    },
+    {
+      "event": "table_compacted",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["table", "partitions", "files_removed", "files_added", "duration_s"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "A table's partitions due for compaction were compacted."
+    },
+    {
+      "event": "table_vacuumed",
+      "component": "pipeline",
+      "levels": ["info"],
+      "fields": ["table", "files_deleted", "duration_s"],
+      "needs_action": false,
+      "alerts": [],
+      "description": "A table's data files removed from its log for longer than their retention were deleted."
     },
     {
       "event": "volume_not_evaluated",

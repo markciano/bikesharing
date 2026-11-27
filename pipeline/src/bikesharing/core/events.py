@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from bikesharing.core.batching import Batch
+from bikesharing.core.delta_maintenance import CompactionMetrics, RetentionMetrics
 from bikesharing.core.published_file import Violation
 from bikesharing.core.settings import COMPONENT, System
 from bikesharing.core.verdict import NodeResult, Severity
@@ -404,6 +405,160 @@ def batch_failed(
         "error",
         "batch_failed",
         {"batch": batch, "reason": reason, "error_type": error_type, "error": error},
+    )
+
+
+def table_compacted(
+    ts: datetime, *, table: str, metrics: CompactionMetrics, duration_s: float
+) -> Event:
+    """Build ``table_compacted``, at info.
+
+    Parameters
+    ----------
+    ts : datetime
+        When the compaction ended.
+    table : str
+        The table compacted.
+    metrics : CompactionMetrics
+        What the compaction changed.
+    duration_s : float
+        How long it took, in seconds.
+
+    Returns
+    -------
+    Event
+        The event.
+    """
+    return Event(
+        ts,
+        "info",
+        "table_compacted",
+        {
+            "table": table,
+            "partitions": metrics.partitions,
+            "files_removed": metrics.files_removed,
+            "files_added": metrics.files_added,
+            "duration_s": duration_s,
+        },
+    )
+
+
+def retention_applied(
+    ts: datetime, *, table: str, metrics: RetentionMetrics, duration_s: float
+) -> Event:
+    """Build ``retention_applied``, at info.
+
+    Parameters
+    ----------
+    ts : datetime
+        When the retention ended.
+    table : str
+        The table retention ran on.
+    metrics : RetentionMetrics
+        What it deleted, zero when nothing was outside the window.
+    duration_s : float
+        How long it took, in seconds.
+
+    Returns
+    -------
+    Event
+        The event.
+    """
+    return Event(
+        ts,
+        "info",
+        "retention_applied",
+        {
+            "table": table,
+            "partitions_deleted": metrics.partitions_deleted,
+            "rows_deleted": metrics.rows_deleted,
+            "duration_s": duration_s,
+        },
+    )
+
+
+def table_vacuumed(
+    ts: datetime, *, table: str, files_deleted: int, duration_s: float
+) -> Event:
+    """Build ``table_vacuumed``, at info.
+
+    Parameters
+    ----------
+    ts : datetime
+        When the vacuum ended.
+    table : str
+        The table vacuumed.
+    files_deleted : int
+        The files it deleted.
+    duration_s : float
+        How long it took, in seconds.
+
+    Returns
+    -------
+    Event
+        The event.
+    """
+    return Event(
+        ts,
+        "info",
+        "table_vacuumed",
+        {"table": table, "files_deleted": files_deleted, "duration_s": duration_s},
+    )
+
+
+def log_cleaned(ts: datetime, *, table: str, duration_s: float) -> Event:
+    """Build ``log_cleaned``, at info.
+
+    Parameters
+    ----------
+    ts : datetime
+        When the log cleanup ended.
+    table : str
+        The table whose log was cleaned.
+    duration_s : float
+        How long it took, in seconds.
+
+    Returns
+    -------
+    Event
+        The event.
+    """
+    return Event(ts, "info", "log_cleaned", {"table": table, "duration_s": duration_s})
+
+
+def maintenance_failed(
+    ts: datetime,
+    *,
+    table: str,
+    task: Literal["compaction", "retention", "vacuum", "log_cleanup"],
+    error_type: str,
+    error: str,
+) -> Event:
+    """Build ``maintenance_failed``, at warn.
+
+    Parameters
+    ----------
+    ts : datetime
+        When the task failed.
+    table : str
+        The table it was working on.
+    task : {"compaction", "retention", "vacuum", "log_cleanup"}
+        The task that failed.
+    error_type : str
+        The exception's type name.
+    error : str
+        The exception's message; redacted on writing.
+
+    Returns
+    -------
+    Event
+        The event.
+    """
+    return Event(
+        ts,
+        "warn",
+        "maintenance_failed",
+        {"table": table, "task": task, "error_type": error_type, "error": error},
     )
 
 

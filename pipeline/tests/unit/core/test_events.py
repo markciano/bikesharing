@@ -7,6 +7,7 @@ import pytest
 
 from bikesharing.core import events
 from bikesharing.core.batching import Batch
+from bikesharing.core.delta_maintenance import CompactionMetrics, RetentionMetrics
 from bikesharing.core.discovery import BronzeObject
 from bikesharing.core.events import Event, RunContext, SystemDiscovery
 from bikesharing.core.published_file import Violation
@@ -190,6 +191,91 @@ def test_batch_failed_is_an_error_with_its_reason() -> None:
     assert record["reason"] == "exception"
     assert record["error_type"] == "IOException"
     assert record["error"] == "disk full"
+
+
+def test_table_compacted_holds_its_table_counts_and_duration() -> None:
+    metrics = CompactionMetrics(partitions=2, files_removed=12, files_added=2)
+
+    record = _line(
+        events.table_compacted(
+            TS, table="processed_objects", metrics=metrics, duration_s=1.5
+        )
+    )
+
+    assert record["level"] == "info"
+    assert record["event"] == "table_compacted"
+    assert list(record)[6:] == [
+        "table",
+        "partitions",
+        "files_removed",
+        "files_added",
+        "duration_s",
+    ]
+    assert list(record.values())[6:] == ["processed_objects", 2, 12, 2, 1.5]
+
+
+def test_retention_applied_holds_its_counts_when_it_deletes_nothing() -> None:
+    metrics = RetentionMetrics(partitions_deleted=0, rows_deleted=0)
+
+    record = _line(
+        events.retention_applied(
+            TS, table="station_stock", metrics=metrics, duration_s=0.25
+        )
+    )
+
+    assert record["level"] == "info"
+    assert record["event"] == "retention_applied"
+    assert list(record)[6:] == [
+        "table",
+        "partitions_deleted",
+        "rows_deleted",
+        "duration_s",
+    ]
+    assert list(record.values())[6:] == ["station_stock", 0, 0, 0.25]
+
+
+def test_table_vacuumed_holds_the_files_it_deleted() -> None:
+    record = _line(
+        events.table_vacuumed(
+            TS, table="station_stock", files_deleted=96, duration_s=3.0
+        )
+    )
+
+    assert record["level"] == "info"
+    assert record["event"] == "table_vacuumed"
+    assert list(record)[6:] == ["table", "files_deleted", "duration_s"]
+    assert list(record.values())[6:] == ["station_stock", 96, 3.0]
+
+
+def test_log_cleaned_holds_its_table_and_duration() -> None:
+    record = _line(events.log_cleaned(TS, table="station_stock", duration_s=0.75))
+
+    assert record["level"] == "info"
+    assert record["event"] == "log_cleaned"
+    assert list(record)[6:] == ["table", "duration_s"]
+    assert list(record.values())[6:] == ["station_stock", 0.75]
+
+
+def test_maintenance_failed_is_a_warning_with_its_task_and_error() -> None:
+    record = _line(
+        events.maintenance_failed(
+            TS,
+            table="station_stock",
+            task="vacuum",
+            error_type="OSError",
+            error="access denied",
+        )
+    )
+
+    assert record["level"] == "warn"
+    assert record["event"] == "maintenance_failed"
+    assert list(record)[6:] == ["table", "task", "error_type", "error"]
+    assert list(record.values())[6:] == [
+        "station_stock",
+        "vacuum",
+        "OSError",
+        "access denied",
+    ]
 
 
 def test_file_invalid_holds_each_violation_with_its_path() -> None:
