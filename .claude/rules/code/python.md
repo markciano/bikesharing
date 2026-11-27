@@ -24,6 +24,7 @@ The package follows a functional core and an imperative shell ([ADR-0046](../../
 
 - `bikesharing.core` holds pure decisions over values: no I/O, and no `duckdb`, `dbt` or HTTP client.
 - `bikesharing.shell` does the I/O and the orchestration, and calls the core; the core never imports the shell.
+- `bikesharing.shell.delta` is the only way to Delta tables and the one module that imports `deltalake` ([ADR-0052](../../../docs/decisions/0052-delta-maintenance-and-access-pattern.md)); a new table follows the [lakehouse catalog](../../../docs/lakehouse.md#adding-a-table) › Adding a table.
 - `pipeline/modal_image.py`, `pipeline/modal_app.py` and `pipeline/modal_one_off.py`, outside `src/`, are the only files that import `modal`, and none imports `duckdb`. The package and its configuration load without Modal's SDK, which sits in the `platform` dependency group.
 
 ## Testing
