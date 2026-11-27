@@ -10,13 +10,13 @@ from deltalake import DeltaTable, Field, QueryBuilder, Schema
 from deltalake.exceptions import CommitFailedError
 from deltalake.schema import PrimitiveType
 
-from bikesharing.core.settings import LOCAL_TIMEZONE, System
+from bikesharing.core.settings import LOCAL_TIMEZONE, TABLE_PATHS, System
 from bikesharing.core.verdict import MergeMetrics
 from bikesharing.shell.delta import (
     PROCESSED_OBJECTS_SCHEMA,
     STATION_STOCK_SCHEMA,
-    Lakehouse,
     ProcessedObject,
+    Tables,
     capture_history,
     ensure_tables,
     latest_captures,
@@ -58,11 +58,9 @@ type StockRow = tuple[System, str, datetime]
 
 
 @pytest.fixture
-def lakehouse(tmp_path: Path) -> Lakehouse:
-    """A lakehouse in a local folder, with its tables created."""
-    lakehouse = local_lakehouse(tmp_path / "lakehouse")
-    ensure_tables(lakehouse)
-    return lakehouse
+def tables(tmp_path: Path) -> Tables:
+    """A run's tables, in a lakehouse in a local folder."""
+    return ensure_tables(local_lakehouse(tmp_path / "lakehouse"))
 
 
 @pytest.fixture
@@ -103,7 +101,7 @@ def stock(
 
 
 def merge(
-    lakehouse: Lakehouse,
+    tables: Tables,
     rows: ArrowStream,
     captures: Sequence[datetime],
     *,
@@ -111,7 +109,7 @@ def merge(
 ) -> MergeMetrics:
     """Merge a batch whose rows were captured at ``captures``."""
     return merge_station_stock(
-        lakehouse,
+        tables,
         rows,
         first_capture=min(captures),
         last_capture=max(captures),
@@ -120,11 +118,16 @@ def merge(
     )
 
 
-def stock_keys(lakehouse: Lakehouse) -> list[tuple[str, str, datetime]]:
+def open_table(tables: Tables, path: str) -> DeltaTable:
+    """A handle of the test's own on the table at ``path``, at its latest version."""
+    return DeltaTable(tables.lakehouse.table_uri(path))
+
+
+def stock_keys(tables: Tables) -> list[tuple[str, str, datetime]]:
     """The natural key of every row of ``station_stock``, sorted."""
     reader = (
         QueryBuilder()
-        .register("t", DeltaTable(lakehouse.table_uri("silver/station_stock")))
+        .register("t", open_table(tables, TABLE_PATHS["station_stock"]))
         .execute("select system, station_id, captured_at from t")
     )
     return sorted(
@@ -150,18 +153,19 @@ def processed(key: str, system: System, captured_at: datetime) -> ProcessedObjec
 class Interfering:
     """An Arrow stream that commits another writer's batch when first exported.
 
-    The other writer's MERGE lands between the moment the module opens its
-    table handle and the moment it commits, which is a commit conflict.
+    The other writer, a second run with its own tables, commits its MERGE
+    between the moment the module reads its table handle and the moment it
+    commits, which is a commit conflict.
     """
 
     def __init__(
         self,
-        lakehouse: Lakehouse,
+        tables: Tables,
         rows: duckdb.DuckDBPyRelation,
         other: duckdb.DuckDBPyRelation,
         other_captures: Sequence[datetime],
     ) -> None:
-        self.lakehouse = lakehouse
+        self.other_tables = ensure_tables(tables.lakehouse)
         self.rows = rows
         self.other = other
         self.other_captures = other_captures
@@ -170,14 +174,14 @@ class Interfering:
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         self.exports += 1
         if self.exports == 1:
-            merge(self.lakehouse, self.other, self.other_captures)
+            merge(self.other_tables, self.other, self.other_captures)
         return self.rows.__arrow_c_stream__(requested_schema)
 
 
 def test_ensure_tables_creates_station_stock_with_its_schema(
-    lakehouse: Lakehouse,
+    tables: Tables,
 ) -> None:
-    table = DeltaTable(lakehouse.table_uri("silver/station_stock"))
+    table = open_table(tables, TABLE_PATHS["station_stock"])
 
     assert table.schema() == STATION_STOCK_SCHEMA
     assert table.metadata().partition_columns == ["local_date"]
@@ -215,133 +219,133 @@ def test_station_stock_schema_follows_its_dbt_contract() -> None:
 
 
 def test_ensure_tables_creates_processed_objects_with_no_partitions(
-    lakehouse: Lakehouse,
+    tables: Tables,
 ) -> None:
-    table = DeltaTable(lakehouse.table_uri("control/processed_objects"))
+    table = open_table(tables, TABLE_PATHS["processed_objects"])
 
     assert table.schema() == PROCESSED_OBJECTS_SCHEMA
     assert table.metadata().partition_columns == []
 
 
 def test_ensure_tables_keeps_the_rows_of_existing_tables(
-    lakehouse: Lakehouse,
+    tables: Tables,
 ) -> None:
-    record_processed(lakehouse, [processed("k1", "ambici", T0)])
+    record_processed(tables, [processed("k1", "ambici", T0)])
 
-    ensure_tables(lakehouse)
+    reopened = ensure_tables(tables.lakehouse)
 
-    assert processed_keys(lakehouse) == frozenset({"k1"})
+    assert processed_keys(reopened) == frozenset({"k1"})
 
 
 # Verifies DQR2
 def test_merge_station_stock_returns_the_metrics_of_an_insert_only_merge(
-    lakehouse: Lakehouse, con: duckdb.DuckDBPyConnection
+    tables: Tables, con: duckdb.DuckDBPyConnection
 ) -> None:
     rows = stock(con, "b1", [("ambici", "1", T0), ("ambici", "2", T0)])
 
-    metrics = merge(lakehouse, rows, [T0])
+    metrics = merge(tables, rows, [T0])
 
     assert metrics == MergeMetrics(rows_inserted=2, rows_updated=0, rows_deleted=0)
 
 
 # Verifies DQR2
 def test_merge_station_stock_adds_no_row_when_a_batch_is_merged_twice(
-    lakehouse: Lakehouse, con: duckdb.DuckDBPyConnection
+    tables: Tables, con: duckdb.DuckDBPyConnection
 ) -> None:
     rows = stock(con, "b1", [("ambici", "1", T0), ("bicing", "1", T0)])
-    merge(lakehouse, rows, [T0])
+    merge(tables, rows, [T0])
 
-    metrics = merge(lakehouse, rows, [T0])
+    metrics = merge(tables, rows, [T0])
 
     assert metrics == MergeMetrics(rows_inserted=0, rows_updated=0, rows_deleted=0)
-    assert len(stock_keys(lakehouse)) == 2
+    assert len(stock_keys(tables)) == 2
 
 
 # Verifies DQR2
 def test_merge_station_stock_adds_only_the_rows_the_table_lacks(
-    lakehouse: Lakehouse, con: duckdb.DuckDBPyConnection
+    tables: Tables, con: duckdb.DuckDBPyConnection
 ) -> None:
     t1 = T0 + timedelta(minutes=10)
-    merge(lakehouse, stock(con, "b1", [("ambici", "1", T0)]), [T0])
+    merge(tables, stock(con, "b1", [("ambici", "1", T0)]), [T0])
     rows = stock(con, "b2", [("ambici", "1", T0), ("ambici", "1", t1)])
 
-    metrics = merge(lakehouse, rows, [T0, t1])
+    metrics = merge(tables, rows, [T0, t1])
 
     assert metrics.rows_inserted == 1
-    assert stock_keys(lakehouse) == [("ambici", "1", T0), ("ambici", "1", t1)]
+    assert stock_keys(tables) == [("ambici", "1", T0), ("ambici", "1", t1)]
 
 
 def test_merge_station_stock_spans_the_local_dates_of_its_batch(
-    lakehouse: Lakehouse, con: duckdb.DuckDBPyConnection
+    tables: Tables, con: duckdb.DuckDBPyConnection
 ) -> None:
     # 22:50 and 23:10 UTC fall on both sides of Madrid's midnight in November.
     before = datetime(2026, 11, 18, 22, 50, tzinfo=UTC)
     after = datetime(2026, 11, 18, 23, 10, tzinfo=UTC)
     rows = stock(con, "b1", [("ambici", "1", before), ("ambici", "1", after)])
-    merge(lakehouse, rows, [before, after])
+    merge(tables, rows, [before, after])
 
-    metrics = merge(lakehouse, rows, [before, after])
+    metrics = merge(tables, rows, [before, after])
 
     assert metrics.rows_inserted == 0
-    assert len(stock_keys(lakehouse)) == 2
+    assert len(stock_keys(tables)) == 2
 
 
 def test_merge_station_stock_retries_a_conflict_on_a_fresh_handle(
-    lakehouse: Lakehouse, con: duckdb.DuckDBPyConnection
+    tables: Tables, con: duckdb.DuckDBPyConnection
 ) -> None:
     # A conflict is only certain when both writers insert a same key, the case
     # that could duplicate a row; one shared key among others must be enough.
     rows = stock(con, "b1", [("ambici", station, T0) for station in ("1", "2", "3")])
     other = stock(con, "b2", [("ambici", station, T0) for station in ("3", "4")])
-    stream = Interfering(lakehouse, rows, other, [T0])
+    stream = Interfering(tables, rows, other, [T0])
 
-    metrics = merge(lakehouse, stream, [T0])
+    metrics = merge(tables, stream, [T0])
 
     assert stream.exports == 2
     assert metrics.rows_inserted == 2
-    assert stock_keys(lakehouse) == [
+    assert stock_keys(tables) == [
         ("ambici", station, T0) for station in ("1", "2", "3", "4")
     ]
 
 
 def test_merge_station_stock_raises_a_conflict_after_its_attempts(
-    lakehouse: Lakehouse, con: duckdb.DuckDBPyConnection
+    tables: Tables, con: duckdb.DuckDBPyConnection
 ) -> None:
     rows = stock(con, "b1", [("ambici", station, T0) for station in ("1", "2", "3")])
     other = stock(con, "b2", [("ambici", station, T0) for station in ("3", "4")])
-    stream = Interfering(lakehouse, rows, other, [T0])
+    stream = Interfering(tables, rows, other, [T0])
 
     with pytest.raises(CommitFailedError):
-        merge(lakehouse, stream, [T0], attempts=1)
+        merge(tables, stream, [T0], attempts=1)
 
-    assert stock_keys(lakehouse) == [("ambici", "3", T0), ("ambici", "4", T0)]
+    assert stock_keys(tables) == [("ambici", "3", T0), ("ambici", "4", T0)]
 
 
 def test_record_processed_adds_no_row_for_a_key_already_recorded(
-    lakehouse: Lakehouse,
+    tables: Tables,
 ) -> None:
-    record_processed(lakehouse, [processed("k1", "ambici", T0)])
+    record_processed(tables, [processed("k1", "ambici", T0)])
 
     record_processed(
-        lakehouse,
+        tables,
         [processed("k1", "ambici", T0), processed("k2", "bicing", T0)],
     )
 
-    assert processed_keys(lakehouse) == frozenset({"k1", "k2"})
-    reader = capture_history(lakehouse, since=T0, until=T0 + timedelta(seconds=1))
+    assert processed_keys(tables) == frozenset({"k1", "k2"})
+    reader = capture_history(tables, since=T0, until=T0 + timedelta(seconds=1))
     assert duckdb.from_arrow(reader).count("*").fetchall() == [(2,)]
 
 
-def test_processed_keys_is_empty_on_new_tables(lakehouse: Lakehouse) -> None:
-    assert processed_keys(lakehouse) == frozenset()
+def test_processed_keys_is_empty_on_new_tables(tables: Tables) -> None:
+    assert processed_keys(tables) == frozenset()
 
 
 def test_latest_processed_returns_each_system_latest_capture(
-    lakehouse: Lakehouse,
+    tables: Tables,
 ) -> None:
     t1 = T0 + timedelta(minutes=10)
     record_processed(
-        lakehouse,
+        tables,
         [
             processed("k1", "ambici", T0),
             processed("k2", "ambici", t1),
@@ -349,23 +353,23 @@ def test_latest_processed_returns_each_system_latest_capture(
         ],
     )
 
-    assert latest_processed(lakehouse) == {"ambici": t1, "bicing": T0}
+    assert latest_processed(tables) == {"ambici": t1, "bicing": T0}
 
 
 def test_latest_processed_returns_none_for_a_system_with_no_object(
-    lakehouse: Lakehouse,
+    tables: Tables,
 ) -> None:
-    record_processed(lakehouse, [processed("k1", "bicing", T0)])
+    record_processed(tables, [processed("k1", "bicing", T0)])
 
-    assert latest_processed(lakehouse) == {"ambici": None, "bicing": T0}
+    assert latest_processed(tables) == {"ambici": None, "bicing": T0}
 
 
 def test_capture_history_writes_the_objects_captured_in_its_range_as_parquet(
-    lakehouse: Lakehouse, work: Path
+    tables: Tables, work: Path
 ) -> None:
     since, until = T0, T0 + timedelta(hours=24)
     record_processed(
-        lakehouse,
+        tables,
         [
             processed("before", "ambici", since - timedelta(microseconds=1)),
             processed("first", "ambici", since),
@@ -381,7 +385,7 @@ def test_capture_history_writes_the_objects_captured_in_its_range_as_parquet(
     )
     path = work / "capture_history.parquet"
 
-    write_parquet(scratch, capture_history(lakehouse, since=since, until=until), path)
+    write_parquet(scratch, capture_history(tables, since=since, until=until), path)
 
     rows = scratch.sql(
         f"select key, station_count from read_parquet('{path}') order by key"
@@ -402,7 +406,7 @@ def test_capture_history_writes_the_objects_captured_in_its_range_as_parquet(
 
 # Verifies d008 R6
 def test_latest_captures_writes_each_system_latest_capture_as_parquet(
-    lakehouse: Lakehouse, con: duckdb.DuckDBPyConnection, work: Path
+    tables: Tables, con: duckdb.DuckDBPyConnection, work: Path
 ) -> None:
     # Bicing's latest capture falls on the previous local date.
     earlier = datetime(2026, 11, 18, 22, 50, tzinfo=UTC)
@@ -417,7 +421,7 @@ def test_latest_captures_writes_each_system_latest_capture_as_parquet(
             ("bicing", "7", earlier),
         ],
     )
-    merge(lakehouse, rows, [earlier, T0, t1])
+    merge(tables, rows, [earlier, T0, t1])
     scratch = connect(
         work / "scratch.duckdb",
         allowed_directories=[work],
@@ -428,7 +432,7 @@ def test_latest_captures_writes_each_system_latest_capture_as_parquet(
 
     write_parquet(
         scratch,
-        latest_captures(lakehouse, {"ambici": t1, "bicing": earlier}),
+        latest_captures(tables, {"ambici": t1, "bicing": earlier}),
         path,
     )
 
@@ -448,9 +452,9 @@ def test_latest_captures_writes_each_system_latest_capture_as_parquet(
 
 
 def test_latest_captures_is_empty_with_no_latest_capture(
-    lakehouse: Lakehouse,
+    tables: Tables,
 ) -> None:
-    reader = latest_captures(lakehouse, {})
+    reader = latest_captures(tables, {})
 
     assert duckdb.from_arrow(reader).count("*").fetchall() == [(0,)]
 
@@ -459,11 +463,10 @@ def test_r2_lakehouse_sets_the_endpoint_and_conditional_put() -> None:
     lakehouse = r2_lakehouse(
         account_id="acc", access_key_id="id", secret_access_key="secret"
     )
+    path = TABLE_PATHS["station_stock"]
 
     assert lakehouse.uri == "s3://bikesharing-lakehouse"
-    assert lakehouse.table_uri("silver/station_stock") == (
-        "s3://bikesharing-lakehouse/silver/station_stock"
-    )
+    assert lakehouse.table_uri(path) == f"s3://bikesharing-lakehouse/{path}"
     assert lakehouse.storage_options == {
         "AWS_ENDPOINT_URL": "https://acc.r2.cloudflarestorage.com",
         "AWS_REGION": "auto",

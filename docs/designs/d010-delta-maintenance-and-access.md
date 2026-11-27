@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 5.
+- Current: Step 6.
 
 ## 1. Spec — what and why
 
@@ -848,7 +848,7 @@ Yes if it exits 0.
 
 ### Step 5 — A run opens each table once
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `refactor: d010.s5 open each Delta table once per run`
 - **R:** R1

@@ -29,6 +29,7 @@ from obstore.store import LocalStore
 from bikesharing.core.discovery import parse_bronze_key, parse_exclusion_list
 from bikesharing.core.settings import TABLE_PATHS
 from bikesharing.shell.delta import (
+    ensure_tables,
     local_lakehouse,
     processed_keys,
 )
@@ -162,7 +163,7 @@ def _processed_stations(delta_path: Path) -> int:
 
 
 def _processed(delta_path: Path) -> set[str]:
-    return set(processed_keys(local_lakehouse(delta_path)))
+    return set(processed_keys(ensure_tables(local_lakehouse(delta_path))))
 
 
 def _rewrite(object_file: Path, change: Callable[[list[dict[str, Any]]], None]) -> None:
