@@ -20,7 +20,12 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › concerns, C1–C5 written (Common table access to Daily maintenance). Left, in order: C6 `delta.checkpointInterval` per table, between 5 and 10, from each table's opens per run (settled); C7 maintenance events (compaction, retention, vacuum) in the event registry (asked; Compaction's last sentence assumes compaction events); C8 migration script in `pipeline/scripts/`, its verification and code version in the commit metadata (settled, D2, D5, R6–R9); C9 rewrite [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job, with `**replaces …**` (settled, ADR-0052); C10 steps for moving Modal's region, written and not run (settled, T080). Parked for File layout: a catalog of the lakehouse's tables (physical model, every layer, storage only), e.g. `docs/lakehouse.md`, linked from architecture.md › 8.
+- Current: Plan › concerns, written up to Maintenance events. Left, in order:
+  - C8 migration script in `pipeline/scripts/`, its verification and code version in the commit metadata (settled, D2, D5, R6–R9); it also sets the three table properties on existing tables (checkpoint interval, expired log cleanup off, tombstone retention).
+  - C9 rewrite [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job, with `**replaces …**` (settled, ADR-0052).
+  - C10 steps for moving Modal's region, written and not run (settled, T080).
+- Parked for File layout: a catalog of the lakehouse's tables, e.g. `docs/lakehouse.md`, linked from architecture.md › 8, holding how each table applies ADR-0052 and how its values are computed; a rule in `.claude/rules/` for new tables; a test that every table has its settings; the table paths kept only in `settings.py`, imported by `delta.py` and `tests/integration/test_run.py`.
+- Owner: explain each concern until it is understood before asking for the decision.
 
 ## 1. Spec — what and why
 
@@ -318,16 +323,20 @@ N = √(2 · c · a · w / o)
 
 #### Maintenance events
 
-Each maintenance task writes one event per table it acts on, following one structured event per unit of work, as `batch_committed` and `node_finished` do. The events are added to `contracts/log-events.registry.json`, at level `info`, with `needs_action: false` and no alert, and no existing event changes (R2):
+Each maintenance task writes one event per table it acts on, following one structured event per unit of work, as `batch_committed` and `node_finished` do. The events are added to `contracts/log-events.registry.json` with `needs_action: false` and no alert, and no existing event changes (R2):
 
-| Event | Written | Fields | Counts from `deltalake` |
-|---|---|---|---|
-| `table_compacted` | After a batch's compaction of one table | `table`, `partitions`, `files_removed`, `files_added`, `duration_s` | `optimize.compact`'s metrics |
-| `retention_applied` | After the retention of `station_stock`, also when it deletes nothing | `table`, `partitions_deleted`, `rows_deleted`, `duration_s` | `delete`'s metrics |
-| `table_vacuumed` | After the vacuum of one table | `table`, `files_deleted`, `duration_s` | The length of the list `vacuum` returns |
-| `log_cleaned` | After the log cleanup of one table | `table`, `duration_s` | None: `cleanup_metadata()` returns no count |
+| Event | Level | Written | Fields | Values from `deltalake` |
+|---|---|---|---|---|
+| `table_compacted` | `info` | After a batch's compaction of one table | `table`, `partitions`, `files_removed`, `files_added`, `duration_s` | `optimize.compact`'s metrics |
+| `retention_applied` | `info` | After the retention of `station_stock`, also when it deletes nothing | `table`, `partitions_deleted`, `rows_deleted`, `duration_s` | `delete`'s metrics |
+| `table_vacuumed` | `info` | After the vacuum of one table | `table`, `files_deleted`, `duration_s` | The length of the list `vacuum` returns |
+| `log_cleaned` | `info` | After the log cleanup of one table | `table`, `duration_s` | None: `cleanup_metadata()` returns no count |
+| `maintenance_failed` | `warn` | When a task fails on one table, in place of its event | `table`, `task` (`compaction`, `retention`, `vacuum` or `log_cleanup`), `error_type`, `error` | The exception's type and message |
 
 Every count is an integer. The events measure each task on its own: the compaction events show whether `COMPACTION_THRESHOLD` runs well, and the daily ones show the Done when's run of the daily maintenance.
+
+- **A failed task:** the run writes `maintenance_failed` and goes on with the next table, task or batch, and `run_finished`'s outcome does not change, following graceful degradation of non-critical work. The batch's data is already committed, and each task acts on the table's state, so the next run or day does what the failed one left ([Compaction](#compaction), [Daily maintenance](#daily-maintenance)).
+- **Not actionable:** one failure is fixed by waiting, as `docs/observability.md` › Actionable events sets. Failures on consecutive days are not: from the third day without a vacuum, removed files stay in R2 ([Vacuum and tombstone retention](#vacuum-and-tombstone-retention)). TODO(T078): alert on `maintenance_failed` over consecutive days.
 
 ### 2.2 Decision summary
 
