@@ -1219,7 +1219,8 @@ Yes if it exits 0, and the lint hook reports nothing on the two documents.
   - R17: `migrate`, with `rewrite` patched to drop one row, fails and leaves the table with the version before the rewrite's partition columns and rows, its restore commit carrying the code version;
   - R8: `station_stock` keeps the same data files, and its only new commit sets the table properties;
   - R9: each commit the migration writes carries the code version in its custom metadata;
-  - a second run on a migrated table skips the rewrite and sets the properties.
+  - a second run on a migrated table skips the rewrite and sets the properties;
+  - the rewritten `processed_objects` has `captured_at` statistics in every data file, so `latest_processed` returns each feed's latest capture.
   - `main`'s code checks are not tested: the Done when checks TH1 in Step 15.
 
 #### Reads
