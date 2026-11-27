@@ -268,18 +268,36 @@ After each batch, the run compacts the partitions the batch left over their rule
 | `processed_objects` | Compacted when a batch leaves one at or over its threshold of data files, since every reader reads a partition whole | Compacted into one file |
 | `station_stock` | Never compacted: its MERGE and `latest_captures` prune within the day by `captured_at`, which one file spanning the day would defeat | Compacted into one file |
 
-The threshold is a setting per table in `pipeline/src/bikesharing/core/run_settings.json`, `compaction_threshold`, keyed by table name; a table with no entry never compacts its active partitions. `processed_objects`' threshold is 10, the highest that keeps a run within the Done when's 700 GetObject: s019's arithmetic reaches 700 at its worst point, 95 commits since the checkpoint with full active partitions, at 10, and each 10 files more add about 180 ([s019 › Verdict](../spikes/s019-pipeline-run-time-r2-reads.md#53-verdict)). A lower threshold saves under 1 s per run, and the compaction events measure whether another value runs better.
+The threshold is a constant per table in `pipeline/src/bikesharing/core/settings.py`, `COMPACTION_THRESHOLD`, keyed by table name; a table with no entry never compacts its active partitions. `processed_objects`' threshold is 10, the highest that keeps a run within the Done when's 700 GetObject: s019's arithmetic reaches 700 at its worst point, 95 commits since the checkpoint with full active partitions, at 10, and each 10 files more add about 180 ([s019 › Verdict](../spikes/s019-pipeline-run-time-r2-reads.md#53-verdict)). A lower threshold saves under 1 s per run, and the compaction events measure whether another value runs better.
 
 #### Daily maintenance
 
 The daily maintenance runs inside one run a day, after its last batch, following a fixed maintenance window off-peak with idempotent tasks ([ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)):
 
-- **Which run:** the run that starts within the 15 min from `maintenance_local_time` in Europe/Madrid, a setting in `run_settings.json` set to `04:00`, outside the slow hours of [s019 › Not verified](../spikes/s019-pipeline-run-time-r2-reads.md#54-not-verified). The run decides from its own start time, which it receives as a parameter, so no state records whether maintenance ran.
+- **Which run:** the run that starts within the 15 min from `MAINTENANCE_LOCAL_TIME` in Europe/Madrid, a constant in `settings.py` set to `04:00`, outside the slow hours of [s019 › Not verified](../spikes/s019-pipeline-run-time-r2-reads.md#54-not-verified). The run decides from its own start time, which it receives as a parameter, so no state records whether maintenance ran.
 - **In order:**
   1. Retention deletes every partition of `station_stock` whose local date is before the first day of the current local month minus 12 months, with partition values read from the log; with none, it writes no commit (D4, R12–R14).
   2. Vacuum removes, from both tables, the data files their log removed more than 7 days ago, with `dry_run=False` (ADR-0021).
 - **A missed day:** both tasks act on the tables' state, not on the date, so the next day's maintenance does what a failed or skipped one left (D4).
 - **Cost:** 1 run in 96 takes longer, so it stays out of the p95; vacuum lists each table's files once a day, not once per run.
+
+#### Checkpoint interval
+
+Each table's `delta.checkpointInterval` is the N that minimizes its R2 requests per run, following the square-root rule for a fixed cost paid every N periods against a cost that grows with N ([s019 › P6](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)):
+
+N = √(2 · c · a · w / o)
+
+| Input | Meaning | Value | Source |
+|---|---|---|---|
+| `c` | Commits per run | 1.1: the MERGE, and a compaction now and then | [Compaction](#compaction) |
+| `a` | Class A requests per checkpoint | 3: the checkpoint's Parquet and `_last_checkpoint` (2 PUT), and the LIST of `_delta_log/` that rebuilds the snapshot it writes | `deltalake` 1.7.0, `crates/core/src/protocol/checkpoints.rs` and `kernel/transaction/mod.rs` |
+| `w` | Weight of a Class A request against a Class B one | 10: R2's monthly free allowance is 1M Class A and 10M Class B | R2 pricing |
+| `o` | Opens per run that replay the log | 1: each table is opened once, and its refresh reads only its own commits | [Common table access](#common-table-access) |
+
+- **Value:** 8 for both tables, since both have the same inputs. A checkpoint's Class B reads are about N + 2, about one per commit whatever N is, so they do not move the optimum.
+- **Bound:** N stays at or below 12, the commits of the Done when's 3 h window, so that the window includes a checkpoint of each table.
+- **Where it lives:** `CHECKPOINT_INTERVAL` in `settings.py`, keyed by table name. `ensure_tables` sets it as the table property when it creates a table, through `configuration`, and the migration script sets it on existing tables with `alter.set_table_properties`.
+- **A new table, or other inputs:** the interval is computed again from the formula. The Done when's GetObject per run measure the result.
 
 ### 2.2 Decision summary
 
