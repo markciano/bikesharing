@@ -21,7 +21,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
 - Current: Plan › File layout; every concern is written.
-- Parked for File layout: a catalog of the lakehouse's tables, e.g. `docs/lakehouse.md`, linked from architecture.md › 8, holding how each table applies ADR-0052 and how its values are computed; a rule in `.claude/rules/` for new tables; a test that every table has its settings; the table paths kept only in `settings.py`, imported by `delta.py` and `tests/integration/test_run.py`.
+- Parked for File layout: a catalog of the lakehouse's tables, e.g. `docs/lakehouse.md`, linked from architecture.md › 8, holding how each table applies ADR-0052 and how its values are computed; a rule in `.claude/rules/` for new tables; a test that every table has its settings; the table paths kept only in `settings.py`, imported by `delta.py` and `tests/integration/test_delta.py`, which today repeat them.
 - Owner: explain each concern until it is understood before asking for the decision.
 
 ## 1. Spec — what and why
