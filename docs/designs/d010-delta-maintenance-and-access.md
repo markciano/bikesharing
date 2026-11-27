@@ -357,7 +357,7 @@ T080 runs these steps once this task's Done when has passed, so that the fix and
 
 #### Migration
 
-`pipeline/scripts/migrate_delta_tables.py` is the one-off migration of D2, which the owner runs locally with D5's token in the environment. It calls `deltalake` directly, following a self-contained data migration that adds nothing to the application's API for a single use: ADR-0052's common table access covers the runs, and import-linter the package. It takes from `bikesharing.shell.delta` and `settings.py` only each table's schema, partition columns and properties. **#3**
+`pipeline/scripts/migrate_delta_tables.py` is the one-off migration of D2, which the owner runs locally with D5's token in the environment. It calls `deltalake` directly, following a self-contained data migration that adds nothing to the application's API for a single use: ADR-0052's common table access covers the runs, and import-linter the package. It takes from `bikesharing.shell.delta` and `settings.py` only each table's path, schema, partition columns and properties. **#3**
 
 It runs in this order:
 
@@ -1076,7 +1076,7 @@ Yes if it exits 0.
 - `pipeline/src/bikesharing/shell/run.py`:
   - `RunConfig.maintenance_window`: `RUN_SETTINGS.cadence` in `scheduled_config`, `None` in `one_off_config`;
   - after each committed batch, per table, `compact` with `partitions_to_compact` over `table_partitions`, writing `table_compacted`;
-  - after the batch loop and before publishing, in the maintenance run only: retention, vacuum and log cleanup, in that order, writing their events;
+  - after the batch loop and before publishing, in the maintenance run only: retention, vacuum and log cleanup, in that order, writing their events; retention's `today` is the date of the run's start in `LOCAL_TIMEZONE`, the current local month of R12;
   - each task runs per table in its own `try`, and a failure writes `maintenance_failed` and goes on, with the run's outcome unchanged.
 - `pipeline/tests/integration/test_run.py`, with the run's start passed as a fixed UTC time:
   - a batch that leaves partitions over their rule compacts them;
@@ -1270,17 +1270,17 @@ The PR of Steps 1–13, `T072: Delta maintenance and access in the pipeline` wit
 #### Check
 
 ```bash
-gh pr view --json state,mergedAt
+gh pr view <number> --json state,mergedAt
 ```
 
-Yes if `state` is `MERGED`.
+Yes if `state` is `MERGED`, with `<number>` the PR of Do 1, since the local branch is gone.
 
 ### Step 15 — Pause the schedule and run the migration
 
 - **Status:** 💤 todo
 - **Who:** Owner
 - **Commit:** —
-- **R:** R6, R7, R8, R9
+- **R:** —
 - **Model:** `sonnet · medium`
 - **Review:** `no`
 
@@ -1393,7 +1393,7 @@ Yes if every item holds:
 - **Commit:** `chore: d010.s18 remove the one-off migration`
 - **R:** —
 - **Model:** `sonnet · low`
-- **Review:** `no`
+- **Review:** `code`
 
 #### Scope
 
