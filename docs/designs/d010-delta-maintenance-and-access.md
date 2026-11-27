@@ -1315,7 +1315,7 @@ Steps 1 and 2 of D2's order, in production:
 3. Load its S3 access key pair into the shell without echo or history: `read -s "MIGRATION_R2_ACCESS_KEY_ID?Access key ID: " && export MIGRATION_R2_ACCESS_KEY_ID`, and the same for `MIGRATION_R2_SECRET_ACCESS_KEY`.
 4. Switch to `main`, up to date with `origin/main`, with a clean working tree.
 5. Run `uv run --directory pipeline python scripts/migrate_delta_tables.py`.
-6. If it exits non-zero, keep the schedule stopped: the script has restored the version before its rewrite, or named the version to restore if it could not. Fix the cause and run the migration again.
+6. If it exits non-zero, keep the schedule stopped: the script has restored the version before its rewrite, or named the version to restore if it could not. If it ends without `migration passed` or a list of failed checks, such as on a traceback, the rewrite may have committed without a verification, which a second run would not repeat. Check the table's state with Claude, fix the cause, then run the migration again.
 
 #### Check
 
