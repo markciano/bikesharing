@@ -79,6 +79,7 @@ def test_the_file_built_from_the_fixtures_passes_the_schema(
         time_budget=timedelta(hours=1),
         lookback=timedelta(hours=1),
         clock=lambda: datetime(2026, 10, 22, 8, 0, tzinfo=UTC),
+        maintenance_window=None,
     )
 
     assert run(config) == "succeeded"

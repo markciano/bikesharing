@@ -38,6 +38,7 @@ from bikesharing.shell.run import (
     run,
     scheduled_config,
 )
+from bikesharing.shell.run_settings import RUN_SETTINGS
 
 REPO = Path(__file__).resolve().parents[3]
 DBT_PROJECT = REPO / "pipeline" / "dbt"
@@ -60,6 +61,13 @@ BICING = [
 # With batches of 4, oldest first: AMBICI's three and BICING's first, then the rest.
 BATCH_1 = [*AMBICI, BICING[0]]
 BATCH_2 = BICING[1:]
+
+MAINTENANCE_WINDOW = timedelta(minutes=15)
+# 04:00 in Europe/Madrid (CEST) on the day of BICING's captures: the start of
+# the maintenance run. NOW, 10:00 there, is outside its window.
+MAINTENANCE_START = datetime(2026, 10, 22, 2, 0, tzinfo=UTC)
+TABLES = ["station_stock", "processed_objects"]
+REGISTRY = json.loads((REPO / "contracts" / "log-events.registry.json").read_text())
 
 # The stand-in records its call in ``calls.json`` and exits with the code in
 # ``exit_code``, both in its working directory, which is the web folder.
@@ -98,6 +106,7 @@ def config(tmp_path: Path, bronze_folder: Path, delta_path: Path) -> RunConfig:
         time_budget=timedelta(hours=1),
         lookback=timedelta(hours=1),
         clock=lambda: NOW,
+        maintenance_window=MAINTENANCE_WINDOW,
     )
 
 
@@ -687,6 +696,168 @@ def test_the_uploaded_log_is_byte_identical_whether_the_copy_succeeds_or_fails(
     assert log_object.read_text(encoding="utf-8") == "".join(
         f"{body}\n" for body in grafana.bodies()
     )
+
+
+def _at(config: RunConfig, start: datetime, **changes: Any) -> RunConfig:
+    """Return the configuration of a run whose clock stays at ``start``."""
+    return replace(config, clock=lambda: start, **changes)
+
+
+def test_a_batch_that_closes_a_partition_compacts_it_in_both_tables(
+    config: RunConfig, tmp_path: Path, delta_path: Path
+) -> None:
+    # Batches of 2: AMBICI's day gets a file from each of the first two
+    # batches, and closes with the second, which reaches BICING's day.
+    outcome = run(replace(config, max_objects=2))
+
+    events = _events(tmp_path)
+    compacted = [
+        (e["table"], e["partitions"], e["files_removed"], e["files_added"])
+        for e in _named(events, "table_compacted")
+    ]
+    names = [e["event"] for e in events]
+    second_commit = [
+        i for i, e in enumerate(events) if e["event"] == "batch_committed"
+    ][1]
+    assert outcome == "succeeded"
+    assert compacted == [("station_stock", 1, 2, 1), ("processed_objects", 1, 2, 1)]
+    assert names[second_commit + 1 : second_commit + 3] == ["table_compacted"] * 2
+    assert _stock_rows(delta_path) == _processed_stations(delta_path)
+    assert _processed(delta_path) == set(AMBICI + BICING)
+
+
+def test_the_maintenance_run_retains_vacuums_and_cleans_the_log_before_publishing(
+    config: RunConfig, tmp_path: Path
+) -> None:
+    outcome = run(_at(config, MAINTENANCE_START))
+
+    events = _events(tmp_path)
+    maintenance = [
+        (e["event"], e["table"])
+        for e in events
+        if e["event"] in {"retention_applied", "table_vacuumed", "log_cleaned"}
+    ]
+    names = [e["event"] for e in events]
+    assert outcome == "succeeded"
+    assert maintenance == [
+        ("retention_applied", "station_stock"),
+        ("table_vacuumed", "station_stock"),
+        ("table_vacuumed", "processed_objects"),
+        ("log_cleaned", "station_stock"),
+        ("log_cleaned", "processed_objects"),
+    ]
+    assert names.index("batch_committed") < names.index("retention_applied")
+    assert names.index("log_cleaned") < names.index("file_built")
+
+
+@pytest.mark.parametrize(
+    ("start", "window"),
+    [
+        (MAINTENANCE_START + MAINTENANCE_WINDOW, MAINTENANCE_WINDOW),
+        (MAINTENANCE_START - timedelta(seconds=1), MAINTENANCE_WINDOW),
+        # A one-off run has no window, so not even its start at 04:00 runs it.
+        (MAINTENANCE_START, None),
+    ],
+    ids=["after-the-window", "before-the-window", "one-off"],
+)
+def test_no_other_run_does_the_daily_maintenance(
+    config: RunConfig, tmp_path: Path, start: datetime, window: timedelta | None
+) -> None:
+    outcome = run(_at(config, start, maintenance_window=window))
+
+    names = {e["event"] for e in _events(tmp_path)}
+    assert outcome == "succeeded"
+    assert names.isdisjoint({"retention_applied", "table_vacuumed", "log_cleaned"})
+
+
+# Verifies d010 R15
+def test_the_daily_maintenance_keeps_every_row_of_processed_objects(
+    config: RunConfig, tmp_path: Path, delta_path: Path
+) -> None:
+    run(config)
+    stock_rows = _stock_rows(delta_path)
+    # 04:00 in Europe/Madrid (CET) on 2027-12-01: the window starts on
+    # 2026-12-01, so every partition of station_stock is outside it.
+    year_later = datetime(2027, 12, 1, 3, 0, tzinfo=UTC)
+
+    run(_at(config, year_later))
+
+    retention = _named(_events(tmp_path), "retention_applied")
+    assert [(e["table"], e["partitions_deleted"]) for e in retention] == [
+        ("station_stock", 2)
+    ]
+    assert retention[0]["rows_deleted"] == stock_rows > 0
+    assert _stock_rows(delta_path) == 0
+    assert _processed(delta_path) == set(AMBICI + BICING)
+
+
+@pytest.mark.parametrize(
+    ("function", "task", "tables"),
+    [
+        ("compact", "compaction", TABLES),
+        ("delete_partitions", "retention", ["station_stock"]),
+        ("vacuum", "vacuum", TABLES),
+        ("cleanup_log", "log_cleanup", TABLES),
+    ],
+)
+def test_a_failing_maintenance_task_is_logged_and_leaves_the_outcome(
+    config: RunConfig,
+    tmp_path: Path,
+    delta_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    function: str,
+    task: str,
+    tables: list[str],
+) -> None:
+    def fail(*_: object, **__: object) -> None:
+        raise RuntimeError(f"{function} failed")
+
+    monkeypatch.setattr(f"bikesharing.shell.run.{function}", fail)
+
+    outcome = run(_at(config, MAINTENANCE_START, max_objects=2))
+
+    events = _events(tmp_path)
+    failed = _named(events, "maintenance_failed")
+    assert outcome == "succeeded"
+    assert {(e["table"], e["task"]) for e in failed} == {(t, task) for t in tables}
+    assert {(e["level"], e["error_type"], e["error"]) for e in failed} == {
+        ("warn", "RuntimeError", f"{function} failed")
+    }
+    assert _processed(delta_path) == set(AMBICI + BICING)
+    assert _named(events, "file_built")
+
+
+# Verifies d010 R2
+def test_every_event_of_a_maintenance_run_is_registered_at_its_level(
+    config: RunConfig, tmp_path: Path
+) -> None:
+    registered = {
+        e["event"]: set(e["levels"])
+        for e in REGISTRY["events"]
+        if e["component"] == "pipeline"
+    }
+
+    run(_at(config, MAINTENANCE_START, max_objects=2))
+
+    written = {(e["event"], e["level"]) for e in _events(tmp_path)}
+    assert {
+        "table_compacted",
+        "retention_applied",
+        "table_vacuumed",
+        "log_cleaned",
+    } <= {event for event, _ in written}
+    for event, level in written:
+        assert level in registered.get(event, set()), f"{event} at {level}"
+
+
+def test_only_the_scheduled_config_sets_a_maintenance_window() -> None:
+    env = _environment()
+
+    scheduled = scheduled_config(env, root=REPO, container_memory_mib=4096)
+    one_off = one_off_config(env, root=REPO, container_memory_mib=4096)
+
+    assert scheduled.maintenance_window == RUN_SETTINGS.cadence
+    assert one_off.maintenance_window is None
 
 
 # Verifies d009 R1
