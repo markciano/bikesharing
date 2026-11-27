@@ -221,9 +221,10 @@ The how this plan builds, from [s019 › Production inputs](../spikes/s019-pipel
 
 - it opens each table once per run, and refreshes it after its own writes;
 - every read and MERGE it offers takes the table's range, so no caller can read a table whole;
-- it reads values the log's file statistics hold, such as a feed's latest capture, from the log.
+- it reads values the log's file statistics hold, such as a feed's latest capture, from the log;
+- every query names the columns it returns, never `select *`, following explicit projection at a component boundary: `capture_history` and `latest_captures` feed dbt, and a column a table gains, such as `utc_date`, would otherwise reach dbt's inputs, whose columns R1 keeps.
 
-An import-linter contract in `pipeline/pyproject.toml` makes it the only module of the package that imports `deltalake`, following module boundaries enforced by tooling, as ADR-0046's rules are. A slice that reads `processed_objects` on its own fails CI, instead of bringing back full reads that only R2's request counts would show (R5). `.claude/rules/code/python.md` › Structure states the same rule.
+An import-linter contract in `pipeline/pyproject.toml` makes it the only module of the package that imports `deltalake`, following module boundaries enforced by tooling, as ADR-0046's rules are. A slice that reads `processed_objects` on its own fails CI, instead of bringing back full reads that only R2's request counts would show (R5). `.claude/rules/code/python.md` › Structure states the same rules. **#5**
 
 #### `processed_objects` layout
 
@@ -390,6 +391,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 2 | [Modal's region](#modals-region) | Modal stays in Europe only if a run costs no more there, its median time × 1.15 at most the US median, following a decision by unit cost **refines [s019 › D2](../spikes/s019-pipeline-run-time-r2-reads.md#d2-modals-region-is-decided-after-the-fix)** | With the p95 within 2 min, a shorter run changes nothing the page shows | — | Plan |
 | 3 | [Migration](#migration), [Requirements](#13-requirements) | The migration calls `deltalake` directly, taking only each table's schema, partition columns and properties from the package, following a self-contained data migration; R5 and `.claude/rules/code/python.md` › Structure limit the common table access to the runs and the package, as ADR-0052's scope does | Nothing is added to `delta.py` for a single use, so nothing is left in it to clean up when the script is removed | R5 | Plan review |
 | 4 | [Migration](#migration), [File layout](#23-file-layout) | mypy type-checks the migration script in `check-pipeline.sh`, following the same checks for all of a component's Python code, as `scripts/smoke_test.py` | Its one run rewrites a production table, and a type error would otherwise show only there; the line is removed with the script | — | Steps |
+| 5 | [Common table access](#common-table-access), [Step 6](#step-6--processed_objects-by-system-feed-and-utc-date) | Every query of `bikesharing.shell.delta` names the columns it returns, following explicit projection at a component boundary; `.claude/rules/code/python.md` › Structure states it, and `capture_history` and `latest_captures`, the two that feed dbt, follow it from Step 6 | With `select *`, `utc_date` would reach dbt's input from Step 6, as any column a table gains would | R1 | Steps review |
 
 ### 2.3 File layout
 
@@ -398,7 +400,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 ```text
 .
 ├── .claude/rules/code/
-│   └── python.md                          (modified)  Structure: only bikesharing.shell.delta imports deltalake in the package; a new Delta table follows docs/lakehouse.md › Adding a table
+│   └── python.md                          (modified)  Structure: only bikesharing.shell.delta imports deltalake in the package, and its queries name their columns; a new Delta table follows docs/lakehouse.md › Adding a table
 ├── .github/workflows/
 │   └── ci.yml                             (modified)  docs/lakehouse.md joins the pipeline path filter
 ├── contracts/
@@ -594,7 +596,8 @@ def cleanup_log(tables: Tables, table: TableName) -> None: ...
 - `latest_processed`: per system and feed with processed objects, its latest `captured_at`, from the log's file statistics; one with none is left out (calls 2 and 7, R11).
 - `processed_keys`: the keys of each system and feed captured at or after its instant, its latest capture minus the lookback; one left out reads nothing (call 3, R4).
 - `capture_history`: the rows of those feeds within `[since, until)`, in the columns it returned before, without `utc_date`, so dbt's input stays the same (call 4, R1).
-- `merge_station_stock`, `latest_captures`: unchanged but for `tables` (calls 5 and 8).
+- `merge_station_stock`: unchanged but for `tables` (call 5).
+- `latest_captures`: unchanged but for `tables`, and for the columns it returns, those of `station_stock` today, listed in its query in place of `select *` (call 8, R1).
 - `record_processed`: writes each row's `utc_date` from `captured_at`, and bounds its MERGE as call 6 sets (R16).
 - `table_partitions`: each partition with its data files, from the log's add actions, reading no data file.
 - `compact`, `delete_partitions`: act on those partitions only, and write no commit when given none (R14).
@@ -632,7 +635,7 @@ class RunConfig:
 
 | R | Method | What is verified | Level |
 |---|---|---|---|
-| R1 | Test | The existing tests of a run's `station_stock` rows and published file pass unchanged on `deltalake` 1.7.0 and the new layout; `capture_history` returns the columns it returned before | integration |
+| R1 | Test | The existing tests of a run's `station_stock` rows and published file pass unchanged on `deltalake` 1.7.0 and the new layout; `capture_history` returns the columns it returned before, and `latest_captures` those of `station_stock` | integration |
 | R2 | Test | The existing tests of the run's events and heartbeat pass unchanged, and the registry's test finds the five new events registered | unit |
 | R3 | Test | Objects of two systems are recorded in the one `processed_objects`, one row each | integration |
 | R4 | Test | With a data file of another system's partition removed from disk, `processed_keys` and `capture_history` still return the feed's rows, so they never read it | integration |
@@ -890,7 +893,7 @@ Yes if it exits 0 with no test removed.
 - **Status:** 💤 todo
 - **Who:** Claude
 - **Commit:** `feat: d010.s6 partition processed_objects by system, feed and UTC date`
-- **R:** R3, R16
+- **R:** R1, R3, R16
 - **Model:** `opus · medium`
 - **Review:** `no`
 
@@ -899,8 +902,10 @@ Yes if it exits 0 with no test removed.
 - `pipeline/src/bikesharing/shell/delta.py`:
   - `PROCESSED_OBJECTS_SCHEMA` gains `utc_date` after `captured_at`; `TABLE_SCHEMAS`, `PARTITION_COLUMNS` and `DATE_PARTITION`;
   - `ensure_tables` creates each missing table of `TABLE_PATHS` with its schema, its partition columns and three properties from `settings.py`: `delta.checkpointInterval`, `delta.enableExpiredLogCleanup` set to `false`, and `delta.deletedFileRetentionDuration`;
-  - `record_processed` writes each row's `utc_date` from `captured_at`, and its MERGE predicate adds the batch's systems, feeds, `utc_date` partitions and `captured_at` range (call 6).
+  - `record_processed` writes each row's `utc_date` from `captured_at`, and its MERGE predicate adds the batch's systems, feeds, `utc_date` partitions and `captured_at` range (call 6);
+  - `capture_history` and `latest_captures` list the columns they return in their queries, in place of `select *`: `capture_history` those it returned before, without `utc_date`, and `latest_captures` those of `station_stock` today (#5).
 - `pipeline/tests/integration/test_delta.py`:
+  - R1: `capture_history` returns the columns it returned before, without `utc_date`, and `latest_captures` those of `station_stock`;
   - the table properties of a new table, once per key of `TABLE_PATHS` (`pytest.mark.parametrize`);
   - R3: objects of two systems are recorded in the one `processed_objects`, one row each;
   - R16: a batch recorded twice adds no rows to `station_stock` or `processed_objects`.
@@ -912,13 +917,15 @@ Yes if it exits 0 with no test removed.
 | [`processed_objects` layout](#processed_objects-layout) | d010 › Plan | The partition columns and `utc_date` |
 | [Bounded calls](#bounded-calls), rows 1 and 6 | d010 › Plan | What `ensure_tables` and `record_processed` state |
 | [Checkpoint interval](#checkpoint-interval) › Where it lives; [Vacuum and tombstone retention](#vacuum-and-tombstone-retention), table; [Daily maintenance](#daily-maintenance), In order item 3 | d010 › Plan | The three properties and where their values come from |
-| [`bikesharing.shell.delta`](#bikesharingshelldelta) › constants, `ensure_tables`, `record_processed` | d010 › Components | The contract |
+| [`bikesharing.shell.delta`](#bikesharingshelldelta) › constants, `ensure_tables`, `record_processed`, `capture_history`, `latest_captures` | d010 › Components | The contract |
+| [Common table access](#common-table-access), last bullet | d010 › Plan | Every query names the columns it returns |
 
 #### Do
 
 1. Write the tests in `test_delta.py`, failing.
 2. Implement the schema, the three mappings and `ensure_tables`' creation in `delta.py`.
 3. Implement `record_processed`'s `utc_date` and its bounded MERGE.
+4. List the columns of `capture_history`'s and `latest_captures`' queries.
 
 #### Check
 
@@ -984,13 +991,13 @@ Yes if it exits 0.
 - `pipeline/src/bikesharing/shell/delta.py`:
   - `latest_processed` returns each system and feed's latest `captured_at` from the log's file statistics of its latest `utc_date` partition, leaving out a feed with no row (calls 2 and 7), or by the fallback of Step 1's check;
   - `processed_keys` takes each feed's instant and reads only its partitions from that instant's date (call 3);
-  - `capture_history` takes the batch's feeds and reads their partitions within `[since, until)`, returning the columns it returned before, without `utc_date` (call 4).
+  - `capture_history` takes the batch's feeds and reads their partitions within `[since, until)` (call 4).
 - `pipeline/src/bikesharing/shell/run.py`: each feed's instant is its latest capture minus `LISTING_LOOKBACK`; `latest_captures` takes, per system, the instant of `(system, FEED)`.
 - `pipeline/tests/integration/test_delta.py`:
   - R4: with a data file of another system's partition removed from disk, `processed_keys` and `capture_history` still return the feed's rows;
   - R10: `processed_keys` returns no key captured before the feed's instant;
   - R11: `latest_processed` leaves out a feed with no row;
-  - R1: `capture_history` returns the columns it returned before.
+  - R1: the existing tests of a run's `station_stock` rows and published file pass unchanged.
 
 #### Reads
 
