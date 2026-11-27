@@ -629,7 +629,22 @@ class RunConfig:
 
 | R | Method | What is verified | Level |
 |---|---|---|---|
-| R1 | Test / Inspection / Analysis / Demonstration | | unit / integration / e2e; — for other methods |
+| R1 | Test | The existing tests of a run's `station_stock` rows and published file pass unchanged on `deltalake` 1.7.0 and the new layout; `capture_history` returns the columns it returned before | integration |
+| R2 | Test | The existing tests of the run's events and heartbeat pass unchanged, and the registry's test finds the five new events registered | unit |
+| R3 | Test | Objects of two systems are recorded in the one `processed_objects`, one row each | integration |
+| R4 | Test | With a data file of another system's partition removed from disk, `processed_keys` and `capture_history` still return the feed's rows, so they never read it | integration |
+| R5 | Inspection | import-linter's contract that only `bikesharing.shell.delta` imports `deltalake`, run by `check-pipeline.sh` in CI | — |
+| R6 | Test | On a correct rewrite, the migration's verification passes its three checks | integration |
+| R7 | Test | On a rewrite with one row, key, or run ID and code version altered, the migration exits non-zero and names that check, one case per check | integration |
+| R8 | Test | After the migration, `station_stock`'s version is the one before it | integration |
+| R9 | Test | Each commit the migration writes carries its code version in its custom metadata | integration |
+| R10 | Test | `plan_listing` starts after the key of the latest capture minus 15 min; `processed_keys` returns no key captured before that instant | unit, integration |
+| R11 | Test | `plan_listing` lists the whole prefix when nothing is processed; `latest_processed` leaves out a feed with no row | unit, integration |
+| R12 | Test | `retention_start` and `partitions_to_delete` on month and year edges; `delete_partitions` removes the partitions given | unit, integration |
+| R13 | Test | `partitions_to_delete` keeps the first day of the window and every later one | unit |
+| R14 | Test | `delete_partitions` with no partition leaves the table's version unchanged | integration |
+| R15 | Test | A run's daily maintenance leaves every row of `processed_objects` | integration |
+| R16 | Test | A batch recorded twice adds no rows to `station_stock` or `processed_objects` | integration |
 
 ### 2.7 Breaking changes
 
