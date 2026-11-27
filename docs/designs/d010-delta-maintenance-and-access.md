@@ -329,8 +329,8 @@ Each maintenance task writes one event per table it acts on, following one struc
 
 | Event | Level | Written | Fields | Values from `deltalake` |
 |---|---|---|---|---|
-| `table_compacted` | `info` | After a batch's compaction of one table | `table`, `partitions`, `files_removed`, `files_added`, `duration_s` | `optimize.compact`'s metrics |
-| `retention_applied` | `info` | After the retention of `station_stock`, also when it deletes nothing | `table`, `partitions_deleted`, `rows_deleted`, `duration_s` | `delete`'s metrics |
+| `table_compacted` | `info` | After a batch's compaction of one table | `table`, `partitions`, `files_removed`, `files_added`, `duration_s` | `optimize.compact`'s `partitionsOptimized`, `numFilesRemoved` and `numFilesAdded` |
+| `retention_applied` | `info` | After the retention of `station_stock`, also when it deletes nothing | `table`, `partitions_deleted`, `rows_deleted`, `duration_s` | `partitions_deleted` from the partitions given; `delete`'s `num_deleted_rows`, present since every data file the pipeline writes has its row count in its statistics |
 | `table_vacuumed` | `info` | After the vacuum of one table | `table`, `files_deleted`, `duration_s` | The length of the list `vacuum` returns |
 | `log_cleaned` | `info` | After the log cleanup of one table | `table`, `duration_s` | None: `cleanup_metadata()` returns no count |
 | `maintenance_failed` | `warn` | When a task fails on one table, in place of its event | `table`, `task` (`compaction`, `retention`, `vacuum` or `log_cleanup`), `error_type`, `error` | The exception's type and message |
@@ -367,7 +367,7 @@ It runs in this order:
 2. **Checks the layout.** When `processed_objects` is already partitioned by `system`, `feed` and `utc_date`, it skips steps 3 and 4 and goes on to step 5, so a second run never rewrites the table again and still completes a run that failed in step 5.
 3. **Rewrites `processed_objects`.** It reads the current version, adds `utc_date` from `captured_at`, and overwrites the table with `partition_by` set to the new partition columns and `schema_mode="overwrite"`, Delta's way of changing a table's partitioning. It takes the schema and the partition columns from `bikesharing.shell.delta`, so it writes the table `ensure_tables` would create. `station_stock` is not rewritten (R8).
 4. **Verifies the rewrite.** It compares the new version with the one before it, read by time travel, on the three checks of D2: the number of rows, the set of `key`s, and the set of `key`, run ID and code version (R6). A failed check is reported by name, and the script exits non-zero (R7).
-5. **Sets the table properties.** Only once the verification passes, it sets on both tables `delta.checkpointInterval`, `delta.enableExpiredLogCleanup` and `delta.deletedFileRetentionDuration` from `settings.py`, the values `ensure_tables` sets on a new table ([Checkpoint interval](#checkpoint-interval), [Daily maintenance](#daily-maintenance), [Vacuum and tombstone retention](#vacuum-and-tombstone-retention)), with `alter.set_table_properties`. A failed verification thus leaves only the rewrite to undo. Setting a property to the value it already holds changes nothing, so the step can run again.
+5. **Sets the table properties.** Only once the verification passes, it sets on both tables `delta.checkpointInterval`, `delta.enableExpiredLogCleanup` and `delta.deletedFileRetentionDuration` from `settings.py`, the values `ensure_tables` sets on a new table ([Checkpoint interval](#checkpoint-interval), [Daily maintenance](#daily-maintenance), [Vacuum and tombstone retention](#vacuum-and-tombstone-retention)), with `alter.set_table_properties`. A failed verification thus leaves only the rewrite to undo. Setting a property to the value it already holds only adds a commit, so the step can run again.
 
 Every commit it writes carries its code version in `custom_metadata`, through `CommitProperties` (R9).
 
