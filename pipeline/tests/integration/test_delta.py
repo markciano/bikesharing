@@ -10,6 +10,11 @@ from deltalake import DeltaTable, Field, QueryBuilder, Schema
 from deltalake.exceptions import CommitFailedError
 from deltalake.schema import PrimitiveType
 
+from bikesharing.core.delta_maintenance import (
+    CompactionMetrics,
+    Partition,
+    RetentionMetrics,
+)
 from bikesharing.core.settings import (
     CHECKPOINT_INTERVAL,
     LOCAL_TIMEZONE,
@@ -26,6 +31,8 @@ from bikesharing.shell.delta import (
     ProcessedObject,
     Tables,
     capture_history,
+    compact,
+    delete_partitions,
     ensure_tables,
     latest_captures,
     latest_processed,
@@ -34,6 +41,8 @@ from bikesharing.shell.delta import (
     processed_keys,
     r2_lakehouse,
     record_processed,
+    table_partitions,
+    vacuum,
 )
 from bikesharing.shell.duckdb_session import ArrowStream, connect, write_parquet
 
@@ -639,3 +648,160 @@ def test_r2_lakehouse_sets_the_endpoint_and_conditional_put() -> None:
         "AWS_SECRET_ACCESS_KEY": "secret",
         "aws_conditional_put": "etag",
     }
+
+
+def objects_partition(system: System, day: date, *, files: int) -> Partition:
+    """A partition of ``processed_objects``: ``system``'s ``station_status`` on ``day``."""
+    return Partition(
+        values=(
+            ("system", system),
+            ("feed", "station_status"),
+            ("utc_date", day.isoformat()),
+        ),
+        day=day,
+        files=files,
+    )
+
+
+def stock_partition(day: date, *, files: int) -> Partition:
+    """A partition of ``station_stock``: the local date ``day``."""
+    return Partition(values=(("local_date", day.isoformat()),), day=day, files=files)
+
+
+def record_twice_per_system(tables: Tables) -> None:
+    """Record two batches of both systems, which leave two files in each partition."""
+    for minutes in (0, 10):
+        captured_at = T0 + timedelta(minutes=minutes)
+        record_processed(
+            tables,
+            [
+                processed(f"a{minutes}", "ambici", captured_at),
+                processed(f"b{minutes}", "bicing", captured_at),
+            ],
+        )
+
+
+def table_version(tables: Tables, table: TableName) -> int:
+    """The latest version of ``table``, read on a handle of the test's own."""
+    return open_table(tables, TABLE_PATHS[table]).version()
+
+
+def test_table_partitions_returns_each_partition_with_its_data_files(
+    tables: Tables,
+) -> None:
+    record_twice_per_system(tables)
+    record_processed(tables, [processed("a_late", "ambici", T0 + timedelta(days=1))])
+    remove_data_files(tables)
+
+    assert table_partitions(tables, "processed_objects") == [
+        objects_partition("ambici", T0.date(), files=2),
+        objects_partition("ambici", T0.date() + timedelta(days=1), files=1),
+        objects_partition("bicing", T0.date(), files=2),
+    ]
+
+
+def test_table_partitions_is_empty_on_a_new_table(tables: Tables) -> None:
+    assert table_partitions(tables, "station_stock") == []
+
+
+def test_compact_compacts_only_the_partitions_given(tables: Tables) -> None:
+    record_twice_per_system(tables)
+
+    metrics = compact(
+        tables,
+        "processed_objects",
+        [objects_partition("ambici", T0.date(), files=2)],
+    )
+
+    assert metrics == CompactionMetrics(partitions=1, files_removed=2, files_added=1)
+    assert table_partitions(tables, "processed_objects") == [
+        objects_partition("ambici", T0.date(), files=1),
+        objects_partition("bicing", T0.date(), files=2),
+    ]
+
+
+def test_compact_adds_up_the_metrics_of_each_partition_given(
+    tables: Tables,
+) -> None:
+    record_twice_per_system(tables)
+
+    metrics = compact(
+        tables, "processed_objects", table_partitions(tables, "processed_objects")
+    )
+
+    assert metrics == CompactionMetrics(partitions=2, files_removed=4, files_added=2)
+
+
+# Verifies d010 R14
+def test_compact_given_no_partition_writes_no_commit(tables: Tables) -> None:
+    record_twice_per_system(tables)
+    version = table_version(tables, "processed_objects")
+
+    metrics = compact(tables, "processed_objects", [])
+
+    assert metrics == CompactionMetrics(partitions=0, files_removed=0, files_added=0)
+    assert table_version(tables, "processed_objects") == version
+
+
+# Verifies d010 R12
+def test_delete_partitions_removes_the_partitions_given(
+    tables: Tables, con: duckdb.DuckDBPyConnection
+) -> None:
+    old = datetime(2025, 10, 15, 10, 0, tzinfo=UTC)
+    rows = stock(
+        con, "b1", [("ambici", "1", old), ("ambici", "2", old), ("ambici", "1", T0)]
+    )
+    merge(tables, rows, [old, T0])
+
+    metrics = delete_partitions(
+        tables, "station_stock", [stock_partition(old.date(), files=1)]
+    )
+
+    assert metrics == RetentionMetrics(partitions_deleted=1, rows_deleted=2)
+    assert stock_keys(tables) == [("ambici", "1", T0)]
+
+
+# Verifies d010 R14
+def test_delete_partitions_given_no_partition_writes_no_commit(
+    tables: Tables, con: duckdb.DuckDBPyConnection
+) -> None:
+    merge(tables, stock(con, "b1", [("ambici", "1", T0)]), [T0])
+    version = table_version(tables, "station_stock")
+
+    metrics = delete_partitions(tables, "station_stock", [])
+
+    assert metrics == RetentionMetrics(partitions_deleted=0, rows_deleted=0)
+    assert table_version(tables, "station_stock") == version
+
+
+def remove_one_file(tables: Tables) -> None:
+    """Leave one data file of ``processed_objects`` removed by the table, still on disk."""
+    record_processed(tables, [processed("k1", "ambici", T0)])
+    delete_partitions(
+        tables, "processed_objects", table_partitions(tables, "processed_objects")
+    )
+
+
+def test_vacuum_deletes_a_file_removed_longer_ago_than_its_retention(
+    tables: Tables,
+) -> None:
+    remove_one_file(tables)
+
+    deleted = vacuum(tables, "processed_objects", retention=timedelta(0))
+
+    assert deleted == 1
+    root = Path(tables.lakehouse.uri) / TABLE_PATHS["processed_objects"]
+    assert list(root.rglob("*.parquet")) == []
+
+
+def test_vacuum_keeps_a_file_removed_within_its_retention(tables: Tables) -> None:
+    remove_one_file(tables)
+
+    deleted = vacuum(tables, "processed_objects", retention=timedelta(hours=1))
+
+    assert deleted == 0
+
+
+def test_vacuum_rejects_a_retention_of_no_whole_hours(tables: Tables) -> None:
+    with pytest.raises(ValueError, match="whole number of hours"):
+        vacuum(tables, "processed_objects", retention=timedelta(minutes=90))
