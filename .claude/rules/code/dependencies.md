@@ -51,6 +51,11 @@ A component design lists these files in its File layout and chooses the concrete
 - Only the locked versions run. Installing them automatically is fine (`uv sync --locked`, `npm ci`, `uv run`, `terraform init -lockfile=readonly`); running any other version is not (no `npx --yes <pkg>@<version>`, `pip install`, global installs).
 - A repository tool runs through its entry script in `scripts/`, which checks that the locked version is installed and otherwise stops naming the install command (e.g. `scripts/lint-docs.sh`).
 
+## Upgrades
+
+- An upgrade's impact is checked against what the code relies on, not only the APIs and defaults it calls: list the guarantees taken from the library (e.g. which concurrent writes conflict) and check each against the release's changes, those announced as performance work or fixes included.
+- A guarantee the code relies on has a test of its observable outcome (a learning test), which provokes the case that would break it, not the library's current mechanism: the suite then checks it at every upgrade.
+
 ## Out of scope
 
 Code under `spikes/` is throwaway and does not follow this rule.

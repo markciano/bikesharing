@@ -46,6 +46,8 @@ The design doc follows the blocks of the template. This skill fills Spec, Plan a
      - what is being decided and why it matters, in 2–3 lines;
      - the options, each with its practical consequence;
      - the recommendation marked, with a one-line reason and the standard or pattern that applies.
+
+   A concern that upgrades a dependency or a runtime, settled or asked, is first checked as `.claude/rules/code/dependencies.md` › Upgrades sets.
 3. Once the owner picks, write one row in **Decision summary** and, where the template's Approach comment allows it, **Options considered**.
    A cross-cutting decision becomes an **ADR**: write it during the Plan from [adr-template.md](adr-template.md); the owner approves it on the edit's diff. Link it in the header.
 4. With every concern decided, write **File layout**, then **Components** and **Test plan** when they apply. A change to the overall structure also updates CLAUDE.md › Project structure; ask the owner.
