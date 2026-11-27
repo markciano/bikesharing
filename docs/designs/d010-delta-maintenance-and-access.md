@@ -83,11 +83,7 @@ The verification follows source-to-target reconciliation: the rewritten table an
 - the same set of bronze object keys in their rows;
 - the same run ID and code version on each row.
 
-Their data files differ by design. If a check fails, the migration reports which one, and the schedule stays paused while the owner:
-
-1. Restores the version before the migration with Delta's time travel.
-2. Fixes the cause.
-3. Runs the migration again.
+Their data files differ by design. If a check fails, the migration restores the version before its rewrite with Delta's time travel and reports which check failed, and the schedule stays paused while the owner fixes the cause and runs the migration again. A restore writes one commit that points the table back to the earlier version's data files, which stay in R2 until a vacuum removes them 7 days later, so it copies no data. **#6**
 
 Options rejected:
 
@@ -170,6 +166,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R14** While no partition of `station_stock` is outside the retention window, the daily maintenance shall write no commit for retention. (D4)
 - **R15** When the daily maintenance applies retention, the pipeline shall delete no rows of `processed_objects`. (D4)
 - **R16** When a batch is processed again, the pipeline shall add no rows to `station_stock` or `processed_objects`. (D1)
+- **R17** If a check of the migration's verification fails, then the migration shall restore the rewritten table to the version before its rewrite. (D2)
 
 ### 1.4 Done when
 
@@ -367,7 +364,7 @@ It runs in this order:
 1. **Checks the code.** It refuses unless the working tree is clean, untracked files included, and HEAD is `origin/main`, the checks of `deploy.sh`, and takes HEAD's full SHA as its code version (TH1).
 2. **Checks the layout.** When `processed_objects` is already partitioned by `system`, `feed` and `utc_date`, it skips steps 3 and 4 and goes on to step 5, so a second run never rewrites the table again and still completes a run that failed in step 5.
 3. **Rewrites `processed_objects`.** It reads the current version, adds `utc_date` from `captured_at`, and overwrites the table with `partition_by` set to the new partition columns and `schema_mode="overwrite"`, Delta's way of changing a table's partitioning. It takes the schema and the partition columns from `bikesharing.shell.delta`, so it writes the table `ensure_tables` would create. `station_stock` is not rewritten (R8).
-4. **Verifies the rewrite.** It compares the new version with the one before it, read by time travel, on the three checks of D2: the number of rows, the set of `key`s, and the set of `key`, run ID and code version (R6). A failed check is reported by name, and the script exits non-zero (R7).
+4. **Verifies the rewrite.** It compares the new version with the one before it, read by time travel, on the three checks of D2: the number of rows, the set of `key`s, and the set of `key`, run ID and code version (R6). On a failed check, it restores the version before the rewrite with `restore`, checks that its partition columns and number of rows are back, and exits non-zero naming each failed check (R7, R17). If the restore itself fails, it reports the version to restore. **#6**
 5. **Sets the table properties.** Only once the verification passes, it sets on both tables `delta.checkpointInterval`, `delta.enableExpiredLogCleanup` and `delta.deletedFileRetentionDuration` from `settings.py`, the values `ensure_tables` sets on a new table ([Checkpoint interval](#checkpoint-interval), [Daily maintenance](#daily-maintenance), [Vacuum and tombstone retention](#vacuum-and-tombstone-retention)), with `alter.set_table_properties`. A failed verification thus leaves only the rewrite to undo. Setting a property to the value it already holds only adds a commit, so the step can run again.
 
 Every commit it writes carries its code version in `custom_metadata`, through `CommitProperties` (R9).
@@ -392,6 +389,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 3 | [Migration](#migration), [Requirements](#13-requirements) | The migration calls `deltalake` directly, taking only each table's schema, partition columns and properties from the package, following a self-contained data migration; R5 and `.claude/rules/code/python.md` › Structure limit the common table access to the runs and the package, as ADR-0052's scope does | Nothing is added to `delta.py` for a single use, so nothing is left in it to clean up when the script is removed | R5 | Plan review |
 | 4 | [Migration](#migration), [File layout](#23-file-layout) | mypy type-checks the migration script in `check-pipeline.sh`, following the same checks for all of a component's Python code, as `scripts/smoke_test.py` | Its one run rewrites a production table, and a type error would otherwise show only there; the line is removed with the script | — | Steps |
 | 5 | [Common table access](#common-table-access), [Step 6](#step-6--processed_objects-by-system-feed-and-utc-date) | Every query of `bikesharing.shell.delta` names the columns it returns, following explicit projection at a component boundary; `.claude/rules/code/python.md` › Structure states it, and `capture_history` and `latest_captures`, the two that feed dbt, follow it from Step 6 | With `select *`, `utc_date` would reach dbt's input from Step 6, as any column a table gains would | R1 | Steps review |
+| 6 | [D2](#d2-existing-data-moves-to-the-new-layout-in-a-one-off-migration), [Migration](#migration) | On a failed verification, the migration itself restores the version before its rewrite, following an automatic rollback on failed validation, as schema migration tools do **refines D2** | Only reviewed code writes to production (TH1), and a restore is one commit that copies no data | R7, R17 | Steps review |
 
 ### 2.3 File layout
 
@@ -641,7 +639,7 @@ class RunConfig:
 | R4 | Test | With a data file of another system's partition removed from disk, `processed_keys` and `capture_history` still return the feed's rows, so they never read it | integration |
 | R5 | Inspection | import-linter's contract that only `bikesharing.shell.delta` imports `deltalake`, run by `check-pipeline.sh` in CI | — |
 | R6 | Test | On a correct rewrite, the migration's verification passes its three checks | integration |
-| R7 | Test | On a rewrite with one row, key, or run ID and code version altered, the migration exits non-zero and names that check, one case per check; restoring the version before it then brings back its partition columns and rows, as D2's recovery needs | integration |
+| R7 | Test | On a rewrite with one row, key, or run ID and code version altered, the migration's verification names that check, one case per check | integration |
 | R8 | Test | After the migration, `station_stock` holds the same data files as before it, and its only new commit sets the table properties | integration |
 | R9 | Test | Each commit the migration writes carries its code version in its custom metadata | integration |
 | R10 | Test | `plan_listing` starts after the key of the latest capture minus 15 min; `processed_keys` returns no key captured before that instant | unit, integration |
@@ -651,6 +649,7 @@ class RunConfig:
 | R14 | Test | `delete_partitions` with no partition leaves the table's version unchanged | integration |
 | R15 | Test | A run's daily maintenance leaves every row of `processed_objects` | integration |
 | R16 | Test | A batch recorded twice adds no rows to `station_stock` or `processed_objects` | integration |
+| R17 | Test | On a rewrite that fails a check, the migration exits non-zero and the table has the version before the rewrite's partition columns and rows again | integration |
 
 ### 2.6 Breaking changes
 
@@ -1194,7 +1193,7 @@ Yes if it exits 0, and the lint hook reports nothing on the two documents.
 - **Status:** 💤 todo
 - **Who:** Claude
 - **Commit:** `feat: d010.s13 add the one-off migration of the Delta tables`
-- **R:** R6, R7, R8, R9
+- **R:** R6, R7, R8, R9, R17
 - **Model:** `opus · high`
 - **Review:** `code and security`
 
@@ -1204,11 +1203,13 @@ Yes if it exits 0, and the lint hook reports nothing on the two documents.
   - `main()`: Migration step 1 (clean working tree, untracked files included; HEAD is `origin/main`; HEAD's full SHA as code version); reads `MIGRATION_R2_ACCESS_KEY_ID` and `MIGRATION_R2_SECRET_ACCESS_KEY` from the environment; builds the storage options of `bikesharing-lakehouse` from `CLOUDFLARE_ACCOUNT_ID`, as `r2_lakehouse` does; exits non-zero naming each failed check;
   - `migrate`: Migration steps 2–5, on a lakehouse URI, its storage options and the code version;
   - `rewrite`, `verify` and `set_properties`: steps 3, 4 and 5; `verify` returns the names of the checks that failed;
+  - on a failed verification, `migrate` restores the version before the rewrite and checks its partition columns and number of rows, reporting the version to restore if the restore fails;
   - every commit carries the code version in `custom_metadata`, through `CommitProperties`.
 - `pipeline/scripts/check-pipeline.sh`: mypy also checks `scripts/migrate_delta_tables.py` (#4).
 - `pipeline/tests/integration/test_migrate_delta_tables.py` (new), loading the script by path with `importlib`, on a local lakehouse whose `processed_objects` the test writes in the current layout:
   - R6: a correct rewrite passes the three checks;
-  - R7: a rewritten table with one row, one key, or one run ID and code version altered fails `verify` naming that check, one case per check; restoring the version before it brings back its partition columns and rows;
+  - R7: a rewritten table with one row, one key, or one run ID and code version altered fails `verify` naming that check, one case per check;
+  - R17: `migrate`, with `rewrite` patched to drop one row, fails and leaves the table with the version before the rewrite's partition columns and rows, its restore commit carrying the code version;
   - R8: `station_stock` keeps the same data files, and its only new commit sets the table properties;
   - R9: each commit the migration writes carries the code version in its custom metadata;
   - a second run on a migrated table skips the rewrite and sets the properties.
@@ -1306,7 +1307,7 @@ Steps 1 and 2 of D2's order, in production:
 3. Load its S3 access key pair into the shell without echo or history: `read -s "MIGRATION_R2_ACCESS_KEY_ID?Access key ID: " && export MIGRATION_R2_ACCESS_KEY_ID`, and the same for `MIGRATION_R2_SECRET_ACCESS_KEY`.
 4. Switch to `main`, up to date with `origin/main`, with a clean working tree.
 5. Run `uv run --directory pipeline python scripts/migrate_delta_tables.py`.
-6. If it exits non-zero, keep the schedule stopped and follow D2's recovery: restore the version before the migration with time travel, fix the cause, and run the migration again.
+6. If it exits non-zero, keep the schedule stopped: the script has restored the version before its rewrite, or named the version to restore if it could not. Fix the cause and run the migration again.
 
 #### Check
 
