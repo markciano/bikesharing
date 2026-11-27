@@ -620,6 +620,7 @@ class RunConfig:
 - **Compaction:** after each committed batch, per table: `compact` with `partitions_to_compact` over `table_partitions`, from the batch's latest capture and `DATE_PARTITION`'s time zone.
 - **Daily maintenance:** after the batch loop ends, whether by the last batch, the time budget or a batch that did not commit, and before publishing: when `maintenance_window` is set and `is_maintenance_run` holds for the run's start, retention, vacuum and log cleanup, in that order ([Daily maintenance](#daily-maintenance)). A one-off run never runs it; the next scheduled one at `MAINTENANCE_LOCAL_TIME` does.
 - **A failed task:** each task runs per table inside its own `try`, and an exception writes `maintenance_failed` and goes on; the run's outcome does not change ([Maintenance events](#maintenance-events)).
+- **Gold:** `latest_captures` takes, for each system, the instant `latest_processed` holds for `(system, FEED)`, the feed `station_stock` is built from (call 8).
 
 ### 2.5 Test plan
 
@@ -633,7 +634,7 @@ class RunConfig:
 | R4 | Test | With a data file of another system's partition removed from disk, `processed_keys` and `capture_history` still return the feed's rows, so they never read it | integration |
 | R5 | Inspection | import-linter's contract that only `bikesharing.shell.delta` imports `deltalake`, run by `check-pipeline.sh` in CI | — |
 | R6 | Test | On a correct rewrite, the migration's verification passes its three checks | integration |
-| R7 | Test | On a rewrite with one row, key, or run ID and code version altered, the migration exits non-zero and names that check, one case per check | integration |
+| R7 | Test | On a rewrite with one row, key, or run ID and code version altered, the migration exits non-zero and names that check, one case per check; restoring the version before it then brings back its partition columns and rows, as D2's recovery needs | integration |
 | R8 | Test | After the migration, `station_stock` holds the same data files as before it, and its only new commit sets the table properties | integration |
 | R9 | Test | Each commit the migration writes carries its code version in its custom metadata | integration |
 | R10 | Test | `plan_listing` starts after the key of the latest capture minus 15 min; `processed_keys` returns no key captured before that instant | unit, integration |
