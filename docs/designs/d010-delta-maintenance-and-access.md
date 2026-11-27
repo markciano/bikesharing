@@ -358,7 +358,7 @@ T080 runs these steps once this task's Done when has passed, so that the fix and
 
 #### Migration
 
-`pipeline/scripts/migrate_delta_tables.py` is the one-off migration of D2, which the owner runs locally with D5's token in the environment. It calls `deltalake` directly, following a self-contained data migration that adds nothing to the application's API for a single use: ADR-0052's common table access covers the runs, and import-linter the package. It takes from `bikesharing.shell.delta` and `settings.py` only each table's path, schema, partition columns and properties. **#3**
+`pipeline/scripts/migrate_delta_tables.py` is the one-off migration of D2, which the owner runs locally with D5's token in the environment. It calls `deltalake` directly, following a self-contained data migration that adds nothing to the application's API for a single use: ADR-0052's common table access covers the runs, and import-linter the package. It takes from `bikesharing.shell.delta` and `settings.py` only each table's path, schema, partition columns and properties, and the lakehouse from `r2_lakehouse`, so it writes with the runs' storage options. **#3**
 
 It runs in this order:
 
@@ -1206,8 +1206,8 @@ Yes if it exits 0, and the lint hook reports nothing on the two documents.
 
 #### Scope
 
-- `pipeline/scripts/migrate_delta_tables.py` (new), calling `deltalake` directly and taking from `bikesharing.shell.delta` and `settings.py` only each table's path, schema, partition columns and properties:
-  - `main()`: Migration step 1 (clean working tree, untracked files included; HEAD is `origin/main`; HEAD's full SHA as code version); reads `MIGRATION_R2_ACCESS_KEY_ID` and `MIGRATION_R2_SECRET_ACCESS_KEY` from the environment; builds the storage options of `bikesharing-lakehouse` from `CLOUDFLARE_ACCOUNT_ID`, as `r2_lakehouse` does; exits non-zero naming each failed check;
+- `pipeline/scripts/migrate_delta_tables.py` (new), calling `deltalake` directly and taking from `bikesharing.shell.delta` and `settings.py` only each table's path, schema, partition columns and properties, and `r2_lakehouse`:
+  - `main()`: Migration step 1 (clean working tree, untracked files included; HEAD is `origin/main`; HEAD's full SHA as code version); reads `MIGRATION_R2_ACCESS_KEY_ID` and `MIGRATION_R2_SECRET_ACCESS_KEY` from the environment; builds `bikesharing-lakehouse` with `r2_lakehouse` from `CLOUDFLARE_ACCOUNT_ID`; exits non-zero naming each failed check;
   - `migrate`: Migration steps 2–5, on a lakehouse URI, its storage options and the code version;
   - `rewrite`, `verify` and `set_properties`: steps 3, 4 and 5; `verify` returns the names of the checks that failed;
   - on a failed verification, `migrate` restores the version before the rewrite and checks its partition columns and number of rows, reporting the version to restore if the restore fails;
