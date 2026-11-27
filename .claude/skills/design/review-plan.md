@@ -10,8 +10,8 @@ Phase shows Plan checked and Plan review unchecked. Otherwise stop and tell the 
 
 - The design doc `docs/designs/dNNN-*.md`: Status, Spec and Plan.
 - ADRs linked in its header, only when a check needs them.
-- The rule documents listed in File layout, for check 6, and the deliverables of a document-only or parent task, for check 7.
-- Nothing else unless a finding needs confirming; announce it in one line, within the reading budget in CLAUDE.md.
+- The rule documents listed in File layout, for check 7, and the deliverables of a document-only or parent task, for check 8.
+- Nothing else unless a finding needs confirming or a fact needs verifying for check 6; announce it in one line, within the reading budget in CLAUDE.md.
 
 ## Checklist
 
@@ -20,9 +20,10 @@ Phase shows Plan checked and Plan review unchecked. Otherwise stop and tell the 
 3. **Consistency.** Decisions do not contradict each other or existing ADRs. Cross-cutting decisions have their ADR. Each decision names the standard that applies, or has an ADR for the deviation.
 4. **Verifiability.** Every requirement can be checked by something in the Test plan; every Done when item, by a test, a command or an owner check.
 5. **No gaps.** No decision is left implicit. File layout is complete, the documents the change affects included, and its names follow the conventions in CLAUDE.md. Pending items follow the conventions in CLAUDE.md.
-6. **Rule documents.** Every file in File layout that states rules or decisions (ADRs, `.claude/**`, `CLAUDE.md`) is written; each matches the Decision summary and adds no decision of its own. New ADRs are linked in the header.
-7. **Deliverables** (document-only or parent). Every file in File layout is written and listed in Approach; each says what the Spec and the Plan decided, with no decision of its own and none missing.
-8. **Children** (parent). Every open question and requirement of the parent is closed by the parent or by one child; each child has a scope, what it closes and a Done when that can be checked; dependencies follow the map's order, with no cycle.
+6. **External facts.** Every fact the Plan relies on and does not decide (how a library, service or platform behaves, how the existing code behaves, a measured value) cites its source: documentation, release notes, code or a spike. Any that does not is verified through `web-researcher` or by reading the code before the review closes.
+7. **Rule documents.** Every file in File layout that states rules or decisions (ADRs, `.claude/**`, `CLAUDE.md`) is written; each matches the Decision summary and adds no decision of its own. New ADRs are linked in the header.
+8. **Deliverables** (document-only or parent). Every file in File layout is written and listed in Approach; each says what the Spec and the Plan decided, with no decision of its own and none missing.
+9. **Children** (parent). Every open question and requirement of the parent is closed by the parent or by one child; each child has a scope, what it closes and a Done when that can be checked; dependencies follow the map's order, with no cycle.
 
 ## Severity
 
