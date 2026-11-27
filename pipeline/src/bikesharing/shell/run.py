@@ -50,7 +50,12 @@ from bikesharing.core.discovery import (
     pending_objects,
     plan_listing,
 )
-from bikesharing.core.events import Event, RunContext, SystemDiscovery
+from bikesharing.core.events import (
+    Event,
+    MaintenanceTask,
+    RunContext,
+    SystemDiscovery,
+)
 from bikesharing.core.published_file import (
     build_published_file,
     validate_published_file,
@@ -101,8 +106,6 @@ _ASSETS_DIR: Final = "public"
 # (d008 #14, Transformation in dbt).
 _VOLUME_WINDOW: Final = timedelta(days=7)
 _CHECKED_STATUSES: Final = frozenset({"pass", "warn", "fail", "error"})
-
-type _Task = Literal["compaction", "retention", "vacuum", "log_cleanup"]
 
 
 class GoldBuildFailed(RuntimeError):
@@ -800,7 +803,10 @@ def _clean_log(state: _Run, tables: Tables, table: TableName) -> Event:
 
 
 def _maintain(
-    state: _Run, table: TableName, task: _Task, action: Callable[[], Event | None]
+    state: _Run,
+    table: TableName,
+    task: MaintenanceTask,
+    action: Callable[[], Event | None],
 ) -> None:
     """Run one maintenance task on one table, logging its event or its failure.
 
