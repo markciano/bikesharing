@@ -253,7 +253,7 @@ A feed with no processed object has no partition, so call 2 returns nothing for 
 
 - **Upgrade:** `deltalake` moves from 1.6.6 to 1.7.0 for call 5's pruning, raising the manifest's minimum to `>=1.7.0` so that no relock goes back to a version without it ([ADR-0017](../decisions/0017-dependencies-locked-per-component.md)); R1 and R16's tests check that the upgrade keeps the outputs.
 - **Impact:** the [1.7.0 release notes](https://github.com/delta-io/delta-rs/releases/tag/python-v1.7.0) and its `table.py` change no API or default the pipeline uses. They add the MERGE's pruning by the source's statistics and correct the pruning statistics of timestamps, which `captured_at`'s ranges rely on.
-- **Explicit values:** `vacuum` simulates by default and keeps the table's retention, so the pipeline passes `dry_run=False` and a retention of 7 days ([ADR-0021](../decisions/0021-retention-per-layer.md)).
+- **Explicit values:** `vacuum` simulates by default and keeps the table's retention, so the pipeline passes `dry_run=False`, a retention of 7 days ([ADR-0021](../decisions/0021-retention-per-layer.md)) and `enforce_retention_duration=False` ([Vacuum and tombstone retention](#vacuum-and-tombstone-retention)).
 - **File statistics:** call 2 reads `get_add_actions(flatten=True)`, one row per data file with its `partition.<col>`, `min.<col>` and `max.<col>` columns, checked against the installed version before it is built. If the columns are missing, call 2 reads its feed's latest `utc_date` partition instead ([s019 › P4](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)).
 
 #### Compaction
@@ -277,10 +277,26 @@ The daily maintenance runs inside one run a day, after its last batch, following
 - **Which run:** the run that starts within the 15 min from `MAINTENANCE_LOCAL_TIME` in Europe/Madrid, a constant in `settings.py` set to `04:00`, outside the slow hours of [s019 › Not verified](../spikes/s019-pipeline-run-time-r2-reads.md#54-not-verified). The run decides from its own start time, which it receives as a parameter, so no state records whether maintenance ran.
 - **In order:**
   1. Retention deletes every partition of `station_stock` whose local date is before the first day of the current local month minus 12 months, with partition values read from the log; with none, it writes no commit (D4, R12–R14).
-  2. Vacuum removes, from both tables, the data files their log removed more than 7 days ago, with `dry_run=False` (ADR-0021).
+  2. Vacuum removes, from both tables, the data files their log removed more than 7 days ago, with `dry_run=False` (ADR-0021), as [Vacuum and tombstone retention](#vacuum-and-tombstone-retention) sets.
   3. Log cleanup removes, from both tables, the log files older than the log's 30-day retention, with `cleanup_metadata()`. Both tables set `delta.enableExpiredLogCleanup` to `false`, the way [Checkpoint interval](#checkpoint-interval) sets its property, so no commit lists `_delta_log/` to clean it.
 - **A missed day:** the three tasks act on the tables' state, not on the date, so the next day's maintenance does what a failed or skipped one left (D4).
-- **Cost:** 1 run in 96 takes longer, so it stays out of the p95; vacuum lists each table's files once a day, not once per run.
+- **Cost:** 1 run in 96 takes longer, so it stays out of the p95; no task lists a table's data files.
+
+#### Vacuum and tombstone retention
+
+Vacuum finds the data files to delete from the log's remove actions (tombstones), each recording a file the table removed and when, and lists no data file, so its cost does not grow with the table's history ([ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)). Each checkpoint drops the tombstones older than the table's `delta.deletedFileRetentionDuration`. A file whose tombstone is gone is no longer referenced anywhere: no later vacuum finds it, and it stays in R2 for good ([`vacuum.rs`](https://github.com/delta-io/delta-rs/blob/python-v1.7.0/crates/core/src/operations/vacuum.rs), [`log_replay.rs`](https://github.com/delta-io/delta-kernel-rs/blob/main/kernel/src/action_reconciliation/log_replay.rs)). With both at 7 days, a file would be deletable only from its 7th day until the next checkpoint, about 2 h, and a daily vacuum would miss most files.
+
+The tables therefore keep their tombstones longer than vacuum waits to delete:
+
+| Setting | Value | Where |
+|---|---|---|
+| Tombstone retention | 10 days | `TOMBSTONE_RETENTION` in `settings.py`, set as each table's `delta.deletedFileRetentionDuration` the way [Checkpoint interval](#checkpoint-interval) sets its property |
+| Vacuum retention | 7 days, the table history of ADR-0021 | `VACUUM_RETENTION` in `settings.py`, passed as `retention_hours=168` with `enforce_retention_duration=False` |
+
+- **Attempts per file:** a file is deletable from 7 days after its removal until the first checkpoint after 10 days, so the daily vacuum sees it on at least 10 − 7 = 3 days. A file removed on a Monday at 10:00 is deletable from the next Monday at 10:00, vacuum sees it on Tuesday, Wednesday and Thursday at 04:00, and the first checkpoint after Thursday at 10:00 drops its tombstone.
+- **A missed day:** the next vacuum catches up on up to 2 consecutive days without one. From the third, the files removed in that gap stay in R2 unreferenced: once the cause is fixed, a one-off `vacuum(full=True)`, which lists the table once, deletes them.
+- **Cost:** each checkpoint holds 3 days more of tombstones, about 1,200 rows and 30 kB per table. No data or log file is added, and the table history stays at 7 days.
+- **Safety check:** `enforce_retention_duration=False` turns off `deltalake`'s check that vacuum keeps at least the tombstone retention, since the two differ by design. A unit test checks instead that `VACUUM_RETENTION` is 7 days and below `TOMBSTONE_RETENTION`.
 
 #### Checkpoint interval
 
