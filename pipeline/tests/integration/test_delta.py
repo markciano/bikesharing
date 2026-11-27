@@ -10,7 +10,14 @@ from deltalake import DeltaTable, Field, QueryBuilder, Schema
 from deltalake.exceptions import CommitFailedError
 from deltalake.schema import PrimitiveType
 
-from bikesharing.core.settings import LOCAL_TIMEZONE, TABLE_PATHS, System
+from bikesharing.core.settings import (
+    CHECKPOINT_INTERVAL,
+    LOCAL_TIMEZONE,
+    TABLE_PATHS,
+    TOMBSTONE_RETENTION,
+    System,
+    TableName,
+)
 from bikesharing.core.verdict import MergeMetrics
 from bikesharing.shell.delta import (
     PROCESSED_OBJECTS_SCHEMA,
@@ -218,13 +225,28 @@ def test_station_stock_schema_follows_its_dbt_contract() -> None:
     assert STATION_STOCK_SCHEMA == expected
 
 
-def test_ensure_tables_creates_processed_objects_with_no_partitions(
+def test_ensure_tables_creates_processed_objects_by_system_feed_and_utc_date(
     tables: Tables,
 ) -> None:
     table = open_table(tables, TABLE_PATHS["processed_objects"])
 
     assert table.schema() == PROCESSED_OBJECTS_SCHEMA
-    assert table.metadata().partition_columns == []
+    assert table.metadata().partition_columns == ["system", "feed", "utc_date"]
+
+
+@pytest.mark.parametrize("name", list(TABLE_PATHS))
+def test_ensure_tables_sets_the_maintenance_properties_of_a_new_table(
+    tables: Tables, name: TableName
+) -> None:
+    table = open_table(tables, TABLE_PATHS[name])
+
+    assert table.metadata().configuration == {
+        "delta.checkpointInterval": str(CHECKPOINT_INTERVAL[name]),
+        "delta.enableExpiredLogCleanup": "false",
+        "delta.deletedFileRetentionDuration": (
+            f"interval {TOMBSTONE_RETENTION.days} days"
+        ),
+    }
 
 
 def test_ensure_tables_keeps_the_rows_of_existing_tables(
@@ -336,6 +358,58 @@ def test_record_processed_adds_no_row_for_a_key_already_recorded(
     assert duckdb.from_arrow(reader).count("*").fetchall() == [(2,)]
 
 
+def processed_rows(tables: Tables) -> list[tuple[str, str, date]]:
+    """The key, system and UTC date of every row of ``processed_objects``, sorted."""
+    reader = (
+        QueryBuilder()
+        .register("t", open_table(tables, TABLE_PATHS["processed_objects"]))
+        .execute("select key, system, utc_date from t")
+    )
+    return sorted(duckdb.from_arrow(reader).fetchall())
+
+
+def test_record_processed_writes_the_utc_date_of_each_capture(
+    tables: Tables,
+) -> None:
+    # 23:30 UTC falls on the next local date in Madrid; utc_date keeps the UTC one.
+    late = datetime(2026, 11, 18, 23, 30, tzinfo=UTC)
+
+    record_processed(tables, [processed("k1", "ambici", late)])
+
+    assert processed_rows(tables) == [("k1", "ambici", date(2026, 11, 18))]
+
+
+# Verifies d010 R3
+def test_record_processed_records_two_systems_in_one_table(
+    tables: Tables,
+) -> None:
+    record_processed(
+        tables,
+        [processed("k1", "ambici", T0), processed("k2", "bicing", T0)],
+    )
+
+    assert processed_rows(tables) == [
+        ("k1", "ambici", T0.date()),
+        ("k2", "bicing", T0.date()),
+    ]
+
+
+# Verifies d010 R16
+def test_a_batch_recorded_twice_adds_no_rows_to_either_table(
+    tables: Tables, con: duckdb.DuckDBPyConnection
+) -> None:
+    rows = stock(con, "b1", [("ambici", "1", T0), ("bicing", "1", T0)])
+    objects = [processed("k1", "ambici", T0), processed("k2", "bicing", T0)]
+    merge(tables, rows, [T0])
+    record_processed(tables, objects)
+
+    merge(tables, rows, [T0])
+    record_processed(tables, objects)
+
+    assert len(stock_keys(tables)) == 2
+    assert len(processed_rows(tables)) == 2
+
+
 def test_processed_keys_is_empty_on_new_tables(tables: Tables) -> None:
     assert processed_keys(tables) == frozenset()
 
@@ -364,6 +438,7 @@ def test_latest_processed_returns_none_for_a_system_with_no_object(
     assert latest_processed(tables) == {"ambici": None, "bicing": T0}
 
 
+# Verifies d010 R1
 def test_capture_history_writes_the_objects_captured_in_its_range_as_parquet(
     tables: Tables, work: Path
 ) -> None:
@@ -405,6 +480,7 @@ def test_capture_history_writes_the_objects_captured_in_its_range_as_parquet(
 
 
 # Verifies d008 R6
+# Verifies d010 R1
 def test_latest_captures_writes_each_system_latest_capture_as_parquet(
     tables: Tables, con: duckdb.DuckDBPyConnection, work: Path
 ) -> None:
