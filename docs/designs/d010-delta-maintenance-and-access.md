@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 13.
+- Current: Step 14.
 
 ## 1. Spec — what and why
 
@@ -1197,7 +1197,7 @@ Yes if it exits 0, and the lint hook reports nothing on the two documents.
 
 ### Step 13 — One-off migration script
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d010.s13 add the one-off migration of the Delta tables`
 - **R:** R6, R7, R8, R9, R17
