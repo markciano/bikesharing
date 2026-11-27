@@ -158,7 +158,7 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 - **R2** The pipeline shall keep the names and fields of its existing events and heartbeat, adding events or fields only. (D1)
 - **R3** The pipeline shall keep one `processed_objects` table for every system and feed, with one row per processed bronze object. (D1)
 - **R4** When a run reads `processed_objects` for a feed, the pipeline shall read only the data files that hold that feed's rows. (D1)
-- **R5** The pipeline shall read and write `processed_objects` only through its common table access. (D1)
+- **R5** In its runs, the pipeline shall read and write `processed_objects` only through its common table access. (D1) **#3**
 - **R6** When the migration has rewritten a table, the migration shall verify that the rewritten table and the version before it hold the same number of rows, the same set of bronze object keys, and the same run ID and code version on each row. (D2)
 - **R7** If a check of the migration's verification fails, then the migration shall report which check failed. (D2)
 - **R8** The migration shall rewrite only the tables whose partitioning changes. (D2)
@@ -359,7 +359,9 @@ T080 runs these steps once this task's Done when has passed, so that the fix and
 
 #### Migration
 
-`pipeline/scripts/migrate_delta_tables.py` is the one-off migration of D2, which the owner runs locally with D5's token in the environment. It runs in this order:
+`pipeline/scripts/migrate_delta_tables.py` is the one-off migration of D2, which the owner runs locally with D5's token in the environment. It calls `deltalake` directly, following a self-contained data migration that adds nothing to the application's API for a single use: ADR-0052's common table access covers the runs, and import-linter the package. It takes from `bikesharing.shell.delta` and `settings.py` only each table's schema, partition columns and properties. **#3**
+
+It runs in this order:
 
 1. **Checks the code.** It refuses unless the working tree is clean, untracked files included, and HEAD is `origin/main`, the checks of `deploy.sh`, and takes HEAD's full SHA as its code version (TH1).
 2. **Checks the layout.** When `processed_objects` is already partitioned by `system`, `feed` and `utc_date`, it skips steps 3 and 4 and goes on to step 5, so a second run never rewrites the table again and still completes a run that failed in step 5.
@@ -384,6 +386,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 |---|---|---|---|---|---|
 | 1 | [Modal's region](#modals-region) | Modal's region is tried in production right after this task's Done when, with no estimate first, following one variable changed at a time **refines [s019 › D2](../spikes/s019-pipeline-run-time-r2-reads.md#d2-modals-region-is-decided-after-the-fix)** | The trial is one reversible line, and the estimate would not save it; a trial alongside the fix would mix both in the Done when | — | Plan |
 | 2 | [Modal's region](#modals-region) | Modal stays in Europe only if a run costs no more there, its median time × 1.15 at most the US median, following a decision by unit cost **refines [s019 › D2](../spikes/s019-pipeline-run-time-r2-reads.md#d2-modals-region-is-decided-after-the-fix)** | With the p95 within 2 min, a shorter run changes nothing the page shows | — | Plan |
+| 3 | [Migration](#migration), [Requirements](#13-requirements) | The migration calls `deltalake` directly, taking only each table's schema, partition columns and properties from the package, following a self-contained data migration; R5 and `.claude/rules/code/python.md` › Structure limit the common table access to the runs and the package, as ADR-0052's scope does | Nothing is added to `delta.py` for a single use, so nothing is left in it to clean up when the script is removed | R5 | Plan review |
 
 ### 2.3 File layout
 
@@ -392,7 +395,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 ```text
 .
 ├── .claude/rules/code/
-│   └── python.md                          (modified)  Structure: only bikesharing.shell.delta imports deltalake; a new Delta table follows docs/lakehouse.md › Adding a table
+│   └── python.md                          (modified)  Structure: only bikesharing.shell.delta imports deltalake in the package; a new Delta table follows docs/lakehouse.md › Adding a table
 ├── .github/workflows/
 │   └── ci.yml                             (modified)  docs/lakehouse.md joins the pipeline path filter
 ├── contracts/
