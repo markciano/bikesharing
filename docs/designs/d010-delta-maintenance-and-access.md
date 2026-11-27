@@ -278,7 +278,8 @@ The daily maintenance runs inside one run a day, after its last batch, following
 - **In order:**
   1. Retention deletes every partition of `station_stock` whose local date is before the first day of the current local month minus 12 months, with partition values read from the log; with none, it writes no commit (D4, R12–R14).
   2. Vacuum removes, from both tables, the data files their log removed more than 7 days ago, with `dry_run=False` (ADR-0021).
-- **A missed day:** both tasks act on the tables' state, not on the date, so the next day's maintenance does what a failed or skipped one left (D4).
+  3. Log cleanup removes, from both tables, the log files older than the log's 30-day retention, with `cleanup_metadata()`. Both tables set `delta.enableExpiredLogCleanup` to `false`, the way [Checkpoint interval](#checkpoint-interval) sets its property, so no commit lists `_delta_log/` to clean it.
+- **A missed day:** the three tasks act on the tables' state, not on the date, so the next day's maintenance does what a failed or skipped one left (D4).
 - **Cost:** 1 run in 96 takes longer, so it stays out of the p95; vacuum lists each table's files once a day, not once per run.
 
 #### Checkpoint interval
@@ -298,6 +299,19 @@ N = √(2 · c · a · w / o)
 - **Bound:** N stays at or below 12, the commits of the Done when's 3 h window, so that the window includes a checkpoint of each table.
 - **Where it lives:** `CHECKPOINT_INTERVAL` in `settings.py`, keyed by table name. `ensure_tables` sets it as the table property when it creates a table, through `configuration`, and the migration script sets it on existing tables with `alter.set_table_properties`.
 - **A new table, or other inputs:** the interval is computed again from the formula. The Done when's GetObject per run measure the result.
+
+#### Maintenance events
+
+Each maintenance task writes one event per table it acts on, following one structured event per unit of work, as `batch_committed` and `node_finished` do. The events are added to `contracts/log-events.registry.json`, at level `info`, with `needs_action: false` and no alert, and no existing event changes (R2):
+
+| Event | Written | Fields | Counts from `deltalake` |
+|---|---|---|---|
+| `table_compacted` | After a batch's compaction of one table | `table`, `partitions`, `files_removed`, `files_added`, `duration_s` | `optimize.compact`'s metrics |
+| `retention_applied` | After the retention of `station_stock`, also when it deletes nothing | `table`, `partitions_deleted`, `rows_deleted`, `duration_s` | `delete`'s metrics |
+| `table_vacuumed` | After the vacuum of one table | `table`, `files_deleted`, `duration_s` | The length of the list `vacuum` returns |
+| `log_cleaned` | After the log cleanup of one table | `table`, `duration_s` | None: `cleanup_metadata()` returns no count |
+
+Every count is an integer. The events measure each task on its own: the compaction events show whether `COMPACTION_THRESHOLD` runs well, and the daily ones show the Done when's run of the daily maintenance.
 
 ### 2.2 Decision summary
 
