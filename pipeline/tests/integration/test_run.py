@@ -27,9 +27,8 @@ from deltalake import DeltaTable, QueryBuilder
 from obstore.store import LocalStore
 
 from bikesharing.core.discovery import parse_bronze_key, parse_exclusion_list
+from bikesharing.core.settings import TABLE_PATHS
 from bikesharing.shell.delta import (
-    PROCESSED_OBJECTS_PATH,
-    STATION_STOCK_PATH,
     local_lakehouse,
     processed_keys,
 )
@@ -149,12 +148,16 @@ def _count(delta_path: Path, path: str, sql: str) -> int:
 
 
 def _stock_rows(delta_path: Path) -> int:
-    return _count(delta_path, STATION_STOCK_PATH, "select count(*) as n from t")
+    return _count(
+        delta_path, TABLE_PATHS["station_stock"], "select count(*) as n from t"
+    )
 
 
 def _processed_stations(delta_path: Path) -> int:
     return _count(
-        delta_path, PROCESSED_OBJECTS_PATH, "select sum(station_count) as n from t"
+        delta_path,
+        TABLE_PATHS["processed_objects"],
+        "select sum(station_count) as n from t",
     )
 
 
