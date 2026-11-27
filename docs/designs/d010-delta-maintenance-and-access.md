@@ -191,6 +191,7 @@ If either fails, `capture_history`'s pruning is checked first.
 <!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
 
 - Moving Modal's region ([s019 › P8](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)): its steps are written in [Modal's region](#modals-region) and not run in this task — T080
+- Keeping other catalogs in sync with the code or configuration they describe: this design keeps `docs/lakehouse.md` in sync with `settings.py` ([Table settings and catalog](#table-settings-and-catalog)), which sets no rule for other catalogs. TODO(T078.2): consider the same for `docs/observability.md`'s alerts and events, only if its complexity is affordable — T078.2
 
 ## 2. Plan — how
 
@@ -339,7 +340,15 @@ Each maintenance task writes one event per table it acts on, following one struc
 Every count is an integer. The events measure each task on its own: the compaction events show whether `COMPACTION_THRESHOLD` runs well, and the daily ones show the Done when's run of the daily maintenance.
 
 - **A failed task:** the run writes `maintenance_failed` and goes on with the next table, task or batch, and `run_finished`'s outcome does not change, following graceful degradation of non-critical work. The batch's data is already committed, and each task acts on the table's state, so the next run or day does what the failed one left ([Compaction](#compaction), [Daily maintenance](#daily-maintenance)).
-- **Not actionable:** one failure is fixed by waiting, as `docs/observability.md` › Actionable events sets. Failures on consecutive days are not: from the third day without a vacuum, removed files stay in R2 ([Vacuum and tombstone retention](#vacuum-and-tombstone-retention)). TODO(T078): alert on `maintenance_failed` over consecutive days.
+- **Not actionable:** one failure is fixed by waiting, as `docs/observability.md` › Actionable events sets. Failures on consecutive days are not: from the third day without a vacuum, removed files stay in R2 ([Vacuum and tombstone retention](#vacuum-and-tombstone-retention)). TODO(T078.2): alert on `maintenance_failed` over consecutive days.
+
+#### Table settings and catalog
+
+Each table's settings have one source, `settings.py`, and the catalog `docs/lakehouse.md` explains them without copying them, following a single source of truth:
+
+- **`settings.py`:** `TABLE_PATHS` maps each table's name to its path in `bikesharing-lakehouse`, and its keys are the pipeline's tables. `CHECKPOINT_INTERVAL` and `COMPACTION_THRESHOLD` are keyed by the same names, and `TOMBSTONE_RETENTION`, `VACUUM_RETENTION` and `MAINTENANCE_LOCAL_TIME` hold for every table. `delta.py`, the migration script and the tests import them, and no other module or test writes a table's path.
+- **`docs/lakehouse.md`:** one entry per table, headed by its name, states how the table applies [ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md): its partition columns, the range each reader states, its compaction and retention, and how each tunable value is computed. It names the constant that holds each value and never writes the value. `docs/architecture.md` › 8 links to it from a bullet on Delta tables.
+- **Kept in step by one test:** an integration test, `tests/integration/test_lakehouse_catalog.py`, checks that the catalog's table headings are `TABLE_PATHS`' keys, so a table added or removed without its entry fails CI. It reads a file outside `pipeline/`, so `docs/lakehouse.md` joins the `pipeline` path filter in `.github/workflows/ci.yml`. A table with no `CHECKPOINT_INTERVAL` fails `ensure_tables`' own tests, which read it by the table's name.
 
 #### Modal's region
 
