@@ -371,7 +371,9 @@ It runs in this order:
 
 Every commit it writes carries its code version in `custom_metadata`, through `CommitProperties` (R9).
 
-The script and its test are removed in the PR that records the Done when, once the migration has passed, following dead code removal: they run once, depend on `bikesharing.shell.delta`'s schema, and Git keeps them.
+`check-pipeline.sh` type-checks the script with mypy, as it does `scripts/smoke_test.py`, since its one run rewrites a production table.
+
+The script, its test and its line in `check-pipeline.sh` are removed in the PR that records the Done when, once the migration has passed, following dead code removal: they run once, depend on `bikesharing.shell.delta`'s schema, and Git keeps them. **#4**
 
 ### 2.2 Decision summary
 
@@ -387,6 +389,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 1 | [Modal's region](#modals-region) | Modal's region is tried in production right after this task's Done when, with no estimate first, following one variable changed at a time **refines [s019 › D2](../spikes/s019-pipeline-run-time-r2-reads.md#d2-modals-region-is-decided-after-the-fix)** | The trial is one reversible line, and the estimate would not save it; a trial alongside the fix would mix both in the Done when | — | Plan |
 | 2 | [Modal's region](#modals-region) | Modal stays in Europe only if a run costs no more there, its median time × 1.15 at most the US median, following a decision by unit cost **refines [s019 › D2](../spikes/s019-pipeline-run-time-r2-reads.md#d2-modals-region-is-decided-after-the-fix)** | With the p95 within 2 min, a shorter run changes nothing the page shows | — | Plan |
 | 3 | [Migration](#migration), [Requirements](#13-requirements) | The migration calls `deltalake` directly, taking only each table's schema, partition columns and properties from the package, following a self-contained data migration; R5 and `.claude/rules/code/python.md` › Structure limit the common table access to the runs and the package, as ADR-0052's scope does | Nothing is added to `delta.py` for a single use, so nothing is left in it to clean up when the script is removed | R5 | Plan review |
+| 4 | [Migration](#migration), [File layout](#23-file-layout) | mypy type-checks the migration script in `check-pipeline.sh`, following the same checks for all of a component's Python code, as `scripts/smoke_test.py` | Its one run rewrites a production table, and a type error would otherwise show only there; the line is removed with the script | — | Steps |
 
 ### 2.3 File layout
 
@@ -407,6 +410,7 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
     ├── pyproject.toml                     (modified)  deltalake >=1.7.0; import-linter contract: only bikesharing.shell.delta imports deltalake
     ├── uv.lock                            (modified)  deltalake 1.7.0
     ├── scripts/
+    │   ├── check-pipeline.sh              (modified)  mypy also checks migrate_delta_tables.py; the line is removed with the script
     │   └── migrate_delta_tables.py        (new)       One-off migration of D2: checks, rewrite of processed_objects, verification, table properties; removed in the PR that records the Done when
     ├── src/bikesharing/core/
     │   ├── discovery.py                   (modified)  plan_listing lists from the latest capture minus the lookback, with no daily full sweep
@@ -1098,6 +1102,85 @@ bash pipeline/scripts/check-pipeline.sh
 ```
 
 Yes if it exits 0.
+
+### Step 11 — Only the table access imports `deltalake`
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `chore: d010.s11 allow only the table access to import deltalake`
+- **R:** R5
+- **Model:** `sonnet · low`
+- **Review:** `no`
+
+#### Scope
+
+- `pipeline/pyproject.toml`: a `forbidden` import-linter contract, with `source_modules = ["bikesharing"]`, `forbidden_modules = ["deltalake"]` and `ignore_imports = ["bikesharing.shell.delta -> deltalake"]`, after the three existing contracts; `include_external_packages` is already `true`.
+- Tests: none; R5 is verified by Inspection of the contract, which `check-pipeline.sh` runs in CI.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [Common table access](#common-table-access), last paragraph | d010 › Plan | What the contract enforces, and why by tooling |
+| `[tool.importlinter]` and its three contracts | `pipeline/pyproject.toml` | The form and the comment the new contract follows |
+
+#### Do
+
+1. Add the contract to `pyproject.toml`, with a comment citing ADR-0052.
+2. Run `uv run --directory pipeline lint-imports`.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0 and `lint-imports` lists the new contract as kept.
+
+### Step 12 — Lakehouse catalog
+
+- **Status:** 💤 todo
+- **Who:** Claude
+- **Commit:** `docs: d010.s12 add the lakehouse catalog`
+- **R:** —
+- **Model:** `opus · medium`
+- **Review:** `no`
+
+#### Scope
+
+- `docs/lakehouse.md` (new):
+  - the catalog's opening: what it holds and what for, how to read an entry, and one worked example that follows `processed_objects` through a run;
+  - `## Adding a table`: the steps to add a table, each linking to the part of an entry that explains its value and stating what checks it;
+  - `## Tables`: one `###` entry per table, headed by its name, with its partition columns, the range each reader states, its compaction and retention, and how each tunable value is computed, naming its constant in `settings.py` and never its value.
+- `pipeline/tests/integration/test_lakehouse_catalog.py` (new): the `###` headings under `## Tables` are `TABLE_PATHS`' keys.
+- `.github/workflows/ci.yml`: `docs/lakehouse.md` joins the `pipeline` path filter.
+- `docs/architecture.md` › 8 Cross-cutting concepts: a bullet on Delta tables linking to the catalog.
+
+#### Reads
+
+| What | Where | Why |
+|---|---|---|
+| [Table settings and catalog](#table-settings-and-catalog) | d010 › Plan | What the catalog holds, its test and the path filter |
+| [ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md) | `docs/decisions/` | The pattern each entry applies |
+| [Compaction](#compaction), [Checkpoint interval](#checkpoint-interval), [Vacuum and tombstone retention](#vacuum-and-tombstone-retention), [Daily maintenance](#daily-maintenance) | d010 › Plan | How each tunable value is computed |
+| Catalogs | `.claude/rules/docs/general.md` | The opening every catalog starts with |
+| The `pipeline` path filter | `.github/workflows/ci.yml` | Where the catalog's path joins |
+| 8 Cross-cutting concepts | `docs/architecture.md` | Where the bullet goes, with its source |
+
+#### Do
+
+1. Write the test in `test_lakehouse_catalog.py`, failing.
+2. Write `docs/lakehouse.md`.
+3. Add `docs/lakehouse.md` to the `pipeline` path filter in `ci.yml`.
+4. Add the bullet to `docs/architecture.md` › 8.
+
+#### Check
+
+```bash
+bash pipeline/scripts/check-pipeline.sh
+```
+
+Yes if it exits 0, and the lint hook reports nothing on the two documents.
 
 ## 4. Close
 
