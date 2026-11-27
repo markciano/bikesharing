@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 12.
+- Current: Step 13.
 
 ## 1. Spec — what and why
 
@@ -1152,7 +1152,7 @@ Yes if it exits 0 and `lint-imports` lists the new contract as kept.
 
 ### Step 12 — Lakehouse catalog
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `docs: d010.s12 add the lakehouse catalog`
 - **R:** —

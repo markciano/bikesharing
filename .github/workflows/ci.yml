@@ -37,6 +37,7 @@ jobs:
               - 'contracts/latest-station-count.json'
               - 'contracts/log-events.registry.json'
               - 'contracts/log-events.schema.json'
+              - 'docs/lakehouse.md'
               - '.github/workflows/ci.yml'
             monitoring:
               - 'monitoring/**'
