@@ -1,16 +1,20 @@
 """Builds each function's configuration from its environment and runs the pipeline end to end.
 
 A run discovers the pending bronze objects, processes them oldest first in
-bounded batches, and builds, validates and deploys the published file from the
-lakehouse's committed state (d008, Bronze reading and Publishing). A batch that
-does not commit stops the run with no further batch and no publishing, so the
-next run retries it (d008 D9, A failed batch halts the pipeline until T060.5).
+bounded batches, compacting the tables after each, and builds, validates and
+deploys the published file from the lakehouse's committed state (d008, Bronze
+reading and Publishing; d010, Compaction). The run that starts in the daily
+maintenance window then applies retention, vacuums and cleans the tables' logs
+before publishing (d010, Daily maintenance). A batch that does not commit stops
+the run with no further batch and no publishing, so the next run retries it
+(d008 D9, A failed batch halts the pipeline until T060.5).
 The run logs every step as an event, uploads its log at its end, pings its
 heartbeat check and copies its events to Grafana, and it never raises: every failure ends as a failed outcome
 (d008, Observability).
 """
 
 import contextlib
+import functools
 import json
 import resource
 import shutil
@@ -19,7 +23,7 @@ import tempfile
 import uuid
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Final, Literal, cast
 
@@ -33,6 +37,13 @@ from bikesharing.core.batching import (
     stage_drained,
     within_end_instant,
 )
+from bikesharing.core.delta_maintenance import (
+    first_open_day,
+    is_maintenance_run,
+    partitions_to_compact,
+    partitions_to_delete,
+    retention_start,
+)
 from bikesharing.core.discovery import (
     BronzeObject,
     parse_exclusion_list,
@@ -45,15 +56,19 @@ from bikesharing.core.published_file import (
     validate_published_file,
 )
 from bikesharing.core.read_schema import STATION_FIELDS, STATION_STATUS_COLUMNS
-from bikesharing.core.settings import SYSTEMS, System
+from bikesharing.core.settings import SYSTEMS, TABLE_PATHS, System, TableName
 from bikesharing.core.verdict import NodeResult, is_insert_only, judge_batch, rule_id
 from bikesharing.shell import duckdb_session
 from bikesharing.shell.dbt_runner import DbtPaths, dbt_build
 from bikesharing.shell.delta import (
+    DATE_PARTITION,
     Lakehouse,
     ProcessedObject,
     Tables,
     capture_history,
+    cleanup_log,
+    compact,
+    delete_partitions,
     ensure_tables,
     latest_captures,
     latest_processed,
@@ -62,6 +77,8 @@ from bikesharing.shell.delta import (
     processed_keys,
     r2_lakehouse,
     record_processed,
+    table_partitions,
+    vacuum,
 )
 from bikesharing.shell.event_log import EventLog
 from bikesharing.shell.heartbeat import Signal, ping
@@ -84,6 +101,8 @@ _ASSETS_DIR: Final = "public"
 # (d008 #14, Transformation in dbt).
 _VOLUME_WINDOW: Final = timedelta(days=7)
 _CHECKED_STATUSES: Final = frozenset({"pass", "warn", "fail", "error"})
+
+type _Task = Literal["compaction", "retention", "vacuum", "log_cleanup"]
 
 
 class GoldBuildFailed(RuntimeError):
@@ -150,6 +169,9 @@ class RunConfig:
         How far before the latest processed capture a listing starts.
     clock : Callable[[], datetime]
         The current instant, timezone-aware.
+    maintenance_window : timedelta or None
+        How long after ``MAINTENANCE_LOCAL_TIME`` a run that starts does the
+        daily maintenance; None never does it.
     otlp : OtlpTarget or None
         Where the run's events are copied to Grafana at its end; None sends
         nothing.
@@ -172,6 +194,7 @@ class RunConfig:
     time_budget: timedelta
     lookback: timedelta
     clock: Callable[[], datetime]
+    maintenance_window: timedelta | None
     otlp: OtlpTarget | None = None
 
 
@@ -200,6 +223,7 @@ def _config(
     heartbeat_url: str | None,
     otlp: OtlpTarget | None,
     secrets: frozenset[str],
+    maintenance_window: timedelta | None,
 ) -> RunConfig:
     """Return a run's configuration, with the core's constants and the paths under ``root``."""
     schema = json.loads((root / _FILE_SCHEMA).read_text(encoding="utf-8"))
@@ -221,6 +245,7 @@ def _config(
         time_budget=RUN_SETTINGS.time_budget,
         lookback=settings.LISTING_LOOKBACK,
         clock=_now,
+        maintenance_window=maintenance_window,
         otlp=otlp,
     )
 
@@ -313,6 +338,9 @@ def scheduled_config(
                 *({otlp.token} if otlp is not None else ()),
             }
         ),
+        # One scheduled run a day starts within a cadence of the maintenance
+        # time (d010, Daily maintenance).
+        maintenance_window=RUN_SETTINGS.cadence,
     )
 
 
@@ -365,6 +393,7 @@ def one_off_config(
         heartbeat_url=None,
         otlp=None,
         secrets=frozenset({bronze_id, bronze_secret}),
+        maintenance_window=None,
     )
 
 
@@ -411,10 +440,13 @@ def run(config: RunConfig) -> Literal["succeeded", "failed"]:
 
     In order: it creates the run's work folder, pings ``start`` and logs
     ``run_started``; discovers the pending objects; applies the end instant;
-    processes each batch while the time budget allows, stopping at the first
-    that does not commit; unless a batch failed, builds, validates and deploys
-    the published file; and finally removes the work folder, logs
-    ``run_finished``, uploads the log and pings ``success`` or ``fail``.
+    processes each batch while the time budget allows, compacting the tables
+    after each and stopping at the first that does not commit; in the
+    maintenance run, applies retention, vacuums and cleans the logs; unless a
+    batch failed, builds, validates and deploys the published file; and finally
+    removes the work folder, logs ``run_finished``, uploads the log and pings
+    ``success`` or ``fail``. A failed maintenance task is logged and changes
+    neither the outcome nor what follows.
 
     Parameters
     ----------
@@ -487,17 +519,22 @@ def _execute(state: _Run, started_at: datetime) -> None:
     batches = plan_batches(
         within_end_instant(pending, config.end_instant), config.max_objects
     )
+    committed = True
     for batch in batches:
         if not may_start_batch(
             run_started=started_at, now=state.now(), budget=config.time_budget
         ):
             break
         if not _process_batch(state, tables, batch):
-            # A batch that does not commit halts the run, with no publishing,
-            # so the next run retries it (d008 D9, A failed batch halts the
-            # pipeline until T060.5).
-            return
-    _publish(state, tables)
+            committed = False
+            break
+        _compact(state, tables, batch)
+    _daily_maintenance(state, tables, started_at)
+    # A batch that does not commit halts the run, with no publishing, so the
+    # next run retries it (d008 D9, A failed batch halts the pipeline until
+    # T060.5).
+    if committed:
+        _publish(state, tables)
 
 
 def _discover(
@@ -662,6 +699,137 @@ def _commit_batch(state: _Run, tables: Tables, batch: Batch, folder: Path) -> bo
         )
     )
     return True
+
+
+def _compact(state: _Run, tables: Tables, batch: Batch) -> None:
+    """Compact, in each table, the partitions the batch left over their rule."""
+    for table in TABLE_PATHS:
+        _maintain(
+            state,
+            table,
+            "compaction",
+            functools.partial(_compact_table, state, tables, table, batch),
+        )
+
+
+def _compact_table(
+    state: _Run, tables: Tables, table: TableName, batch: Batch
+) -> Event | None:
+    """Compact one table's due partitions; return its event, or None with none due."""
+    began = state.now()
+    _, timezone = DATE_PARTITION[table]
+    # A partition before the day a later batch can still reach is closed and
+    # compacted into one file; an open one only at its table's threshold
+    # (d010, Compaction).
+    due = partitions_to_compact(
+        table_partitions(tables, table),
+        first_open_day=first_open_day(
+            batch.last_capture, lookback=state.config.lookback, timezone=timezone
+        ),
+        threshold=settings.COMPACTION_THRESHOLD.get(table),
+    )
+    if not due:
+        return None
+    metrics = compact(tables, table, due)
+    return events.table_compacted(
+        state.now(), table=table, metrics=metrics, duration_s=_since(state, began)
+    )
+
+
+def _daily_maintenance(state: _Run, tables: Tables, started_at: datetime) -> None:
+    """In the maintenance run only: retention, vacuum and log cleanup, in that order.
+
+    The run decides from its own start, so no state records whether the
+    maintenance ran; each task acts on the tables' state, so the next day's
+    does what a failed or skipped one left (d010, Daily maintenance).
+    """
+    window = state.config.maintenance_window
+    if window is None or not is_maintenance_run(
+        started_at,
+        local_time=settings.MAINTENANCE_LOCAL_TIME,
+        window=window,
+        timezone=settings.LOCAL_TIMEZONE,
+    ):
+        return
+    today = started_at.astimezone(settings.LOCAL_TIMEZONE).date()
+    for table, months in settings.RETENTION_MONTHS.items():
+        start = retention_start(today, months=months)
+        _maintain(
+            state,
+            table,
+            "retention",
+            functools.partial(_retain, state, tables, table, start),
+        )
+    for table in TABLE_PATHS:
+        _maintain(
+            state, table, "vacuum", functools.partial(_vacuum, state, tables, table)
+        )
+    for table in TABLE_PATHS:
+        _maintain(
+            state,
+            table,
+            "log_cleanup",
+            functools.partial(_clean_log, state, tables, table),
+        )
+
+
+def _retain(state: _Run, tables: Tables, table: TableName, start: date) -> Event:
+    """Delete the table's partitions before ``start``; return its event."""
+    began = state.now()
+    due = partitions_to_delete(table_partitions(tables, table), start=start)
+    metrics = delete_partitions(tables, table, due)
+    return events.retention_applied(
+        state.now(), table=table, metrics=metrics, duration_s=_since(state, began)
+    )
+
+
+def _vacuum(state: _Run, tables: Tables, table: TableName) -> Event:
+    """Delete the data files the table removed before the vacuum retention."""
+    began = state.now()
+    deleted = vacuum(tables, table, retention=settings.VACUUM_RETENTION)
+    return events.table_vacuumed(
+        state.now(), table=table, files_deleted=deleted, duration_s=_since(state, began)
+    )
+
+
+def _clean_log(state: _Run, tables: Tables, table: TableName) -> Event:
+    """Delete the table's log files older than the log's retention."""
+    began = state.now()
+    cleanup_log(tables, table)
+    return events.log_cleaned(state.now(), table=table, duration_s=_since(state, began))
+
+
+def _maintain(
+    state: _Run, table: TableName, task: _Task, action: Callable[[], Event | None]
+) -> None:
+    """Run one maintenance task on one table, logging its event or its failure.
+
+    A failure writes ``maintenance_failed`` and leaves the run's outcome: the
+    batch's data is already committed and the next run does what this one left,
+    following graceful degradation of non-critical work (d010, Maintenance
+    events).
+    """
+    try:
+        event = action()
+    # Any failure of a task, whatever its cause, must leave the run going on.
+    except Exception as error:  # noqa: BLE001
+        state.emit(
+            events.maintenance_failed(
+                state.now(),
+                table=table,
+                task=task,
+                error_type=type(error).__name__,
+                error=str(error),
+            )
+        )
+        return
+    if event is not None:
+        state.emit(event)
+
+
+def _since(state: _Run, began: datetime) -> float:
+    """Return the seconds since ``began``, from the run's clock."""
+    return (state.now() - began).total_seconds()
 
 
 def _publish(state: _Run, tables: Tables) -> None:

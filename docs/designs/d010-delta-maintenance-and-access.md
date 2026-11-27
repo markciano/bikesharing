@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 10.
+- Current: Step 11.
 
 ## 1. Spec — what and why
 
@@ -328,7 +328,7 @@ Each maintenance task writes one event per table it acts on, following one struc
 
 | Event | Level | Written | Fields | Values from `deltalake` |
 |---|---|---|---|---|
-| `table_compacted` | `info` | After a batch's compaction of one table | `table`, `partitions`, `files_removed`, `files_added`, `duration_s` | `optimize.compact`'s `partitionsOptimized`, `numFilesRemoved` and `numFilesAdded` |
+| `table_compacted` | `info` | After a batch's compaction of one table, when the batch left partitions due; none otherwise **DI3** | `table`, `partitions`, `files_removed`, `files_added`, `duration_s` | `optimize.compact`'s `partitionsOptimized`, `numFilesRemoved` and `numFilesAdded` |
 | `retention_applied` | `info` | After the retention of `station_stock`, also when it deletes nothing | `table`, `partitions_deleted`, `rows_deleted`, `duration_s` | `partitions_deleted` from the partitions given; `delete`'s `num_deleted_rows`, present since every data file the pipeline writes has its row count in its statistics |
 | `table_vacuumed` | `info` | After the vacuum of one table | `table`, `files_deleted`, `duration_s` | The length of the list `vacuum` returns |
 | `log_cleaned` | `info` | After the log cleanup of one table | `table`, `duration_s` | None: `cleanup_metadata()` returns no count |
@@ -1071,7 +1071,7 @@ Yes if it exits 0.
 
 ### Step 10 — Compaction and daily maintenance in a run
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `feat: d010.s10 compact after each batch and run the daily maintenance`
 - **R:** R2, R15
@@ -1457,3 +1457,4 @@ Yes if the checks exit 0 and the search finds nothing.
 |---|---|---|---|---|
 | DI1 | [deltalake 1.7.0](#deltalake-170), [Step 1](#step-1--upgrade-deltalake-to-170) | `deltalake` 1.7.0 is kept, and the two retry tests provoke the conflict with one key both writers insert, following tests of observable behaviour | 1.7.0 no longer conflicts on every concurrent insert within the batch's capture range; no case tried duplicated a key | Step 1 |
 | DI2 | [Step 17](#step-17--check-the-done-when-in-production) | Step 17 also records the maintenance run's total run time and its margin to the timeout, with no threshold, following measuring the headroom to a limit | The p95 leaves that run out, and no data yet sets a threshold | Step 1 |
+| DI3 | [Maintenance events](#maintenance-events) | `table_compacted` is written only when a batch's compaction of a table has partitions due, following one event per unit of work done | Each event is then one compaction, with no event at zero from every batch, about 190 a day | Step 10 |
