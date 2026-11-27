@@ -864,6 +864,7 @@ Yes if it exits 0.
   - a handle is refreshed after the module's own writes and before a retried MERGE.
 - `pipeline/src/bikesharing/shell/run.py`: calls `ensure_tables` once and passes its `Tables` to every other call.
 - `pipeline/tests/integration/test_delta.py`, `pipeline/tests/integration/test_run.py`: their calls take `Tables`; the existing tests of a run's `station_stock` rows and published file pass unchanged (R1).
+- `pipeline/tests/integration/test_delta.py` and the example in `Lakehouse.table_uri`'s docstring in `delta.py`: every table path from `TABLE_PATHS`, none written as a literal ([Table settings and catalog](#table-settings-and-catalog)).
 
 #### Reads
 
@@ -880,14 +881,16 @@ Yes if it exits 0.
 2. Change every call of a run in `delta.py` to take `tables`, reading through its handles.
 3. Update `run.py` to call `ensure_tables` once and pass `Tables`.
 4. Update `test_delta.py` and `test_run.py` to the new signatures.
+5. Replace the table paths written as literals in `test_delta.py` and in `delta.py`'s docstring.
 
 #### Check
 
 ```bash
 bash pipeline/scripts/check-pipeline.sh
+grep -rn -E "silver/station_stock|control/processed_objects" pipeline/src pipeline/tests --include="*.py"
 ```
 
-Yes if it exits 0 with no test removed.
+Yes if the checks exit 0 with no test removed, and the search finds only `TABLE_PATHS`' two lines in `settings.py`.
 
 ### Step 6 — `processed_objects` by system, feed and UTC date
 
