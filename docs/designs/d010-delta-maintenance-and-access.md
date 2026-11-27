@@ -20,8 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: Draft 📝
 - Phase: [x] Spec · [ ] Plan · [ ] Plan review · [ ] Steps · [ ] Steps review
-- Current: Plan › concerns, written up to Maintenance events. Left, in order:
-  - C8 migration script in `pipeline/scripts/`, its verification and code version in the commit metadata (settled, D2, D5, R6–R9); it also sets the three table properties on existing tables (checkpoint interval, expired log cleanup off, tombstone retention).
+- Current: Plan › concerns, written up to Migration. Left, in order:
   - C9 rewrite [d008 › Delta writes](d008-pipeline-platform-and-walking-skeleton.md#delta-writes), whose #6 makes maintenance a separate job, with `**replaces …**` (settled, ADR-0052).
   - C10 steps for moving Modal's region, written and not run (settled, T080).
 - Parked for File layout: a catalog of the lakehouse's tables, e.g. `docs/lakehouse.md`, linked from architecture.md › 8, holding how each table applies ADR-0052 and how its values are computed; a rule in `.claude/rules/` for new tables; a test that every table has its settings; the table paths kept only in `settings.py`, imported by `delta.py` and `tests/integration/test_run.py`.
@@ -337,6 +336,18 @@ Every count is an integer. The events measure each task on its own: the compacti
 
 - **A failed task:** the run writes `maintenance_failed` and goes on with the next table, task or batch, and `run_finished`'s outcome does not change, following graceful degradation of non-critical work. The batch's data is already committed, and each task acts on the table's state, so the next run or day does what the failed one left ([Compaction](#compaction), [Daily maintenance](#daily-maintenance)).
 - **Not actionable:** one failure is fixed by waiting, as `docs/observability.md` › Actionable events sets. Failures on consecutive days are not: from the third day without a vacuum, removed files stay in R2 ([Vacuum and tombstone retention](#vacuum-and-tombstone-retention)). TODO(T078): alert on `maintenance_failed` over consecutive days.
+
+#### Migration
+
+`pipeline/scripts/migrate_delta_tables.py` is the one-off migration of D2, which the owner runs locally with D5's token in the environment. It runs in this order:
+
+1. **Checks the code.** It refuses unless the working tree is clean, untracked files included, and HEAD is `origin/main`, the checks of `deploy.sh`, and takes HEAD's full SHA as its code version (TH1).
+2. **Checks the layout.** It refuses when `processed_objects` is already partitioned by `system`, `feed` and `utc_date`, so a second run never rewrites it again.
+3. **Rewrites `processed_objects`.** It reads the current version, adds `utc_date` from `captured_at`, and overwrites the table with `partition_by` set to the new partition columns and `schema_mode="overwrite"`, Delta's way of changing a table's partitioning. It takes the schema and the partition columns from `bikesharing.shell.delta`, so it writes the table `ensure_tables` would create. `station_stock` is not rewritten (R8).
+4. **Verifies the rewrite.** It compares the new version with the one before it, read by time travel, on the three checks of D2: the number of rows, the set of `key`s, and the set of `key`, run ID and code version (R6). A failed check is reported by name, and the script exits non-zero (R7).
+5. **Sets the table properties.** Only once the verification passes, it sets on both tables `delta.checkpointInterval`, `delta.enableExpiredLogCleanup` and `delta.deletedFileRetentionDuration` from `settings.py`, the values `ensure_tables` sets on a new table ([Checkpoint interval](#checkpoint-interval), [Daily maintenance](#daily-maintenance), [Vacuum and tombstone retention](#vacuum-and-tombstone-retention)), with `alter.set_table_properties`. A failed verification thus leaves only the rewrite to undo.
+
+Every commit it writes carries its code version in `custom_metadata`, through `CommitProperties` (R9).
 
 ### 2.2 Decision summary
 
