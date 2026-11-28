@@ -212,7 +212,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 
 ### 4.2 Known gaps at close
 
-<!-- What the task leaves undone or imperfect, each with the task that covers it and its `TODO(TNNN)` marker (CLAUDE.md › Pending items): requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
+<!-- What the task leaves undone or imperfect, each with its `TODO(TNNN)` marker, which names the task that covers it (CLAUDE.md › Pending items): requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
 
 - `<gap>` — TNNN
 
