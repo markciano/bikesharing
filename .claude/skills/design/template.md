@@ -169,7 +169,8 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 - R: the requirements the step implements or tests, or —.
 - Commit: the proposed message, following the Git conventions in CLAUDE.md.
 - Model: the model and effort the step's session runs with, fitted to the step: the lightest that does it well, never more than it needs nor less (e.g. sonnet · medium). For an Owner step, those of the session that guides the owner, or — when the owner works alone.
-- Review: `code`, `security`, `code and security`, or `no`. A review goes on the step that completes a reviewable unit (a flow or action, usually built over several steps); the last code step has at least `code`. -->
+- Review: `code`, `security`, `code and security`, or `no`. A review goes on the step that completes a reviewable unit (a flow or action, usually built over several steps); the last code step has at least `code`.
+- Records: only for a step whose result cannot be obtained again later, such as a measure on production over its window, the output of an owner's run, or logs that expire: what it writes in 4.1 Implemented (each measure with its result, threshold, window and source). Omitted otherwise; a test run is not recorded, since it can run again. -->
 
 ### 3.1 Prerequisites
 
@@ -183,6 +184,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 - **R:** R1, R3 (or —)
 - **Model:** `<model · effort>` (or —)
 - **Review:** `<code | security | code and security | no>`
+- **Records:** `<what the step writes in 4.1 Implemented>` (optional)
 
 #### Scope
 
@@ -206,7 +208,7 @@ Each step is one reviewable result and one commit, touching at most 2–3 files.
 
 ### 4.1 Implemented
 
-<!-- Component — what was delivered; tests passing. In a document-only task: Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. -->
+<!-- Component — what was delivered; tests passing. In a document-only task: Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. The results of steps with Records are written here by those steps, when they run. -->
 
 ### 4.2 Known gaps at close
 
