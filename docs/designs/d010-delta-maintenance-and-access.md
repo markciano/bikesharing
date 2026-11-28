@@ -1,15 +1,15 @@
 # Design: Delta maintenance and access in the pipeline
 
-- **Task:** T072
+- **Task:** T072; T080 runs [Modal's region](#modals-region)
 - **Kind:** build
 - **ADRs:** [ADR-0021](../decisions/0021-retention-per-layer.md), [ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md)
 - **New ADRs from this doc:** none
 
 ## Status
 
-- State: Complete ✅
+- State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: —
+- Current: T080, [Modal's region](#modals-region) › 1. Pin the region
 
 ## 1. Spec — what and why
 
@@ -305,7 +305,7 @@ Each table's settings have one source, `settings.py`, and the catalog `docs/lake
 T080 runs these steps once this task's Done when has passed, so that the fix and the region are each measured on their own, following one variable changed at a time. They are written here and not run in this task:
 
 1. **Pin the region.** A PR sets `region="eu"` on the scheduled function in `pipeline/modal_app.py`, and is merged and deployed with `deploy.sh`. `eu` is Modal's broad region for the European Economic Area, which avoids the transatlantic round trip to R2's WEUR buckets, with a surcharge of 1.15× on every resource, against 1.75× for a narrow region such as `eu-west` ([Modal › Region selection](https://modal.com/docs/guide/region-selection)).
-2. **Measure.** `run_stats.py` gives the run times of 12 consecutive scheduled runs with no catch-up (one batch) in the US, before the PR, and of the first 12 such runs in Europe, after it: a window of 3 h each, as in the Done when.
+2. **Measure.** `run_stats.py` gives the run times of the scheduled runs with no catch-up (one batch) over the same clock hours on two consecutive days, so that the time of day does not weigh on the comparison: in the US, from 01:15 UTC, the first run after the smoke test whose historical compaction took 260.6 s, until the deploy of the PR, and in Europe, over those same hours on the next day.
 3. **Decide.** Modal stays in Europe if the median run time in Europe × 1.15 is at most the median run time in the US. Modal bills a container by the second, so a run's cost follows its time times the surcharge. Otherwise a PR removes `region` and is deployed, since an older commit is never redeployed. **#1, #2**
 
 #### Migration
