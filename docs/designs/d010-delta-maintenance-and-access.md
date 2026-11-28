@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 16.
+- Current: Step 17.
 
 ## 1. Spec — what and why
 
@@ -1324,7 +1324,7 @@ Steps 1 and 2 of D2's order, in production:
 
 ### Step 16 — Deploy the new code and revoke the token
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **R:** —
