@@ -47,6 +47,7 @@ app = modal.App(APP_NAME)
     ],
     cpu=1.0,
     memory=(MEMORY_MIB, MEMORY_MIB),
+    region="eu",
     timeout=TIMEOUT_S,
     max_containers=1,
 )
