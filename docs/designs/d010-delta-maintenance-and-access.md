@@ -1,10 +1,3 @@
-<!--
-Design doc template. A design doc is the working document of one task: Spec (what and why), Plan (how), Steps (implementation), Close (what was delivered).
-It is detailed enough that Code can implement it without making design decisions.
-Sections marked Optional are kept only when they apply.
-Kind: a build task builds code or configuration and has every block. A document-only task delivers documents only, written during the Spec and the Plan, and has no Steps block. A parent is a document-only task with children (`TNNN.M`): it holds what its children share, and its Children section.
--->
-
 # Design: Delta maintenance and access in the pipeline
 
 - **Task:** T072
@@ -14,38 +7,17 @@ Kind: a build task builds code or configuration and has every block. A document-
 
 ## Status
 
-<!-- State: Draft 📝 · Ready for implementation 🎬 · In progress 🔄 · Complete ✅. A document-only task goes from Draft to Complete.
-Phase: the blocks and reviews completed. A document-only task shows only Spec · Plan · Plan review.
-Current: where work resumes (the step being implemented, or the block and section of the design; — when complete), plus only what the next session cannot derive from the document, such as an instruction from the owner. Nothing it can re-derive: options, recommendations, files to read, later sections. A document-only task names the section. -->
-
-- State: In progress 🔄
+- State: Complete ✅
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Review.
+- Current: —
 
 ## 1. Spec — what and why
 
-<!-- What the result does seen from outside, not how it is built. The test: if whoever uses the result would notice a change, it belongs here; if not, it belongs to the Plan. External systems and their data (feeds, fields) may be named. -->
-
 ### 1.1 Context
-
-<!-- 2–4 sentences for a reader with no prior context: the problem or need and why it matters now; who or what uses the result; where things stand today, including any design or spike this builds on. No solution here: it starts in Decided at framing. For a correction: current vs expected behaviour and how to reproduce it. -->
 
 The pipeline's first slice (T060.1) manages its Delta tables on R2 poorly: a run opens its tables several times and reads them with no bounds, so its lakehouse reads and its run time grow every day; a run counted 12,369 GetObject, most of them in full reads of the control table `processed_objects` ([s019 › Verdict](../spikes/s019-pipeline-run-time-r2-reads.md#53-verdict)). [ADR-0052](../decisions/0052-delta-maintenance-and-access-pattern.md) sets how every pipeline table is accessed and maintained, and this task applies it to the slice's tables before the next slices build on them, together with silver's rolling 12-month retention ([ADR-0021](../decisions/0021-retention-per-layer.md)). The result is the scheduled pipeline itself, and the owner who operates it: its reads and run time per run should stop growing with the data held.
 
 ### 1.2 Decided at framing
-
-<!-- Optional. One heading per decision about what the result does. In this order, so the reader finds what matters first:
-1. The decision and why, in one short paragraph. A decision with several parts (rules, cases, steps) follows it with them as a list, or a numbered list for steps in order, each with its reason.
-2. What would change it, and what would not, each with the action to take. Only when a later event could reopen it.
-3. The options rejected that a later reader could propose again, each with why it lost: it meets the requirements and the ADRs in force, and lost on a trade-off this project weighed. An option that breaks an ADR or a requirement, only varies a parameter of the chosen one, or merely shapes the choice is left out; with none such, this item is omitted.
-4. The artefact that fixes it, in whatever form the decision needs (e.g. a mapping table, a page map, a weighted matrix). An artefact that does not fit here or must outlive the design goes in its own file: the Plan decides where it lives and its format, File layout lists it, and this decision links to it.
-
-A security decision lists its threats in this table, with IDs `TH1`, `TH2`… per document:
-
-| # | Threat (STRIDE) | Impact | Control | Requirement |
-|---|---|---|---|---|
-| `TH1` | | | | |
--->
 
 #### D1. Same outputs, and one control table for every feed
 
@@ -141,15 +113,6 @@ Options rejected:
 
 ### 1.3 Requirements
 
-<!-- Optional. The acceptance criteria, cited by number in the Test plan and the steps. They translate Decided at framing and cite the decision they come from; nothing is decided here.
-One behaviour per requirement, verifiable, with a measurable threshold where one applies. Written in EARS:
-- Ubiquitous: The <system> shall <response>.
-- Event: When <trigger>, the <system> shall <response>.
-- State: While <state>, the <system> shall <response>.
-- Unwanted: If <condition>, then the <system> shall <response>.
-- Optional: Where <feature is included>, the <system> shall <response>.
-Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) are not repeated. -->
-
 - **R1** For the same bronze, the pipeline shall produce the same rows of `station_stock` and a published file with the same content as before this task. (D1)
 - **R2** The pipeline shall keep the names and fields of its existing events and heartbeat, adding events or fields only. (D1)
 - **R3** The pipeline shall keep one `processed_objects` table for every system and feed, with one row per processed bronze object. (D1)
@@ -170,8 +133,6 @@ Only requirements specific to this task; project-wide rules (CLAUDE.md, ADRs) ar
 
 ### 1.4 Done when
 
-<!-- Optional. Only what closes this task and Requirements cannot express: operational actions, checks on real data, understanding. The general closing rule is checked in `.claude/skills/implement/review.md`. -->
-
 The owner ran the change in D2's order, and the migration from the merged `main` with a token that writes only to `bikesharing-lakehouse` and expires after one day, revoked once the migration passed (D2, D5, TH1).
 
 Checked on production after the deploy, over a window of at least 3 h that starts with the first scheduled run with no catch-up (one batch), and includes a checkpoint of each table and the run of the daily maintenance ([s019 › P7](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)):
@@ -183,21 +144,12 @@ If either fails, `capture_history`'s pruning is checked first.
 
 ### 1.5 Out of scope
 
-<!-- Optional. What someone could expect and will not be done, each item pointing to the task that covers it. -->
-
 - Moving Modal's region ([s019 › P8](../spikes/s019-pipeline-run-time-r2-reads.md#55-production-inputs)): its steps are written in [Modal's region](#modals-region) and not run in this task — T080
 - Keeping other catalogs in sync with the code or configuration they describe: this design keeps `docs/lakehouse.md` in sync with `settings.py` ([Table settings and catalog](#table-settings-and-catalog)), which sets no rule for other catalogs. TODO(T078.2): consider the same for `docs/observability.md`'s alerts and events, only if its complexity is affordable — T078.2
 
 ## 2. Plan — how
 
-<!-- 2-3 sentences -->
-
 ### 2.1 Approach
-
-<!-- Detailed plan organized by #### blocks.
-Block `3. Steps` is written using this plan. In a document-only task, Approach lists the main and supporting deliverables instead, each already written.
-A block may end with `Options considered`, with pros and cons, only for a decision asked of the owner, and listing only the alternatives that Decided at framing's item 3 keeps; a decision with none such has no Options considered.
--->
 
 #### Carried-over inputs
 
@@ -376,13 +328,6 @@ The script, its test and its line in `check-pipeline.sh` are removed in the PR t
 
 ### 2.2 Decision summary
 
-<!-- It logs decisions about the plan, including changes. Oldest first.
-Entries follow .claude/rules/docs/decision-log.md (log only, change links).
-- Applies to: anchor link(s) to the section where the decision is applied, named in one or two words.
-- Decided at: the Status phase where it was decided (Plan, Steps), or `<phase> review` when decided while reviewing that phase.
-- R: Requirement affected.
--->
-
 | # | Applies to | Decision | Reason | R | Decided at |
 |---|---|---|---|---|---|
 | 1 | [Modal's region](#modals-region) | Modal's region is tried in production right after this task's Done when, with no estimate first, following one variable changed at a time **refines [s019 › D2](../spikes/s019-pipeline-run-time-r2-reads.md#d2-modals-region-is-decided-after-the-fix)** | The trial is one reversible line, and the estimate would not save it; a trial alongside the fix would mix both in the Done when | — | Plan |
@@ -393,8 +338,6 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 | 6 | [D2](#d2-existing-data-moves-to-the-new-layout-in-a-one-off-migration), [Migration](#migration) | On a failed verification, the migration itself restores the version before its rewrite, following an automatic rollback on failed validation, as schema migration tools do **refines D2** | Only reviewed code writes to production (TH1), and a restore is one commit that copies no data | R7, R17 | Steps review |
 
 ### 2.3 File layout
-
-<!-- Every file and folder the task creates or modifies, documents included, as a tree: (new) or (modified), and its purpose or change in one line. A task that adds a component also lists its CI job in `.github/workflows/ci.yml` (recipe in `.claude/rules/code/ci.md`), and its version files, manifest and lockfile (`.claude/rules/code/dependencies.md`). -->
 
 ```text
 .
@@ -436,8 +379,6 @@ Entries follow .claude/rules/docs/decision-log.md (log only, change links).
 ```
 
 ### 2.4 Components
-
-<!-- Optional. One subsection per component. The contract is exact, in the component's own language, never pseudocode. -->
 
 The contracts of what this task adds, and of what changes its signature; a function whose signature does not change is not listed. Each line under a signature says what it decides; the behaviour behind it is in [Approach](#21-approach).
 
@@ -631,8 +572,6 @@ class RunConfig:
 
 ### 2.5 Test plan
 
-<!-- Optional. Every requirement has at least one verification method (IADT: Inspection, Analysis, Demonstration, Test). Test is the default, at the lowest level that can verify the requirement. Another method only when no test can: Inspection for configuration or documents, Analysis for production data or measurements, Demonstration for behaviour observed end to end, such as a third-party service. -->
-
 | R | Method | What is verified | Level |
 |---|---|---|---|
 | R1 | Test | The existing tests of a run's `station_stock` rows and published file pass unchanged on `deltalake` 1.7.0 and the new layout; `capture_history` returns the columns it returned before, and `latest_captures` those of `station_stock` | integration |
@@ -655,16 +594,12 @@ class RunConfig:
 
 ### 2.6 Breaking changes
 
-<!-- Optional. Shared models or interfaces this design changes, and how their dependants are handled. -->
-
 | File | Why it breaks | Strategy |
 |---|---|---|
 | `control/processed_objects` in `bikesharing-lakehouse` | Its partition columns change and it gains `utc_date`, so the deployed code and the new one cannot read each other's layout | D2's order: the schedule is paused, the migration rewrites the table, and the new code's deployment resumes the schedule ([Migration](#migration)) |
 | `pipeline/src/bikesharing/shell/delta.py`, `pipeline/src/bikesharing/core/settings.py` | The path constants are removed, and the run's calls take `Tables` in place of `Lakehouse` ([Components](#24-components)) | Every dependant changes in this task: `run.py`, `test_delta.py`, `test_run.py` and `test_discovery.py`, all in [File layout](#23-file-layout) |
 
 ### 2.7 What does not change
-
-<!-- Optional. Code or documents that must not be modified. Out of scope limits the what; this section limits the how. -->
 
 - `pipeline/dbt/`: its models, sources and contracts. dbt's Parquet inputs keep their columns (R1).
 - `pipeline/modal_app.py`: its region and its schedule ([Modal's region](#modals-region), T080).
@@ -674,18 +609,7 @@ class RunConfig:
 
 ## 3. Steps
 
-<!-- Build tasks only; a document-only task removes this block.
-Each step is one reviewable result and one commit, touching at most 2–3 files.
-- Status: where the step is: 💤 todo · 🎬 ready · 🔄 in progress · ⛔ blocked · ✅ done
-- Who: Owner (manual actions: dashboards, accounts, deploys, runs, checks) or Claude (code and documents).
-- R: the requirements the step implements or tests, or —.
-- Commit: the proposed message, following the Git conventions in CLAUDE.md.
-- Model: the model and effort the step's session runs with, fitted to the step: the lightest that does it well, never more than it needs nor less (e.g. sonnet · medium). For an Owner step, those of the session that guides the owner, or — when the owner works alone.
-- Review: `code`, `security`, `code and security`, or `no`. A review goes on the step that completes a reviewable unit (a flow or action, usually built over several steps); the last code step has at least `code`. -->
-
 ### 3.1 Prerequisites
-
-<!-- Owner actions outside the repo, each with its exact version or value and how to verify it. Write "None" when empty. -->
 
 None.
 
@@ -1433,11 +1357,19 @@ Yes if the checks exit 0 and the search finds nothing.
 
 ## 4. Close
 
-<!-- The record of what the task delivered, for whoever opens this design later. -->
-
 ### 4.1 Implemented
 
-<!-- Component — what was delivered; tests passing. In a document-only task: Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. -->
+- **`pipeline`:**
+  - `deltalake` 1.7.0;
+  - each table's settings in `settings.py`, with `TABLE_PATHS` as the one source of its paths;
+  - `bikesharing.shell.delta` as the common table access: each table opened once per run, `processed_objects` partitioned by `system`, `feed` and `utc_date`, and the eight bounded calls;
+  - discovery from each system and feed's latest capture minus 15 min, with no daily full sweep;
+  - compaction after each batch, and the daily maintenance (retention, vacuum, log cleanup) in the run at 04:00 Europe/Madrid, with its pure decisions in `bikesharing.core.delta_maintenance` and its five events;
+  - an import-linter contract that only `bikesharing.shell.delta` imports `deltalake`, kept in `check-pipeline.sh` (R5, by Inspection);
+  - the one-off migration, run in production in Step 15 and removed in Step 18 (#4).
+- **`contracts`:** the five maintenance events in `log-events.registry.json`, with no alert.
+- **`docs`:** the catalog `docs/lakehouse.md`, kept in step with `TABLE_PATHS` by its test and in the `pipeline` path filter of CI; `docs/architecture.md` › 6.2 and › 8.
+- **Tests:** `check-pipeline.sh` passes with 400 tests. The migration's tests of R6–R9 and R17 passed in Step 13 and in the PR of Step 14, and were removed with the script.
 
 **Done when on production** (Step 17), over the window from 2026-11-28 01:15 to 08:55 UTC (02:15 to 09:55 Europe/Madrid): 31 scheduled runs of version `2485644`, all succeeded, from the first one after the deploy's smoke test.
 
@@ -1467,18 +1399,10 @@ Yes if the checks exit 0 and the search finds nothing.
 
 ### 4.2 Known gaps at close
 
-<!-- What the task leaves undone or imperfect, each with the task that covers it and its `TODO(TNNN)` marker (CLAUDE.md › Pending items): requirements not fully met, File layout items not delivered, TODOs citing this task. "None" is valid. -->
-
-- `<gap>` — TNNN
+- No alert on `maintenance_failed` over consecutive days, after which removed files stay in R2 ([Maintenance events](#maintenance-events), `TODO(T078.2)`)
+- `docs/observability.md`'s alerts and events are not kept in sync with the code as `docs/lakehouse.md` is ([Out of scope](#15-out-of-scope), `TODO(T078.2)`)
 
 ### 4.3 Decisions taken during implementation
-
-<!-- Decisions made after the Plan was approved, including deviations from Scope approved by the owner. Oldest first; "None" is valid.
-- #: `DI1`, `DI2`… (decision during implementation).
-- Applies to: anchor link(s) to the design section the decision changes, or the path of a file outside the design.
-- Decision and Reason: one line each; the content goes where it applies.
-- Decided at: the step where it was decided (`Step N`).
--->
 
 | # | Applies to | Decision | Reason | Decided at |
 |---|---|---|---|---|
