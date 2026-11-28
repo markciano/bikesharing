@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 15.
+- Current: Step 16.
 
 ## 1. Spec — what and why
 
@@ -1285,7 +1285,7 @@ Yes if `state` is `MERGED`, with `<number>` the PR of Do 1, since the local bran
 
 ### Step 15 — Pause the schedule and run the migration
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **R:** —
