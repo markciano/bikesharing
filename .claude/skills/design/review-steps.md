@@ -19,6 +19,7 @@ Phase shows Steps checked and Steps review unchecked. Otherwise stop and tell th
 4. **Shape.** Each step touches at most 2–3 files, all in File layout, and contradicts no decision in Decided at framing or Decision summary; an Owner step follows the order and the controls those decisions and the threat table set. A code step includes its tests. The last step verifies the deliverable end to end. Commit follows the Git conventions in CLAUDE.md. Pending items follow the conventions in CLAUDE.md.
 5. **Review points.** Every step sets Review; each review closes a reviewable unit, and the last code step has at least `code`.
 6. **External facts.** Every fact the Steps rely on and do not decide, such as how a library call behaves or a figure measured elsewhere, cites its source, or is verified before the review closes.
+7. **Records.** Every step whose result cannot be obtained again later, such as a measure on production or the output of an owner's run, sets Records, naming each measure with its threshold, window and source; no step records a result that can be obtained again, such as a test run.
 
 ## Severity
 
