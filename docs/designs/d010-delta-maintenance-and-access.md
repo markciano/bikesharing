@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 17.
+- Current: Step 18.
 
 ## 1. Spec — what and why
 
@@ -1354,7 +1354,7 @@ Step 3 of D2's order: the merged `main` deployed, which resumes the schedule; ca
 
 ### Step 17 — Check the Done when in production
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Owner
 - **Commit:** —
 - **R:** —
@@ -1438,6 +1438,32 @@ Yes if the checks exit 0 and the search finds nothing.
 ### 4.1 Implemented
 
 <!-- Component — what was delivered; tests passing. In a document-only task: Deliverable — what it holds. A parent also names the children's issues created at its close; this block is not updated as they progress, since their state lives in their issues and their own working documents. -->
+
+**Done when on production** (Step 17), over the window from 2026-11-28 01:15 to 08:55 UTC (02:15 to 09:55 Europe/Madrid): 31 scheduled runs of version `2485644`, all succeeded, from the first one after the deploy's smoke test.
+
+| Measure | Result | Threshold |
+|---|---|---|
+| GetObject per run on `bikesharing-lakehouse`, mean (6,809 in total) | 220 | at most 700 |
+| p95 run time (median 34.9 s, maximum 66.9 s) | 59.0 s | at most 2 min |
+| `batch_committed` events, which include a checkpoint of each table | 31 | at least 8 |
+| Maintenance run, started at 03:00 UTC | `retention_applied` on `station_stock`, `table_vacuumed` and `log_cleaned` on both tables, no `maintenance_failed` | its events for each table, no failure |
+
+**Before and after.** The baseline is that of the [T077 spike](../../spikes/t077-run-time-and-r2-reads/README.md), measured with the same two scripts over 192 runs, from 2026-11-21 03:00 to 2026-11-23 03:00 UTC. The two windows differ in length and in the data accumulated.
+
+| Per run | Baseline | After | Change |
+|---|---|---|---|
+| GetObject on `bikesharing-lakehouse`, mean | 6,578 | 220 | −97% |
+| PutObject and ListObjects on `bikesharing-lakehouse`, mean | 24.9 | 23.6 | −5% |
+| Run time, median | 128.5 s | 34.9 s | −73% |
+| Run time, p95 | 234.8 s | 59.0 s | −75% |
+| Peak memory, p95 | 1,558 MB | 1,033 MB | −34% |
+
+- **Maintenance run:** 59.0 s, 541 s under the 600 s timeout (DI2). It deleted no partition and no data file. Each vacuum took about 2 s, each log cleanup 1.1 to 1.4 s, and retention, with nothing to delete, under 0.01 s.
+- **Compaction in the window:** 3 of the 31 runs compacted one table, at 03:15, 05:30 and 07:45 UTC.
+- **Storage of `bikesharing-lakehouse`:** from 0.396 to 0.400 GB and from 4,832 to 5,020 objects between the window's first and last sample, with the files that compaction and the migration removed still stored until a vacuum can delete them, 7 days after their removal. Before the deploy, the R2 dashboard showed about 0.25 GB.
+- **Historical compaction:** the smoke test ran it, in a run of 260.6 s, outside the window.
+- **Peak memory:** 1,033 MB at p95, 1,050 MB at most.
+- **Measurement tool:** `r2_metrics.py` no longer starts on the current package, since the `proxy.py` it imports uses names this task removed from `bikesharing.shell.delta`. It ran unchanged through a temporary launcher that defines those names.
 
 ### 4.2 Known gaps at close
 
