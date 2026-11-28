@@ -20,7 +20,7 @@ Current: where work resumes (the step being implemented, or the block and sectio
 
 - State: In progress 🔄
 - Phase: [x] Spec · [x] Plan · [x] Plan review · [x] Steps · [x] Steps review
-- Current: Step 18.
+- Current: Review.
 
 ## 1. Spec — what and why
 
@@ -1396,7 +1396,7 @@ Yes if every item holds:
 
 ### Step 18 — Remove the one-off migration
 
-- **Status:** 💤 todo
+- **Status:** ✅ done
 - **Who:** Claude
 - **Commit:** `chore: d010.s18 remove the one-off migration`
 - **R:** —
